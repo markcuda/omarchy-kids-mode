@@ -13,7 +13,6 @@ back here for context. Spokes are owned by whoever builds them.
 | Kid themes | `omarchy-<name>-theme` repos: big type, high contrast, fun, mascot unlock art | open — perfect lone-wolf project | you? |
 | Kid plugins & games | Shell plugins (bar, launcher, widgets) and mini-games — "so when they log in, they have something to do" | open — lone-wolf friendly | you? |
 | App packs | Curated per-age install manifests + web-app sets | open | you? |
-| [`jfuerwentsches/omarchy-kids`](https://github.com/jfuerwentsches/omarchy-kids) | Independent project, started 2026-08-27: age-tiered config + Rust parental agent + Qt parent control over SSH. Early concept | related — coordinating is open question #5 | jfuerwentsches |
 
 ## Add a spoke
 
