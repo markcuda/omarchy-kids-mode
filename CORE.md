@@ -42,7 +42,7 @@ single most important step**. Full anti-bypass matrix: report 03 §6.
 | 2 | Mascot paths: boy/girl/neutral vs character-choice-with-neutral-default — or both? | mascot spoke |
 | 3 | Default family DNS: Cloudflare Family (sponsor, simplest) vs CleanBrowsing/AdGuard (SafeSearch at DNS)? | report 04 |
 | 4 | Levels: parent-set, earned through play, or both? | report 07 |
-| 5 | How do we relate to [`jfuerwentsches/omarchy-kids`](https://github.com/jfuerwentsches/omarchy-kids) (same idea, started 2026-08-27)? | SPOKES.md |
+| 5 | How do we relate to [`jfuerwentsches/omarchy-kids`](https://github.com/jfuerwentsches/omarchy-kids) (same idea, started 2026-08-27)? | Discord outreach |
 | 6 | Multiple kids on one machine — what does upstream multi-user look like? | upstream |
 | 7 | Any voice/AI at all? Community is wary; if ever, a nameless offline tool, off by default | report 07 |
 
