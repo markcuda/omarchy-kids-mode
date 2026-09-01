@@ -1,0 +1,57 @@
+name: 🧒 Kid-test report (filed by a parent or guardian)
+description: You tried something with your child. Tell us what happened — no names, photos, or identifying details.
+title: "[Kid-test] "
+labels: ["type: kid-test", "needs-parent-input"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you — this is the most valuable feedback we get. **Please don't include your child's name, photo, voice,
+        username, or exact age.** Use the age band. A maintainer adds the `kid-tested` label when a feature has reports.
+  - type: input
+    id: what
+    attributes:
+      label: What did you test? (issue/RFC/repo link or description)
+    validations:
+      required: true
+  - type: dropdown
+    id: age
+    attributes:
+      label: Child's age band
+      options: ["3–5", "5–7", "8–10", "11–13", "13+"]
+    validations:
+      required: true
+  - type: dropdown
+    id: level
+    attributes:
+      label: Capability level they were using
+      options: ["Level 1 (one thing)", "Level 2 (two things)", "Level 3 (real tiling)", "Level 3+ (shell)", "N/A"]
+  - type: textarea
+    id: tried
+    attributes:
+      label: What did they try to do?
+    validations:
+      required: true
+  - type: textarea
+    id: worked
+    attributes:
+      label: What worked?
+  - type: textarea
+    id: confused
+    attributes:
+      label: What confused or frustrated them?
+  - type: textarea
+    id: delighted
+    attributes:
+      label: What made them laugh or lean in?
+  - type: textarea
+    id: bypass
+    attributes:
+      label: Did they get around anything they shouldn't have? (If it's a real bypass, use private reporting — see SECURITY.md — and just say "reported privately" here.)
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Confirmation
+      options:
+        - label: I am the child's parent or guardian, I was present, and this report contains no identifying details.
+          required: true

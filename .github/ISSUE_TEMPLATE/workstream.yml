@@ -1,0 +1,43 @@
+name: 🧩 Propose or claim a workstream
+description: A chunk of work big enough to get its own repo, plugin, theme, or sub-project.
+title: "[Workstream] "
+labels: ["type: workstream", "status: triage"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Workstream name
+      placeholder: "omarchy-kids-dns — filtered DNS with DoH lock-down"
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: In scope
+    validations:
+      required: true
+  - type: textarea
+    id: out
+    attributes:
+      label: Explicitly out of scope
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: Deliverables & definition of done
+  - type: textarea
+    id: deps
+    attributes:
+      label: Depends on / blocks (link issues, RFCs, layers)
+  - type: input
+    id: repo
+    attributes:
+      label: Proposed repo name (if it needs its own)
+      placeholder: "omarchy-kids-dns"
+  - type: dropdown
+    id: owner
+    attributes:
+      label: Ownership
+      options:
+        - I'll lead it
+        - I'll contribute but need a lead
+        - Proposing only — needs an owner

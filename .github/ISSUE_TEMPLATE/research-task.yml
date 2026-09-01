@@ -1,0 +1,52 @@
+name: 🔬 Research task
+description: A question we need answered before we can decide or build something.
+title: "[Research] "
+labels: ["type: research", "status: triage"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: The question
+      placeholder: "Can Limine be password-protected so a kid can't edit the kernel command line?"
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters / what decision it unblocks
+    validations:
+      required: true
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Layer
+      multiple: true
+      options:
+        - L1 Commissioning & accounts
+        - L2 Boot & system hardening
+        - L3 Network & content filtering
+        - L4 App sandboxing & allowlisting
+        - L5 Desktop shell & progressive UI
+        - L6 Onboarding
+        - L7 Themes, mascots & sound
+        - L8 Apps, games & learning content
+        - L9 Screen time, reports & parent dashboard
+        - L10 Voice & local AI
+        - L11 Packaging & distribution
+        - Pedagogy / policy / community
+  - type: textarea
+    id: start
+    attributes:
+      label: Where to start (known sources, people, repos)
+  - type: textarea
+    id: deliverable
+    attributes:
+      label: Deliverable
+      description: Usually a note in `research/` plus new rows in `research/sources.md`. Say what "done" looks like.
+      value: "A research note at research/<topic>.md with verified sources, and a recommendation."
+  - type: checkboxes
+    id: claim
+    attributes:
+      label: Claiming
+      options:
+        - label: I'm taking this one (a maintainer will assign it to you)

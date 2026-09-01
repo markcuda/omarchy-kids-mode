@@ -1,0 +1,14 @@
+# Link checker config (https://github.com/lycheeverse/lychee)
+max_concurrency = 8
+timeout = 20
+max_retries = 2
+accept = ["200..=299", "403", "429", "999"]   # bot-blocked sites are not dead links
+exclude_private = true
+exclude = [
+  "^https?://localhost",
+  "^https?://127\\.",
+  "^https?://192\\.168\\.",
+  # Blueprint archive contains known-fabricated URLs on purpose; audit lives in research/sources-audit
+  "github\\.com/omarchy/kids-mode",
+]
+exclude_path = ["research/archive", "research/sources-audit"]

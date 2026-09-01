@@ -1,0 +1,5 @@
+# Default reviewers for everything. Add area maintainers as they emerge.
+*                       @markcuda
+/docs/architecture/     @markcuda
+/research/              @markcuda
+/rfcs/                  @markcuda

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Ask a question or float a half-formed idea
+    url: https://github.com/markcuda/omarchy-kids-mode/discussions
+    about: Discussions are for open-ended conversation. Issues are for things someone can act on.
+  - name: 🔒 Report a safety bypass privately
+    url: https://github.com/markcuda/omarchy-kids-mode/security/advisories/new
+    about: If a child could use the report to get around a protection, report it privately first. See SECURITY.md.
+  - name: 🗨️ Omarchy Discord
+    url: https://omarchy.org/discord
+    about: Real-time chat with the Omarchy community (find the kids-mode channel).

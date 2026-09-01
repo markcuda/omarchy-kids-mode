@@ -1,0 +1,58 @@
+name: 🛡️ Safety / bypass concern (non-sensitive)
+description: A design weakness or bypass that is already public knowledge or purely theoretical. For working bypasses, use private reporting (SECURITY.md).
+title: "[Safety] "
+labels: ["type: safety", "status: triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ If a kid could follow your report step-by-step to get around a protection, **do not post it here** — use the private
+        [security advisory form](../security/advisories/new). Theoretical or already-public concerns are fine here.
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Layer
+      multiple: true
+      options:
+        - L1 Commissioning & accounts
+        - L2 Boot & system hardening
+        - L3 Network & content filtering
+        - L4 App sandboxing & allowlisting
+        - L5 Desktop shell & progressive UI
+        - L6 Onboarding
+        - L7 Themes, mascots & sound
+        - L8 Apps, games & learning content
+        - L9 Screen time, reports & parent dashboard
+        - L10 Voice & local AI
+        - L11 Packaging & distribution
+    validations:
+      required: true
+  - type: textarea
+    id: concern
+    attributes:
+      label: The concern
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: How bad is it?
+      options:
+        - Exposure to harmful content
+        - Full control of the machine (root / parent account)
+        - Turns off a restriction (time limit, filter, allowlist)
+        - Privacy leak (data about the child leaves the machine)
+        - Annoyance / friction only
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Skill needed to exploit
+      options:
+        - Any kid who can click
+        - A curious 10-year-old with YouTube
+        - A teen who knows Linux
+        - Physical access + tools (USB, BIOS)
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Possible mitigation (if you have one)

@@ -1,0 +1,151 @@
+# Labels-as-code. Sync with EndBug/label-sync (see .github/workflows/labels.yml).
+# Groups: type / layer / status / priority / effort / age / flags
+
+- name: "type: idea"
+  color: "1d76db"
+  description: A proposal for something Kids Mode should do
+- name: "type: research"
+  color: "1d76db"
+  description: A question to answer before we decide or build
+- name: "type: source"
+  color: "1d76db"
+  description: A link, paper, product or prior art to register
+- name: "type: safety"
+  color: "b60205"
+  description: A non-sensitive safety or bypass concern
+- name: "type: workstream"
+  color: "1d76db"
+  description: A chunk of work that deserves an owner and probably a repo
+- name: "type: rfc"
+  color: "1d76db"
+  description: A substantial proposal under review
+- name: "type: docs"
+  color: "1d76db"
+  description: Changes to this repo's documentation
+- name: "type: kid-test"
+  color: "1d76db"
+  description: A parent-filed report of a child trying something
+- name: "type: bug"
+  color: "1d76db"
+  description: Something in the repo or a doc is wrong
+
+- name: "layer: L1"
+  color: "5319e7"
+  description: Commissioning & accounts
+- name: "layer: L2"
+  color: "5319e7"
+  description: Boot & system hardening
+- name: "layer: L3"
+  color: "5319e7"
+  description: Network & content filtering
+- name: "layer: L4"
+  color: "5319e7"
+  description: App sandboxing & allowlisting
+- name: "layer: L5"
+  color: "5319e7"
+  description: Desktop shell & progressive UI
+- name: "layer: L6"
+  color: "5319e7"
+  description: Onboarding (parent and kid)
+- name: "layer: L7"
+  color: "5319e7"
+  description: Themes, mascots & sound
+- name: "layer: L8"
+  color: "5319e7"
+  description: Apps, games & learning content
+- name: "layer: L9"
+  color: "5319e7"
+  description: Screen time, reports & parent dashboard
+- name: "layer: L10"
+  color: "5319e7"
+  description: Voice & local AI
+- name: "layer: L11"
+  color: "5319e7"
+  description: Packaging & distribution
+- name: "layer: community"
+  color: "5319e7"
+  description: Governance, process, this repo
+
+- name: "status: triage"
+  color: "fbca04"
+  description: Not yet labelled by a maintainer
+- name: "status: needs-verification"
+  color: "fbca04"
+  description: Cites something nobody has confirmed yet
+- name: "status: needs-champion"
+  color: "fbca04"
+  description: Good idea, nobody owns it (30 days → parked)
+- name: "status: ready"
+  color: "0e8a16"
+  description: Clear enough to start; unassigned = fair game
+- name: "status: in-progress"
+  color: "0e8a16"
+  description: Someone is on it
+- name: "status: in-fcp"
+  color: "0e8a16"
+  description: RFC in its 7-day final comment period
+- name: "status: blocked"
+  color: "d93f0b"
+  description: Waiting on something else (say what in the issue)
+- name: "status: parked"
+  color: "cccccc"
+  description: Not now; not a rejection
+- name: "status: done"
+  color: "cccccc"
+  description: Finished
+- name: "status: wontfix"
+  color: "cccccc"
+  description: Decided against, with reasons
+
+- name: "priority: p0-quick-win"
+  color: "b60205"
+  description: Reduces the pop-up risk or unblocks a Phase-1 decision
+- name: "priority: p1"
+  color: "d93f0b"
+  description: Important for the current phase
+- name: "priority: p2"
+  color: "fbca04"
+  description: Normal
+- name: "priority: later"
+  color: "cccccc"
+  description: A later phase
+
+- name: "effort: S"
+  color: "c2e0c6"
+  description: An evening
+- name: "effort: M"
+  color: "c2e0c6"
+  description: A weekend
+- name: "effort: L"
+  color: "c2e0c6"
+  description: Weeks
+
+- name: "age: 3-5"
+  color: "f9d0c4"
+- name: "age: 5-7"
+  color: "f9d0c4"
+- name: "age: 8-10"
+  color: "f9d0c4"
+- name: "age: 11-13"
+  color: "f9d0c4"
+- name: "age: 13+"
+  color: "f9d0c4"
+
+- name: "good first issue"
+  color: "7057ff"
+  description: Small, well-described, no deep context needed
+- name: "help wanted"
+  color: "008672"
+  description: We'd love a hand
+- name: "kid-tested"
+  color: "0e8a16"
+  description: A parent-filed kid-test report exists (maintainer-applied)
+- name: "needs-parent-input"
+  color: "e99695"
+  description: We need real-family perspective before deciding
+- name: "needs-upstream"
+  color: "e99695"
+  description: Depends on Omarchy/Hyprland/Arch upstream
+- name: "safety"
+  color: "b60205"
+  description: Touches child safety or privacy; any maintainer may pause the merge
