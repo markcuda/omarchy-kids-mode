@@ -46,24 +46,61 @@ single most important step**. Full anti-bypass matrix: report 03 §6.
 | 6 | Multiple kids on one machine — what does upstream multi-user look like? | upstream |
 | 7 | Any voice/AI at all? Community is wary; if ever, a nameless offline tool, off by default | report 07 |
 
-## First tasks
+## Build plan v0 — prototype the Child path
 
-Small, concrete, claimable. Open an issue saying "I'm on it."
+Upstream is about to design the installer's "Child" option. The most useful thing this hub can do
+is hand DHH a **working, kid-tested answer** to what that option should do — code, not opinions.
+Three phases, roughly four weeks:
 
-| Task | Size | Grounding |
-| --- | --- | --- |
-| `omarchy dns` Family preset — a PR-shaped patch to the existing script | S | report 04 |
-| Chromium/Firefox kids policy pack (`/etc/chromium/policies/managed/`) | S | report 04 |
-| `omarchy-kids-check` — green/red "is it safe?" self-test for parents | M | report 04 |
-| Kid-user script: useradd (no groups), `noexec` home, polkit deny pack | S | report 03 |
-| Boot-harden kit: Limine editor off + re-apply hook, TTY/VT lockdown, checklist card | S | report 03 |
-| Level 1/2/3 Hyprland Lua overlays | M | reports 01, 07 |
-| Parent five-screen setup flow — prototype + test with 5 parents | M | report 07 |
-| First kid theme (`omarchy-kids-tux-theme`): big type, 7:1 contrast, mascot unlock art | S | report 05 |
-| Kids bar + launcher as shell plugins (big targets, allowlist-driven) | M | report 01 |
-| "Shortcut Target Practice" — a window-tiling mini-game; nothing like it exists | L | report 05 |
-| Verify on real 4.0.2: second-user session, Limine editor vs UKI, Flatpak override precedence | M | report 03 |
-| Talk to the `omarchy-kids` author; agree how we fit together | S | — |
+**Phase 1 · Verify (week 1).** Settle the five unknowns that could sink the design, on a real
+4.0.2 install (VM + one old laptop):
+
+- Does a second user with an SDDM session survive `omarchy update`?
+- Can Limine's editor inject `init=/bin/bash` past the UKI?
+- Which tmpfs mounts (`/tmp`, `/dev/shm`, `/run/user/*`) allow exec?
+- Can a `--user` Flatpak override beat a system-level one?
+- Does booting an old snapshot from the boot menu resurrect the pre-kids state?
+
+**Phase 2 · The slice (weeks 2–3).** One script, `omarchy-kids-provision`, five pieces:
+
+1. **Kid account** — no groups, `noexec` home, polkit deny pack, root locked, session launched
+   from a root-owned Hyprland config via `--config`. This is "sudo is the boundary", implemented.
+2. **Web safety on by default** — `omarchy dns` Family preset + the Chromium policy pack
+   (SafeSearch, YouTube Restricted, DoH off, no incognito). The #1 parent ask; small patches to
+   scripts that already exist.
+3. **Boot basics** — Limine editor off + re-apply hook, TTY/VT lockdown, printed firmware-password card.
+4. **`omarchy-kids-check`** — a green/red "is it safe?" screen. Trust needs proof.
+5. **One Level-1 experience** — fullscreen-only rules, a big friendly launcher, the first kid theme
+   with mascot unlock art. If it's only a lockdown, it fails the mission; it must be fun in minute one.
+
+One under-13 preset only. No daemon, no screen time, no mascot flows yet — the onboarding and
+mascot groups design in parallel against this substrate.
+
+**Phase 3 · Prove and pitch (week 4).** Wire the script into deferred provisioning (`cidata`) so
+choosing "Child" is demonstrable at install; run report 03's bypass matrix against it; collect 2–3
+kid-test reports from the channel; record a two-minute demo; post it to Omarchy's
+Discussions → Suggestions as the community's proposal for the Child path.
+
+**Done means:** a parent takes an ISO plus one command and hands a locked, fun, Level-1 laptop to
+a 7-year-old — and DHH gets a tested design to react to instead of a wishlist.
+
+### Tasks — claim one with an issue
+
+| Phase | Task | Size | Grounding |
+| --- | --- | --- | --- |
+| 1 | The five verification checks above, written up as a short note | M | report 03 |
+| 2 | Kid-user script: useradd (no groups), `noexec` home, polkit deny pack | S | report 03 |
+| 2 | `omarchy dns` Family preset — a PR-shaped patch to the existing script | S | report 04 |
+| 2 | Chromium/Firefox kids policy pack (`/etc/chromium/policies/managed/`) | S | report 04 |
+| 2 | Boot-harden kit: Limine editor off + re-apply hook, TTY/VT lockdown, checklist card | S | report 03 |
+| 2 | `omarchy-kids-check` — the green/red self-test | M | report 04 |
+| 2 | Level-1 Hyprland Lua config (fullscreen-only) + big launcher | M | reports 01, 07 |
+| 2 | First kid theme (`omarchy-kids-tux-theme`): big type, 7:1 contrast, mascot unlock art | S | report 05 |
+| 3 | `cidata` deferred-provisioning demo + two-minute video | M | report 01 |
+| 3 | Bypass-matrix test run + kid-test reports | M | report 03 |
+| ∥ | Parent five-screen setup flow — prototype + test with 5 parents (onboarding group) | M | report 07 |
+| ∥ | "Shortcut Target Practice" tiling mini-game (lone-wolf, nothing like it exists) | L | report 05 |
+| ∥ | Talk to the `omarchy-kids` author; agree how we fit together | S | — |
 
 ## Omarchy 4.0.2 facts to build against (report 01)
 
