@@ -15,7 +15,7 @@ exactly who this needs.
 
 ## Rules
 
-1. **Only cite links you've opened.** Mark claims as verified, inferred, or opinion. The registry
+1. **Only cite links you've opened.** Maintainers claims as verified, inferred, or opinion. The registry
    is [research/sources.md](research/sources.md); the archived AI blueprint is not citable.
 2. **Nothing about real children.** No names, photos, voices, usernames, or exact ages — anywhere.
 3. **AI help is fine — say so** in the PR, and own every line.
