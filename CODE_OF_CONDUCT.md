@@ -1,22 +1,13 @@
 # Code of Conduct
 
-_Omarchy Kids Mode adopts the Contributor Covenant 3.0 (below) with the following project-specific notes._
+We adopt the Contributor Covenant 3.0 (below), with three project notes:
 
-**Community Moderators** are the maintainers listed in `GOVERNANCE.md`. To report a concern, message a
-maintainer privately on GitHub or Discord, or open a private security advisory if it involves a safety issue;
-we aim to acknowledge within 7 days. Reports about a maintainer go to a different maintainer.
-
-**Children first.** This community exists for kids but is not a space *for* kids: GitHub and Discord require
-users to be 13+, and children participate only through a parent or guardian (see the kid-test report form).
-Posting a child's name, photo, voice, username, or exact age — yours or anyone's — is a violation. So is
-gendered or belittling language about children, and any content that would be unsafe for a child to encounter
-in our spaces. "Grown-up/guardian", not "mom/dad", in examples.
-
-**Gatekeeping is a violation.** Mocking a beginner's question, a parent's non-technical framing, or a
-contributor's choice of tools (including AI assistance, when disclosed) is restricted behaviour here.
-
-**Enforcement** follows the ladder below (warning → temporarily limited activities → temporary suspension →
-permanent ban), applied on GitHub and in any Discord channel this project moderates.
+- **To report a concern:** message a repo admin privately on GitHub, or an Omarchy Discord
+  moderator. Until formal governance exists, that's the honest answer.
+- **Children first.** Kids take part only through a parent or guardian. Posting a child's name,
+  photo, voice, username, or exact age is a violation.
+- **No gatekeeping.** Mocking a beginner's question or a parent's non-technical framing is
+  restricted behaviour here.
 
 ---
 

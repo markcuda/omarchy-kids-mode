@@ -7,7 +7,7 @@ import re, glob, os, csv
 from collections import OrderedDict
 import os
 ROOT=os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),"..",".."))
-LAYER_HINT={"01":"L11, L5","02":"L1, L9, all","03":"L1, L2, L4","04":"L3","05":"L7, L8","06":"community","07":"L5, L6, L10"}
+LAYER_HINT={"01":"platform","02":"prior art","03":"hardening","04":"web safety","05":"apps & themes","06":"process","07":"pedagogy"}
 STATUS_RE=re.compile(r'\b(VERIFIED|SEARCH-ONLY|SEARCH ONLY|DEAD/UNVERIFIABLE|DEAD-UNVERIFIABLE|DEAD/WRONG|UNVERIFIABLE|UNVERIFIED|DEAD|PARTIAL|WRONG)\b',re.I)
 URL_RE=re.compile(r'https?://(?:[^\s<>()\]|"]|\([^\s()]*\))+')
 def norm_status(s):
@@ -18,7 +18,7 @@ def norm_status(s):
     if s=="PARTIAL": return "partial"
     return s.lower()
 rows=[]
-for path in sorted(glob.glob(f"{ROOT}/research/reports/*.md")):
+for path in sorted(glob.glob(f"{ROOT}/research/0[0-9]-*.md")):
     rid=os.path.basename(path)[:2]
     text=open(path,encoding="utf-8").read()
     m=re.search(r'^## Sources.*$',text,re.M)
@@ -84,7 +84,7 @@ for r in by_url.values(): counts[r["status"]]=counts.get(r["status"],0)+1
 out=[]
 out.append("# Sources — the master registry\n")
 out.append("_status: living · updated 2026-09-01 · **Cite as `[R01-S14]`** (report 01, its source S14). Only rows marked `verified` may be cited from `docs/`; see ADR-0003._\n")
-out.append("How to read: every research report keeps its own `Sources` table with per-report keys. This page merges them all, de-duplicated by URL, grouped by subject. **`verified`** = a research agent fetched the page on 2026-09-01 and the content matched the claim it is cited for; **`search-only`** = surfaced in search results but not opened; **`dead/unverifiable`** = 404, blocked, or could not be confirmed. The original blueprint's bibliography is audited separately in `sources-audit/` and is **not** citable.\n")
+out.append("How to read: every research report keeps its own `Sources` table with per-report keys. This page merges them all, de-duplicated by URL, grouped by subject. **`verified`** = a research agent fetched the page on 2026-09-01 and the content matched the claim it is cited for; **`search-only`** = surfaced in search results but not opened; **`dead/unverifiable`** = 404, blocked, or could not be confirmed. The original blueprint's bibliography is audited separately in `archive/` and is **not** citable.\n")
 out.append(f"**Totals:** {len(by_url)} unique sources from {len(rows)} citations · " + " · ".join(f"{k}: {v}" for k,v in sorted(counts.items())) + "\n")
 out.append("## Add a source\n\nOpen a **📚 Add a source** issue, or PR a row into the right group below **and** into the report/note that cites it. Include the date you opened it. Don't paste a link you haven't opened.\n")
 out.append("## Contents\n")
@@ -94,7 +94,7 @@ out.append("")
 for g,items in grouped.items():
     if not items: continue
     out.append(f"## {g}\n")
-    out.append("| Key(s) | Title | URL | Status | Layers | Note |\n|---|---|---|---|---|---|")
+    out.append("| Key(s) | Title | URL | Status | Topic | Note |\n|---|---|---|---|---|---|")
     for r in sorted(items,key=lambda r:(r['status']!='verified',r['title'].lower())):
         keys=", ".join(r["keys"]); layers=", ".join(sorted(x for x in r["layers"] if x))
         out.append(f"| {keys} | {r['title'].replace('|','/')} | <{r['url']}> | {r['status']} | {layers} | {r['note'].replace('|','/')} |")

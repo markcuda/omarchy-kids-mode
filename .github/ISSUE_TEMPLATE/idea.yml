@@ -1,79 +1,38 @@
-name: 💡 Idea / feature proposal
-description: Propose something Kids Mode should do. Small ideas welcome — this is how the backlog grows.
+name: 💡 Idea
+description: Something Kids Mode should do. Small ideas welcome — parents especially.
 title: "[Idea] "
-labels: ["type: idea", "status: triage"]
+labels: ["idea"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks! You don't need to be a developer. Parents, teachers and kids (with a grown-up) are exactly who we want to hear from.
-        Not sure it's an "idea" yet? Start a [Discussion](../discussions) instead.
   - type: textarea
-    id: summary
+    id: idea
     attributes:
-      label: The idea in one or two sentences
-      placeholder: "When a kid opens a second app, the screen splits 50/50 and a mascot shows the Super+Arrow keys."
+      label: The idea, in a sentence or two
+      placeholder: "When a kid opens a second app, the screen splits 50/50 and the mascot shows the arrow keys."
     validations:
       required: true
   - type: dropdown
-    id: layer
+    id: area
     attributes:
-      label: Which layer does this touch?
-      description: See docs/architecture/overview.md. Pick the closest.
-      multiple: true
+      label: Area
       options:
-        - L1 Commissioning & accounts (parent setup, users)
-        - L2 Boot & system hardening
-        - L3 Network & content filtering
-        - L4 App sandboxing & allowlisting
-        - L5 Desktop shell & progressive UI
-        - L6 Onboarding (parent and kid)
-        - L7 Themes, mascots & sound
-        - L8 Apps, games & learning content
-        - L9 Screen time, reports & parent dashboard
-        - L10 Voice & local AI
-        - L11 Packaging & distribution (plugins, themes, installer)
-        - Community / docs / this repo
-    validations:
-      required: true
-  - type: checkboxes
-    id: who
-    attributes:
-      label: Who is it for?
-      options:
-        - label: Pre-readers (~3–5)
-        - label: Early readers (~5–7)
-        - label: Builders (~8–10)
-        - label: Navigators (~11–13)
-        - label: Teens (13+)
-        - label: Parents / guardians
-        - label: Teachers / classrooms
+        - Install & accounts
+        - Parent setup
+        - Child onboarding / mascot
+        - Web safety
+        - The growing desktop (levels)
+        - Apps & games
+        - Screen time
+        - Themes & fun
+        - Something else
   - type: textarea
-    id: problem
+    id: why
     attributes:
-      label: What problem does it solve? (a real moment, if you have one)
-      placeholder: "My 6-year-old keeps dragging windows off-screen and then can't find them."
-  - type: textarea
-    id: proposal
-    attributes:
-      label: How might it work?
-      description: Sketches, flows, keybindings, config — anything. Rough is fine.
-  - type: textarea
-    id: prior
-    attributes:
-      label: Prior art / links
-      description: Anything that already does this (another OS, an app, a paper). Only paste links you've actually opened.
-  - type: textarea
-    id: safety
-    attributes:
-      label: Safety & privacy considerations
-      description: Could a kid bypass it? Does it store anything about the child? Does it need network?
+      label: Why? (a real moment with a real kid, if you have one)
   - type: dropdown
     id: help
     attributes:
       label: Can you help make it happen?
       options:
-        - I'd like to work on it
-        - I can help test with my kids
-        - I can help with research / writing
+        - I'd like to build it
+        - I can test with my kids
         - Just the idea for now
