@@ -361,7 +361,7 @@ R01-S49;R03-S63,"HN comment on Omarchy login (no display manager, LUKS as passwo
 R01-S52;R03-S68,"DHH on X: ""The road map for Omarchy 4.1 is already several man years...""",https://x.com/dhh/status/2089630095010889953,search-only,"L1, L2, L4, L11, L5",4.1 roadmap; multi-user claim relies on #532 comment,Other / secondary coverage
 R01-S53,"DHH on X: ""Omarchy Quattro is out!!""",https://x.com/dhh/status/2088304854603047019,search-only,"L11, L5",Launch announcement,Other / secondary coverage
 R01-S62,Voxtype,https://voxtype.io/,search-only,"L11, L5",Linked from manual,Other / secondary coverage
-R02-S20,Wikipedia: Sugar (desktop environment),https://en.wikipedia.org/wiki/Sugar_(desktop_environment,verified,"L1, L9, all",0.121 2024-02-06; Journal; Home/Group/Neighborhood; Sugarizer; SFC,Other / secondary coverage
+R02-S20,Wikipedia: Sugar (desktop environment),https://en.wikipedia.org/wiki/Sugar_(desktop_environment),verified,"L1, L9, all",0.121 2024-02-06; Journal; Home/Group/Neighborhood; Sugarizer; SFC,Other / secondary coverage
 R02-S21,Wikipedia: DoudouLinux,https://en.wikipedia.org/wiki/DoudouLinux,verified,"L1, L9, all","Debian/LXDE, DansGuardian, 2.1 Dec 2013, inactive",Other / secondary coverage
 R02-S51,Starry Hope: Family Link on a Chromebook (2026),https://www.starryhope.com/chromebooks/family-link-chromebook-parental-controls-2026/,search-only,"L1, L9, all","Per-device limits, app approval, three filter postures",Other / secondary coverage
 R03-S33,Limine CONFIG.md (v12.x),https://github.com/Limine-Bootloader/Limine/blob/v12.x/CONFIG.md,verified,"L1, L2, L4","editor_enabled, hash_mismatch_panic; no password option",Other / secondary coverage

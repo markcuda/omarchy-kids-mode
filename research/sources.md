@@ -485,7 +485,7 @@ Open a **📚 Add a source** issue, or PR a row into the right group below **and
 | R05-S5 | vinegarhq/sober | <https://github.com/vinegarhq/sober> | verified | L7, L8 | Issue-tracker repo; "Not affiliated with Roblox"; 1.1k stars. |
 | R06-S37 | W3C WAI: Developing an Accessibility Statement | <https://www.w3.org/WAI/planning/statements/> | verified | community | Minimum contents; plain-language guidance |
 | R02-S21 | Wikipedia: DoudouLinux | <https://en.wikipedia.org/wiki/DoudouLinux> | verified | L1, L9, all | Debian/LXDE, DansGuardian, 2.1 Dec 2013, inactive |
-| R02-S20 | Wikipedia: Sugar (desktop environment) | <https://en.wikipedia.org/wiki/Sugar_(desktop_environment> | verified | L1, L9, all | 0.121 2024-02-06; Journal; Home/Group/Neighborhood; Sugarizer; SFC |
+| R02-S20 | Wikipedia: Sugar (desktop environment) | <https://en.wikipedia.org/wiki/Sugar_(desktop_environment)> | verified | L1, L9, all | 0.121 2024-02-06; Journal; Home/Group/Neighborhood; Sugarizer; SFC |
 | R04-S70 | YouTube Terms of Service | <https://www.youtube.com/t/terms> | verified | L3 | No download/automated access without permission |
 | R05-S33 | 3 command line games | <https://opensource.com/article/19/10/learn-bash-command-line-games> | search-only | L7, L8 | Bashcrawl description. |
 | R05-S35 | 5 games for learning Linux | <https://devopschops.com/blog/games-for-learning-linux/> | search-only | L7, L8 | Bashcrawl → Command Challenge → Bandit → CLI Murders path. |
