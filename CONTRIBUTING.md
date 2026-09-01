@@ -24,5 +24,7 @@ exactly who this needs.
 
 ## Mechanics
 
-Fork → branch → PR. `main` is protected; one review merges it. CI checks markdown and links.
-Everything here is [MIT](LICENSE) — by contributing you agree to that.
+Fork → branch → PR. `main` is protected: one review + green CI (markdown + links) merges it,
+squash-only, no force-pushes. First-time contributors' CI runs after a maintainer approves them —
+normal for a repo about kids' safety, nothing personal. Everything here is [MIT](LICENSE) — by
+contributing you agree to that.
