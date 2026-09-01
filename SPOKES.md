@@ -8,7 +8,7 @@ back here for context. Spokes are owned by whoever builds them.
 
 | Spoke | What | Status | Who |
 | --- | --- | --- | --- |
-| Onboarding flow & parent/child setup | The install-time "Child" path and the parent's five-minute setup | forming — people coalescing (Discord) | open — join in |
+| [Onboarding flow & parent/child setup](https://github.com/markcuda/omarchy-kids-setup) | The install-time "Child" path and the parent's five-minute setup: wizard skeleton, dry-run provisioning, safety check, test-laptop kit | **started** — skeleton up, join in | @markcuda + open |
 | Onboarding mascot | The character(s) that teach kids the machine; boy/girl/neutral paths proposed | forming | needs artists |
 | Kid themes | `omarchy-<name>-theme` repos: big type, high contrast, fun, mascot unlock art | open — perfect lone-wolf project | you? |
 | Kid plugins & games | Shell plugins (bar, launcher, widgets) and mini-games — "so when they log in, they have something to do" | open — lone-wolf friendly | you? |
