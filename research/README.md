@@ -12,6 +12,7 @@ Everything we know, and how well we know it.
 | `community/` | Synthesised signal from Discord/Discussions — what people asked for, in their words. |
 | `sources-audit/` | Automated HTTP audit of the original blueprint's 257-entry bibliography (198 unique URLs). |
 | `archive/` | Inputs we started from, kept verbatim with a warning header. Not citable. |
+| `tools/` | Generators: `merge_sources.py` rebuilds `sources.md`/`sources.csv` from the reports; `audit_blueprint_bibliography.py` produced the blueprint audit. |
 
 ## Reports
 
