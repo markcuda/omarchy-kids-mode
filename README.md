@@ -33,7 +33,7 @@ picture.
 | A lone wolf | Build a **theme or plugin** kids see when they log in — cool, fun, pre-packaged |
 | Just curious | Put Omarchy on an old laptop and build something for the kid in your life |
 | A connector | [Run or join an Omarchy meetup](https://omarchy.org/meetups/) and invite parents |
-| A parent with 5 minutes | Share a [parent story](../../discussions) or open an idea issue |
+| A parent with 5 minutes | Share a [parent story](https://github.com/markcuda/omarchy-kids-mode/discussions) or open an idea issue |
 
 Ground rules: only cite links you've opened · never post anything about a real child · AI-assisted
 work is fine, say so · be kind to beginners. More: [CONTRIBUTING.md](CONTRIBUTING.md).
