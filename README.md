@@ -7,7 +7,7 @@ deliberation, and the core feature set live here. Everything that ships — them
 app packs — lives in its own repo (a **spoke**) and links back. See [SPOKES.md](SPOKES.md).
 
 An independent community effort by parents in the Omarchy Discord. Not affiliated with or endorsed
-by DHH, 37signals, or the Omarchy project.
+by DHH, 37signals, or the Omarchy project. Started by Mark Cuda, owned by all.
 
 ## Where this is heading
 
