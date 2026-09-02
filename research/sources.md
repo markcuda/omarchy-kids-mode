@@ -4,7 +4,7 @@ _status: living · updated 2026-09-01 · **Cite as `[R01-S14]`** (report 01, its
 
 How to read: every research report keeps its own `Sources` table with per-report keys. This page merges them all, de-duplicated by URL, grouped by subject. **`verified`** = a research agent fetched the page on 2026-09-01 and the content matched the claim it is cited for; **`search-only`** = surfaced in search results but not opened; **`dead/unverifiable`** = 404, blocked, or could not be confirmed. The original blueprint's bibliography is audited separately in `archive/` and is **not** citable.
 
-**Totals:** 474 unique sources from 493 citations · dead/unverifiable: 17 · search-only: 196 · verified: 261
+**Totals:** 576 unique sources from 595 citations · dead/unverifiable: 18 · search-only: 209 · verified: 349
 
 ## Add a source
 
@@ -18,13 +18,13 @@ Open a **📚 Add a source** issue, or PR a row into the right group below **and
 - [Hyprland / Wayland / Quickshell](#hyprland--wayland--quickshell) (8)
 - [Sandboxing, hardening & privilege (bubblewrap, polkit, Flatpak, fapolicyd, Limine, systemd)](#sandboxing-hardening--privilege-bubblewrap-polkit-flatpak-fapolicyd-limine-systemd) (9)
 - [DNS, network & browser policy](#dns-network--browser-policy) (37)
-- [Parental-control tools (Linux)](#parental-control-tools-linux) (19)
-- [Kids / educational distributions & prior art](#kids--educational-distributions--prior-art) (31)
-- [Mainstream parental-control benchmarks (Apple, Google, Microsoft, Nintendo, Amazon)](#mainstream-parental-control-benchmarks-apple-google-microsoft-nintendo-amazon) (15)
-- [Apps, games, learning content & themes](#apps-games-learning-content--themes) (11)
-- [Pedagogy, child development, AI & policy](#pedagogy-child-development-ai--policy) (22)
+- [Parental-control tools (Linux)](#parental-control-tools-linux) (21)
+- [Kids / educational distributions & prior art](#kids--educational-distributions--prior-art) (33)
+- [Mainstream parental-control benchmarks (Apple, Google, Microsoft, Nintendo, Amazon)](#mainstream-parental-control-benchmarks-apple-google-microsoft-nintendo-amazon) (17)
+- [Apps, games, learning content & themes](#apps-games-learning-content--themes) (23)
+- [Pedagogy, child development, AI & policy](#pedagogy-child-development-ai--policy) (23)
 - [OSS governance, process & repo practice](#oss-governance-process--repo-practice) (34)
-- [Other / secondary coverage](#other--secondary-coverage) (116)
+- [Other / secondary coverage](#other--secondary-coverage) (199)
 
 ## Omarchy — official (repo, manual, releases, site)
 
@@ -287,6 +287,7 @@ Open a **📚 Add a source** issue, or PR a row into the right group below **and
 | Key(s) | Title | URL | Status | Topic | Note |
 |---|---|---|---|---|---|
 | R02-S6, R07-S62 | endlessm/malcontent README (GitHub mirror) | <https://github.com/endlessm/malcontent> | verified | pedagogy, prior art | Components, deps, "not a MAC system" |
+| R08-S72 | GCompris `clockgame/ActivityInfo.qml` (KDE Invent raw) | <https://invent.kde.org/education/gcompris/-/raw/master/src/activities/clockgame/ActivityInfo.qml> | verified | learning | Field list. |
 | R02-S9 | GNOME gnome-shell issue #9194 "Parental control screen time limit bypass" | <https://gitlab.gnome.org/GNOME/gnome-shell/-/work_items/9194> | verified | prior art | User-switcher bypass of time limit |
 | R07-S60 | Hughes, R. — "Age Ratings in GNOME Software: Introducing OARS?" (2016) | <https://blogs.gnome.org/hughsie/2016/03/07/age-ratings-in-gnome-software-introducing-oars/> | verified | pedagogy | · 2026-09-01 · rationale: upstream self-description + per-country rule engine. |
 | R02-S4 | Launchpad: timekpr-next | <https://launchpad.net/timekpr-next> | verified | prior art | 0.5.10 released 2026-08-03; 0.5.9 2025-12-22; author Eduards Bezverhijs |
@@ -297,6 +298,7 @@ Open a **📚 Add a source** issue, or PR a row into the right group below **and
 | R02-S27 | Veyon | <https://veyon.io/> | verified | prior art | Features; no Wayland statement |
 | R02-S28 | Veyon docs: Platform specific notes | <https://docs.veyon.io/en/latest/admin/platform-notes.html> | verified | prior art | No Wayland section |
 | R02-S8, R07-S63 | Withnall, "Parental controls in GNOME" notes (GUADEC 2020-07-23) | <https://events.gnome.org/event/1/contributions/78/attachments/11/29/presentation_notes.pdf> | verified | pedagogy, prior art | Architecture, OARS, accounts-service, 2% uptake, "not real security", screen-time future |
+| R08-S73 | GCompris Developers corner wiki | <https://invent.kde.org/education/gcompris/-/wikis/Developers-corner> | search-only | learning | Only navigation rendered. |
 | R02-S59 | GNOME admin guide: single-application mode | <https://help.gnome.org/admin/system-admin-guide/stable/lockdown-single-app-mode.html.en> | search-only | prior art | Kiosk reference on GNOME |
 | R03-S71 | GNOME blog: Age rating data for Flathub apps | <https://blogs.gnome.org/wjjt/2019/08/08/age-rating-data-for-flathub-apps/> | search-only | hardening | OARS/malcontent mechanism |
 | R02-S57 | GNOME wiki: Parental Controls and Metered Data hackfest 2019 | <https://wiki.gnome.org/Hackfests/ParentalAndMetered2019> | search-only | prior art | Upstreaming event |
@@ -316,6 +318,7 @@ Open a **📚 Add a source** issue, or PR a row into the right group below **and
 | R07-S46 | DoudouLinux — "The Activities Menu" | <https://www.doudoulinux.org/web/english/documentation-7/configuration-14/article/the-activities-menu.html> | verified | pedagogy | · 2026-09-01 · parent ticks activities; single choice auto-launches; hidden "Whole" via typing "tux". |
 | R02-S11 | Edubuntu 26.04 LTS Released | <https://discourse.ubuntu.com/t/edubuntu-26-04-lts-released/80831> | verified | prior art | GNOME 50, age-group profiles, rewritten tools, RPi5, to Apr 2029 |
 | R02-S22 | Endless Global: Operating System | <https://www.endlessglobal.com/foundation/access/operating-system> | verified | prior art | Debian + OSTree, offline, target users |
+| R08-S90 | endlessm/kolibri-explore-plugin (GitHub) | <https://github.com/endlessm/kolibri-explore-plugin> | verified | learning | MIT; /explore; content packs with extra metadata. |
 | R02-S18 | PrimTux | <https://primtux.fr/> | verified | prior art | PrimTux 9, age sessions, parental control, QwantJunior, SILL |
 | R02-S19 | Sugar Labs wiki: Sugar on a Stick | <https://wiki.sugarlabs.org/go/Sugar_on_a_Stick> | verified | prior art | Says Sugar 0.118 / Fedora 35; last edited 2022-02-16 |
 | R07-S45 | Tech Age Kids — "Make and Code your own Laptop with Kano Computer Kit Complete" (2017) | <https://www.techagekids.com/2017/12/kano-computer-kit-complete-hands-on-review.html> | verified | pedagogy | · 2026-09-01 · Story Mode; 6+; terminal-style setup a 7-year-old coped with; touch/left-hand criticisms. |
@@ -330,6 +333,7 @@ Open a **📚 Add a source** issue, or PR a row into the right group below **and
 | R02-S39 | Endless community: Idea — Add Time Limits to Parental Controls | <https://community.endlessos.com/t/idea-add-time-limits-to-parental-controls/22724> | search-only | prior art | Real thread id 22724 (blueprint used /12345) |
 | R02-S37 | Endless community: Release Endless OS 6.0.0 and 5.1.3 | <https://community.endlessos.com/t/release-endless-os-6-0-0-and-5-1-3/22661> | search-only | prior art | 2024-05-14, Debian 12 |
 | R02-S38 | Endless community: Release Endless OS 6.0.7 | <https://community.endlessos.com/t/release-endless-os-6-0-7/23609> | search-only | prior art | Nov 2025 point release |
+| R08-S91 | Endless Key product page | <https://www.endlessos.org/key> | dead/unverifiable | learning | 302 to access.endlessstudios.com (Endless Access game-making programme); Key page gone. |
 | R02-S56 | endlessm/eos-parental-controls (superseded) | <https://github.com/endlessm/eos-parental-controls> | search-only | prior art | Predecessor of malcontent |
 | R06-S47 | Fedora approves AI-assisted contribution policy (ostechnix; The Register) | <https://ostechnix.com/fedora-ai-contribution-policy/> | search-only | process | Approval reported 2025-10-22/23 |
 | R02-S32 | Fedora Sugar on a Stick Spin download | <https://fedora.gitlab.io/websites-apps/fedora-websites/fedora-websites-3.0/spins/soas/download/> | search-only | prior art | SoaS 43, 2025-10-28 |
@@ -347,6 +351,8 @@ Open a **📚 Add a source** issue, or PR a row into the right group below **and
 | Key(s) | Title | URL | Status | Topic | Note |
 |---|---|---|---|---|---|
 | R02-S45, R07-S48 | Apple Support: Use Screen Time to manage your child's iPhone or iPad | <https://support.apple.com/en-us/108806> | verified | pedagogy, prior art | Downtime, App Limits, Communication Limits, Ask to Buy |
+| R08-S11 | Duolingo Research Report, "The Duolingo Method for App-based Teaching and Learning" (2023-01-11, PDF) | <https://duolingo-papers.s3.amazonaws.com/reports/Duolingo_whitepaper_duolingo_method_2023.pdf> | verified | learning | Rewards per exercise/session; streak in Language & Math apps; Literacy app "daily joke" instead of streak; Common Core K-2; adult-selected level; leaderboards citing Landers 2017. |
+| R08-S14 | EDC, "Enhancing Literacy Outcomes with Duolingo ABC" (Jan 2022, PDF) | <https://duolingo-papers.s3.amazonaws.com/reports/edc-report-on-duolingo-abc.pdf> | verified | learning | n=105, ages 4–5, 9 weeks, pre/post, PALS-K; dosage predicts; no control group. |
 | R04-S13 | Google Workspace: Control YouTube content available to users | <https://knowledge.workspace.google.com/admin/youtube/control-youtube-content-available-to-users?hl=en> | verified | web safety | Redirect target of support.google.com/a/answer/6214622; five CNAME hosts; header alternative |
 | R07-S47 | Google — "Get started with Family Link" | <https://support.google.com/families/answer/7101025?hl=en> | verified | pedagogy | · 2026-09-01. |
 | R04-S69 | Google: Chrome & your child's Google Account | <https://support.google.com/families/answer/7087030?hl=en> | verified | web safety | Linux Chrome controls; sign-out caveat; request flow |
@@ -366,8 +372,20 @@ Open a **📚 Add a source** issue, or PR a row into the right group below **and
 
 | Key(s) | Title | URL | Status | Topic | Note |
 |---|---|---|---|---|---|
+| R08-S80 | Anki Manual, "Contributing" (sharing decks) | <https://docs.ankiweb.net/contrib.html> | verified | learning | Public via AnkiWeb; private .apkg without scheduling. |
+| R08-S78 | Anki Manual, "Exporting" | <https://docs.ankiweb.net/exporting.html> | verified | learning | .apkg contents; scheduling toggle. |
+| R08-S79 | Anki Manual, "Packaged Decks" | <https://docs.ankiweb.net/importing/packaged-decks.html> | verified | learning | Import merge by note id; update modes. |
 | R05-S21 | Flathub appstream API | <https://flathub.org/api/v2/appstream/> | verified | apps & themes | (curl, ~70 ids) — Flathub presence/versions; 404 = not found under guessed id. |
+| R08-S71 | GCompris home | <https://gcompris.net/index-en.html> | verified | learning | Ages 2–10; 100+ activities; AGPL; KDE. |
+| R08-S65 | Kolibri Studio User Guide | <https://kolibri-studio.readthedocs.io/en/latest/> | verified | learning | Channel authoring tool. |
+| R08-S66 | Kolibri Studio, "Add content" | <https://kolibri-studio.readthedocs.io/en/latest/add_content.html> | verified | learning | Formats; required metadata; mastery criteria options. |
+| R08-S61 | Kolibri User Guide | <https://kolibri.readthedocs.io/en/latest/> | verified | learning | Offline-first; channels; Studio; coach reports. |
+| R08-S62 | Kolibri User Guide, "Import resources" | <https://kolibri.readthedocs.io/en/latest/manage/resources.html> | verified | learning | Studio token, LAN peer, USB; selective import. |
+| R08-S63 | Kolibri User Guide, "Learn" | <https://kolibri.readthedocs.io/en/latest/learn.html> | verified | learning | Points; progress icons; n-in-a-row completion; no leaderboards/streaks. |
+| R08-S64 | learningequality/kolibri (GitHub) | <https://github.com/learningequality/kolibri> | verified | learning | MIT; offline-first. |
 | R07-S39 | MIT News — "ScratchJr: Coding for kindergarten" (2014) | <https://news.mit.edu/2014/scratchjr-coding-kindergarten> | verified | pedagogy | · 2026-09-01 · ages 5-7; pre-readers; MIT/Tufts/PICO. |
+| R08-S74 | scratchfoundation/scratchjr (GitHub) | <https://github.com/scratchfoundation/scratchjr> | verified | learning | Ages 5–7; BSD-3-Clause. |
+| R08-S81 | AnkiWeb shared decks | <https://ankiweb.net/shared/decks> | search-only | learning | Page rendered blank to fetcher. |
 | R05-S43 | Best Kiwix ZIMs | <https://ostechnix.com/best-kiwix-zim-files/> | search-only | apps & themes | Sizes/examples. |
 | R05-S63 | Classroom mod | <https://forum.luanti.org/viewtopic.php?t=23715> | search-only | apps & themes | . |
 | R05-S62 | ContentDB education mods | <https://content.luanti.org/packages/?page=1&tag=education&type=mod> | search-only | apps & themes | . |
@@ -387,6 +405,7 @@ Open a **📚 Add a source** issue, or PR a row into the right group below **and
 | R07-S1 | Common Sense Media — "AI Companions Decoded: … Recommends AI Companion Safety Standards" (30 Apr 2025) | <https://www.commonsensemedia.org/press-releases/ai-companions-decoded-common-sense-media-recommends-ai-companion-safety-standards> | verified | pedagogy | · 2026-09-01 · "No social AI companions for young people under 18"; Character.AI/Nomi/Replika tested. |
 | R07-S29 | Common Sense Media — "The 2025 Common Sense Census: Media Use by Kids Zero to Eight" (26 Feb 2025) | <https://www.commonsensemedia.org/research/the-2025-common-sense-census-media-use-by-kids-zero-to-eight> | verified | pedagogy | · 2026-09-01. |
 | R07-S12 | European Commission — "Commission publishes guidelines on the protection of minors" (14 Jul 2025) | <https://digital-strategy.ec.europa.eu/en/library/commission-publishes-guidelines-protection-minors> | verified | pedagogy | · 2026-09-01 · age assurance, private defaults, streaks/autoplay/push off, parental controls, AV app prototype. |
+| R08-S58 | Kim & Castelli 2021, "Effects of Gamification on Behavioral Change in Education", IJERPH (PMC) | <https://pmc.ncbi.nlm.nih.gov/articles/PMC8037535/> | verified | learning | 18 studies; <1h ES 1.57; multi-year −0.20. |
 | R07-S40 | Raspberry Pi Foundation — "2025 highlights from the Raspberry Pi Computing Education Research Centre" | <https://www.raspberrypi.org/blog/2025-highlights-from-the-raspberry-pi-computing-education-research-centre/> | verified | pedagogy | · 2026-09-01 · EPICS; PRIMM Debug; younger learners' trial-and-error debugging. |
 | R07-S28 | AAP — "Media and Young Minds", Pediatrics 138(5) 2016 | <https://publications.aap.org/pediatrics/article/138/5/e20162591/60503/Media-and-Young-Minds> | search-only | pedagogy | · 2026-09-01 · ≤1 h/day for 2-5; video-chat only <18 mo; revised version DOI 10.1542/peds.2025-075320 noted in search. |
 | R07-S58 | ACM — "Growing Up With Dark Patterns: How Children Perceive Malicious…" (2024) | <https://dl.acm.org/doi/fullHtml/10.1145/3679318.3685358> | search-only | pedagogy | (fetch 403) · 2026-09-01 · ~half spot trick questions/emotional manipulation; confirmshaming less. |
@@ -448,44 +467,116 @@ Open a **📚 Add a source** issue, or PR a row into the right group below **and
 
 | Key(s) | Title | URL | Status | Topic | Note |
 |---|---|---|---|---|---|
+| R08-S87 | 1EdTech Common Cartridge | <https://www.1edtech.org/standards/cc> | verified | learning | Versions; QTI; LTI links. |
+| R08-S2 | ACL Anthology record P16-1174 | <https://aclanthology.org/P16-1174/> | verified | learning | Metadata only; abstract not on page. |
 | R04-S63 | AdGuard Home openapi.yaml | <https://raw.githubusercontent.com/AdguardTeam/AdGuardHome/master/openapi/openapi.yaml> | verified | web safety | /control/protection duration; clients; safesearch; blocked_services schedule; querylog |
 | R07-S14 | Alston & Bird — "Challenge to Utah's App Store Accountability Act Voluntarily Dismissed…" | <https://www.alstonprivacy.com/challenge-to-utahs-app-store-accountability-act-voluntarily-dismissed-following-statutory-amendments/> | verified | pedagogy | · 2026-09-01 · HB 498; effective 6 May 2027; dismissal 21 Apr 2026. |
 | R03-S57 | Bash Reference Manual — The Restricted Shell (bashref.texi) | <https://git.savannah.gnu.org/cgit/bash.git/plain/doc/bashref.texi> | verified | hardening | Restriction list and script caveat |
+| R08-S99 | Bastani et al. 2025, "Generative AI without guardrails can harm learning", PNAS (Semantic Scholar record) | <https://api.semanticscholar.org/graph/v1/paper/DOI:10.1073/pnas.2422633122?fields=title,authors,year,venue,abstract,citationCount> | verified | learning | High-school maths; harm without guardrails; teacher-designed hints mitigate. |
+| R08-S48 | Bjork Learning & Forgetting Lab, "Research" (desirable difficulties) | <https://bjorklab.psych.ucla.edu/research/> | verified | learning | Five conditions; non-additive combinations. |
+| R08-S47 | Bloom 1984, "The 2 Sigma Problem", Educational Researcher (ERIC EJ303699) | <https://eric.ed.gov/?id=EJ303699> | verified | learning | Abstract only; mastery learning as group method. |
+| R08-S52 | Center for Self-Determination Theory, "Theory" | <https://selfdeterminationtheory.org/theory/> | verified | learning | Three needs; intrinsic/extrinsic; CET. |
+| R08-S38 | Cepeda, Pashler, Vul, Wixted & Rohrer 2006, Psychological Bulletin (Europe PMC record) | <https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID:16719566%20AND%20SRC:MED&resultType=core&format=json> | verified | learning | 839 assessments/317 experiments/184 articles; optimal ISI grows with RI. |
 | R04-S47 | Chromium policy_definitions (YAML source) | <https://github.com/chromium/chromium/tree/main/components/policy/resources/templates/policy_definitions> | verified | web safety | DnsOverHttpsMode, ForceYouTubeRestrict, ForceGoogleSafeSearch, URLBlocklist/Allowlist, Incognito, DevTools, ExtensionInstall*, DownloadRestrictions, BrowserSignin, SafeBrowsingProtectionLevel |
 | R04-S9 | CleanBrowsing filters | <https://cleanbrowsing.org/filters/> | verified | web safety | Family/Adult/Security IPs, DoH/DoT; SafeSearch + YT restricted; VPN/proxy blocking |
 | R07-S9 | Cooley — "NetChoice v. Bonta: Ninth Circuit Narrows Injunction…" (30 Mar 2026) | <https://www.cooley.com/news/insight/2026/2026-03-30-netchoice-v-bonta-ninth-circuit-narrows-injunction-against-californias-ageappropriate-design-code-act> | verified | pedagogy | · 2026-09-01 · 12 Mar 2026 decision; which provisions enjoined/cleared. |
+| R08-S101 | De Simone et al. 2025, "From Chalkboards to Chatbots", World Bank PRWP 11125 (ERIC ED676624) | <https://eric.ed.gov/?id=ED676624> | verified | learning | Nigeria senior secondary; 6 weeks; +0.31 SD overall, +0.23 English. |
+| R08-S53 | Deci, Koestner & Ryan 1999, Psychological Bulletin (Europe PMC record) | <https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID:10589297%20AND%20SRC:MED&resultType=core&format=json> | verified | learning | 128 studies; tangible rewards "more detrimental for children". |
 | R06-S29 | Diátaxis | <https://diataxis.fr/> | verified | process | Four doc types |
 | R07-S6 | DLA Piper — "AI companion bots: Top points from recent FTC and government actions" (Sep 2025) | <https://www.dlapiper.com/en-us/insights/publications/2025/09/ftc-ai-chatbots> | verified | pedagogy | · 2026-09-01 · lists 6(b) topics, SB 243 summary, 44-AG letter. |
+| R08-S75 | DragonBox | <https://dragonbox.com/> | verified | learning | Products by age; Engage/Explore/Reflect/Apply; no efficacy data. |
 | R04-S14 | DuckDuckGo Safe Search help | <https://duckduckgo.com/duckduckgo-help-pages/features/safe-search/> | verified | web safety | safe.duckduckgo.com CNAME; kp param |
+| R08-S44 | Dunlosky et al. 2013, Psychological Science in the Public Interest (Europe PMC record) | <https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID:26173288%20AND%20SRC:MED&resultType=core&format=json> | verified | learning | Practice testing, distributed practice high utility across ages; interleaving moderate. |
+| R08-S13 | Duolingo ABC Scope and Sequence, English (Nov 2022, PDF) | <https://lit-lessons-cdn.duolingo.com/resources/duolingo_abc_scope_and_sequence_english.pdf> | verified | learning | Nine levels as buildings; Pre-K/K 1–4, 1st 5–8, 2nd 9; unit tables. |
+| R08-S28 | Duolingo blog, "2025 Duolingo Highlights" (2025-12-10) | <https://blog.duolingo.com/product-highlights/> | verified | learning | Chess, Score, 172 courses, smaller chunks, friend leaderboards. |
+| R08-S12 | Duolingo blog, "A good read: building Duolingo ABC for Android" (2022-10-06) | <https://blog.duolingo.com/a-good-read-building-duolingo-abc-for-android/> | verified | learning | Ages 3–8; intrinsic delight; no streak/hearts/leaderboards discussed. |
+| R08-S31 | Duolingo blog, "Dear Duolingo: Why is spaced repetition so important?" (2023-12-26) | <https://blog.duolingo.com/spaced-repetition-for-learning/> | verified | learning | End-of-lesson review; spacing + accuracy select practice. |
+| R08-S22 | Duolingo blog, "Does Duolingo Work?" (2024-11-14) | <https://blog.duolingo.com/how-well-does-duolingo-work/> | verified | learning | Five sections ≈ five semesters; no children. |
+| R08-S17 | Duolingo blog, "Duolingo Music Is Here" (2023-10-11) | <https://blog.duolingo.com/music-course/> | verified | learning | Rhythm, notes, keyboard; counts toward streak/XP. |
+| R08-S19 | Duolingo blog, "Duolingo's Video Call" (2024-09-24) | <https://blog.duolingo.com/video-call/> | verified | learning | Lily; adapts to level; withholds grammar corrections; no efficacy cited. |
+| R08-S4 | Duolingo blog, "Ending & honoring our volunteer Contributor program" (2021-03-10) | <https://blog.duolingo.com/ending-honoring-our-volunteer-contributor-program-2/> | verified | learning | Reasons quoted; 1,000+ volunteers; $4M award; paid Course Specialists. |
+| R08-S20 | Duolingo blog, "Explain My Answer is now free for all learners!" (post dated 2026-01-01) | <https://blog.duolingo.com/explain-my-answer-now-free/> | verified | learning | Personalised mistake explanation; moved from Max to free. |
+| R08-S21 | Duolingo blog, "How does Duolingo evaluate effectiveness?" (2022-10-17) | <https://blog.duolingo.com/duolingo-efficacy-research-framework/> | verified | learning | Engagement/mastery/application/proficiency; CEFR. |
+| R08-S25 | Duolingo blog, "How Duolingo Leaderboards and Leagues Work" (2023-05-03) | <https://blog.duolingo.com/duolingo-leagues-leaderboards/> | verified | learning | 10 leagues; "a little competition worked"; opt-out. |
+| R08-S8 | Duolingo blog, "How Streaks keep learners committed" (2017-05-10) | <https://blog.duolingo.com/how-streaks-keep-duolingo-learners-committed-to-their-language-goals/> | verified | learning | Streak Wager +14% D7; Weekend Amulet +4%. |
+| R08-S23 | Duolingo blog, "How the Duolingo Owl decides what notification to send" (2020-09-03) | <https://blog.duolingo.com/hi-its-duo-the-ai-behind-the-meme/> | verified | learning | Bandit; 200M reminders/34 days; novelty decay via forgetting curve. |
+| R08-S18 | Duolingo blog, "Introducing Duolingo Max" (2023-03-14, since updated) | <https://blog.duolingo.com/duolingo-max/> | verified | learning | GPT-4; human-written scenarios; review; no age statement. |
+| R08-S3 | Duolingo blog, "Learning how to help you learn: introducing Birdbrain" (2020-10-07) | <https://blog.duolingo.com/learning-how-to-help-you-learn-introducing-birdbrain/> | verified | learning | Learner knowledge × exercise difficulty; >20% lessons personalised; learn more and return more. |
+| R08-S27 | Duolingo blog, "Start earning brand-new Achievements" (2023-12-11) | <https://blog.duolingo.com/achievement-badges/> | verified | learning | Badge categories. |
+| R08-S16 | Duolingo blog, "Teaching Owlgebra: developing math on Duolingo" | <https://blog.duolingo.com/developing-math/> | verified | learning | Knowledge components differ; thousands of visuals; Rive. |
+| R08-S15 | Duolingo blog, "The Duolingo App Now Has Math, Music, and Language" (2023-10-11) | <https://blog.duolingo.com/new-subjects/> | verified | learning | Streak/XP/quests shared across subjects. |
+| R08-S10 | Duolingo blog, "The Duolingo Method: 5 key principles" (2023-02-02) | <https://blog.duolingo.com/duolingo-teaching-method/> | verified | learning | Five principles. |
+| R08-S7 | Duolingo blog, "The Duolingo Streak uses habit research" (2022-01-31) | <https://blog.duolingo.com/how-duolingo-streak-builds-habit/> | verified | learning | "tap into loss aversion"; 3.6×; +1.7% D7; +0.38% DAL. |
+| R08-S26 | Duolingo blog, "Understanding Duolingo's Time Spent Learning Well Metric" (2024-06-13) | <https://blog.duolingo.com/time-spent-learning-well/> | verified | learning | Proxy for learning; path lessons 1.0, others 0.5; "can't learn if they churn". |
+| R08-S9 | Duolingo blog, "Why Duolingo switched to Energy" (2025-07-03) | <https://blog.duolingo.com/duolingo-energy/> | verified | learning | Hearts "not the most effective way to support learning"; beginners 2× lockout. |
+| R08-S5 | Duolingo blog, new home screen / Path (2022-11-01) | <https://blog.duolingo.com/new-duolingo-home-screen-design/> | verified | learning | Linear path; interspersed skills; spaced repetition rationale. |
+| R08-S24 | Duolingo Research page | <https://research.duolingo.com/> | verified | learning | Lists Settles & Meeder 2016, Yancey & Settles KDD 2020, assessment papers. |
 | R07-S55 | euCONSENT — "Digital Age of Consent under the GDPR" | <https://euconsent.eu/digital-age-of-consent-under-the-gdpr/> | verified | pedagogy | · 2026-09-01 · per-state 13-16 table. |
+| R08-S76 | Fairplay/CCFC, "Advocates to FTC: Prodigy Math Game Preys on Kids and Families" (2021-02-19) | <https://fairplayforkids.org/feb-19-2021-advocates-to-ftc-prodigy-math-game-preys-on-kids-and-families/> | verified | learning | Allegations and mechanics. |
 | R07-S31 | Fitzpatrick, Cristini, Bernard & Garon-Carrier (2023) — "Meeting preschool screen time recommendations: which parental strategies matter?", Frontiers in Psychology | <https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2023.1287396/full> | verified | pedagogy | · 2026-09-01 · restrictive OR 4.07; co-viewing OR 0.20. |
 | R05-S13 | Free Software Mascots | <https://jxself.org/mascots.shtml> | verified | apps & themes | Lists GNU, Freedo, Wilber, Konqi; no license detail. |
 | R07-S25 | GitHub — peteonrails/voxtype | <https://github.com/peteonrails/voxtype> | verified | pedagogy | · 2026-09-01 · Rust, MIT, local-by-default, whisper.cpp + 8 other engines, Hyprland/Niri/Sway/River/GNOME/KDE, `omarchy-plugin` dir, v0.7.0 referenced. |
+| R08-S82 | H5P content types | <https://h5p.org/content-types-and-applications> | verified | learning | 60+ types. |
+| R08-S84 | H5P licensing | <https://h5p.org/licensing> | verified | learning | MIT core (one GPL dep); content CC BY 4.0 default. |
+| R08-S83 | H5P specification | <https://h5p.org/documentation/developers/h5p-specification> | verified | learning | h5p.json, content.json, library.json, semantics.json. |
+| R08-S54 | Hamari, Koivisto & Sarsa 2014, HICSS (Semantic Scholar record) | <https://api.semanticscholar.org/graph/v1/paper/DOI:10.1109/HICSS.2014.377?fields=title,authors,year,venue,abstract,citationCount> | verified | learning | Positive but context- and user-dependent. |
 | R07-S26 | HealthyChildren.org (AAP) — "Helping Kids Thrive in a Digital World: AAP Policy Explained" | <https://www.healthychildren.org/English/family-life/Media/Pages/helping-kids-thrive-in-a-digital-world-AAP-policy-explained.aspx> | verified | pedagogy | · 2026-09-01 · policy "Digital Ecosystems, Children, and Adolescents"; page dated 3 Jun 2026; no restated hour cap; hour-before-bed; co-use; delay personal devices. |
 | R07-S33 | Hourcade, J. P. — *Child-Computer Interaction*, 1st ed. (2015), PDF | <https://jphourcade.com/book/child-computer-interaction-first-edition.pdf> | verified | pedagogy | (redirect from homepage.divms.uiowa.edu) —  (PDF downloaded, text extracted locally) · 2026-09-01 · Piaget stages pp. 10-11; Wyeth & Purchase; Appendix A motor skills pp. 130-137 (targets 64/32/16 px; drag vs click-move-click; typing/spelling). |
 | R07-S7 | Hunton — "COPPA Rule Amendment Compliance Deadline Approaches" | <https://www.hunton.com/privacy-and-cybersecurity-law-blog/coppa-rule-amendment-compliance-deadline-approaches> | verified | pedagogy | · 2026-09-01 · compliance 22 Apr 2026; three key changes. |
 | R03-S54 | Hyprland wiki (source: hyprwm/hyprland-wiki) — Permissions, Binds, Flags, Submaps, Dispatchers, Window rules, Config options, Lua utilities, Global binds | <https://wiki.hypr.land/Configuring/Advanced-and-Cool/Permissions/> | verified | hardening | Lua API; permission types; option defaults |
+| R08-S41 | Karpicke, Blunt & Smith 2016, Frontiers in Psychology | <https://www.frontiersin.org/articles/10.3389/fpsyg.2016.00350/full> | verified | learning | 88 4th-graders; d=0.48–0.64. |
+| R08-S100 | Kestin et al. 2025, "AI tutoring outperforms in-class active learning", Scientific Reports (Semantic Scholar record) | <https://api.semanticscholar.org/graph/v1/paper/DOI:10.1038/s41598-025-97652-6?fields=title,authors,year,venue,abstract,citationCount> | verified | learning | College physics RCT. |
+| R08-S60 | Khan Academy Kids | <https://www.khanacademy.org/kids> | verified | learning | Ages 2–8; free forever; no ads/subscriptions; ELOF + Common Core; personalized path. |
+| R08-S97 | Khan Academy, "Framework for Responsible AI in Education" (2025-04-03) | <https://blog.khanacademy.org/khan-academys-framework-for-responsible-ai-in-education/> | verified | learning | Nine principles. |
+| R08-S96 | Khanmigo for parents | <https://www.khanmigo.ai/parents> | verified | learning | Socratic; elementary–college; parent history; flagged-content alerts; $4/mo. |
 | R05-S17 | Konqi by Tyson Tan | <https://commons.wikimedia.org/wiki/File:KDE_Mascot_Konqi_by_Tyson_Tan.png> | verified | apps & themes | CC BY-SA 4.0 / LGPL 2.1+. |
+| R08-S93 | Kulik & Fletcher 2016, RER (ERIC EJ1090502) | <https://eric.ed.gov/?id=EJ1090502> | verified | learning | 50 evaluations; median 0.66 SD; test-alignment caveat. |
+| R08-S45 | Kulik & Kulik 1988, "Timing of Feedback and Verbal Learning", RER (ERIC EJ375720) | <https://eric.ed.gov/?id=EJ375720> | verified | learning | 53 studies; classroom immediate > delayed; lab opposite. |
+| R08-S57 | Kurnaz & Koçtürk 2025, "A Meta-Analysis of Gamification's Impact on Student Motivation in K-12", Psychology in the Schools (Semantic Scholar record) | <https://api.semanticscholar.org/graph/v1/paper/DOI:10.1002/pits.70056?fields=title,authors,year,venue,abstract> | verified | learning | g=.654; extrinsic>intrinsic; primary g=.309. |
+| R08-S70 | le-utils `constants/exercises.py` (raw) | <https://raw.githubusercontent.com/learningequality/le-utils/master/le_utils/constants/exercises.py> | verified | learning | Mastery model and question type constants. |
+| R08-S69 | learningequality/le-utils (GitHub) | <https://github.com/learningequality/le-utils> | verified | learning | Content kinds; licences; label specs. |
+| R08-S6 | Lenny's Newsletter, Jorge Mazal (ex-CPO), "How Duolingo reignited user growth" | <https://www.lennysnewsletter.com/p/how-duolingo-reignited-user-growth> | verified | learning | Secondary venue, first-person; CURR +21%; leagues +17% learning time; 10-day streak; failed moves counter. |
 | R03-S33 | Limine CONFIG.md (v12.x) | <https://github.com/Limine-Bootloader/Limine/blob/v12.x/CONFIG.md> | verified | hardening | editor_enabled, hash_mismatch_panic; no password option |
 | R06-S35 | Linux kernel: AI Coding Assistants | <https://docs.kernel.org/process/coding-assistants.html> | verified | process | `Assisted-by: LLM [TOOL]`; AI must not sign off DCO |
+| R08-S89 | LWN, "Endless OS aimed at educational and offline environments" (2024) | <https://lwn.net/Articles/984086/> | verified | learning | Endless Key is an open-source Kolibri plugin; OSTree base. |
 | R06-S36 | LWN: Fedora floats AI-assisted contributions policy | <https://lwn.net/Articles/1039623/> | verified | process | Three principles; opt-in AI features; draft status as of Oct 2025 |
 | R06-S23 | MADR template (develop) | <https://github.com/adr/madr/blob/develop/template/adr-template.md> | verified | process | Full template text captured |
+| R08-S46 | Metcalfe, Kornell & Finn 2009, Memory & Cognition (author PDF) | <https://web.williams.edu/Psychology/Faculty/Kornell/Publications/Metcalfe.Kornell.Finn.2009.pdf> | verified | learning | Grade 6: delayed > immediate > none. |
+| R08-S29 | Mind the Product, "Lessons from Duolingo's product handbook" | <https://www.mindtheproduct.com/lessons-from-duolingos-product-handbook/> | verified | learning | Secondary; quotes "User trust matters more than immediate gains"; four product principles. |
+| R08-S59 | Mohammed, Fatemah & Hassan 2024, Simulation & Gaming (Semantic Scholar record) | <https://api.semanticscholar.org/graph/v1/paper/DOI:10.1177/10468781241237389?fields=title,authors,year,venue,abstract> | verified | learning | 5th grade; badges vs leaderboards no difference; novelty. |
+| R08-S39 | Murre & Dros 2015, "Replication and Analysis of Ebbinghaus' Forgetting Curve", PLOS ONE | <https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0120644> | verified | learning | Replication successful; 20 min–31 days. |
 | R04-S28 | NetworkManager nm-settings-nmcli | <https://networkmanager.dev/docs/api/latest/nm-settings-nmcli.html> | verified | web safety | ipv4.dns, ignore-auto-dns, dns-priority, connection.permissions |
 | R06-S9 | NixOS/rfcs README | <https://github.com/NixOS/rfcs/blob/master/README.md> | verified | process | Shepherd team; SC; FCP motion to end unproductive debate |
 | R04-S75 | NSFW Filter extension | <https://github.com/nsfw-filter/nsfw-filter> | verified | web safety | Local TF.js; ViT-384; v3.0.0; Chrome |
+| R08-S88 | Open edX docs, "What is OLX?" | <https://docs.openedx.org/en/latest/educators/olx/what-is-olx.html> | verified | learning | XML; .tar.gz; cc2olx. |
+| R08-S77 | PBS, "PBS KIDS Sets New Bar in Educational Gaming Space" (2011-10-13) | <https://www.pbs.org/about/about-pbs/blogs/news/pbs-kids-sets-new-bar-in-educational-gaming-space-with-launch-of-over-40-new-skills-based-games/> | verified | learning | Math framework; classroom-tested; ages 2–8; free. |
 | R06-S5 | PEP 1 | <https://peps.python.org/pep-0001/> | verified | process | Vet ideas publicly first; sponsors; statuses; required sections |
 | R04-S71 | Pinchflat README | <https://github.com/kieraneglin/pinchflat> | verified | web safety | yt-dlp; single container; Plex/Jellyfin/Kodi; stability caveat |
 | R07-S13 | Privacy World (Squire Patton Boggs) — "Federal Judge Enjoins Enforcement of Texas App Store Age Verification Law" (Dec 2025) | <https://www.privacyworld.blog/2025/12/federal-judge-enjoins-enforcement-of-texas-app-store-age-verification-law/> | verified | pedagogy | · 2026-09-01 · injunction 23 Dec 2025; SB 2420 effective 1 Jan 2026. |
 | R06-S34 | REUSE tutorial | <https://reuse.software/tutorial/> | verified | process | SPDX headers; LICENSES/; reuse lint |
+| R08-S67 | ricecooker docs | <https://ricecooker.readthedocs.io/en/latest/> | verified | learning | Node tree; required metadata; publish flow. |
+| R08-S68 | ricecooker docs, "Exercises" | <https://ricecooker.readthedocs.io/en/latest/exercises.html> | verified | learning | Four question types; default mastery 3 of 5; hints. |
+| R08-S40 | Roediger & Karpicke 2006, "Test-enhanced learning", Psychological Science (Europe PMC record) | <https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID:16507066%20AND%20SRC:MED&resultType=core&format=json> | verified | learning | Testing > restudy at 2 days/1 week. |
+| R08-S43 | Rohrer, Dedrick & Stershic 2015, J. Educational Psychology (ERIC EJ1071568) | <https://eric.ed.gov/?id=EJ1071568> | verified | learning | 126 7th-graders; d=0.42/0.79. |
+| R08-S94 | Roschelle, Feng, Murphy & Mason 2016, "Online Mathematics Homework Increases Student Achievement", AERA Open (ERIC PDF) | <https://files.eric.ed.gov/fulltext/EJ1194398.pdf> | verified | learning | 2,850 7th-graders; 43 schools; g=0.18. |
 | R06-S33 | Rust Foundation Trademark Policy | <https://rustfoundation.org/policy/rust-trademark-policy/> | verified | process | Repo names OK for compatibility; no appearance of official status |
+| R08-S55 | Sailer & Homner 2020, "The Gamification of Learning: a Meta-analysis", Educ. Psych. Review (Semantic Scholar record) | <https://api.semanticscholar.org/graph/v1/paper/DOI:10.1007/s10648-019-09498-w?fields=title,authors,year,venue,abstract,citationCount> | verified | learning | g=.49/.36/.25; fiction and social interaction moderators. |
+| R08-S85 | scorm.com, "SCORM Explained" | <https://scorm.com/scorm-explained/> | verified | learning | imsmanifest; run-time API; tracking. |
+| R08-S1 | Settles & Meeder 2016, "A Trainable Spaced Repetition Model for Language Learning" (ACL, PDF) | <https://aclanthology.org/P16-1174.pdf> | verified | learning | HLR; error −45% vs baselines; deployed: daily engagement +12%. |
 | R05-S14 | Sober site | <https://sober.vinegarhq.org/> | verified | apps & themes | flatpak id org.vinegarhq.Sober; unofficial, closed-source, may be discontinued. |
+| R08-S49 | Sweller 1988, "Cognitive Load During Problem Solving", Cognitive Science (Semantic Scholar record) | <https://api.semanticscholar.org/graph/v1/paper/DOI:10.1207/s15516709cog1202_4?fields=title,authors,year,venue,abstract,citationCount> | verified | learning | Metadata only; abstract elided by publisher. |
 | R07-S42 | thejavaguy.org — "My 7½ year old learned 4 bash (Linux) commands in one hour" | <https://thejavaguy.org/posts/008-my-kid-learned-bash-in-one-hour/> | verified | pedagogy | · 2026-09-01 · echo/ls/touch/rm; up-arrow; tab completion. |
 | R05-S18 | Tux.svg | <https://commons.wikimedia.org/wiki/File:Tux.svg> | verified | apps & themes | Ewing permission with attribution; LeSage CC0. |
 | R07-S35 | Typing.com — "At What Age Are Kids Developmentally Ready for Typing?" | <https://www.typing.com/blog/age-kids-developmentally-reading-typing/> | verified | pedagogy | · 2026-09-01 · familiarity in K; formal grades 2-3; wpm benchmarks (vendor blog). |
+| R08-S92 | VanLehn 2011, Educational Psychologist (ERIC EJ946764) | <https://eric.ed.gov/?id=EJ946764> | verified | learning | Human d=0.79; ITS 0.76; CAI 0.3. |
 | R05-S5 | vinegarhq/sober | <https://github.com/vinegarhq/sober> | verified | apps & themes | Issue-tracker repo; "Not affiliated with Roblox"; 1.1k stars. |
+| R08-S42 | Vlach & Sandhofer 2012, Child Development (Semantic Scholar record) | <https://api.semanticscholar.org/graph/v1/paper/DOI:10.1111/j.1467-8624.2012.01781.x?fields=title,authors,year,venue,abstract,citationCount> | verified | learning | Ages 5–7, n=36; spacing improves generalisation. |
 | R06-S37 | W3C WAI: Developing an Accessibility Statement | <https://www.w3.org/WAI/planning/statements/> | verified | process | Minimum contents; plain-language guidance |
 | R02-S21 | Wikipedia: DoudouLinux | <https://en.wikipedia.org/wiki/DoudouLinux> | verified | prior art | Debian/LXDE, DansGuardian, 2.1 Dec 2013, inactive |
 | R02-S20 | Wikipedia: Sugar (desktop environment) | <https://en.wikipedia.org/wiki/Sugar_(desktop_environment)> | verified | prior art | 0.121 2024-02-06; Journal; Home/Group/Neighborhood; Sugarizer; SFC |
+| R08-S51 | Wood, Bruner & Ross 1976, "The role of tutoring in problem solving" (Semantic Scholar record) | <https://api.semanticscholar.org/graph/v1/paper/DOI:10.1111/j.1469-7610.1976.tb00381.x?fields=title,authors,year,venue,abstract,citationCount> | verified | learning | Metadata only; abstract elided. |
+| R08-S95 | WWC Intervention Report, Cognitive Tutor (June 2016, PDF) | <https://ies.ed.gov/ncee/wwc/Docs/InterventionReports/wwc_cognitivetutor_062116.pdf> | verified | learning | Algebra I mixed effects (+4, −7 to +19); Geometry potentially negative. |
+| R08-S86 | xapi.com overview | <https://xapi.com/overview/> | verified | learning | IEEE 9274.1.1-2023; actor-verb-object; LRS; offline. |
 | R04-S70 | YouTube Terms of Service | <https://www.youtube.com/t/terms> | verified | web safety | No download/automated access without permission |
 | R05-S33 | 3 command line games | <https://opensource.com/article/19/10/learn-bash-command-line-games> | search-only | apps & themes | Bashcrawl description. |
 | R05-S35 | 5 games for learning Linux | <https://devopschops.com/blog/games-for-learning-linux/> | search-only | apps & themes | Bashcrawl → Command Challenge → Bandit → CLI Murders path. |
@@ -509,6 +600,12 @@ Open a **📚 Add a source** issue, or PR a row into the right group below **and
 | R01-S53 | DHH on X: "Omarchy Quattro is out!!" | <https://x.com/dhh/status/2088304854603047019> | search-only | platform | Launch announcement |
 | R01-S52, R03-S68 | DHH on X: "The road map for Omarchy 4.1 is already several man years..." | <https://x.com/dhh/status/2089630095010889953> | search-only | hardening, platform | 4.1 roadmap; multi-user claim relies on #532 comment |
 | R06-S52 | Discord Terms of Service | <https://discord.com/terms> | search-only | process | ≥13 and local minimum age |
+| R08-S37 | Duolingo ABC Privacy Policy | <https://www.duolingo.com/abc-privacy> | search-only | learning | JS shell. |
+| R08-S34 | Duolingo ABC site | <https://abc.duolingo.com/> | search-only | learning | JS shell; snippet: ages 3–8, free. |
+| R08-S35 | Duolingo efficacy page | <https://www.duolingo.com/efficacy> | search-only | learning | JS shell; whitepaper list seen in search. |
+| R08-S36 | Duolingo Help Center, Family Plan | <https://preview.duolingo.com/help/family-plan> | search-only | learning | Snippet: under-13 "private profiles since we restrict social features"; page rendered empty. |
+| R08-S33 | Duolingo Q4/FY2025 shareholder letter (SEC) | <https://www.sec.gov/Archives/edgar/data/1562088/000162828026012246/q4fy25duolingo12-31x25shar.htm> | search-only | learning | 403. |
+| R08-S32 | Duolingo, Inc. Form 10-K FY2025 (SEC EDGAR) | <https://www.sec.gov/Archives/edgar/data/1562088/000162828026012494/duol-20251231.htm> | search-only | learning | 403 to fetcher; snippet: ~43M DAU 7+-day streak, ~15M 365+; 52.7M DAU; 130M MAU; 12.2M paid. |
 | R06-S39 | EndBug/label-sync | <https://github.com/EndBug/label-sync> | search-only | process | Action; YAML/JSON config; global+local sets |
 | R05-S69 | ExOv5 on Internet Archive | <https://archive.org/details/exov5_2> | search-only | apps & themes | Gray-area distribution; do not bundle. |
 | R07-S59 | Fairplay — petition to FTC on dark patterns and children (2021) | <https://fairplayforkids.org/wp-content/uploads/2021/05/darkpatterns.pdf> | search-only | pedagogy | · 2026-09-01. |
@@ -521,12 +618,15 @@ Open a **📚 Add a source** issue, or PR a row into the right group below **and
 | R07-S43 | Hacker News — "How many Linux commands can a 7 year old learn?" | <https://news.ycombinator.com/item?id=31285143> | search-only | pedagogy | · 2026-09-01. |
 | R05-S60 | Highly legible fonts | <https://chris.bur.gs/highly-legible-fonts/> | search-only | apps & themes | . |
 | R01-S49, R03-S63 | HN comment on Omarchy login (no display manager, LUKS as password) | <https://news.ycombinator.com/item?id=45247299> | search-only | hardening, platform | v3-era description of "seamless login" |
+| R08-S56 | Huang et al. 2020, gamification meta-analysis, ETR&D | <https://link.springer.com/article/10.1007/s11423-020-09807-z> | search-only | learning | Springer cookie wall; metadata via Semantic Scholar only. |
 | R07-S69 | Hunton — "European Commission Issues Guidelines on the Protection of Minors" | <https://www.hunton.com/privacy-and-information-security-law/european-commission-issues-guidelines-on-the-protection-of-minors> | search-only | pedagogy | · 2026-09-01. |
 | R07-S38 | Int. J. Child-Computer Interaction — "ScratchJr design in practice: Low floor, high ceiling" | <https://www.sciencedirect.com/science/article/abs/pii/S2212868923000387> | search-only | pedagogy | · 2026-09-01. |
 | R05-S51 | Jellyfin "max parental rating does not filter NR" | <https://forum.jellyfin.org/t-solved-maximum-allowed-parental-rating-does-not-filter-nr-content> | search-only | apps & themes | Block-unrated fixed in 10.11.0. |
 | R05-S53 | Jellyfin issue #13338 | <https://github.com/jellyfin/jellyfin/issues/13338> | search-only | apps & themes | Custom rating vs parental rating. |
 | R05-S52 | Jellyfin multi-user & parental controls guide 2026 | <https://jellywatch.app/blog/jellyfin-multi-user-parental-controls-guide-2026> | search-only | apps & themes | Tag blocking. |
 | R05-S54 | jfo8000/ScratchJr-Desktop | <https://github.com/jfo8000/ScratchJr-Desktop/> | search-only | apps & themes | Community Mac/Win port. |
+| R08-S98 | Khan Academy Help, "What safety features does Khanmigo have?" | <https://support.khanacademy.org/hc/en-us/articles/14394814244365-What-safety-features-does-Khanmigo-have> | search-only | learning | 403; snippet: moderation, chat visibility, no essays. |
+| R08-S102 | Khan Academy Help, under-13 login options | <https://support.khanacademy.org/hc/en-us/articles/202487460-If-my-child-is-younger-than-age-13-what-login-options-are-there> | search-only | learning | 403. |
 | R07-S8 | Latham & Watkins — "FTC Publishes Updates to COPPA Rule" | <https://www.lw.com/en/insights/ftc-publishes-updates-to-coppa-rule> | search-only | pedagogy | · 2026-09-01 · Fed. Reg. 22 Apr 2025; effective 23 Jun 2025. |
 | R07-S36 | Learning.com — "When Should Children Start Learning Keyboarding" | <https://www.learning.com/blog/when-should-children-start-learning-keyboarding/> | search-only | pedagogy | · 2026-09-01 · palms rest on keyboard ~6-7; grade-3 finger placement (vendor blog). |
 | R07-S71 | LearnTechLib — "A Usability Study with Children: Testing OLPC (One Laptop per Child)" | <https://www.learntechlib.org/noaccess/30696/> | search-only | pedagogy | · 2026-09-01 · icon/navigation effectiveness on XO. |
@@ -556,7 +656,9 @@ Open a **📚 Add a source** issue, or PR a row into the right group below **and
 | R02-S51 | Starry Hope: Family Link on a Chromebook (2026) | <https://www.starryhope.com/chromebooks/family-link-chromebook-parental-controls-2026/> | search-only | prior art | Per-device limits, app approval, three filter postures |
 | R05-S31 | Steam Families guide | <https://steamdb.com/en/articles/steam-family-sharing-complete-guide> | search-only | apps & themes | Child accounts, playtime limits. |
 | R05-S32 | Steam parental controls | <https://www.internetmatters.org/parental-controls/gaming-consoles/steam/> | search-only | apps & themes | Family View PIN steps. |
+| R08-S50 | Sweller, van Merriënboer & Paas 2019, "Cognitive Architecture and Instructional Design: 20 Years Later", Educ. Psych. Review | <https://link.springer.com/article/10.1007/s10648-019-09465-5> | search-only | learning | Springer cookie wall. |
 | R03-S70 | tecnocode: Parental controls web filtering backend (2025-11) | <https://tecnocode.co.uk/2025/11/27/parental-controls-web-filtering-backend/> | search-only | hardening | malcontent direction |
+| R08-S30 | The Duolingo Handbook | <https://handbook.duolingo.com/> | search-only | learning | Fetch exceeded 10 MB size cap; quoted via S29. |
 | R04-S72 | Tube Archivist | <https://git.tubearchivist.com/tubearchivist/tubearchivist> | search-only | web safety | Three containers; kids-use anecdotes |
 | R05-S41 | Tyson Tan | <https://en.wikipedia.org/wiki/Tyson_Tan> | search-only | apps & themes | Konqi/Kiki artist; free-licensed work. |
 | R01-S62 | Voxtype | <https://voxtype.io/> | search-only | platform | Linked from manual |
