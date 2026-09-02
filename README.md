@@ -13,21 +13,29 @@ by DHH, 37signals, or the Omarchy project. Started by Mark Cuda, owned by all.
 
 Upstream has spoken ([full quotes](research/discord-signal.md)):
 
-- **Kids Mode starts at install.** The installer's first question becomes *"Who is this computer
-  for? 1) Me, 2) Child, 3) Another owner."* — DHH
 - **Kids under 13 first.** — DHH
 - **sudo is the boundary.** Parents hold it; changing settings requires it. — DHH
 - **DHH decides what lands in core** — he signs the distro. "Not a democracy 😄. But I'll listen
   to any and all suggestions and ideas!"
+- For core, **Kids Mode starts at install.** The installer's first question becomes *"Who is this
+  computer for? 1) Me, 2) Child, 3) Another owner."* — DHH
 
-So this hub's job is simple: do the homework, prototype, and shape suggestions worth sending
-upstream — and give spoke projects one place to coordinate. **[CORE.md](CORE.md)** is the current
-picture.
+That last point is where the work forks. Two builds are under way, and they diverge on one
+question: **whose machine is it?**
 
-Two builds are under way, and they are complements: the **[installer path](PATH-INSTALLER.md)**
-(the machine is the kid's; chosen at install; built upstream by Pete) and the
-**[sandbox path](PATH-SANDBOX.md)** (Kids Mode as an app on a normal install, for the shared family
-machine; built in this hub's spoke). Pick one and jump in.
+| | Installer path | Sandbox path |
+| --- | --- | --- |
+| Whose machine | The kid's | The family's |
+| Chosen | At install, by the first question | Any time, as an app on a normal install |
+| Accounts | One, the kid's, with a kid password and a parent password | The parent's own, untouched, plus one real account per kid |
+| Getting out | The parent password at `sudo` and the lock screen | Super ×3, the parent password, then *Pause* or *Finish* |
+| Built by | Pete, upstream, in `omacom/omarchy` and `omarchy-iso` | This hub's spoke, [`omarchy-kids-sandbox`](https://github.com/markcuda/omarchy-kids-sandbox) |
+| Page | [PATH-INSTALLER.md](PATH-INSTALLER.md) | [PATH-SANDBOX.md](PATH-SANDBOX.md) |
+
+Both honor the fixed points above, both run the kid's desktop from a root-owned config, and they
+share the parent command and its feature commands, so pieces move between them. The hub's job is
+the same for either: do the homework, prototype, shape suggestions worth sending upstream, and
+give spoke projects one place to coordinate. **[CORE.md](CORE.md)** is the current picture.
 
 ## Jump in
 
