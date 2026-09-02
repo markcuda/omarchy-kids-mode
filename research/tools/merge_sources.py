@@ -7,7 +7,7 @@ import re, glob, os, csv
 from collections import OrderedDict
 import os
 ROOT=os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),"..",".."))
-LAYER_HINT={"01":"platform","02":"prior art","03":"hardening","04":"web safety","05":"apps & themes","06":"process","07":"pedagogy"}
+LAYER_HINT={"01":"platform","02":"prior art","03":"hardening","04":"web safety","05":"apps & themes","06":"process","07":"pedagogy","08":"learning"}
 STATUS_RE=re.compile(r'\b(VERIFIED|SEARCH-ONLY|SEARCH ONLY|DEAD/UNVERIFIABLE|DEAD-UNVERIFIABLE|DEAD/WRONG|UNVERIFIABLE|UNVERIFIED|DEAD|PARTIAL|WRONG)\b',re.I)
 URL_RE=re.compile(r'https?://(?:[^\s<>()\]|"]|\([^\s()]*\))+')
 def norm_status(s):

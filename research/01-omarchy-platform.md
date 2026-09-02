@@ -2,6 +2,8 @@
 
 _Research report · Omarchy Kids Mode · 2026-09-01 · status: draft_
 
+> **Erratum (added 2026-09-02 by the repo maintainer):** this report points at the upstream `agent-accounts` branch as a likely template for per-account session switching (Track B, WS-01). Reading `bin/omarchy-agent-account-switch` on that branch shows it switches **AI subscription credential slots** per provider (Anthropic, OpenAI), not Unix accounts. It is not a session-switching precedent, and that pointer is withdrawn.
+
 ## TL;DR
 
 - **Current release: Omarchy 4.0.2 (2026-08-31).** Omarchy 4 "Quattro" shipped 2026-08-14; 4.0.1 (08-25) and 4.0.2 (08-31) were security fast-follows. The `quattro` branch is now the **default branch** of the canonical repo **github.com/omacom/omarchy** (36.7k stars, MIT). `basecamp/omarchy` URLs redirect; `github.com/omarchy/omarchy` is an unrelated 3-star profile repo. [S1][S4][S6][S7][S8]

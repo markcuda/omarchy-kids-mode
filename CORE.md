@@ -1,7 +1,7 @@
 # Kids Mode Core
 
 The current picture of core Kids Mode: what upstream has fixed, what the research says, what's
-open. Updated 2026-09-01. Numbers like "report 03" refer to [research/](research/).
+open. Updated 2026-09-02. Numbers like "report 03" refer to [research/](research/).
 
 ## Fixed points (from upstream — [quotes](research/discord-signal.md))
 
@@ -14,7 +14,7 @@ open. Updated 2026-09-01. Numbers like "report 03" refer to [research/](research
 
 | Area | Direction | Grounding |
 | --- | --- | --- |
-| **Install & accounts** | The "Child" path sets up a non-sudo kid account; parent holds sudo and the LUKS passphrase. Works with today's plumbing: a second user with an SDDM session and a root-owned Hyprland config via `--config` (how Omarchy's own greeter runs) | reports 01, 03 |
+| **Install & accounts** | Two builds. [Installer path](PATH-INSTALLER.md): one account, kid password + parent password (root's), chosen at install. [Sandbox path](PATH-SANDBOX.md): Kids Mode app on a normal install, one real account per kid, parent never restricted. Both run the kid desktop from a root-owned Hyprland config via `--config`, how Omarchy's own greeter runs | reports 01, 03; the path pages |
 | **Parent setup** | Five minutes, no terminal: age band → preset → daily budget + bedtime → parent PIN. Bands under 13: 3–5, 5–7, 8–10, 11–12 | report 07 |
 | **Child onboarding** | A mascot teaches the machine one key at a time. Paths: **boy/girl/neutral proposed** (Harris); research leans character-choice with a neutral default — open design question for the mascot spoke | report 07 |
 | **Web safety day one** | Family DNS via `omarchy dns` (strict DoT) + locked Chromium policy: SafeSearch, YouTube Restricted, DoH off, no incognito/devtools/extensions. Small change — the hooks already exist | report 04 |
@@ -38,7 +38,7 @@ single most important step**. Full anti-bypass matrix: report 03 §6.
 
 | # | Question | Where |
 | --- | --- | --- |
-| 1 | What exactly will the installer's "Child" path create — and what should we prototype to inform it? | upstream + report 03 |
+| 1 | What exactly will the installer's "Child" path create? Being answered by Pete's PRs; see the [installer path](PATH-INSTALLER.md) | upstream |
 | 2 | Mascot paths: boy/girl/neutral vs character-choice-with-neutral-default — or both? | mascot spoke |
 | 3 | Default family DNS: Cloudflare Family (sponsor, simplest) vs CleanBrowsing/AdGuard (SafeSearch at DNS)? | report 04 |
 | 4 | Levels: parent-set, earned through play, or both? | report 07 |
@@ -46,61 +46,21 @@ single most important step**. Full anti-bypass matrix: report 03 §6.
 | 6 | Multiple kids on one machine — what does upstream multi-user look like? | upstream |
 | 7 | Any voice/AI at all? Community is wary; if ever, a nameless offline tool, off by default | report 07 |
 
-## Build plan v0 — prototype the Child path
+## Two paths, one hub
 
-Upstream is about to design the installer's "Child" option. The most useful thing this hub can do
-is hand DHH a **working, kid-tested answer** to what that option should do — code, not opinions.
-Three phases, roughly four weeks:
+The old build plan ("prototype the Child path") is superseded. Upstream started building the
+Child path itself on 2026-09-02, and the hub's spoke turned to the shared-machine case. Each path
+has its own page with status, decisions, gaps, and how to help:
 
-**Phase 1 · Verify (week 1).** Settle the five unknowns that could sink the design, on a real
-4.0.2 install (VM + one old laptop):
+| Path | One line | Page |
+| --- | --- | --- |
+| **Installer** | The machine is the kid's. One account, two passwords, chosen at install. Built upstream by Pete | [PATH-INSTALLER.md](PATH-INSTALLER.md) |
+| **Sandbox** | The family machine. Kids Mode is an app; each kid a real account; parent never restricted. Built in `omarchy-kids-sandbox` | [PATH-SANDBOX.md](PATH-SANDBOX.md) |
 
-- Does a second user with an SDDM session survive `omarchy update`?
-- Can Limine's editor inject `init=/bin/bash` past the UKI?
-- Which tmpfs mounts (`/tmp`, `/dev/shm`, `/run/user/*`) allow exec?
-- Can a `--user` Flatpak override beat a system-level one?
-- Does booting an old snapshot from the boot menu resurrect the pre-kids state?
-
-**Phase 2 · The slice (weeks 2–3).** One script, `omarchy-kids-provision`, five pieces:
-
-1. **Kid account** — no groups, `noexec` home, polkit deny pack, root locked, session launched
-   from a root-owned Hyprland config via `--config`. This is "sudo is the boundary", implemented.
-2. **Web safety on by default** — `omarchy dns` Family preset + the Chromium policy pack
-   (SafeSearch, YouTube Restricted, DoH off, no incognito). The #1 parent ask; small patches to
-   scripts that already exist.
-3. **Boot basics** — Limine editor off + re-apply hook, TTY/VT lockdown, printed firmware-password card.
-4. **`omarchy-kids-check`** — a green/red "is it safe?" screen. Trust needs proof.
-5. **One Level-1 experience** — fullscreen-only rules, a big friendly launcher, the first kid theme
-   with mascot unlock art. If it's only a lockdown, it fails the mission; it must be fun in minute one.
-
-One under-13 preset only. No daemon, no screen time, no mascot flows yet — the onboarding and
-mascot groups design in parallel against this substrate.
-
-**Phase 3 · Prove and pitch (week 4).** Wire the script into deferred provisioning (`cidata`) so
-choosing "Child" is demonstrable at install; run report 03's bypass matrix against it; collect 2–3
-kid-test reports from the channel; record a two-minute demo; post it to Omarchy's
-Discussions → Suggestions as the community's proposal for the Child path.
-
-**Done means:** a parent takes an ISO plus one command and hands a locked, fun, Level-1 laptop to
-a 7-year-old — and DHH gets a tested design to react to instead of a wishlist.
-
-### Tasks — claim one with an issue
-
-| Phase | Task | Size | Grounding |
-| --- | --- | --- | --- |
-| 1 | The five verification checks above, written up as a short note | M | report 03 |
-| 2 | Kid-user script: useradd (no groups), `noexec` home, polkit deny pack | S | report 03 |
-| 2 | `omarchy dns` Family preset — a PR-shaped patch to the existing script | S | report 04 |
-| 2 | Chromium/Firefox kids policy pack (`/etc/chromium/policies/managed/`) | S | report 04 |
-| 2 | Boot-harden kit: Limine editor off + re-apply hook, TTY/VT lockdown, checklist card | S | report 03 |
-| 2 | `omarchy-kids-check` — the green/red self-test | M | report 04 |
-| 2 | Level-1 Hyprland Lua config (fullscreen-only) + big launcher | M | reports 01, 07 |
-| 2 | First kid theme (`omarchy-kids-tux-theme`): big type, 7:1 contrast, mascot unlock art | S | report 05 |
-| 3 | `cidata` deferred-provisioning demo + two-minute video | M | report 01 |
-| 3 | Bypass-matrix test run + kid-test reports | M | report 03 |
-| ∥ | Parent five-screen setup flow — prototype + test with 5 parents (onboarding group) | M | report 07 |
-| ∥ | "Shortcut Target Practice" tiling mini-game (lone-wolf, nothing like it exists) | L | report 05 |
-| ∥ | Talk to the `omarchy-kids` author; agree how we fit together | S | — |
+They share the parent command and its feature commands, and each hands the other pieces: the
+sandbox spoke's Wi-Fi helper and starter packs go up; the installer path's privilege posture and
+parent command come down. The Phase 1 verification checks live on the sandbox page and apply to
+both.
 
 ## Omarchy 4.0.2 facts to build against (report 01)
 

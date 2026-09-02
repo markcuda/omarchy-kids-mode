@@ -9,7 +9,7 @@ exactly who this needs.
 | --- | --- |
 | 5 minutes | Share a parent story in Discussions, or open a 💡 idea issue |
 | An evening | Verify something: pick a claim, open the links, report back |
-| A weekend | Claim a task from [CORE.md](CORE.md#first-tasks) |
+| A weekend | Run a Phase 1 check from [PATH-SANDBOX.md](PATH-SANDBOX.md), or pick a gap on the [installer path](PATH-INSTALLER.md) |
 | Ongoing | Build a spoke — theme, plugin, game, pack ([SPOKES.md](SPOKES.md)) |
 | With your kid | File a 🧒 kid-test report (age bands only, never names or photos) |
 
