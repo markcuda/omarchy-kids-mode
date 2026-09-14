@@ -1,5 +1,12 @@
 # Progress and handoff
 
+## Paused — September 11, 2026
+
+Work is paused at Mark's request. Start with
+`docs/handoffs/PAUSED-2026-09-11.md`; it supersedes the older takeover status below.
+Private machine evidence is retained locally under `.local/recovery/` and is intentionally
+excluded from Git.
+
 Written 2026-09-05 for whoever picks this up next. `docs/GOAL.md` is the standing order and
 `docs/loop-report.md` is the running account; this file is the shortest path from cold start to
 useful work.

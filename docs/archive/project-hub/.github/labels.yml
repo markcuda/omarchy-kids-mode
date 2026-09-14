@@ -1,0 +1,28 @@
+# Synced by .github/workflows/labels.yml
+- name: "idea"
+  color: "1d76db"
+  description: Something Kids Mode should do
+- name: "spoke"
+  color: "5319e7"
+  description: A spoke repo — theme, plugin, game, pack
+- name: "kid-test"
+  color: "0e8a16"
+  description: A parent-filed report of a child trying something
+- name: "research"
+  color: "1d76db"
+  description: A question to answer before deciding
+- name: "core"
+  color: "b60205"
+  description: The core feature set / upstream-bound
+- name: "safety"
+  color: "b60205"
+  description: Touches child safety or privacy
+- name: "needs-verification"
+  color: "fbca04"
+  description: Cites something nobody has confirmed
+- name: "good first issue"
+  color: "7057ff"
+  description: Small and well-described
+- name: "help wanted"
+  color: "008672"
+  description: We'd love a hand

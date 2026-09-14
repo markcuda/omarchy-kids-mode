@@ -1,0 +1,14 @@
+# markdownlint-cli2 configuration (docs-only repo; keep it permissive)
+default: true
+MD013: false          # line length — prose wraps naturally
+MD024:
+  siblings_only: true # allow repeated headings in different sections (e.g. "Sources")
+MD033: false          # inline HTML allowed (details/summary, badges)
+MD041: false          # first line need not be an H1 (front-matter/italic status lines)
+MD036: false          # emphasis used as pseudo-heading in status lines
+MD060: false
+MD034: false          # bare URLs are fine in source registries/tables; lychee checks them
+MD049: false          # emphasis style may mix (agent-written reports use both)
+MD052: false          # [S1][R01-S14] citation brackets are our convention, not reference links
+MD032: false          # agent-written reports don't always pad lists; not worth the churn
+MD028: false          # separate consecutive blockquotes (quote lists) are intentional

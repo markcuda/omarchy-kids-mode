@@ -1,0 +1,22 @@
+title: "[Parent story] "
+labels: ["type: parent-story"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tell us about a real moment with your kid and a computer — good or bad. No names, no photos, no identifying details about the child, please.
+  - type: textarea
+    id: story
+    attributes:
+      label: The moment
+    validations:
+      required: true
+  - type: textarea
+    id: wish
+    attributes:
+      label: What you wish the computer had done
+  - type: dropdown
+    id: age
+    attributes:
+      label: Rough age band
+      options: ["3–5", "5–7", "8–10", "11–13", "13+"]
