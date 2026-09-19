@@ -566,3 +566,17 @@ installed) and its legacy disk-upgrade fixture needs Linux. All five new tests
 (`theme-palette-test.sh`, `blocked-test.sh`, plus the additions to `panel-test.sh`,
 `launcher-desktop-test.sh`, `launcher-grid-test.sh`, `time-test.sh`, `exit-test.sh`,
 `media-driver-test.sh`) are in that green set.
+
+### 2026-09-18, fourth round — fonts, triage, hygiene
+
+- `fix/qml-fonts` (`f306ca0`, `f81fc00`, off main): every Text/TextInput block under
+  `share/**/*.qml` now resolves a font family — the exit modal, Ask, plugins, Time's Up, the
+  toast, the remaining Wi-Fi rows, and the bar's two badges (`bar.fontFamily`, falling back to
+  `qs.Commons`' `Style`). Review caught a committed `share/.DS_Store`, nested-block gaps and a
+  too-loose `font:` escape in the new scanner; all fixed. `qml-fonts-test.sh` fails on the
+  pre-change tree; the scan covers every QML surface.
+- `docs/branch-triage-2026-09-18` (`f8e3917`, off main): the 79 unmerged remote branches sorted
+  for the gate runner — 45 already content-merged (deletion candidates), 19 clean merges, 15 need
+  a rebase. The loop's own branches are listed separately.
+- Hygiene: `docs/.DS_Store` and `share/.DS_Store` were untracked from every branch tip
+  (`a138f67`, `888eb9f`, `fa6bd88`, `f81fc00`); all local branches verified clean.
