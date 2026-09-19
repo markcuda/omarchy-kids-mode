@@ -351,6 +351,20 @@ check_not_contains "$out" "kid-ada — 15 more minute(s)" \
 check_contains "$out" "Request from Ada" "real: the request card names the kid by display name"
 check_contains "$out" "Kid: Ada (kid-ada)" "real: the request card keeps the account name alongside it"
 
+# A kid with no profile name falls back to the account, with no empty
+# parentheses on the card.
+req_id2="$(python3 "$ROOT_DIR/lib/ask.py" write "$QUEUE_DIR" --kid kid-cy --kind time \
+  --what 10 --minutes 10)"
+req_id2="${req_id2%.json}"
+answers="$(answers_file requests "$req_id2" back back quit)"
+run_panel "$answers"
+check_status "$PANEL_STATUS" 0 "a request from a kid with no profile still renders"
+check_contains "$out" "kid-cy — 10 more minute(s)" \
+  "real: a missing profile name falls back to the account in the list"
+check_contains "$out" "Kid: kid-cy" "real: the card falls back to the account"
+check_not_contains "$out" "Kid: kid-cy (kid-cy)" \
+  "real: the card does not repeat the account as if it were a name"
+
 # --- real: remove a kid, wrong confirmation -> nothing runs -------------
 
 : >"$ARGV_LOG"
