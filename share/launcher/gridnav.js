@@ -60,6 +60,16 @@ function moveDown(index, columns, length) {
     return index + columns < length ? index + columns : index;
 }
 
+// remainingLabel SECONDS -- the kid-visible "N minutes left", or "" when
+// there is nothing to show (no state yet, grace, or negative input). The
+// value is display only; root owns the deadline (docs/time.md).
+function remainingLabel(seconds) {
+    if (typeof seconds !== "number" || !isFinite(seconds) || seconds < 0) return "";
+    var mins = Math.ceil(seconds / 60);
+    if (mins <= 0) return "";
+    return mins + (mins === 1 ? " minute left" : " minutes left");
+}
+
 // Node-only: lets test/shell.d/launcher-grid-test.sh `eval()` this file
 // after pre-declaring `module` and then call these via `module.exports`.
 // The QML JS import environment never defines a global `module`, so this
@@ -71,6 +81,7 @@ if (typeof module !== "undefined") {
         moveLeft: moveLeft,
         moveRight: moveRight,
         moveUp: moveUp,
-        moveDown: moveDown
+        moveDown: moveDown,
+        remainingLabel: remainingLabel
     };
 }

@@ -217,6 +217,10 @@ check.
 - The kid adapter reflecting a live root warning/grace document and hiding the card after a root
   grant; the shell test covers the fixed state fixtures, but a kid seeing those surfaces in a real
   session is still unconfirmed.
+- The launcher's own time-left line (`share/launcher/shell.qml` reading
+  `/run/omarchy-kids/time/<kid>.json` with a `FileView`, rendered through
+  `GridNav.remainingLabel`): the label logic is node-tested and the wiring is static-tested, but
+  the real file watch against root's live state has only been reasoned about, not watched.
 
 ## Verified live (2026-09-02, QEMU test VM; ticket 2)
 
