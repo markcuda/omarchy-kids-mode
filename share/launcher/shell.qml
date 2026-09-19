@@ -425,6 +425,7 @@ ShellRoot {
             // the keys do (I-5) and hides when there is nothing to open.
             Text {
                 id: gridHelp
+                z: 1
                 visible: !root.desktopMode && root.tiles.length > 0
                 anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 20 }
                 text: "↑ ↓ ← → Choose    Enter Open"
@@ -433,7 +434,7 @@ ShellRoot {
                 font.pixelSize: 16
             }
 
-            // An empty or failed manifest must say so, not show a blank screen.
+            // An empty manifest must say so, not show a blank window.
             Text {
                 id: emptyGrid
                 visible: !root.desktopMode && root.tiles.length === 0
