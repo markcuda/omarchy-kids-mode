@@ -1,5 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Launch a kid's Wayland session after every fail-closed check passes
+# omarchy:hidden=true
 # omarchy:args=[--check | --check-setup | --install-configs | --manifest]
 # The kid session launcher: every fail-closed check (SPEC.md R-DESK-1, R-DESK-2, I-3, I-4, I-9), then exec Hyprland.
 # See docs/session.md for the check list and build-time path constants.

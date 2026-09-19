@@ -33,9 +33,9 @@ itself is directly observed in four files and is clearly load-bearing, not decor
 
 **Checked 2026-09-18.** All 27 commands in `bin/` (the parent command plus the 26
 `omarchy-kids-*` commands) carry a `# omarchy:summary=...` line under the shebang, and `AGENTS.md`
-now requires it. The eight internal commands (`authd`, `wifid`, `boot-login`, `session-start`,
-`launcher-ctl`, `parent-auth`, `super-tap`, `time-ledger`) also carry `# omarchy:hidden=true`.
-`# omarchy:examples=` is still unused.
+now requires it. The ten internal commands (`authd`, `wifid`, `boot-login`, `session-start`,
+`session`, `blocked`, `launcher-ctl`, `parent-auth`, `super-tap`, `time-ledger`) also carry
+`# omarchy:hidden=true`. `# omarchy:examples=` is still unused.
 
 ## 2. Shebang and safety flags
 
