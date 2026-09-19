@@ -133,6 +133,8 @@ answers="$(answers_file "kid:kid-ada" time budget 45 back back quit)"
 run_panel "$answers"
 check_contains "$out" "sudo $TREE_BIN/omarchy-kids-conf set kid-ada budget_min 45" \
   "dry-run: changing the budget prints the exact conf-set command"
+check_contains "$out" "Preview only — nothing was changed" \
+  "dry-run: the next card carries the write's preview notice"
 
 answers="$(answers_file "kid:kid-ada" apps gcompris back back quit)"
 run_panel "$answers"
@@ -314,6 +316,8 @@ check_contains "$(cat "$ARGV_LOG")" "omarchy-kids-conf set kid-ada budget_min 45
   "real: changing the budget actually calls conf set"
 check_contains "$(cat "$ETC/kids/kid-ada.conf")" "budget_min=45" \
   "real: the budget override is really on disk afterward"
+check_contains "$out" "Change applied" \
+  "real: the next card carries the write's success notice"
 
 # --- real: hide an app, and it's really written -------------------------
 
@@ -359,6 +363,24 @@ run_panel "$answers" --apply
 check_status "$PANEL_STATUS" 0 "real right-confirmation exits 0"
 check_contains "$(cat "$ARGV_LOG")" "omarchy-kids-provision remove kid-ada --apply" \
   "real: the right confirmation name actually calls provision remove"
+
+# --- real: a failing write is carried, not swallowed by the next card ---
+
+cat >"$TMP/tree/bin/omarchy-kids-conf" <<EOF
+#!/bin/bash
+if [[ "\${1:-}" == "set" ]]; then
+  echo "conf: refusing on purpose" >&2
+  exit 1
+fi
+exec "$ROOT_DIR/bin/omarchy-kids-conf" "\$@"
+EOF
+chmod +x "$TMP/tree/bin/omarchy-kids-conf"
+answers="$(answers_file "kid:kid-ada" time budget 50 back back quit)"
+run_panel "$answers" --apply
+check_status "$PANEL_STATUS" 0 "a failing write does not abort the panel"
+check_contains "$out" "conf: refusing on purpose" "the failing write's own message is shown"
+check_contains "$out" "That change failed" "the next card carries the failure notice"
+cp "$STUBS/omarchy-kids-conf" "$TMP/tree/bin/omarchy-kids-conf"
 
 # --- --help works with no terminal and no answers file needed ----------
 

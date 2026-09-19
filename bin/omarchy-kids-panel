@@ -102,15 +102,37 @@ warm_sudo() {
 }
 
 # run_priv CMD... — print (DRY_RUN=1) or run under sudo. docs/panel.md.
+# The result lands in PANEL_NOTICE so the next card can show it: the card
+# clears, so a write's output would otherwise vanish with the screen.
+PANEL_NOTICE=""
 run_priv() {
   warm_sudo || return 1
+  local rc=0 output first
   if [[ "$DRY_RUN" == "1" ]]; then
-    printf '  [dry-run] sudo'
-    printf ' %q' "$@"
-    printf '\n'
-  else
-    sudo "$@"
+    output="$(printf '  [dry-run] sudo'; printf ' %q' "$@"; printf '\n')"
+    printf '%s\n' "$output"
+    first="${output%%$'\n'*}"
+    PANEL_NOTICE="Preview only — nothing was changed: $first"
+    return 0
   fi
+  output="$(sudo "$@" 2>&1)" || rc=$?
+  first="${output%%$'\n'*}"
+  if [[ -n "$output" ]]; then printf '%s\n' "$output"; fi
+  if ((rc != 0)); then
+    PANEL_NOTICE="That change failed${first:+: $first}"
+  else
+    PANEL_NOTICE="Change applied${first:+: $first}"
+  fi
+  return "$rc"
+}
+
+# panel_notice_lines ARRAYNAME — append the last write result to a card
+# body, then clear it, so a screen picks it up on its next draw.
+panel_notice_lines() {
+  local arrname="$1"
+  [[ -n "$PANEL_NOTICE" ]] || return 0
+  eval "$arrname+=(\"\" \"\$PANEL_NOTICE\")"
+  PANEL_NOTICE=""
 }
 
 # read_priv CMD... — root-only read (issue #27's Data screen); always

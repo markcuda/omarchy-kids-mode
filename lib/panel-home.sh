@@ -53,7 +53,11 @@ screen_home() {
       "quit|Quit|"
     )
 
-    tui_screen_choose "Kids Mode" 1 1 0 "" choices "" "Enter select · Esc quit"
+    # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
+    local -a facts=()
+    panel_notice_lines facts
+
+    tui_screen_choose "Kids Mode" 1 1 0 "" choices "" "Enter select · Esc quit" facts
     local rc=$?
     case "$rc" in
       1) return 1 ;;

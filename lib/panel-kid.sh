@@ -21,6 +21,7 @@ screen_kid_time() { # ACCOUNT NAME
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local -a facts=()
     while IFS= read -r line; do facts+=("${line#"$account: "}"); done <<<"$status_out"
+    panel_notice_lines facts
 
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local choices=(
@@ -73,6 +74,7 @@ screen_kid_web() { # ACCOUNT NAME
       "Mode: $(friendly_web_mode "$mode")"
       "Editable list: no — this mode has no allow list (SPEC.md R-WEB-3)"
     )
+    panel_notice_lines facts
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local choices=("back|Back|")
     tui_screen_choose "$name's web" 1 1 0 "" choices "back" "" facts
@@ -94,6 +96,7 @@ screen_kid_web() { # ACCOUNT NAME
     else
       for l in "${lines[@]}"; do facts+=("  - $l"); done
     fi
+    panel_notice_lines facts
 
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local choices=("add|Add a site|")
@@ -170,7 +173,10 @@ screen_kid_apps() { # ACCOUNT NAME
     choices+=("plugins|Plugins shelf|Marketplace plugins, category Kids, verified only")
     choices+=("back|Back|")
 
-    tui_screen_choose "$name's apps — Enter toggles" 1 1 0 "" choices "back"
+    # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
+    local -a facts=()
+    panel_notice_lines facts
+    tui_screen_choose "$name's apps — Enter toggles" 1 1 0 "" choices "back" "" facts
     local rc=$?
     ((rc == 130)) && return 130
     ((rc == 0)) || return 0
@@ -215,6 +221,7 @@ screen_kid_plugins() { # ACCOUNT NAME
     if ((${#choices[@]} == 0)); then
       # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
       local -a facts=("Nothing on the Kids shelf yet for $name's band ($band).")
+      panel_notice_lines facts
       # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
       local -a empty_choices=("back|Back|")
       tui_screen_choose "$name's plugins shelf" 1 1 0 "" empty_choices "back" "" facts
@@ -224,7 +231,10 @@ screen_kid_plugins() { # ACCOUNT NAME
     fi
     choices+=("back|Back|")
 
-    tui_screen_choose "$name's plugins shelf — Enter installs" 1 1 0 "" choices "back"
+    # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
+    local -a facts=()
+    panel_notice_lines facts
+    tui_screen_choose "$name's plugins shelf — Enter installs" 1 1 0 "" choices "back" "" facts
     local rc=$?
     ((rc == 130)) && return 130
     ((rc == 0)) || return 0
@@ -279,7 +289,10 @@ screen_kid_level() { # ACCOUNT NAME
     "2|Simplified desktop|Super+Space finds apps. Windows can sit side by side."
     "3|Full desktop (advanced)|The existing Omarchy desktop and its broader controls."
   )
-  tui_screen_choose "$name's desktop" 1 1 0 "Changes apply next time they sign in." choices "$current"
+  # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
+  local -a facts=()
+  panel_notice_lines facts
+  tui_screen_choose "$name's desktop" 1 1 0 "Changes apply next time they sign in." choices "$current" "" facts
   local rc=$?
   ((rc == 130)) && return 130
   ((rc == 0)) || return 0
@@ -305,6 +318,7 @@ screen_kid_theme() { # ACCOUNT NAME
   if ((${#choices[@]} == 0)); then
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local -a facts=("No installed themes found under \$OMARCHY_PATH/themes — nothing to pick from.")
+    panel_notice_lines facts
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local back_choices=("back|Back|")
     tui_screen_choose "$name's theme" 1 1 0 "" back_choices "back" "" facts
@@ -312,7 +326,10 @@ screen_kid_theme() { # ACCOUNT NAME
     ((rc == 130)) && return 130
     return 0
   fi
-  tui_screen_choose "$name's theme" 1 1 0 "" choices "$current"
+  # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
+  local -a facts=()
+  panel_notice_lines facts
+  tui_screen_choose "$name's theme" 1 1 0 "" choices "$current" "" facts
   local rc=$?
   ((rc == 130)) && return 130
   ((rc == 0)) || return 0
@@ -335,7 +352,10 @@ screen_kid_desktop() { # ACCOUNT NAME
       "theme|Theme|${theme_cur:-(none set)}"
       "back|Back|"
     )
-    tui_screen_choose "$name's desktop" 1 1 0 "" choices "level"
+    # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
+    local -a facts=()
+    panel_notice_lines facts
+    tui_screen_choose "$name's desktop" 1 1 0 "" choices "level" "" facts
     local rc=$?
     case "$rc" in
       130) return 130 ;;
@@ -435,6 +455,7 @@ screen_kid() { # ACCOUNT
       facts+=("" "$KID_NOTICE")
       KID_NOTICE=""
     fi
+    panel_notice_lines facts
 
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local choices=(

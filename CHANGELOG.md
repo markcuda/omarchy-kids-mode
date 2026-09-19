@@ -24,6 +24,9 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Changed
 
+- Panel writes now carry their result into the next card (`PANEL_NOTICE`): a preview says
+  "Preview only — nothing was changed", a success says "Change applied", and a failure shows the
+  command's own first line, instead of the card clearing the only evidence the change ran.
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.

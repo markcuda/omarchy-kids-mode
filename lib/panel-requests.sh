@@ -44,10 +44,11 @@ screen_requests() {
     rows="$("$KIDS_PY" "$ASK_PY" list-open "$QUEUE_DIR" 2>/dev/null)"
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local -a facts=()
-    [[ -n "$REQ_NOTICE" ]] && {
+    if [[ -n "$REQ_NOTICE" ]]; then
       facts+=("$REQ_NOTICE")
       REQ_NOTICE=""
-    }
+    fi
+    panel_notice_lines facts
     if [[ -z "$rows" ]]; then
       facts+=("No open requests right now.")
       # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
