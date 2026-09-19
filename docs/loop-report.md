@@ -647,3 +647,13 @@ the shared card when a terminal is attached (type `yes` in full; Esc/Ctrl+C canc
 original one-line prompt for pipes and scripts, with `--yes` unchanged. `remove-test` passes on the
 piped path and pins the tty branch statically; `trust-boundary-test` passes with the new
 `lib/tui.sh` source.
+
+### 2026-09-19, sixth round — remove's confirmation
+
+`fix/remove-confirm` (`b9af8da`, off main) closes backlog item 4: `omarchy-kids-remove` uses
+`lib/tui.sh`'s input card when a human is at a terminal (type `yes` in full; Esc/Ctrl+C cancel),
+while a pipe or script keeps the original one-line prompt and `--yes` still skips it. remove-test
+keeps the piped decline case and pins the tty branch; trust-boundary and remove suites green.
+
+Backlog now: R-ASK-2 (owner decision), research-derived favorites/recents or config export/import
+(`docs/research/2026-09-18-kids-mode-landscape.md`), then the I-6 deep-review pass.
