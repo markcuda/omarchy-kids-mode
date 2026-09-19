@@ -580,3 +580,22 @@ installed) and its legacy disk-upgrade fixture needs Linux. All five new tests
   a rebase. The loop's own branches are listed separately.
 - Hygiene: `docs/.DS_Store` and `share/.DS_Store` were untracked from every branch tip
   (`a138f67`, `888eb9f`, `fa6bd88`, `f81fc00`); all local branches verified clean.
+
+### 2026-09-19, fifth round — settings, time-left, and the loop tooling
+
+- `feat/panel-all-settings` (`43decbd`, stacked on the panel branches): R-WIZ-8's remaining panel
+  settings — weekday and weekend budgets/lights-out, a Wi-Fi mode row, and a confirmed Reset to
+  band defaults; `friendly_wifi_mode` now lives in `lib/kids.sh`. Panel suite green; the fable
+  review was re-run after interruptions.
+- `feat/remaining-time` (`db65f28`, stacked on the launcher hints branch): the launcher reads root's
+  `/run/omarchy-kids/time/<kid>.json` display-only and shows "N minutes left" (Level 1 under the
+  clock, Level 2 top-right, hidden in grace); `GridNav.remainingLabel` owns the words, node-tested,
+  with `docs/time.md` recording what only the VM can prove.
+- R-ASK-2's "one keystroke" approve is **parked on the owner**: Enter-on-list approving directly
+  changes approve semantics; today it is list → detail with Approve preselected. Recorded rather
+  than guessed.
+- Tooling: `opencode-loop` installed (`~/.config/opencode/plugins`, `commands/`); the unattended
+  protocol is `.opencode/loop-prompt.md` with the backlog and stop conditions, plus
+  `docs/research/2026-09-18-kids-mode-landscape.md` (timekpr-nExt, Cozy Kids Launcher, others).
+- Next: apply the P2 review findings, then research-derived favorites/recents or config
+  export/import; per-app limits and weekly caps wait on a SPEC amendment.
