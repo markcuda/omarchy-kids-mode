@@ -24,6 +24,9 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Changed
 
+- `omarchy-kids-remove` confirms through the shared card when a human is at a terminal (type
+  `yes` in full, Esc/Ctrl+C cancel); a pipe or script keeps the original one-line prompt, and
+  `--yes` still skips the question entirely.
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.

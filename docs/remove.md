@@ -108,8 +108,10 @@ Every run prints **the plan first**: every step above, either `skipped` (nothing
 `would-remove`. Nothing is written during this pass, no matter which mode was requested.
 
 - **`--dry-run`** stops right there. Exit 0, nothing changed.
-- **Without `--yes`**, the plan is followed by a `Type "yes" to continue` prompt; anything else
-  (including EOF) cancels with exit 1 and changes nothing.
+- **Without `--yes`**, the plan is followed by a confirmation. A human at a terminal gets the
+  shared card (`lib/tui.sh`) and types `yes` in full; a pipe or script keeps the original
+  `Type "yes" to continue` prompt. Anything else (including EOF) cancels with exit 1 and changes
+  nothing.
 - **With `--yes`**, or after typing `yes`, a second pass runs for real, reporting `removed` /
   `skipped` / `FAILED` per step, printed under a `Removing:` header. Ordinary independent failures
   are collected for the summary. Each kid has its own result and removal intent. A failed slot or
