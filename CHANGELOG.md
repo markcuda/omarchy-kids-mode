@@ -24,6 +24,10 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Changed
 
+- Command metadata: the eight internal commands (`authd`, `wifid`, `boot-login`, `session-start`,
+  `launcher-ctl`, `parent-auth`, `super-tap`, `time-ledger`) are marked `omarchy:hidden=true`, the
+  wizard header lists `--apply`, the time summary names `grant`, and the panel's `--help` no longer
+  cites spec ids at a parent.
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.

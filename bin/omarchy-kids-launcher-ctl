@@ -1,5 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Tell the big-tile launcher to open or close from a Hyprland bind
+# omarchy:hidden=true
 # omarchy:args=<show|activate|log ID>
 # Where the Level 1/2 Hyprland binds (share/hyprland/L1.lua, L2.lua) reach the big-tile launcher, so the
 # Lua files never guess a socket path. See docs/launcher-ctl.md for the show/activate/log protocol.

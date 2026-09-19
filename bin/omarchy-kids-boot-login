@@ -1,5 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Select the per-boot SDDM login from the trusted boot mode and LUKS slot
+# omarchy:hidden=true
 # omarchy:args=[--cleanup]
 # R-BOOTMODE-4/5/11/12. See docs/boot.md for the write and cleanup lifecycle.
 set -euo pipefail

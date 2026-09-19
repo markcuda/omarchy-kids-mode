@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Walk a parent through provisioning the first kid
-# omarchy:args=[--dry-run]
+# omarchy:args=[--dry-run] [--apply]
 # The parent wizard's Easy path: one screen at a time, Appendix A, ending in Apply (SPEC.md R-WIZ-1..9).
 # See docs/wizard.md for the full screen list, the answers-file format tests drive it with, and every env var.
 set -euo pipefail

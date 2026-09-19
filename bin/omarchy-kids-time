@@ -1,5 +1,5 @@
 #!/bin/bash
-# omarchy:summary=Display root-published screen-time status for this kid
+# omarchy:summary=Read root-published screen-time status for this kid, or grant minutes (root)
 # omarchy:args=<daemon|status|grant> ...
 # The kid-side display adapter reads root state; grant remains a root-only parent action.
 # See docs/time.md for the trust boundary and compatibility behavior.
