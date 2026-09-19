@@ -635,3 +635,9 @@ this backlog for `opencode-loopd` when the session is not driving.
   `docs/research/2026-09-18-kids-mode-landscape.md`.
 - Next in the backlog: apply the P2 review findings, then favorites/recents from the launch log or
   config export/import; per-app limits and weekly caps wait on a SPEC amendment.
+
+P2 review round closed in `484cd4b`: Back on the Wi-Fi screen no longer runs a write, the reset
+card lists what actually stays (account, name, face, band, password, theme, hand-added sites), the
+Wi-Fi labels/detail match `docs/wifi.md`'s real behavior, `friendly_wifi_mode` lives once in
+`lib/kids.sh`, the weekday rows say "weekday", and the Wi-Fi tests use an exact answer script with
+a real reset case. Panel and wizard suites green.
