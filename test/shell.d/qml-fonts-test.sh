@@ -16,28 +16,30 @@ fi
 out="$(python3 - "$DIR" <<'PY'
 import pathlib, re, sys
 
+# Scans every Text/TextInput/TextEdit opener and checks its *direct*
+# properties (depth 1) for a family. Nested blocks are scanned by their own
+# iteration. Braces inside strings or comments are not tracked; no such
+# block exists under share/ today (update this scanner if one appears).
 root = pathlib.Path(sys.argv[1])
-open_re = re.compile(r"^(\s*)(Text|TextInput)\s*\{\s*$")
-ok_re = re.compile(r"font\.family\s*:|^\s*font\s*:")
+open_re = re.compile(r"^(\s*)(Text|TextInput|TextEdit)\s*\{\s*(//.*)?$")
+ok_re = re.compile(r"font\.family\s*:|^\s*font\s*:\s*[\w.]+\.font\s*$")
 missing = []
 for path in sorted(root.glob("share/**/*.qml")):
-    lines = path.read_text().splitlines()
-    i = 0
-    while i < len(lines):
-        match = open_re.match(lines[i])
-        if not match:
-            i += 1
+    lines = path.read_text(encoding="utf-8").splitlines()
+    for i, line in enumerate(lines):
+        if not open_re.match(line):
             continue
-        depth = lines[i].count("{") - lines[i].count("}")
+        depth = line.count("{") - line.count("}")
         j = i + 1
-        body = []
+        resolved = False
         while j < len(lines) and depth > 0:
+            stripped = lines[j].strip()
+            if depth == 1 and not stripped.startswith("//") and ok_re.search(lines[j]):
+                resolved = True
             depth += lines[j].count("{") - lines[j].count("}")
-            body.append(lines[j])
             j += 1
-        if not any(ok_re.search(line) for line in body):
+        if not resolved:
             missing.append(f"{path.relative_to(root)}:{i + 1}")
-        i = j
 
 for item in missing:
     print(item)

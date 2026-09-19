@@ -339,8 +339,8 @@ PanelWindow {
                             border.width: 2
 
                             TextInput {
-                                font.family: theme.fontFamily
                                 id: passwordInput
+                                font.family: theme.fontFamily
                                 anchors.fill: parent
                                 anchors.margins: 12
                                 echoMode: TextInput.Password
