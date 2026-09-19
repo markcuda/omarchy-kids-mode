@@ -423,6 +423,36 @@ check_contains "$out" "Safety: NOT READY — 1 check(s) failing." \
 check_contains "$out" "firmware:password" "Machine names the failing check"
 check_contains "$out" "isn't marked done" "Machine shows the failing check's own detail"
 check_contains "$out" "WARN  web:policy" "Machine shows warnings too"
+check_contains "$out" "Loaded without root" "Machine says the report ran unprivileged"
+
+# A garbage report is a notice, not a fake pass.
+cat >"$TMP/tree/bin/omarchy-kids-check" <<'EOF'
+#!/bin/bash
+echo "not a report at all"
+exit 2
+EOF
+chmod +x "$TMP/tree/bin/omarchy-kids-check"
+answers="$(answers_file machine back quit)"
+run_panel "$answers"
+check_status "$PANEL_STATUS" 0 "a garbage report does not abort the panel"
+check_contains "$out" "Could not read the safety report" \
+  "a garbage report is reported as unreadable"
+
+# Refresh redraws from a fresh run.
+cat >"$TMP/tree/bin/omarchy-kids-check" <<'EOF'
+#!/bin/bash
+cat <<'JSON'
+{"generated_at":"2026-09-18T10:00:00Z","verdict":"pass","exit_code":0,"sections":[
+ {"name":"Accounts","checks":[{"id":"kid-ada:no-wheel","status":"pass","detail":"not in wheel"}]}]}
+JSON
+exit 0
+EOF
+chmod +x "$TMP/tree/bin/omarchy-kids-check"
+answers="$(answers_file machine refresh back quit)"
+run_panel "$answers"
+check_status "$PANEL_STATUS" 0 "the refresh loop exits 0"
+check "$(grep -c 'Safety: every check passed.' <<<"$out")" 2 \
+  "Check again runs the report a second time"
 
 # --- --help works with no terminal and no answers file needed ----------
 
