@@ -673,3 +673,12 @@ its keys at the bottom ("← → Choose · Enter Sign in · Ctrl+Shift+P Power o
 "Enter Sign in · Esc Back" while typing) and answers a wrong password with "That password didn't
 work. Try again." instead of a shake alone. portal-test pins both strings; docs/portal.md records
 them and still marks the live check as outstanding (VM only).
+
+### 2026-09-19, eighth round — config export
+
+`feat/conf-export` (`bba578f`, off main): `omarchy-kids-conf export <kid>` prints every effective
+setting as `key=value`, resolved override > band > default, omitting password/onboarded; enough to
+save or diff a profile, and the safe half of the research-derived export/import item. conf-test
+covers the header, effective values, an override winning, and the omission. Import (validated,
+all-or-nothing) remains in the backlog, as does the per-app-limits/weekly-caps proposal and
+R-ASK-2's owner decision.
