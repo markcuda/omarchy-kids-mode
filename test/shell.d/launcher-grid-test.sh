@@ -122,9 +122,9 @@ check "$(grep -c '^[[:space:]]*anchors.topMargin: root.margin$' "$QML" || true)"
   "clock and desktop-only search box use flat insets; the grid remains below the clock"
 
 # Labels in the theme font (docs/theming.md) -- every Text element in the
-# tile delegate and the clock must set font.family, not rely on Qt's
-# platform default.
-check "$(grep -c 'font.family: theme.fontFamily' "$QML" || true)" "10" \
+# tile delegate, the clock and both level footers must set font.family, not
+# rely on Qt's platform default.
+check "$(grep -c 'font.family: theme.fontFamily' "$QML" || true)" "12" \
   "grid and searchable picker labels set the theme font"
 
 # No literal colour hex crept into this file (qml-theme-static-test.sh

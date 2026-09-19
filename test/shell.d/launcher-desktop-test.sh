@@ -12,6 +12,9 @@ const fs = require('fs'), os = require('os'), path = require('path'), vm = requi
 const assert = require('assert/strict'), child = require('child_process');
 const dir = process.argv[2], bash = process.argv[3];
 const source = fs.readFileSync(path.join(dir, 'share/launcher/shell.qml'), 'utf8');
+assert.match(source, /id: gridHelp/, 'the Level 1 grid must carry a key-hint footer');
+assert.match(source, /Enter Open/, 'the Level 1 key-hint footer must name Enter');
+assert.match(source, /Nothing is set up here yet/, 'an empty Level 1 grid must say so');
 const nav = require(path.join(dir, 'share/launcher/gridnav.js'));
 const entries = [
   { id: 'paint', label: 'Tux Paint', installed: true, argv: ['/approved/paint'] },

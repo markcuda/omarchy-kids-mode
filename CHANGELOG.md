@@ -24,6 +24,9 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Changed
 
+- Level 1's launcher gains a key-hint footer ("↑ ↓ ← → Choose    Enter Open") that hides when there
+  is nothing to open, and an empty or failed manifest now shows "Nothing is set up here yet."
+  instead of a blank window.
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.
