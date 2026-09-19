@@ -24,6 +24,9 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Changed
 
+- The fail-closed "Ask a grown-up" screen now uses the theme resolver's accent and the shared
+  rounded border instead of a hardcoded 256-colour and a one-off double border, and its words
+  send the child to a grown-up rather than naming a CLI command (I-6).
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.

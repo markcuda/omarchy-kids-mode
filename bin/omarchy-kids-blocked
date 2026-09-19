@@ -5,6 +5,12 @@
 # started yet. See docs/session.md for why this is a placeholder.
 set -euo pipefail
 
+DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+LIB="$DIR/lib"
+[[ -f "$LIB/theme.sh" ]] || LIB=/usr/lib/omarchy-kids
+# shellcheck source=lib/theme.sh
+source "$LIB/theme.sh"
+
 usage() {
   cat <<'EOF'
 Usage: omarchy-kids-blocked "<check name>"
@@ -31,6 +37,7 @@ done
 
 CHECK_NAME="${1:-a check}"
 SLEEP_SECS="${OMARCHY_KIDS_BLOCKED_SLEEP:-15}"
+ACCENT="$(theme_color accent)"
 
 MESSAGE="Ask a grown-up
 
@@ -38,7 +45,7 @@ Something isn't set up right yet, so this desktop can't start safely.
 
 Check that failed: $CHECK_NAME
 
-Find a grown-up. They can run 'omarchy-kids-check' to see what's wrong."
+A grown-up can fix this from their own account."
 
 # Actually attempt the write rather than `[[ -w /dev/tty ]]` first -- the
 # permission-bit check can lie (docs/session.md).
@@ -50,24 +57,24 @@ fi
 if [[ -n "$OUT" ]]; then
   if command -v gum >/dev/null 2>&1; then
     gum style \
-      --border double \
+      --border rounded \
       --align center \
       --width 60 \
       --margin "2 4" \
       --padding "2 4" \
-      --foreground 212 --border-foreground 212 \
+      --foreground "$ACCENT" --border-foreground "$ACCENT" \
       "$MESSAGE" >"$OUT" 2>/dev/null || printf '%s\n' "$MESSAGE" >"$OUT"
   else
     printf '%s\n' "$MESSAGE" >"$OUT"
   fi
 elif command -v gum >/dev/null 2>&1; then
   gum style \
-    --border double \
+    --border rounded \
     --align center \
     --width 60 \
     --margin "2 4" \
     --padding "2 4" \
-    --foreground 212 --border-foreground 212 \
+    --foreground "$ACCENT" --border-foreground "$ACCENT" \
     "$MESSAGE"
 else
   printf '%s\n' "======================================================"
