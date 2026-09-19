@@ -618,3 +618,20 @@ installed) and its legacy disk-upgrade fixture needs Linux. All five new tests
 
 The loop's `.opencode/loop-prompt.md` protocol (committed on `chore/loop-and-research`) carries
 this backlog for `opencode-loopd` when the session is not driving.
+
+### 2026-09-19, fifth round — settings coverage, time-left, loop tooling
+
+- `feat/panel-all-settings` (`43decbd`): P2 gets weekday **and weekend** budgets/lights-out, a
+  Wi-Fi mode row, and a confirmed Reset to band defaults; `friendly_wifi_mode` moved into
+  `lib/kids.sh`. Panel suite green; fable review re-run after interruptions.
+- `feat/remaining-time` (`db65f28`): the launcher reads root's `/run/omarchy-kids/time/<kid>.json`
+  display-only and shows "N minutes left" (Level 1 under the clock, Level 2 top-right, hidden in
+  grace); `GridNav.remainingLabel` owns the words, node- and static-tested. docs/time.md records
+  what only the VM can prove.
+- R-ASK-2's "one keystroke" approve is parked for the owner: Enter-on-list would change approve
+  semantics, so the current list → detail (Approve preselected) stays until that call is made.
+- Tooling: `opencode-loop` + `opencode-loopd` installed; the unattended protocol is
+  `.opencode/loop-prompt.md` (`5f2ec0d`) with the backlog and stop conditions, plus
+  `docs/research/2026-09-18-kids-mode-landscape.md`.
+- Next in the backlog: apply the P2 review findings, then favorites/recents from the launch log or
+  config export/import; per-app limits and weekly caps wait on a SPEC amendment.
