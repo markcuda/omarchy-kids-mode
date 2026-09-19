@@ -552,6 +552,12 @@ check_not_contains "$log_out" "omarchy-kids-exit" \
   "daemon: root grace state does not invoke the finish command"
 check_not_contains "$(cat "$DIR/share/time/timesup.qml")" "omarchy-kids-exit" \
   "timesup: overlay contains no finish command"
+check_contains "$(cat "$DIR/share/time/timesup.qml")" "status.reason" \
+  "timesup: reads the root reason so lights-out can speak for itself"
+check_contains "$(cat "$DIR/share/time/timesup.qml")" "It's bedtime." \
+  "timesup: has bedtime words for a lights-out stop"
+check_contains "$(cat "$DIR/share/time/timesup.qml")" '"Closing in "' \
+  "timesup: counts down in plain words"
 
 "$CONF" reset kid-ada >/dev/null
 unset XDG_SESSION_ID

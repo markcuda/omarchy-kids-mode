@@ -102,6 +102,13 @@ export PATH="$STUBS:$PATH"
 
 "$EXIT_BIN" --help >/dev/null 2>&1
 check_eq "$?" 0 "--help exits 0"
+
+# Static QML wording (the modal itself is a live gate; see this file's own
+# header): the subline must say where Finish actually lands.
+check_contains "$(cat "$ROOT_DIR/share/exit-modal/shell.qml")" "return to the login screen" \
+  "exit modal: the subline says Finish returns to the login screen"
+check_not_contains "$(cat "$ROOT_DIR/share/exit-modal/shell.qml")" "switch to your desktop" \
+  "exit modal: no longer claims it switches to a desktop"
 "$EXIT_BIN" --nonsense >/dev/null 2>&1
 check_eq "$?" 2 "an unknown flag exits 2"
 

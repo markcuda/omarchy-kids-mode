@@ -60,7 +60,7 @@ PanelWindow {
     }
     Text {
         anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 32 }
-        text: "Super + Q: Close app    ·    Super + Shift + K: Ask a grown-up"
+        text: "Super + Q: Close app    ·    Super + Shift + K: Grown-up exit"
         color: theme.caption
         font.family: theme.fontFamily
         font.pixelSize: 16
