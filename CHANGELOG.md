@@ -30,6 +30,8 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Added
 
+- `omarchy-kids-conf export <kid>` prints every effective setting as `key=value` (read-only) for
+  saving or diffing a profile; `password`/`onboarded` are omitted as system-managed markers.
 - Configuration schema ticket 1 (#72): one package-owned declaration now covers every profile and
   `apps.*` key while preserving the existing `omarchy-kids-conf` commands and behavior.
 - Root screen-time state machine (#68, ticket 1): monotonic active seconds now feed root-owned
