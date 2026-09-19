@@ -549,7 +549,7 @@ shoot_times_up() {
   vmroot "env -i PATH=/usr/bin:/bin /usr/bin/omarchy-kids-conf set $kid_q lights_out_weekend 00:01 >/dev/null" || return 1
   vmroot "env -i PATH=/usr/bin:/bin /usr/bin/omarchy-kids-time-ledger tick >/dev/null" || return 1
   wait_times_up_ready 45 || return 1
-  wait_and_capture times-up "$theme" 30 "Time's up" "Finishing in"
+  wait_and_capture times-up "$theme" 30 "Time's up" "Closing in"
 }
 
 shoot_wifi_picker() {

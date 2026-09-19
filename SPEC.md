@@ -84,7 +84,7 @@ malcontent; timekpr; machine-wide DNS or browser policy; localization (English f
 
 ### R-EXIT Exit modal
 
-- R-EXIT-1 In any kid session, **Super+Shift+K** or Super pressed three times within 1.5 s opens a root-owned overlay: the kid's avatar and name, a password field, and two actions: **Pause <name>** ("<possessive> apps stay open. You switch to your desktop.") and **Finish for <name>** ("Closes <possessive> apps. You switch to your desktop."). Pause is preselected.
+- R-EXIT-1 In any kid session, **Super+Shift+K** or Super pressed three times within 1.5 s opens a root-owned overlay: the kid's avatar and name, a password field, and two actions: **Pause <name>** ("<possessive> apps stay open. You switch to your desktop.") and **Finish for <name>** ("Closes <possessive> apps. You return to the login screen."). Pause is preselected.
 - R-EXIT-2 Verified through R-SEC-2.
 - R-EXIT-3 Pause locks the kid session (hyprlock) and switches to the greeter. Finish sends SIGTERM to the session scope, then `loginctl terminate-session`, then the greeter.
 - R-EXIT-4 A paused kid resumes at their own lock screen with their own password or the parent's.
