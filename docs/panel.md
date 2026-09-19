@@ -35,7 +35,9 @@ showed them. Every panel screen now passes them to `tui_screen_choose`'s body ar
 render inside the rounded card under the title, in the theme's colours, in both render modes. A
 screen that has nothing left to draw of its own hands its one line to the screen it returns to
 instead (`KID_NOTICE` in `lib/panel-kid.sh`, `REQ_NOTICE` in `lib/panel-requests.sh`) — a failed
-app-pack read, a mistyped remove confirmation, a request that vanished while it was open.
+app-pack read, a mistyped remove confirmation, a request that vanished while it was open. Write
+results travel the same way through `PANEL_NOTICE`: `run_priv` records preview / applied / failed
+(plus the command's own line) and the next card renders it once.
 
 ### Home (P1)
 
@@ -123,9 +125,12 @@ instead of per-Apply: this panel runs as the parent and is never itself elevated
 world-readable (docs/conf.md, docs/time.md, docs/ask.md), so Home and every P2/P3 screen render
 with no privilege at all. The first time a screen would actually write something, `warm_sudo`
 prints why on screen and spends one `sudo -v`; every write after that in the same run reuses sudo's
-cached credential. `run_priv` is the one place a real change is either printed (`--dry-run`, the
-default) or run for real under `sudo` — so `--dry-run` always shows the exact command a write would
-run, panel-wide, not just for Apply.
+cached credential. `run_priv` is the one place a command is either printed (`--dry-run`, the
+default) or run for real under `sudo`; its output (stderr folded in) is captured and reprinted
+after it exits, so a long install shows nothing while it runs, and the result is carried to the
+next card through `PANEL_NOTICE`. The Web screen's allow-list file is the other writer
+(`write_root_file`), and a failure there carries its own notice. `--dry-run` always shows the
+exact command a write would run, panel-wide, not just for Apply.
 
 ## Not built here
 

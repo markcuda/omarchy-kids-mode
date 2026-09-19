@@ -89,37 +89,45 @@ done
 
 # --- root, once, on first write ------------------------------------------
 
+# PANEL_NOTICE carries the last write's or read's result to the next card.
+PANEL_NOTICE=""
 SUDO_WARMED=0
 warm_sudo() {
   ((SUDO_WARMED)) && return 0
-  SUDO_WARMED=1
   if [[ "$DRY_RUN" == "1" ]]; then
+    SUDO_WARMED=1
     printf '  [dry-run] sudo -v   # one password prompt, warmed here, before the first real write\n'
     return 0
   fi
   echo "Kids Mode needs your password once, to make this change."
-  sudo -v
+  if ! sudo -v; then
+    PANEL_NOTICE="Nothing was changed — the password wasn't accepted."
+    return 1
+  fi
+  SUDO_WARMED=1
 }
 
 # run_priv CMD... — print (DRY_RUN=1) or run under sudo. docs/panel.md.
 # The result lands in PANEL_NOTICE so the next card can show it: the card
 # clears, so a write's output would otherwise vanish with the screen.
-PANEL_NOTICE=""
 run_priv() {
   warm_sudo || return 1
-  local rc=0 output first
+  local rc=0 output first last nl=$'\n'
   if [[ "$DRY_RUN" == "1" ]]; then
     output="$(printf '  [dry-run] sudo'; printf ' %q' "$@"; printf '\n')"
     printf '%s\n' "$output"
-    first="${output%%$'\n'*}"
+    first="${output%%"$nl"*}"
+    first="${first#  }"
     PANEL_NOTICE="Preview only — nothing was changed: $first"
     return 0
   fi
   output="$(sudo "$@" 2>&1)" || rc=$?
-  first="${output%%$'\n'*}"
+  first="${output%%"$nl"*}"
   if [[ -n "$output" ]]; then printf '%s\n' "$output"; fi
   if ((rc != 0)); then
-    PANEL_NOTICE="That change failed${first:+: $first}"
+    last="${output##*"$nl"}"
+    [[ -n "$last" ]] || last="$first"
+    PANEL_NOTICE="That change failed${last:+: $last}"
   else
     PANEL_NOTICE="Change applied${first:+: $first}"
   fi
@@ -142,9 +150,12 @@ panel_notice_lines() {
 SUDO_READ_WARMED=0
 warm_sudo_read() {
   ((SUDO_READ_WARMED)) && return 0
-  SUDO_READ_WARMED=1
   echo "Kids Mode needs your password once, to read this."
-  sudo -v
+  if ! sudo -v; then
+    PANEL_NOTICE="Couldn't read this without your password."
+    return 1
+  fi
+  SUDO_READ_WARMED=1
 }
 
 read_priv() {

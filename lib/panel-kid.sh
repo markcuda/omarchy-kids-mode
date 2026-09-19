@@ -121,8 +121,13 @@ screen_kid_web() { # ACCOUNT NAME
           # that can't set our SUDO_WARMED flag back here — without
           # this, the "one warm-up prompt" would print twice.
           warm_sudo || continue
-          printf '%s\n' "${lines[@]}" | write_root_file "$allow_file"
-          run_priv "$WEB_BIN" install "$band" --allow "$allow_file" --apply
+          if ! printf '%s\n' "${lines[@]}" | write_root_file "$allow_file"; then
+            PANEL_NOTICE="That change failed: could not write the site list."
+            continue
+          fi
+          if ! run_priv "$WEB_BIN" install "$band" --allow "$allow_file" --apply; then
+            PANEL_NOTICE+=" (the site list was saved; the policy was not applied)"
+          fi
         fi
         ;;
       remove)
@@ -138,11 +143,19 @@ screen_kid_web() { # ACCOUNT NAME
           for site in "${lines[@]}"; do [[ "$site" != "$TUI_REPLY" ]] && kept+=("$site"); done
           warm_sudo || continue
           if ((${#kept[@]} == 0)); then
-            write_root_file "$allow_file" </dev/null
+            if ! write_root_file "$allow_file" </dev/null; then
+              PANEL_NOTICE="That change failed: could not write the site list."
+              continue
+            fi
           else
-            printf '%s\n' "${kept[@]}" | write_root_file "$allow_file"
+            if ! printf '%s\n' "${kept[@]}" | write_root_file "$allow_file"; then
+              PANEL_NOTICE="That change failed: could not write the site list."
+              continue
+            fi
           fi
-          run_priv "$WEB_BIN" install "$band" --allow "$allow_file" --apply
+          if ! run_priv "$WEB_BIN" install "$band" --allow "$allow_file" --apply; then
+            PANEL_NOTICE+=" (the site list was saved; the policy was not applied)"
+          fi
         fi
         ;;
       back) return 0 ;;
@@ -430,8 +443,9 @@ screen_kid_remove() { # ACCOUNT NAME
   ((rc == 0)) || return 0
 
   if [[ "$TUI_REPLY" == "$name" ]]; then
-    run_priv "$PROVISION_BIN" remove "$account" --apply
-    [[ "$DRY_RUN" == "0" ]] && KID_JUST_REMOVED=1
+    if run_priv "$PROVISION_BIN" remove "$account" --apply; then
+      [[ "$DRY_RUN" == "0" ]] && KID_JUST_REMOVED=1
+    fi
   else
     KID_NOTICE="That didn't match \"$name\" — nothing was removed."
   fi

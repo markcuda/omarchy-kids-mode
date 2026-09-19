@@ -382,6 +382,25 @@ check_contains "$out" "conf: refusing on purpose" "the failing write's own messa
 check_contains "$out" "That change failed" "the next card carries the failure notice"
 cp "$STUBS/omarchy-kids-conf" "$TMP/tree/bin/omarchy-kids-conf"
 
+# --- real: a rejected sudo password is carried, not a blank card ---------
+
+mv "$STUBS/sudo" "$STUBS/sudo.real"
+cat >"$STUBS/sudo" <<EOF
+#!/bin/bash
+if [[ "\${1:-}" == "-v" ]]; then
+  echo "sudo: no password supplied" >&2
+  exit 1
+fi
+exec "$STUBS/sudo.real" "\$@"
+EOF
+chmod +x "$STUBS/sudo"
+answers="$(answers_file "kid:kid-ada" time grant 15 back back quit)"
+run_panel "$answers" --apply
+check_status "$PANEL_STATUS" 0 "a rejected password does not abort the panel"
+check_contains "$out" "password wasn't accepted" \
+  "the next card says nothing changed after a rejected password"
+mv "$STUBS/sudo.real" "$STUBS/sudo"
+
 # --- --help works with no terminal and no answers file needed ----------
 
 help_out="$("$BIN" --help 2>&1)"
