@@ -657,3 +657,11 @@ keeps the piped decline case and pins the tty branch; trust-boundary and remove 
 
 Backlog now: R-ASK-2 (owner decision), research-derived favorites/recents or config export/import
 (`docs/research/2026-09-18-kids-mode-landscape.md`), then the I-6 deep-review pass.
+
+### 2026-09-19, seventh round — portal help and failure wording
+
+`fix/portal-help` (`aa0c036`, off main): the SDDM greeter now names its keys at the bottom
+(arrows/Enter/power-off, switching to Enter/Esc while typing) and words a wrong password ("That
+password didn't work. Try again.") instead of only shaking the tile. `portal-test` pins both
+strings; `docs/portal.md` records the live check as still VM-only. The empty
+`docs/spec-proposal-per-app-limits` branch was deleted.
