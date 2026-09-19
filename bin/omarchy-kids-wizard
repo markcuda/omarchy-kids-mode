@@ -304,13 +304,7 @@ verify_parent_password() {
   return 0
 }
 
-friendly_wifi_mode() {
-  case "$1" in
-    parent) echo "Ask me first" ;;
-    helper) echo "On their own, safely" ;;
-    *) echo "$1" ;;
-  esac
-}
+# friendly_wifi_mode lives in lib/kids.sh; the wizard and the panel share it.
 
 # maybe_override KEY VALUE BAND_DEFAULT — writes only when it differs (R-BAND-2).
 maybe_override() {

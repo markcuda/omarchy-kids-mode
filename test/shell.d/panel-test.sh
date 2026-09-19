@@ -163,10 +163,12 @@ run_panel "$answers"
 check_contains "$out" "sudo $TREE_BIN/omarchy-kids-conf set kid-ada lights_out_weekend 20:00" \
   "dry-run: weekend lights-out prints the exact conf-set command"
 
-answers="$(answers_file "kid:kid-ada" wifi helper back back quit)"
+answers="$(answers_file "kid:kid-ada" wifi helper back quit)"
 run_panel "$answers"
 check_contains "$out" "sudo $TREE_BIN/omarchy-kids-conf set kid-ada wifi helper" \
   "dry-run: Wi-Fi mode prints the exact conf-set command"
+check_not_contains "$out" "does not match" \
+  "dry-run: the Wi-Fi answer script is consumed exactly"
 
 answers="$(answers_file "kid:kid-ada" reset reset back quit)"
 run_panel "$answers"
@@ -354,14 +356,44 @@ check_contains "$(cat "$ETC/kids/kid-ada.conf")" "apps.hidden=gcompris" \
 
 # --- real: the Wi-Fi mode really lands on disk --------------------------
 
+cat >"$ETC/kids/kid-ada.conf" <<'EOF'
+name=Ada
+avatar=fox
+band=6-8
+EOF
+check_not_contains "$(cat "$ETC/kids/kid-ada.conf")" "wifi=helper" \
+  "real: the Wi-Fi fixture starts with no override"
 : >"$ARGV_LOG"
-answers="$(answers_file "kid:kid-ada" wifi helper back back quit)"
+answers="$(answers_file "kid:kid-ada" wifi helper back quit)"
 run_panel "$answers" --apply
 check_status "$PANEL_STATUS" 0 "real Wi-Fi mode change exits 0"
+check_not_contains "$out" "does not match" \
+  "real: the Wi-Fi answer script is consumed exactly"
 check_contains "$(cat "$ARGV_LOG")" "omarchy-kids-conf set kid-ada wifi helper" \
   "real: changing Wi-Fi mode actually calls conf set"
 check_contains "$(cat "$ETC/kids/kid-ada.conf")" "wifi=helper" \
   "real: the Wi-Fi mode is really on disk afterward"
+
+# --- real: reset clears overrides but keeps the account ----------------
+
+cat >"$ETC/kids/kid-ada.conf" <<'EOF'
+name=Ada
+avatar=fox
+band=6-8
+budget_min=45
+wifi=helper
+EOF
+answers="$(answers_file "kid:kid-ada" reset reset back quit)"
+run_panel "$answers" --apply
+check_status "$PANEL_STATUS" 0 "real reset exits 0"
+check_not_contains "$(cat "$ETC/kids/kid-ada.conf")" "budget_min=" \
+  "real: reset clears a budget override"
+check_not_contains "$(cat "$ETC/kids/kid-ada.conf")" "wifi=helper" \
+  "real: reset clears a Wi-Fi override"
+check_contains "$(cat "$ETC/kids/kid-ada.conf")" "name=Ada" \
+  "real: reset keeps the kid's name"
+check_contains "$(cat "$ETC/kids/kid-ada.conf")" "band=6-8" \
+  "real: reset keeps the kid's band"
 
 # --- real: approve a request, and it's really marked approved ----------
 

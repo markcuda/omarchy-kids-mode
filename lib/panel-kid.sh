@@ -1,8 +1,9 @@
 # shellcheck shell=bash
-# lib/panel-kid.sh — omarchy-kids-panel's P2 (one kid): time, web, apps,
-# plugins, data, desktop (level, theme — issue #53), password, remove —
-# screen_kid is the row menu that dispatches to each. Sourced by the
-# dispatcher; not meant to be executed directly.
+# lib/panel-kid.sh — omarchy-kids-panel's P2 (one kid): time (weekday and
+# weekend), web, Wi-Fi, apps, plugins, data, desktop (level, theme — issue
+# #53), password, reset to band defaults, remove — screen_kid is the row
+# menu that dispatches to each. Sourced by the dispatcher; not meant to be
+# executed directly.
 
 # --- P2: one kid -------------------------------------------------------------
 
@@ -28,8 +29,8 @@ screen_kid_time() { # ACCOUNT NAME
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local choices=(
       "grant|Give more minutes today|"
-      "budget|Change today's daily budget (now $budget min)|"
-      "lights|Change lights-out time (now $lights)|"
+      "budget|Change weekday daily budget (now $budget min)|"
+      "lights|Change weekday lights-out (now $lights)|"
       "budget_we|Change weekend daily budget (now $budget_we min)|"
       "lights_we|Change weekend lights-out (now $lights_we)|"
       "back|Back|"
@@ -80,33 +81,33 @@ screen_kid_time() { # ACCOUNT NAME
   done
 }
 
-# panel_wifi_mode_label MODE — a parent's words for R-WIFI's two modes.
-panel_wifi_mode_label() { # MODE
-  case "$1" in
-    parent) echo "Ask me first" ;;
-    helper) echo "On their own, safely" ;;
-    *) echo "$1" ;;
-  esac
-}
-
 # screen_kid_wifi ACCOUNT NAME — the Wi-Fi mode that used to be wizard-only
 # (R-WIZ-8's "every setting"): parent (Ask) or helper (the root helper).
+# Labels come from lib/kids.sh's friendly_wifi_mode so the wizard and the
+# panel cannot drift.
 screen_kid_wifi() { # ACCOUNT NAME
-  local account="$1" name="$2" current
+  local account="$1" name="$2" current mode_label
   current="$(kid_conf_get "$account" wifi)"
+  if [[ "$current" == parent || "$current" == helper ]]; then
+    mode_label="$(friendly_wifi_mode "$current")"
+  else
+    current=""
+    mode_label="not set (the band's default applies)"
+  fi
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
-  local facts=("Mode: $(panel_wifi_mode_label "$current")")
+  local facts=("Mode: $mode_label")
   panel_notice_lines facts
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local choices=(
-    "parent|Ask me first|New networks need your password."
-    "helper|On their own, safely|The root helper joins the network they ask for."
+    "parent|Ask me first|They can't join new Wi-Fi themselves; you join it from your account."
+    "helper|On their own, safely|The root helper joins what they ask for. The network can't change what's blocked."
     "back|Back|"
   )
   tui_screen_choose "$name's Wi-Fi" 1 1 0 "" choices "$current" "" facts
   local rc=$?
   ((rc == 130)) && return 130
   ((rc == 0)) || return 0
+  [[ "$TUI_REPLY" == back ]] && return 0
   [[ "$TUI_REPLY" != "$current" ]] &&
     run_priv "$CONF_BIN" set "$account" wifi "$TUI_REPLY"
   return 0
@@ -120,8 +121,9 @@ screen_kid_reset() { # ACCOUNT NAME
   local account="$1" name="$2"
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local facts=(
-    "This clears every setting you changed for $name and goes back to the"
-    "age band's defaults. Their account, name, face and password stay."
+    "Time limits, web mode, Wi-Fi, desktop level and starter-app choices go"
+    "back to this band's defaults. Their account, name, face, band,"
+    "password, theme and any sites you added by hand stay."
     ""
     "It does not undo screen time already used today."
   )
