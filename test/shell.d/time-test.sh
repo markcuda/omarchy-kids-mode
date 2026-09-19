@@ -57,6 +57,8 @@ CLOCK_FILE="$ROOT/run/omarchy-kids/time/monotonic"
 NOW_FILE="$ROOT/run/omarchy-kids/time/now"
 LOCK_LOG="$TMP/lock.log"
 FINISH_LOG="$TMP/finish.log"
+NO_ENGAGE_FILE="$TMP/lock-never-engages"
+LOCK_FAIL_FILE="$TMP/lock-request-fails"
 
 mkdir -p "$SHARE/bands" "$SHARE/packs" "$ETC/kids" "$STUBS" "$(dirname "$CLOCK_FILE")"
 cp "$DIR/share/bands/bands.toml" "$SHARE/bands/"
@@ -71,8 +73,9 @@ avatar=fox
 band=6-8
 EOF
 
-# set_sessions LINE... — each LINE is "id uid user active locked",
-# e.g. "1 1000 kid-ada yes no". Replaces the whole session table.
+# set_sessions LINE... — each LINE is "id uid user active locked [class type]",
+# e.g. "1 1000 kid-ada yes no" or "2 1000 kid-ada yes no manager unspecified".
+# class/type default to user/wayland. Replaces the whole session table.
 set_sessions() {
   : >"$SESSIONS"
   local line
@@ -104,17 +107,26 @@ if [[ "\$1" == "show-session" ]]; then
   done
   line="\$(awk -v id="\$id" '\$1==id{print;exit}' "\$STATE")"
   [[ -n "\$line" ]] || exit 1
-  read -r _ _ _ active locked <<<"\$line"
+  read -r _ _ _ active locked class type <<<"\$line"
+  class="\${class:-user}"
+  type="\${type:-wayland}"
   for p in "\${props[@]}"; do
     case "\$p" in
       Active) echo "Active=\$active" ;;
       LockedHint) echo "LockedHint=\$locked" ;;
+      Class) echo "Class=\$class" ;;
+      Type) echo "Type=\$type" ;;
     esac
   done
   exit 0
 fi
 if [[ "\$1" == "lock-session" ]]; then
   printf '%s %s\n' "\$1" "\$2" >>"$LOCK_LOG"
+  [[ -e "$LOCK_FAIL_FILE" ]] && exit 1
+  target="\$(awk -v id="\$2" '\$1==id{print;exit}' "\$STATE")"
+  read -r _ _ _ _ _ class _ <<<"\$target"
+  [[ "\${class:-user}" == "manager" ]] && exit 1
+  [[ -e "$NO_ENGAGE_FILE" ]] && exit 0
   awk -v id="\$2" '\$1 == id { \$5 = "yes" } { print }' "\$STATE" >"\$STATE.tmp"
   mv -f "\$STATE.tmp" "\$STATE"
   exit 0
@@ -137,6 +149,10 @@ kids_set_const "$LEDGER" ETC "$ETC"
 kids_set_const "$LEDGER" SYSROOT "$ROOT"
 kids_set_const "$LEDGER" TIME_CLOCK_FILE "$CLOCK_FILE"
 kids_set_const "$LEDGER" TIME_NOW_FILE "$NOW_FILE"
+kids_set_const "$LEDGER" LOCK_VERIFY_TRIES 3
+kids_set_const "$LEDGER" LOCK_VERIFY_INTERVAL 0
+grep -q '^LOCK_VERIFY_TRIES="3"$' "$LEDGER" ||
+  fail_ "setup: LOCK_VERIFY_TRIES was not substituted in the copied ledger"
 kids_set_const "$TIME" ETC "$ETC"
 kids_set_const "$TIME" SHARE "$SHARE"
 kids_set_const "$TIME" SYSROOT "$ROOT"
@@ -442,6 +458,81 @@ set_clock 2120
 check "$(used_today 2026-09-12)" "2" "tick: unaffected kid catches up after the failed query recovers"
 check "$(cat "$ROOT/var/lib/omarchy-kids/kid-ben/usage/2026-09-12" 2>/dev/null || true)" "2" \
   "tick: failed kid catches up its pending interval after recovery"
+
+# =========================================================================
+# lock targeting and engagement (the 2026-09-08 Air finding): only the
+# account's own graphical session is a lock target, and a request that never
+# engages is recorded failed -- the deadline still takes the session to finish.
+# =========================================================================
+
+set_now "2026-09-13 10:00:00"
+set_clock 3000
+rm -f "$ROOT/run/omarchy-kids/time/kid-ada.json" "$NO_ENGAGE_FILE"
+echo 60 >"$USAGE_DIR/2026-09-13"
+: >"$LOCK_LOG"
+set_sessions
+"$LEDGER" tick >/dev/null # grace is computed even before a session appears
+set_sessions "20 1000 kid-ada yes no" "21 1000 kid-ada yes no manager unspecified"
+set_clock 3010
+"$LEDGER" tick >/dev/null
+check "$(cat "$LOCK_LOG")" "lock-session 20" \
+  "lock: only the Class=user graphical session is a lock target"
+check "$(enforcement_value result)" "success" \
+  "lock: the manager session does not turn a real lock into a failure"
+check "$(state_value state)" "grace" "lock: the locked session remains in grace"
+
+set_now "2026-09-14 10:00:00"
+set_clock 4000
+rm -f "$ROOT/run/omarchy-kids/time/kid-ada.json" "$LOCK_FAIL_FILE" "$NO_ENGAGE_FILE"
+echo 60 >"$USAGE_DIR/2026-09-14"
+: >"$LOCK_LOG"
+set_sessions
+"$LEDGER" tick >/dev/null
+touch "$LOCK_FAIL_FILE"
+set_sessions "30 1000 kid-ada yes no"
+"$LEDGER" tick >/dev/null
+check "$(cat "$LOCK_LOG")" "lock-session 30" \
+  "lock: the engagement check still asks logind for the lock"
+check "$(enforcement_value result)" "failed" \
+  "lock: a rejected lock request is recorded as failed"
+check "$(state_value state)" "grace" \
+  "lock: a rejected lock still starts the grace clock"
+rm -f "$LOCK_FAIL_FILE"
+touch "$NO_ENGAGE_FILE"
+set_clock 4030
+"$LEDGER" tick >/dev/null
+check "$(wc -l <"$LOCK_LOG" | tr -d ' ')" "2" \
+  "lock: a failed lock is retried on the next tick"
+check "$(enforcement_value result)" "failed" \
+  "lock: a request that never engages is recorded as failed"
+rm -f "$NO_ENGAGE_FILE"
+set_clock 4050
+"$LEDGER" tick >/dev/null
+check "$(wc -l <"$LOCK_LOG" | tr -d ' ')" "3" \
+  "lock: the retry asks for the lock again"
+check "$(enforcement_value result)" "success" \
+  "lock: a verified lock after failures records success"
+set_clock 4060
+"$LEDGER" tick >/dev/null
+check "$(state_value state)" "finishing" \
+  "lock: the deadline still expires after failed lock attempts"
+
+# R-TIME-2: a manager session alone is not the kid using the computer, and a
+# manager session does not make a locked graphical session look unlocked.
+set_now "2026-09-15 10:00:00"
+set_clock 5000
+rm -f "$ROOT/run/omarchy-kids/time/kid-ada.json"
+set_sessions "40 1000 kid-ada yes no manager unspecified"
+"$LEDGER" tick >/dev/null
+set_clock 5060
+"$LEDGER" tick >/dev/null
+check "$(used_today 2026-09-15)" "0" \
+  "counting: a manager session alone never counts as active time"
+set_sessions "41 1000 kid-ada yes yes" "42 1000 kid-ada yes no manager unspecified"
+set_clock 5120
+"$LEDGER" tick >/dev/null
+check "$(used_today 2026-09-15)" "0" \
+  "counting: a locked graphical session is not unlocked by its manager session"
 
 echo
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 # omarchy:summary=Add a minute to today's screen-time ledger for every active kid
 # omarchy:args=tick
-# The ONLY thing that ever writes a kid's screen-time usage (SPEC.md R-TIME-1..2, Appendix F); root, run every minute.
+# The ONLY thing that ever writes a kid's screen-time usage (SPEC.md R-TIME-1..2, Appendix F); root, run every 30 seconds.
 # See lib/time.sh's header for the trust boundary this enforces, and docs/time.md for every env var.
 set -euo pipefail
 
@@ -26,6 +26,11 @@ TIME_NOW_FILE="$SYSROOT/run/omarchy-kids/time/now"
 TIME_CLOCK_FILE="$SYSROOT/run/omarchy-kids/time/monotonic"
 EXIT_BIN="$(kids_bin exit "$DIR")"
 
+# How long a lock request gets to appear as LockedHint=yes before this tick
+# records it failed. Tests substitute both (test/shell.d/tree.sh).
+LOCK_VERIFY_TRIES=25
+LOCK_VERIFY_INTERVAL=0.2
+
 die() {
   echo "omarchy-kids-time-ledger: $1" >&2
   exit "${2:-2}"
@@ -38,7 +43,7 @@ Usage: omarchy-kids-time-ledger tick
 Adds one minute to today's ledger for every kid whose session is
 currently active, unlocked, and not paused (SPEC.md R-TIME-1..2), then
 folds any new app-launch lines into every known kid's launches.log
-(R-DATA-1; lib/data.sh). Root only. Meant to be run once a minute by
+(R-DATA-1; lib/data.sh). Root only. Meant to be run every 30 seconds by
 systemd/omarchy-kids-time.timer, not by hand.
 
   -h, --help  Show this help and exit.
@@ -54,10 +59,30 @@ session_prop() {
   first_field "$prop" "$out"
 }
 
+# session_is_lockable ID — "yes" only for the account's own graphical
+# session (Class=user, Type=wayland|x11). logind's Class=manager session is
+# not a lock target and is not active time. A missing property or read
+# failure is unknown, so it returns 1 and callers fail closed.
+session_is_lockable() {
+  local id="$1" class type
+  class="$(session_prop "$id" Class)" || return 1
+  [[ -n "$class" ]] || return 1
+  [[ "$class" == user ]] || {
+    printf 'no\n'
+    return 0
+  }
+  type="$(session_prop "$id" Type)" || return 1
+  [[ -n "$type" ]] || return 1
+  case "$type" in
+    wayland | x11) printf 'yes\n' ;;
+    *) printf 'no\n' ;;
+  esac
+}
+
 # active_kid_sessions — one account per line, deduplicated, for every kid
 # with a session Active=yes/LockedHint=no right now.
 active_kid_sessions() {
-  local sessions line id user active locked seen=$'\n'
+  local sessions line id user active locked kind seen=$'\n'
   sessions="$(loginctl list-sessions --no-legend 2>/dev/null)" || return 1
   while IFS= read -r line; do
     [[ -n "$line" ]] || continue
@@ -67,6 +92,8 @@ active_kid_sessions() {
     [[ -n "$id" && -n "$user" ]] || continue
     is_known_kid "$KIDS_DIR" "$user" || continue
     [[ "$seen" == *$'\n'"$user"$'\n'* ]] && continue
+    kind="$(session_is_lockable "$id")" || return 1
+    [[ "$kind" == yes ]] || continue
     active="$(session_prop "$id" Active)" || return 1
     locked="$(session_prop "$id" LockedHint)" || return 1
     [[ "$active" == yes && "$locked" == no ]] || continue
@@ -75,15 +102,17 @@ active_kid_sessions() {
   done <<<"$sessions"
 }
 
-# kid_session_ids ACCOUNT — active, unlocked sessions that belong to ACCOUNT.
+# kid_session_ids ACCOUNT — active, unlocked, lockable sessions for ACCOUNT.
 kid_session_ids() {
-  local wanted="$1" sessions line id user active locked
+  local wanted="$1" sessions line id user active locked kind
   sessions="$(loginctl list-sessions --no-legend 2>/dev/null)" || return 1
   while IFS= read -r line; do
     [[ -n "$line" ]] || continue
     id="$(awk '{print $1}' <<<"$line")"
     user="$(awk '{print $3}' <<<"$line")"
     [[ "$user" == "$wanted" ]] || continue
+    kind="$(session_is_lockable "$id")" || return 1
+    [[ "$kind" == yes ]] || continue
     active="$(session_prop "$id" Active)" || return 1
     locked="$(session_prop "$id" LockedHint)" || return 1
     [[ "$active" == yes && "$locked" == no ]] || continue
@@ -106,13 +135,31 @@ kid_all_session_ids() {
   done <<<"$sessions"
 }
 
-# lock_kid_sessions SESSION_IDS — lock each target and retain any failure.
+# lock_kid_sessions SESSION_IDS — ask logind to lock each target and prove
+# the lock engaged: loginctl exit 0 only means the request was delivered.
+# Verified LockedHint=yes is the success signal; the grace deadline runs
+# regardless (SPEC.md R-TIME-4, docs/specs/02-root-screen-time.md R-TIMEAUTH-4).
 lock_kid_sessions() {
-  local session_id status=0
+  local ids="$1" session_id status=0 try engaged
   while IFS= read -r session_id; do
     [[ -n "$session_id" ]] || continue
-    loginctl lock-session "$session_id" >/dev/null 2>&1 || status=1
-  done <<<"$1"
+    if ! loginctl lock-session "$session_id" >/dev/null 2>&1; then
+      status=1
+      continue
+    fi
+    engaged=no
+    for ((try = 0; try < LOCK_VERIFY_TRIES; try++)); do
+      if [[ "$(session_prop "$session_id" LockedHint)" == yes ]]; then
+        engaged=yes
+        break
+      fi
+      sleep "$LOCK_VERIFY_INTERVAL"
+    done
+    if [[ "$engaged" == no ]]; then
+      printf 'omarchy-kids-time-ledger: session %s did not report a lock\n' "$session_id" >&2
+      status=1
+    fi
+  done <<<"$ids"
   return "$status"
 }
 
@@ -194,13 +241,15 @@ cmd_tick() {
 # kid_active_state ACCOUNT — yes/no when the account's sessions are known;
 # failure means the account's liveness is unknown and must not advance usage.
 kid_active_state() {
-  local wanted="$1" sessions line id user active locked
+  local wanted="$1" sessions line id user active locked kind
   sessions="$(loginctl list-sessions --no-legend 2>/dev/null)" || return 1
   while IFS= read -r line; do
     [[ -n "$line" ]] || continue
     id="$(awk '{print $1}' <<<"$line")"
     user="$(awk '{print $3}' <<<"$line")"
     [[ "$user" == "$wanted" ]] || continue
+    kind="$(session_is_lockable "$id")" || return 1
+    [[ "$kind" == yes ]] || continue
     active="$(session_prop "$id" Active)" || return 1
     locked="$(session_prop "$id" LockedHint)" || return 1
     [[ "$active" == yes && "$locked" == no ]] && printf 'yes\n' && return 0

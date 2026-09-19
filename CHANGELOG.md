@@ -9,6 +9,9 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Security
 
+- Root screen-time enforcement now targets only the account's own graphical session and records a
+  lock as successful only when the session reports `LockedHint=yes`: logind's `Class=manager`
+  session and an unengaged lock request are no longer recorded as success.
 - Launcher activation now uses fixed argv arrays embedded in the validated root-owned session
   manifest; no kid-writable runtime launcher JSON or separate launcher map is read by the launcher.
 - Closed kid-session path and binary redirect surfaces: kid-facing commands use build-time paths,
