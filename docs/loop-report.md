@@ -599,3 +599,22 @@ installed) and its legacy disk-upgrade fixture needs Linux. All five new tests
   `docs/research/2026-09-18-kids-mode-landscape.md` (timekpr-nExt, Cozy Kids Launcher, others).
 - Next: apply the P2 review findings, then research-derived favorites/recents or config
   export/import; per-app limits and weekly caps wait on a SPEC amendment.
+
+### 2026-09-18, fifth round — panel P2 coverage and the kid's clock
+
+- `feat/panel-all-settings` (`43decbd`; stacked on the panel branch chain): R-WIZ-8's "every
+  setting" is now covered — weekday **and weekend** budgets and lights-out rows, a Wi-Fi mode
+  screen (Ask me first / On their own, safely), and a confirmed Reset to band defaults that keeps
+  the account, name, face and password. `friendly_wifi_mode` moved into `lib/kids.sh` so the panel
+  and wizard cannot drift. Panel suite green; fable review pending (re-run; the first was killed
+  by an interrupted tool call).
+- `feat/remaining-time` (`db65f28`; stacked on the Level 1 hints branch): the launcher reads root's
+  published time state (read-only `FileView`) and shows "N minutes left" at Level 1 and on the
+  Level 2 desktop, hidden in grace. `GridNav.remainingLabel` owns the words and is node-tested;
+  docs/time.md records that the live file watch still needs the VM.
+- R-ASK-2's "approve/decline on one keystroke" is left open on purpose: the current list → detail
+  (Approve preselected) is two screens, but making Enter on the list approve directly changes
+  approve semantics and is the owner's call.
+
+The loop's `.opencode/loop-prompt.md` protocol (committed on `chore/loop-and-research`) carries
+this backlog for `opencode-loopd` when the session is not driving.
