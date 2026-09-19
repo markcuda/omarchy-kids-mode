@@ -520,3 +520,23 @@ Open follow-ups the loop recorded but did not fix: `screen_done` maps a TUI erro
 finish; the remove command's own confirmation is still a plain `read` instead of the card idiom;
 Level 3 is still offered while unverified; the dead `menu`/`terminal` band keys remain accepted
 config. Level 1/2 lock engagement depends on the private spec above.
+
+### 2026-09-18, later — second round
+
+Continued the loop with the same drafting/review split. New local branches:
+
+| Branch | What | State |
+| --- | --- | --- |
+| `feat/panel-machine` (`b04206b`, `cd12088`; stacked on `fix/panel-write-results`) | P4 Machine: Home row and screen running `omarchy-kids-check --json`, verdict, every FAIL/WARN in full, counts, **Check again**. | Reviewed; shape validation, full details, `0x1f` parsing, the unprivileged note, and garbage/refresh tests closed in `cd12088`. |
+| `fix/panel-request-names` (`eb006a9`, `8c6d02a`; stacked on the Machine tip) | Requests show the profile name (account in parentheses on the card). | Review caught a wrong parent (rebased) and name-hygiene gaps (`|`, whitespace, control chars); fixed and tested. |
+| `test/theme-palette-parity` (`b8d2d35`, off main) | Pins the four hand-kept fallback palettes to `lib/theme.sh`; proven to fail on a one-character drift. | New test, no review needed. |
+| `docs/command-metadata` (`0779540`; on the docs truth branch) | `omarchy:hidden=true` on the eight internal commands, wizard args list `--apply`, time summary names `grant`, panel `--help` drops spec ids, style.md updated. | Batch review pending. |
+| `fix/kid-surface-words` (`20c1f43`, off main) | Time's Up is reason-aware ("It's bedtime") and says "Closing in Ns"; the Level 2 footer says "Grown-up exit"; the exit card says Finish returns to the login screen. | Batch review pending. |
+| `fix/launcher-empty-hints` (`27a4f7a`, off main) | Level 1 gains a key-hint footer and "Nothing is set up here yet." empty state; the font-count test moved 10→12. | Batch review pending. |
+
+Mac test note update: the launcher node tests need a real Node, not the mise shim —
+`PATH=$HOME/.local/share/mise/installs/node/20.19.0/bin:$HOME/.local/share/mise/installs/python/3.13.15/bin:$PATH`.
+
+Still not done: a card-mode panel test (the wizard's exists), `font.family` on the exit/Ask/plugins/
+Time's Up/toast surfaces, Level 3 gating (human decision), the dead `menu`/`terminal` band keys,
+and the remove command's own plain `read` confirmation.
