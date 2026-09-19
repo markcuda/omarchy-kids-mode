@@ -559,3 +559,10 @@ All three batch-reviewed branches closed their findings:
 Review findings left as recorded open items: `blocked`/`session` are candidates for
 `omarchy:hidden`; the ledger's grace keeps its first `reason` for the whole countdown; and
 `docs/time.md`'s dated live record still quotes the old "Finishing in" wording.
+
+Full suite run at the end of the round (pinned Python and Node on PATH): **47 of 48 files pass**.
+The only failure is `packaging-test.sh`, and only on this Mac — it needs `shellcheck` (not
+installed) and its legacy disk-upgrade fixture needs Linux. All five new tests
+(`theme-palette-test.sh`, `blocked-test.sh`, plus the additions to `panel-test.sh`,
+`launcher-desktop-test.sh`, `launcher-grid-test.sh`, `time-test.sh`, `exit-test.sh`,
+`media-driver-test.sh`) are in that green set.
