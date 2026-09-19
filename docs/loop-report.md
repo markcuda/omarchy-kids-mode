@@ -490,3 +490,33 @@ were removed, and Tokyo Night was restored. These checks do not replace their or
 The parent panel empty state was inspected on the laptop. Following Add a kid exposed #123:
 preview mode was not handed to the wizard. An owned wizard stub confirmed the mode loss without
 provisioning an account. Its explicit CLI mode handoff is drafted for independent review.
+
+## 2026-09-18 — review-driven drafting loop (deepseek drafting, fable reviewing)
+
+A headless loop turned the two 2026-09-18 read-only reviews (status + UI/UX, run with
+`claude-fable-5-1` high effort) into reviewed topic branches. No push, no PR, no VM run: the `gh`
+CLI's active account is not `markcuda` (repo lock), and rule 11 keeps drafting agents off the test
+VM. Everything below is local, for the gate runner.
+
+| Branch | What | State |
+| --- | --- | --- |
+| `fix/time-lock-engagement` (`9d038cf`, off main) | The root tick locks only the account's own graphical session (`Class=user`, `Type=wayland|x11`), verifies `LockedHint=yes` before recording success, retries failures, and keeps the deadline; a manager session no longer counts as active time (R-TIME-2, R-TIMEAUTH-4). | Reviewed (approve with nits, closed). Needs the VM lock scenario. |
+| `docs/truth-pass-2026-09-18` (`6f8639e`) | README, panel.md, exit.md, time.md, wizard.md, style.md, conf.md, the trimmed-menu comment and media/README checked against the code. | Reviewed twice: changes required, then approve. |
+| `fix/wizard-honesty` (`cccda92`, `3c43dec`; stacked on the docs branch) | Drops the Advanced App menu row (no level reads the key), fixes the history row to ask about the parent's view, carries a failed Apply's own tail into Done, removes the preview button that only apologised, draws the summary once, takes the 3-5 password question from band data, and leaves honestly after Apply; SPEC.md R-WIZ-1/R-WIZ-6/A14 amended to record the unshipped preview. | Reviewed; both rounds' findings closed. |
+| `fix/panel-write-results` (`2e10e59`, `a34a432`, off main) | `PANEL_NOTICE` carries preview / applied / failed (the command's last line) into the next card; a rejected password and a failed site-list write now say what happened. | Reviewed; findings closed. |
+| `fix/blocked-screen` (`2cdfa33`, off main) | The R-DESK-2 fail-closed screen takes the theme accent and shared rounded border and sends the child to a grown-up instead of naming a CLI command; new `blocked-test.sh`. | Not independently reviewed (small, tested). |
+
+Private: `.local/recovery/spec-08-session-lock-engagement-PRIVATE.md` is a fable-written spec for
+the missing Level 1/2 lock listener (options, interface, requirements, tickets). It describes the
+still-open lock weakness, so it stays out of the public tree until the owner approves publication.
+
+Machine notes for the next run: on this Mac `python3` resolves to a mise shim that can stall the
+suite under parallel load; `test/all` is green with
+`PATH=$HOME/.local/share/mise/installs/python/3.13.15/bin:$PATH`, except `packaging-test.sh`,
+which fails only because `shellcheck` is not installed here. The previously stalled
+`remove-test.sh` passed alone with that PATH.
+
+Open follow-ups the loop recorded but did not fix: `screen_done` maps a TUI error (2) to a normal
+finish; the remove command's own confirmation is still a plain `read` instead of the card idiom;
+Level 3 is still offered while unverified; the dead `menu`/`terminal` band keys remain accepted
+config. Level 1/2 lock engagement depends on the private spec above.
