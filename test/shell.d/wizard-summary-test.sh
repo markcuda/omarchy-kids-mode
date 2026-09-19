@@ -52,7 +52,7 @@ setup_globals() {
   WEB_MODE=garden BUDGET_MIN=30 BUDGET_MIN_WEEKEND=45 LIGHTS_OUT=20:00
   LIGHTS_OUT_WEEKEND=20:30 WIFI_MODE=parent LEVEL=1 ALLOWLIST_IDS=browser
   NO_PASSWORD=1 KID_PASSWORD='' TOTAL_STEPS=15
-  DNS_MODE='' SITES='' MENU_MODE='' THEME='' HISTORY_VISIBLE=''
+  DNS_MODE='' SITES='' THEME='' HISTORY_VISIBLE=''
 }
 
 # Source the real renderer and production screen. Runtime dependencies used by
@@ -113,6 +113,10 @@ if grep -q '|' <<<"$current_card"; then
   echo 'FAIL current Ready card contains raw row separators'
   exit 1
 fi
+[[ "$(grep -c '^Account' <<<"$current_card")" == 1 ]] || {
+  echo 'FAIL the summary is drawn more than once (or not at all)'
+  exit 1
+}
 [[ "$(grep -Ec 'Screen time \(weekends\)|Bedtime \(weekends\)' <<<"$current_card" || true)" == 0 ]] || {
   echo 'FAIL production Advanced helper duplicated weekend summary rows'
   exit 1

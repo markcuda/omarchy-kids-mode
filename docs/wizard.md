@@ -222,9 +222,8 @@ such switch exists on this box: `bin/omarchy-kids-exit --finish` ends a *kid's o
 inside it (`docs/exit.md`), there is nothing today that starts one as a preview from the parent's
 side, and that file notes `Seat.SwitchToGreeter()` outright fails on Omarchy 4.0.2 while a session
 is live. A button that only printed an apology would be a control that does nothing (I-6), so
-Done offers only **Return to my desktop** and Omy's line says `<Name>` signs in from the portal
-next time the screen locks or the computer starts. Building a real preview switch is separate,
-later work.
+Done offers only **Return to my desktop** and Omy's line says `<Name>` signs in from the login
+screen next time the computer starts. Building a real preview switch is separate, later work.
 
 ## The answers-file layout
 

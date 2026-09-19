@@ -321,7 +321,7 @@ screen_summary() {
       password_line="$DISPLAY_NAME types their own password to get in."
     fi
 
-    # shellcheck disable=SC2034 # read by tui_screen_summary via nameref-by-name
+    # shellcheck disable=SC2034 # read by _tui_build_summary_lines via nameref-by-name
     local rows=(
       "Account|$ACCOUNT"
       "Face|$AVATAR"

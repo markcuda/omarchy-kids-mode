@@ -123,6 +123,7 @@ run_apply_step() {
     rc="${PIPESTATUS[0]}"
     if ! sudo -n tee -a "$SETUP_LOG" <"$tmp" >/dev/null; then
       rc=1
+      APPLY_LOG_FAILED=1
     fi
     if ! sudo -n -v >/dev/null 2>&1; then
       APPLY_AUTH_EXPIRED=1
@@ -159,9 +160,8 @@ screen_apply() {
 
   tui_progress steps 0 "You can watch this happen — nothing here needs another click."
 
-  APPLY_STARTED=1
   APPLY_FAILURE_TAIL=()
-  TUI_LEAVE_MESSAGE="Leave setup? Apply has already made its changes; they stay."
+  APPLY_LOG_FAILED=0
   APPLY_OK=1
   if ! prepare_apply_log; then
     APPLY_OK=0
@@ -170,6 +170,12 @@ screen_apply() {
     echo
     echo "Authorization expired or the setup log is unavailable. Return to Step 2 to verify again."
     return 1
+  fi
+  # Only a real run has changed anything, so only then is leaving a
+  # "your changes stay" situation (I-6).
+  if [[ "$DRY_RUN" != "1" ]]; then
+    APPLY_STARTED=1
+    TUI_LEAVE_MESSAGE="Leave setup? Apply has already made its changes; they stay."
   fi
   for ((i = 0; i < total; i++)); do
     run_apply_step "${steps[i]}" "${funcs[i]}"
@@ -202,19 +208,22 @@ screen_apply() {
   return 0
 }
 
-# A14: Done. One button: an "open the desktop" action would be a control
-# that cannot work on Omarchy 4.0.2 (no live preview switch; docs/wizard.md),
-# so it is not offered. Omy's line mentions omarchy-kids-bar instead
-# (AGENTS.md: spec wins).
+# A14: Done. One action: an "open the desktop" preview does not exist on
+# Omarchy 4.0.2, so offering the button would be a control that cannot work
+# (SPEC.md R-WIZ-6's amendment, docs/wizard.md).
 screen_done() {
-  local headline omy
+  local headline omy footer
   if ((APPLY_OK)); then
     headline="$DISPLAY_NAME's setup is complete. Final safety checks run when they sign in."
     omy="$headline Next time the computer starts, $DISPLAY_NAME signs in from the login screen."
     omy+=" Want a peek at $DISPLAY_NAME from your own bar? Run 'omarchy-kids-bar enable' any time — it only changes what you ask it to."
   else
     headline="Setup stopped at \"$FAILED_STEP\"."
-    omy="$headline Details are in the setup log: $SETUP_LOG"
+    if ((APPLY_LOG_FAILED)); then
+      omy="$headline The failed step's own lines are below."
+    else
+      omy="$headline Details are in the setup log: $SETUP_LOG"
+    fi
   fi
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local choices=(
@@ -223,10 +232,14 @@ screen_done() {
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local body=()
   if ((!APPLY_OK)) && ((${#APPLY_FAILURE_TAIL[@]})); then
-    body+=("Last lines from the setup log:")
+    body+=("Last lines from the failed step:")
     body+=("${APPLY_FAILURE_TAIL[@]}")
   fi
-  tui_screen_choose "Done" 15 "$TOTAL_STEPS" 1 "$omy" choices "parent" "$TUI_FOOTER_DEFAULT" body
+  footer="Enter finish"
+  if ((APPLY_STARTED)); then
+    footer="Enter finish · Ctrl+C leave (changes stay)"
+  fi
+  tui_screen_choose "Done" 15 "$TOTAL_STEPS" 1 "$omy" choices "parent" "$footer" body
   local rc=$?
   return $((rc == 130 ? 130 : 0))
 }

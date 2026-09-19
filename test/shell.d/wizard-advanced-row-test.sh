@@ -62,7 +62,7 @@ setup_advanced_globals() {
   # shellcheck disable=SC2034 # read indirectly through adv_get
   BUDGET_MIN_WEEKEND=60 LIGHTS_OUT=19:30 LIGHTS_OUT_WEEKEND=20:00
   # shellcheck disable=SC2034 # read indirectly through adv_get
-  ALLOWLIST_IDS="$1" WIFI_MODE=parent LEVEL=1 MENU_MODE=trimmed
+  ALLOWLIST_IDS="$1" WIFI_MODE=parent LEVEL=1
   # shellcheck disable=SC2034 # read indirectly through adv_get
   THEME=catppuccin-latte HISTORY_VISIBLE=yes
 }

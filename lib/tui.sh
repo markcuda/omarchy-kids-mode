@@ -252,9 +252,9 @@ tui_header() {
   fi
 }
 
-# _tui_confirm_leave -- "Leave setup? Nothing has been changed yet."
-# Returns 0 (leave) or 1 (redraw the interrupted screen). A second Ctrl+C
-# here also means leave.
+# _tui_confirm_leave -- "$TUI_LEAVE_MESSAGE" (default: "Leave setup?
+# Nothing has been changed yet."). Returns 0 (leave) or 1 (redraw the
+# interrupted screen). A second Ctrl+C here also means leave.
 _tui_confirm_leave() {
   local msg="$TUI_LEAVE_MESSAGE"
   if [[ "$TUI_MODE" == file ]]; then
