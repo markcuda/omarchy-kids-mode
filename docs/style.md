@@ -31,16 +31,12 @@ upstream's own `AGENTS.md` (line 6) points command authors at
 — **UNVERIFIED**: the exact parser for `omarchy:summary` wasn't fetched, but the header format
 itself is directly observed in four files and is clearly load-bearing, not decorative.
 
-**Gap in this repo.** None of the 26 `bin/omarchy-kids-*` bash commands carries any
-`# omarchy:*=` header. `bin/omarchy-kids`, `bin/omarchy-kids-exit`, `bin/omarchy-kids-check`, and
-every other command instead rely on a `usage()` function and `--help` for the same information —
-useful to a human running `--help`, but not machine-discoverable the way upstream's header is, and
-not mentioned anywhere in this repo's own `AGENTS.md` Layout table.
-
-**Fix.** Add `# omarchy:summary=<one line>` as the first comment line under the shebang in every
-`bin/omarchy-kids-*` file (and `# omarchy:args=`, `# omarchy:examples=` where the command takes
-arguments), ahead of any prose rationale. Keep the existing `usage()` — the header is metadata,
-not a replacement for `--help`.
+**Checked 2026-09-18.** All 27 commands in `bin/` (the parent command plus the 26
+`omarchy-kids-*` commands) carry a `# omarchy:summary=...` line under the shebang, and `AGENTS.md`
+now requires it. `# omarchy:examples=` is not used yet, and the internal commands (`authd`,
+`wifid`, `boot-login`, `session-start`, `launcher-ctl`, `parent-auth`, `super-tap`,
+`time-ledger`) do not carry `# omarchy:hidden=true` yet — that is the remaining work under this
+heading.
 
 ## 2. Shebang and safety flags
 
@@ -54,25 +50,10 @@ script with real branching and a `case` dispatch). Upstream's own `AGENTS.md` (l
 an explicit exception: "Scripts under `install/` and `migrations/` may be sourced and
 intentionally omit shebangs" entirely.
 
-**Gap in this repo.** This repo's own `AGENTS.md` (Layout table) already commits to one policy —
-"bash, `set -euo pipefail`" for every `bin/omarchy-kids-*` command — but the repo doesn't follow
-its own rule: of 26 bash scripts in `bin/`, 18 use `set -uo pipefail` (missing `-e`) and only 8 use
-the documented `set -euo pipefail`. The 18: `omarchy-kids`, `omarchy-kids-ask`,
-`omarchy-kids-blocked`, `omarchy-kids-assert`, `omarchy-kids-bar`, `omarchy-kids-check`,
-`omarchy-kids-data`, `omarchy-kids-exit`, `omarchy-kids-panel`, `omarchy-kids-parent-auth`,
-`omarchy-kids-remove`, `omarchy-kids-session`, `omarchy-kids-super-tap`, `omarchy-kids-time`,
-`omarchy-kids-time-ledger`, `omarchy-kids-wifi`, `omarchy-kids-wizard`.
-Unlike upstream's cases, this isn't a deliberate "short script, no `set` at all" choice — it's a
-half-adopted `-e` that's silently missing from most of the fleet while `AGENTS.md` claims
-otherwise.
-
-**Fix.** Pick one and make `AGENTS.md` match reality: either (a) add `-e` to the 18 files above so
-the repo's stated rule is true (recommended — dry-run safety and root-writing commands both depend
-on failing loudly on an unchecked error), or (b) if a specific file execs into another program at
-every exit path and genuinely can't use `-e` safely (as may be true for `omarchy-kids` and
-`omarchy-kids-exit`, which `exec` into other binaries), say so in that file's own header the way
-upstream would, and narrow `AGENTS.md`'s Layout-table claim to name the exception instead of
-stating a blanket rule the code doesn't follow.
+**Checked 2026-09-18.** All 25 bash commands in `bin/` (`omarchy-kids` plus the 24 bash
+`omarchy-kids-*` commands) use `set -euo pipefail`; the only non-bash commands there are the two
+Python daemons (`omarchy-kids-authd`, `omarchy-kids-wifid`). The 2026-09-03 audit that found 18
+files missing `-e`, and the fix under issue #49, are recorded below.
 
 **Resolved (issue #49): (a).** All 18 files now carry `set -euo pipefail`, and `omarchy-kids`/
 `omarchy-kids-exit` need no exception after all — their `exec` calls are each already the last
@@ -261,21 +242,10 @@ exception found anywhere in this material is `install/provisioning/setup-form.sh
 `--prompt.foreground="#845DF9"` (section 5 above), justified because that prompt runs before login,
 before any theme file is readable.
 
-**Gap in this repo.** `share/bar/KidsModule.qml` hardcodes five raw hex/rgba colors: `#5a5f73`
-(paused dot) and `#7ad17a` (live dot) at line 247, `#ffb454` (request badge) at line 263,
-`#14161f` (badge/dot text) at lines 251 and 269, and `Qt.rgba(1, 1, 1, 0.12)` (row hover) at line
-323. The file's own header already flags this as a known shortcut, not an oversight (lines 39–44):
-*"Deliberately NOT used: qs.Commons' `Style`/`Color` singletons and qs.Ui's `BarIconButton`/
-`WidgetButton`... This file draws its own icon row with plain QtQuick primitives instead, at the
-cost of not matching the shell's theme."* Text color is already piped correctly — the label `Text`
-elements use `root.bar.foreground` (lines 333–334) — so only the dot/badge fills are the gap.
-
-**Fix.** Resolve the file's own open question first (whether a third-party plugin under
-`~/.config/omarchy/plugins/` can `import qs.Commons` the same way a first-party plugin does —
-flagged **UNVERIFIED** in the file itself), then swap the five literals above for `Style`/`Color`
-tokens. If the import turns out not to resolve for third-party plugins, the file's own fallback
-plan (copy the small pieces of `qs.Commons` this widget needs into this plugin's own directory)
-is the documented next step — do that instead of leaving hex in place.
+**Resolved (checked 2026-09-18).** `share/bar/KidsModule.qml` now resolves its dots, badges and
+selected row through `qs.Commons`' `Color`/`Style` (`Color.muted`, `Color.accent`, `Color.urgent`,
+`Style.selectedFillFor`, `bar.foreground`, `bar.fontFamily`) and contains no raw hex or `Qt.rgba`
+literals; `test/shell.d/qml-theme-static-test.sh` enforces the hex ban.
 
 ## 9. Lua helper style
 

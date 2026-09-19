@@ -260,7 +260,7 @@ garden             # A7 Web (6-8's default)
 default            # A8 Screen time ("the usual" — not "I'll set my own")
 pack               # A9 Apps (the whole starter pack, not "let me pick")
 parent             # A10 Wi-Fi (6-8's default)
-1                  # A11 Desktop level (6-8's default)
+2                  # A11 Desktop level (6-8's default)
 secret1            # A12 Kid password
 secret1            # A12 Kid password, again
 apply              # A13 Summary: Apply (not "Change something")
@@ -491,7 +491,7 @@ friendly_web_mode, friendly_wifi_mode, validate_budget_minutes,
 validate_lights_out, and every lib/tui.sh tui_screen_* function. Not
 meant to be executed or sourced on its own.
 
-One row per key, twelve keys in six groups (Web, Screen time, Apps,
+One row per key, thirteen keys in six groups (Web, Screen time, Apps,
 Wi-Fi, Desktop, Data), Appendix B order within each group. name/avatar/
 band (A3-A5) and password (A12) are collected by their own screens
 before either path reaches here, so they're not rows; onboarded is a

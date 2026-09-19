@@ -8,8 +8,8 @@ builds the modal itself (`share/exit-modal/shell.qml`), the command it and the H
 actually run (`bin/omarchy-kids-exit`, replacing its earlier stub), and the triple-tap counter
 (`bin/omarchy-kids-super-tap`).
 
-**Nothing here has run against a real Hyprland or Quickshell** — see "What's unverified" below
-before trusting any of it in front of a kid.
+See "Verified live" below for what has run in the QEMU test VM, and "What's unverified" for the
+rest.
 
 ## The pieces
 
@@ -148,8 +148,7 @@ repo's macOS dev/test boxes) doesn't and echoes the literal `"N"` back, so that 
 
 ## What's unverified
 
-Everything that touches a real Hyprland or Quickshell, since neither was available while writing
-this (per the environment this was built in):
+The original issue's unverified list, with later live findings annotated:
 
 - **`share/exit-modal/shell.qml` end to end.** Now verified live (see "Verified live" below):
   `PanelWindow` + `WlrLayershell.layer: WlrLayer.Overlay` (from `Quickshell.Wayland`) is real API
@@ -162,18 +161,19 @@ this (per the environment this was built in):
   showing it, the way `bin/omarchy-kids-launcher-ctl` does for the launcher.
 - **The triple-tap bind itself.** `Hyprland --verify-config` and the live modal in the VM are
   what actually confirm `{ release = true }` and `SUPER_L` behave as documented once run against
-  a real Hyprland 0.56.2 — not run here.
-- **`pgrep -f "quickshell -p <path>"` as "is the modal already open".** Untested against a real
-  `quickshell -p ...` invocation's actual process listing.
-- **`--finish --kid <account>`, end to end (issue #37).** Never run against a real
-  `systemd-logind`/multi-session box: whether `/run/user/<uid>/hypr/<signature>/` is really where
-  a kid's Hyprland instance shows up (and whether there's ever more than one at a time), whether
+  a real Hyprland 0.56.2 — **verified live 2026-09-02, see "Verified live" below (earlier draft
+  note said "not run here").**
+- **The "is the modal already open" check.** It uses `lib/kids.sh`'s pidfile pair
+  (`modal_already_open`/`modal_write_pid`/`modal_close`), not `pgrep -f`; `test/shell.d/exit-test.sh`
+  and the live run below cover it.
+- **`--finish --kid <account>`, end to end (issue #37).** Whether
+  `/run/user/<uid>/hypr/<signature>/` is really where a kid's Hyprland instance shows up (and
+  whether there's ever more than one at a time), whether
   `runuser -u <account> -- env ... hyprctl dispatch 'hl.dsp.exit()'` actually reaches that
   instance's compositor socket from a root shell, and whether `loginctl terminate-user <account>`
   is meaningfully safer than `terminate-session` given the same "sddm-helper crashes on a hard
   terminate" finding above applies to *any* forced termination, not just `terminate-session`
-  specifically — confirm this doesn't also crash sddm-helper before relying on it as "the safe
-  fallback".
+  specifically — **verified live 2026-09-03, see "Verified live" below**.
 
 ## Testing in the VM
 
@@ -206,7 +206,8 @@ are on the box (`docs/vm.md` has the SSH/VNC details):
    `share/exit-modal/shell.qml`'s header is actually about.
 7. Tap bare Super three times within 1.5 seconds and confirm the modal opens the same way
    Super+Shift+K does. `Hyprland --verify-config` against each level file, and this live check,
-   are what actually confirm `{ release = true }` + `SUPER_L` behave as documented — not run here.
+   are what actually confirm `{ release = true }` + `SUPER_L` behave as documented (verified live;
+   see "Verified live" below).
    `omarchy-kids-super-tap` can also be exercised directly, without Hyprland at all:
    `omarchy-kids-super-tap; omarchy-kids-super-tap; omarchy-kids-super-tap` run three times within
    1.5 seconds should call `omarchy-kids-exit` the same way.

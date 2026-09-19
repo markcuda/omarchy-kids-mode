@@ -21,6 +21,11 @@ The existing `exit-modal-over-app-<theme>.png` files are extra composition check
 required surface. The three walkthrough videos in docs/GOAL.md item 3 are recorded separately;
 this driver only takes stills.
 
+**On disk today (2026-09-18):** only `launcher-<theme>.png` and `exit-modal-<theme>.png`, plus the
+two `exit-modal-over-app-<theme>.png` composition shots. The rest of the table is the driver's
+target list, not a claim that the files exist; the release set is filled in by the gate runner on
+the VM.
+
 For every surface, the driver polls disposable screenshots until macOS Vision finds the required
 text. It then takes a separate release screenshot and checks the same text again before replacing
 the committed image. A process alone is never treated as proof that its UI has rendered.

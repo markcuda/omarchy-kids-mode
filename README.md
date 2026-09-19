@@ -16,6 +16,9 @@ The two share the parent command and its feature commands.
 
 ## Status: v1 build in progress
 
+**Paused 2026-09-11** at the owner's request; the current state, what is verified, and the resume
+path are in [`docs/handoffs/PAUSED-2026-09-11.md`](docs/handoffs/PAUSED-2026-09-11.md).
+
 The spec is **[SPEC.md](SPEC.md)**; the work is
 [issues in six milestones](https://github.com/markcuda/omarchy-kids-sandbox/milestones), in build
 order. Results of the Phase 1 checks live in [`docs/phase1/`](docs/phase1/) (real hardware and the
@@ -40,10 +43,11 @@ drawn from; nothing here is drawn from the spec alone.
   is a courtesy, not a lock: a kid can end their own session anyway (`loginctl terminate-session`,
   or closing every window). **Pause** is not offered because it is not implemented.
 - Screen time counts real minutes while a kid's session is active, in a root-owned ledger, and
-  warns before it runs out (`docs/time.md`). The lights-out "Time's Up" overlay fires and finishes
-  on its own after 60 seconds — but it runs *in the kid's own session*, so for a band with a
-  terminal (9-12, 13+) it is a reminder, not a fence: `pkill quickshell` dismisses it and nothing
-  root-side ends the session. Treat bedtime as advisory until that moves into the root ledger.
+  warns before it runs out (`docs/time.md`). At the budget or lights-out boundary root asks logind
+  to lock the session, records the result of that request, and ends the session after a 60-second
+  grace period unless a parent grants more; the lock's live behavior is an open finding
+  (`docs/handoffs/PAUSED-2026-09-11.md`). The in-session "Time's Up" card is display only —
+  killing it does not stop the root deadline.
 - "Ask a parent" for more time opens over the launcher, and the parent password grants it on the
   spot — the grant shows up in the ledger within the minute (`docs/ask.md`).
 - The parent panel's Home screen shows live per-kid minutes and grants more time for real, run
@@ -71,13 +75,13 @@ verified live, what is open, and which decisions are still waiting.
 | Parent wizard | Easy path (A-or-B chunks, preselected by age band) or Advanced (a table of toggles). Bash + gum in Omarchy's floating terminal, looks like the installer, Omy where the logo sits |
 | Per-kid provisioning | Real account, no sudo, locked home, polkit denies, the installer path's privilege posture, a LUKS slot for the kid's password, a root-owned Hyprland config for the chosen level |
 | Login portal | Face tiles then password, as an SDDM theme. Parent tile last |
-| Exit modal | Super ×3: parent password, then **Finish** (closes the kid's apps and returns to the portal). **Pause** returns after its implementation lands (`docs/phase1/V1.md`) |
+| Exit modal | Super ×3: parent password, then **Finish** (closes the kid's apps and returns to the portal). **Pause** is not offered; its mechanism is undecided (`docs/phase1/DECISIONS-NEEDED.md`) |
 | `omarchy-kids-*` | Feature commands: web policy, screen time, apps, Wi-Fi helper, ask-a-parent queue |
 | Safety check | Green/red, at the end of setup and at every kid login, failing closed |
 
 ## What is here now
 
-Twenty-seven `bin/omarchy-kids-*` commands, each with a `--help`; most have their own
+Twenty-six `bin/omarchy-kids-*` commands, each with a `--help`; most have their own
 `docs/<command>.md`, the rest documented alongside a related command's page instead. The shared
 shell under `lib/`; the data, policies, Hyprland levels, and Quickshell surfaces under `share/`;
 and `test/all`. [`AGENTS.md`](AGENTS.md)'s Layout table is the map.
