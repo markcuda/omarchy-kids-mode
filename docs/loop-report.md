@@ -641,3 +641,9 @@ card lists what actually stays (account, name, face, band, password, theme, hand
 Wi-Fi labels/detail match `docs/wifi.md`'s real behavior, `friendly_wifi_mode` lives once in
 `lib/kids.sh`, the weekday rows say "weekday", and the Wi-Fi tests use an exact answer script with
 a real reset case. Panel and wizard suites green.
+
+Backlog item 4 landed as `fix/remove-confirm` (`b9af8da`): `omarchy-kids-remove` confirms through
+the shared card when a terminal is attached (type `yes` in full; Esc/Ctrl+C cancel) and keeps the
+original one-line prompt for pipes and scripts, with `--yes` unchanged. `remove-test` passes on the
+piped path and pins the tty branch statically; `trust-boundary-test` passes with the new
+`lib/tui.sh` source.
