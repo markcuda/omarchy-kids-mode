@@ -52,9 +52,8 @@ usage() {
   cat <<'EOF'
 Usage: omarchy-kids-panel [--dry-run] [--apply] [--help]
 
-Everything after the first kid: Home lists every
-kid with today's minutes and open requests; per kid, screen time, web,
-apps, desktop level, password, and remove; a Requests screen to approve or
+Everything after the first kid: Home lists every kid with today's minutes and open requests; per
+kid, screen time, web, apps, desktop level, password, and remove; a Requests screen to approve or
 decline what a kid has asked for.
 
 Keyboard only: Esc (or "Quit"/"Back") leaves a screen, Ctrl+C leaves the
