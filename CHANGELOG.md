@@ -22,6 +22,12 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
   root-owned 0644 session manifest; missing, linked, mutable, malformed, stale, and mismatched
   documents are refused without stdout.
 
+### Added
+
+- Panel P4 Machine (R-TRUST-2): Home gains a **Machine safety** row that runs
+  `omarchy-kids-check --json` and shows the verdict, every FAIL and WARN with its own detail, and
+  the passed/skipped counts; read-only, with **Check again** to refresh.
+
 ### Changed
 
 - Panel writes now carry their result into the next card (`PANEL_NOTICE`): a preview says

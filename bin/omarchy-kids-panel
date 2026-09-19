@@ -29,6 +29,7 @@ PROVISION_BIN="$(kids_bin provision "$DIR")"
 WIZARD_BIN="$(kids_bin wizard "$DIR")"
 DATA_BIN="$(kids_bin data "$DIR")"
 REMOVE_BIN="$(kids_bin remove "$DIR")"
+CHECK_BIN="$(kids_bin check "$DIR")"
 
 ETC="${OMARCHY_KIDS_ETC:-/etc/omarchy-kids}"
 SYSROOT="${OMARCHY_KIDS_ROOT:-}"
@@ -55,7 +56,7 @@ Usage: omarchy-kids-panel [--dry-run] [--apply] [--help]
 Everything after the first kid (SPEC.md R-WIZ-7, R-WIZ-8): Home lists every
 kid with today's minutes and open requests; per kid, screen time, web,
 apps, desktop level, password, and remove; a Requests screen to approve or
-decline what a kid has asked for.
+decline what a kid has asked for; and a read-only Machine safety report.
 
 Keyboard only: Esc (or "Quit"/"Back") leaves a screen, Ctrl+C leaves the
 whole panel with nothing further changed.
@@ -256,6 +257,8 @@ kid_home_line() {
 source "$LIB/panel-requests.sh"
 # shellcheck source=lib/panel-kid.sh
 source "$LIB/panel-kid.sh"
+# shellcheck source=lib/panel-machine.sh
+source "$LIB/panel-machine.sh"
 # shellcheck source=lib/panel-home.sh
 source "$LIB/panel-home.sh"
 

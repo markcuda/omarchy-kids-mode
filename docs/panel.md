@@ -16,13 +16,14 @@ omarchy-kids-panel [--dry-run] [--apply] [--help]
 command a write would run is printed instead of run. Pass `--apply` (or set `DRY_RUN=0`) for a real
 run.
 
-## Screens (Appendix A's P1-P3; P4/P5 are not built here — see "Not built here" below)
+## Screens (Appendix A's P1-P4; P5 is not built here — see "Not built here" below)
 
 | Screen | What's on it |
 | --- | --- |
-| **P1 Home** | One row per kid — name, band, minutes used/left today, `paused` if a kid's time isn't counting right now, and their open-request count (`kid_home_line`) — then **Add a kid**, **Requests (N)**, **Remove Kids Mode**, **Quit**. |
+| **P1 Home** | One row per kid — name, band, minutes used/left today, `paused` if a kid's time isn't counting right now, and their open-request count (`kid_home_line`) — then **Add a kid**, **Requests (N)**, **Machine safety**, **Remove Kids Mode**, **Quit**. |
 | **P2 Kid** | **Screen time** (today's status, "give more minutes" via `omarchy-kids-time grant`, and editing the daily budget / lights-out, both validated), **Web** (the band's mode; a walled-garden kid also gets an allow-list editor), **Apps** (hide/show the band's pack), **Data**, **Desktop** (level, theme — issue #53), **Password**, **Remove this kid**, **Back**. |
 | **P3 Requests** | Every open "Ask a parent" request, each shown as `<kid> — <what> (<age>)`; Enter opens the reason line and **Approve**/**Decline**. |
+| **P4 Machine** | The read-only safety report (R-TRUST-2, `docs/check.md`): runs `omarchy-kids-check --json` on every draw, shows the verdict, every FAIL and WARN with the check's own detail, and the passed/skipped counts. **Check again** reruns it; nothing here writes or fixes. |
 
 Every screen is keyboard-complete (I-5): Esc or a **Back**/**Quit** row goes back or leaves; Ctrl+C
 leaves the whole panel immediately, same contract as `lib/tui.sh` everywhere else (`docs/tui.md`).
@@ -134,10 +135,8 @@ exact command a write would run, panel-wide, not just for Apply.
 
 ## Not built here
 
-- **P4 Machine** and **P5 Confirm remove** (Remove Kids Mode itself, R-TRUST-4): nothing in this
-  checkout implements "Remove Kids Mode" yet — not the wizard, not this panel, not a standalone
-  command. Home's own "Remove Kids Mode" row says so plainly (I-6) instead of pretending to offer
-  it; removing kids one at a time from their own P2 screen is what this issue actually delivers.
+- **P5 Confirm remove**: the panel has no parent-password confirm screen; Home's row hands off to
+  `bin/omarchy-kids-remove`, which prints its own plan and asks its own confirmation.
 - **Weekend budget/lights-out variants** (`budget_min_weekend`, `lights_out_weekend`): editable
   through `omarchy-kids-conf set` directly today; the Screen Time screen only edits the weekday
   pair, matching the issue brief ("edit budget and lights-out").
@@ -185,7 +184,9 @@ unchanged and still default to a preview.
 
 ## Source header (moved from `bin/omarchy-kids-panel`, issue #49)
 
-Kept for reference; the file itself now carries a 3-line pointer instead.
+Kept for reference; the file itself now carries a 3-line pointer instead. This snapshot predates
+`bin/omarchy-kids-remove` (Home's Remove row now hands off to it), the P4 Machine screen, and the
+#58 removal of the `*_BIN`/`OMARCHY_KIDS_LIB` overrides it lists below.
 
 ```text
 omarchy-kids-panel — everything after the first run (SPEC.md R-WIZ-7,
