@@ -172,6 +172,7 @@ PanelWindow {
                     }
 
                     Text {
+                        font.family: theme.fontFamily
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: root.displayName
                         color: theme.foreground
@@ -189,6 +190,7 @@ PanelWindow {
                         border.width: 2
 
                         TextInput {
+                            font.family: theme.fontFamily
                             id: passwordInput
                             anchors.fill: parent
                             anchors.margins: 12
@@ -202,6 +204,7 @@ PanelWindow {
                     }
 
                     Text {
+                        font.family: theme.fontFamily
                         width: parent.width
                         visible: root.hint.length > 0
                         text: root.hint
@@ -227,6 +230,7 @@ PanelWindow {
                             width: parent.width - 16
                             spacing: 4
                             Text {
+                                font.family: theme.fontFamily
                                 width: parent.width
                                 text: "Finish for " + root.displayName
                                 color: theme.foreground
@@ -236,6 +240,7 @@ PanelWindow {
                                 wrapMode: Text.WordWrap
                             }
                             Text {
+                                font.family: theme.fontFamily
                                 width: parent.width
                                 text: "Closes " + root.possessive(root.displayName) + " apps. You switch to your desktop."
                                 color: theme.caption

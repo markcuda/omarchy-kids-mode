@@ -197,6 +197,7 @@ PanelWindow {
                     spacing: 16
 
                     Text {
+                        font.family: theme.fontFamily
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: "Ask a grown-up"
                         color: theme.foreground
@@ -205,6 +206,7 @@ PanelWindow {
                     }
 
                     Text {
+                        font.family: theme.fontFamily
                         width: parent.width
                         text: root.desc
                         color: theme.caption
@@ -218,6 +220,7 @@ PanelWindow {
                     //     dead controls left visible after the choice
                     //     is made) --------------------------------------
                     Text {
+                        font.family: theme.fontFamily
                         width: parent.width
                         visible: root.done
                         text: root.doneMessage
@@ -239,6 +242,7 @@ PanelWindow {
                         border.width: 2
 
                         TextInput {
+                            font.family: theme.fontFamily
                             id: passwordInput
                             anchors.fill: parent
                             anchors.margins: 12
@@ -252,6 +256,7 @@ PanelWindow {
                     }
 
                     Text {
+                        font.family: theme.fontFamily
                         width: parent.width
                         visible: !root.done && root.hint.length > 0
                         text: root.hint
@@ -281,6 +286,7 @@ PanelWindow {
                                 width: parent.width - 16
                                 spacing: 4
                                 Text {
+                                    font.family: theme.fontFamily
                                     width: parent.width
                                     text: "A grown-up is here"
                                     color: theme.foreground
@@ -290,6 +296,7 @@ PanelWindow {
                                     wrapMode: Text.WordWrap
                                 }
                                 Text {
+                                    font.family: theme.fontFamily
                                     width: parent.width
                                     text: "Type their password"
                                     color: theme.caption
@@ -322,6 +329,7 @@ PanelWindow {
                                 width: parent.width - 16
                                 spacing: 4
                                 Text {
+                                    font.family: theme.fontFamily
                                     width: parent.width
                                     text: "Ask later"
                                     color: theme.foreground
@@ -331,6 +339,7 @@ PanelWindow {
                                     wrapMode: Text.WordWrap
                                 }
                                 Text {
+                                    font.family: theme.fontFamily
                                     width: parent.width
                                     text: "Your grown-up will see it"
                                     color: theme.caption
