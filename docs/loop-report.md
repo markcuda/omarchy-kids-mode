@@ -540,3 +540,22 @@ Mac test note update: the launcher node tests need a real Node, not the mise shi
 Still not done: a card-mode panel test (the wizard's exists), `font.family` on the exit/Ask/plugins/
 Time's Up/toast surfaces, Level 3 gating (human decision), the dead `menu`/`terminal` band keys,
 and the remove command's own plain `read` confirmation.
+
+### 2026-09-18, third round — review fixes
+
+All three batch-reviewed branches closed their findings:
+
+- `fix/kid-surface-words` gained `87db426`: the media driver and its test now wait for "Closing in"
+  (the capture would have timed out), SPEC R-EXIT-1 quotes the shipped Finish subline, the
+  exit-test static block moved out of the flag-parsing group, and the reason assertion matches the
+  actual `root.reason === "lights-out"` branch.
+- `fix/launcher-empty-hints` gained `e50ffee`: the comment and CHANGELOG no longer claim a failed
+  manifest shows the empty state (a failed manifest hides the window first), `z: 1` keeps a tall
+  grid from painting over the footer, the test matches the Level 1 string, and both visibility
+  bindings are asserted.
+- `docs/command-metadata` gained `278d1f5`: the time summary names `daemon` too, and the panel
+  usage paragraph is reflowed.
+
+Review findings left as recorded open items: `blocked`/`session` are candidates for
+`omarchy:hidden`; the ledger's grace keeps its first `reason` for the whole countdown; and
+`docs/time.md`'s dated live record still quotes the old "Finishing in" wording.
