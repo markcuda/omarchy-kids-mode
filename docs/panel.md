@@ -22,7 +22,7 @@ run.
 | --- | --- |
 | **P1 Home** | One row per kid — name, band, minutes used/left today, `paused` if a kid's time isn't counting right now, and their open-request count (`kid_home_line`) — then **Add a kid**, **Requests (N)**, **Machine safety**, **Remove Kids Mode**, **Quit**. |
 | **P2 Kid** | **Screen time** (today's status, "give more minutes" via `omarchy-kids-time grant`, and editing the daily budget / lights-out, both validated), **Web** (the band's mode; a walled-garden kid also gets an allow-list editor), **Apps** (hide/show the band's pack), **Data**, **Desktop** (level, theme — issue #53), **Password**, **Remove this kid**, **Back**. |
-| **P3 Requests** | Every open "Ask a parent" request, each shown as `<kid> — <what> (<age>)`; Enter opens the reason line and **Approve**/**Decline**. |
+| **P3 Requests** | Every open "Ask a parent" request, each shown as `<name> — <what> (<age>)`; Enter opens the reason line and **Approve**/**Decline**. A request card names the kid by their display name and keeps the account name beside it. |
 | **P4 Machine** | The read-only safety report (R-TRUST-2, `docs/check.md`): runs `omarchy-kids-check --json` on every draw, shows the verdict, every FAIL and WARN with the check's own detail in full, and the passed/skipped counts. **Check again** reruns it; nothing here writes or fixes. The panel runs unprivileged, so checks needing root report as warnings, and the card says so. Appendix A's firmware card is one of the report's checks, not a separate screen. |
 
 Every screen is keyboard-complete (I-5): Esc or a **Back**/**Quit** row goes back or leaves; Ctrl+C

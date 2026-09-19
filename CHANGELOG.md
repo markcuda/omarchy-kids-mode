@@ -30,6 +30,8 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Changed
 
+- Panel Requests now name the kid by their profile name (with the account beside it on the request
+  card) instead of the Unix account name.
 - Panel writes now carry their result into the next card (`PANEL_NOTICE`): a preview says
   "Preview only — nothing was changed", a success says "Change applied", and a failure shows the
   command's own last line; a rejected password says so instead of returning a blank card, and a

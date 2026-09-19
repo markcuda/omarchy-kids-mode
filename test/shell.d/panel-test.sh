@@ -344,6 +344,12 @@ check_contains "$(cat "$ARGV_LOG")" "omarchy-kids-ask approve $req_id --apply" \
   "real: approving a request actually calls ask approve"
 check_contains "$(cat "$QUEUE_DIR/$req_id.json")" '"state": "approved"' \
   "real: the request is really marked approved afterward"
+check_contains "$out" "Ada — 15 more minute(s)" \
+  "real: the Requests list shows the kid's display name"
+check_not_contains "$out" "kid-ada — 15 more minute(s)" \
+  "real: the Requests list no longer labels the row with the account name"
+check_contains "$out" "Request from Ada" "real: the request card names the kid by display name"
+check_contains "$out" "Kid: Ada (kid-ada)" "real: the request card keeps the account name alongside it"
 
 # --- real: remove a kid, wrong confirmation -> nothing runs -------------
 
