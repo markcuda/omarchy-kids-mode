@@ -30,6 +30,22 @@ friendly_wifi_mode() { printf '%s' "$1"; }
 
 # shellcheck disable=SC1091
 source "$ROOT/lib/wizard-advanced.sh"
+
+# Issue #20/I-6: the App menu row was offered but no level reads the key, so
+# it must not be in the checklist. The history row is about the parent's view
+# (SPEC.md R-DATA-4), not the kid's.
+[[ " ${ADV_KEYS[*]} " != *" menu "* ]] || {
+  echo 'FAIL Advanced checklist still offers the unenforced App menu row'
+  exit 1
+}
+[[ "$(adv_label_of history_visible)" == "History you can see" ]] || {
+  echo 'FAIL history row still reads as if it controls the kid view'
+  exit 1
+}
+grep -q "Can you see .*'s browsing history?" "$ROOT/lib/wizard-advanced.sh" || {
+  echo 'FAIL history prompt does not ask about the parent view'
+  exit 1
+}
 # Avoid the pack reader here; the production row and formatter remain real.
 adv_default() {
   if [[ "$1" == allowlist ]]; then

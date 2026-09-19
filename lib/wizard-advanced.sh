@@ -6,7 +6,7 @@
 # docs/wizard.md's "The Advanced path" section for the full row list,
 # groups, and editor-by-editor walkthrough.
 
-ADV_KEYS=(web dns sites budget_min budget_min_weekend lights_out lights_out_weekend allowlist wifi level menu theme history_visible)
+ADV_KEYS=(web dns sites budget_min budget_min_weekend lights_out lights_out_weekend allowlist wifi level theme history_visible)
 
 adv_varname() { # KEY -> the bash variable name holding its current value
   case "$1" in
@@ -20,7 +20,6 @@ adv_varname() { # KEY -> the bash variable name holding its current value
     allowlist) echo ALLOWLIST_IDS ;;
     wifi) echo WIFI_MODE ;;
     level) echo LEVEL ;;
-    menu) echo MENU_MODE ;;
     theme) echo THEME ;;
     history_visible) echo HISTORY_VISIBLE ;;
   esac
@@ -32,7 +31,7 @@ adv_group_of() { # KEY -> the group its row is shown under
     budget_min | budget_min_weekend | lights_out | lights_out_weekend) echo "Screen time" ;;
     allowlist) echo "Apps" ;;
     wifi) echo "Wi-Fi" ;;
-    level | menu | theme) echo "Desktop" ;;
+    level | theme) echo "Desktop" ;;
     history_visible) echo "Data" ;;
   esac
 }
@@ -49,9 +48,8 @@ adv_label_of() { # KEY -> the row's label, in parent words
     allowlist) echo "Starter apps" ;;
     wifi) echo "New Wi-Fi networks" ;;
     level) echo "Desktop level" ;;
-    menu) echo "App menu" ;;
     theme) echo "Theme" ;;
-    history_visible) echo "Browsing history" ;;
+    history_visible) echo "History you can see" ;;
   esac
 }
 
@@ -93,13 +91,6 @@ adv_init() {
   done
 }
 
-friendly_menu() {
-  case "$1" in
-    trimmed) echo "Fewer icons, easier to scan" ;;
-    full) echo "Every app Omarchy normally shows" ;;
-    *) echo "$1" ;;
-  esac
-}
 friendly_yesno() {
   case "$1" in
     yes) echo "Yes" ;;
@@ -173,7 +164,6 @@ adv_friendly() {
     web) friendly_web_mode "$value" ;;
     wifi) friendly_wifi_mode "$value" ;;
     dns) friendly_dns "$value" ;;
-    menu) friendly_menu "$value" ;;
     history_visible) friendly_yesno "$value" ;;
     level) tui_desktop_label "$value" ;;
     budget_min | budget_min_weekend) echo "$value minutes a day" ;;
@@ -212,11 +202,8 @@ adv_summary_extra_rows() {
   if [[ "$(adv_get dns)" != "$(adv_default dns)" ]]; then
     adv_append_row "$arrname" "Safe-search DNS|$(friendly_dns "$DNS_MODE") (custom)"
   fi
-  if [[ "$(adv_get menu)" != "$(adv_default menu)" ]]; then
-    adv_append_row "$arrname" "App menu|$(friendly_menu "$MENU_MODE") (custom)"
-  fi
   if [[ "$(adv_get history_visible)" != "$(adv_default history_visible)" ]]; then
-    adv_append_row "$arrname" "Browsing history|$(friendly_yesno "$HISTORY_VISIBLE") (custom)"
+    adv_append_row "$arrname" "History you can see|$(friendly_yesno "$HISTORY_VISIBLE") (custom)"
   fi
   if [[ "$(adv_get sites)" != "$(adv_default sites)" ]]; then
     adv_append_row "$arrname" "Allowed sites|$SITES (custom)"
@@ -386,15 +373,10 @@ adv_edit() {
         "2|Simplified desktop|Super+Space finds apps. Windows can sit side by side." \
         "3|Full desktop (advanced)|The existing Omarchy desktop and its broader controls."
       ;;
-    menu)
-      adv_edit_enum menu "How many icons should $DISPLAY_NAME's app menu show?" "$step" "$total" \
-        "trimmed|Trimmed|Fewer icons, easier to scan." \
-        "full|Full|Every app Omarchy normally shows."
-      ;;
     history_visible)
-      adv_edit_enum history_visible "Can $DISPLAY_NAME see their own browsing history?" "$step" "$total" \
-        "yes|Yes|The same history the parent bar can already show." \
-        "no|No|History stays hidden from $DISPLAY_NAME."
+      adv_edit_enum history_visible "Can you see $DISPLAY_NAME's browsing history?" "$step" "$total" \
+        "yes|Yes|Their history is visible to you on the Data screen." \
+        "no|No|Their history stays hidden from you."
       ;;
     dns) adv_edit_dns "$step" "$total" ;;
     budget_min) adv_edit_number budget_min "How many minutes a day, on weekdays?" "$step" "$total" ;;

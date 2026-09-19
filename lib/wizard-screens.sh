@@ -265,11 +265,11 @@ screen_level() {
   return 0
 }
 
-# A12: Kid password. 3-5 gets an extra "set one or not" choice first
-# (R-BAND's password_optional).
+# A12: Kid password. A band whose `password_optional` is true gets an extra
+# "set one or not" choice first (R-BAND's password_optional).
 screen_password() {
   NO_PASSWORD=0
-  if [[ "$BAND" == "3-5" ]]; then
+  if [[ "$(band_field "$BAND" password_optional)" == "true" ]]; then
     local choices=(
       "yes|Set a password|$DISPLAY_NAME types it to get in."
       "no|No password|$DISPLAY_NAME gets in once you start their session, no typing needed."
@@ -335,7 +335,10 @@ screen_summary() {
       "Password|$password_line"
     )
     adv_summary_extra_rows rows # Advanced-only cells, shown once actually changed
-    tui_screen_summary "Here's what happens next for $DISPLAY_NAME." 13 "$TOTAL_STEPS" 0 "" rows
+    # One card: build the rows, then let the chooser draw them once. A separate
+    # tui_screen_summary here would be cleared by the chooser before it is read.
+    _tui_build_summary_lines rows
+    TUI_SUMMARY_LINES=("Here's what happens next for $DISPLAY_NAME." "" "${TUI_SUMMARY_LINES[@]}")
 
     local choices=("apply|Apply|" "change|Change something|")
     tui_screen_choose "Ready?" 13 "$TOTAL_STEPS" 0 "" choices "apply" "$TUI_FOOTER_DEFAULT" TUI_SUMMARY_LINES

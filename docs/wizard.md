@@ -40,7 +40,7 @@ at the bottom of `bin/omarchy-kids-wizard` jumps straight from step 7 to step 12
 | 12 | A12 | Kid's password | Twice, masked. Band 3-5 gets an extra "set a password or not" choice first (R-BAND's `password_optional`); every other band always sets one. Explains what it unlocks. |
 | 13 | A13 | Summary | A plain-words table — account, face, age band, desktop level, web mode, weekday/weekend screen-time and bedtime limits, Wi-Fi, starter apps, password, plus other customized Advanced settings — changed rows marked `(custom)` — then **Apply** or **Change something** (which opens the same grouped checklist, for a kid built either way, then redraws this summary). |
 | 14 | A13b/A13c | Apply | A step-by-step progress dashboard (`tui_progress`, R-WIZ-5): the account (plus every cell, from either path, that overrides the band default), the web policy, the starter pack, and the safety check (A13c). |
-| 15 | A14 | Done | Omy's line; **Return to my desktop** or **Open `<Name>`'s desktop** (R-WIZ-6). |
+| 15 | A14 | Done | Omy's line; **Return to my desktop** (R-WIZ-6). No live-preview button — there is no such switch (see below). |
 
 ### Step 7, Simple: A7-A11
 
@@ -69,7 +69,7 @@ way just leaves that one app out and moves to the next.
 
 Picking **Advanced** at A6 opens `lib/wizard-advanced.sh`'s `screen_advanced_checklist`: one row
 per Appendix B cell that isn't already collected by a screen both paths share — name/avatar/band
-(A3-A5) and the kid's password (A12) — thirteen rows in six groups, Appendix B order within each
+(A3-A5) and the kid's password (A12) — twelve rows in six groups, Appendix B order within each
 group:
 
 | Group | Rows |
@@ -78,8 +78,8 @@ group:
 | Screen time | Minutes a day, weekdays and weekends (`budget_min`, `budget_min_weekend`), Lights out, weekdays and weekends (`lights_out`, `lights_out_weekend`) |
 | Apps | Starter apps (`allowlist`) |
 | Wi-Fi | New Wi-Fi networks (`wifi`) |
-| Desktop | Desktop level (`level`), App menu (`menu`), Theme (`theme`) |
-| Data | Browsing history (`history_visible`) |
+| Desktop | Desktop level (`level`), Theme (`theme`) |
+| Data | History you can see (`history_visible`) |
 
 `theme`'s row (issue #53) is the one whose "default" isn't a band value at all — bands.toml has
 no theme field — it's the parent's own current Omarchy theme (`lib/theme.sh`'s
@@ -215,15 +215,16 @@ It does not read historical child-writable logs or write a session log. Done say
 complete and that final safety checks run at sign-in. Every real child login still checks
 all session safeguards and refuses to start on any failure (`docs/session.md`).
 
-## Open `<Name>`'s desktop, on Done
+## Why Done has no "Open `<Name>`'s desktop" button
 
-R-WIZ-6 wants this to switch the parent's own session to a live preview of the kid's desktop.
-No such switch exists on this box yet — `bin/omarchy-kids-exit --finish` ends a *kid's own*
-session from inside it (`docs/exit.md`); there's nothing today that starts one as a preview from
-the parent's side, and that file's own header notes `Seat.SwitchToGreeter()` outright fails on
-Omarchy 4.0.2 while a session is live. So choosing "Open `<Name>`'s desktop" here just explains
-that plainly and returns: `<Name>` logs in from the portal next time the screen locks or the
-computer starts. Building a real preview switch is separate, later work.
+R-WIZ-6 wants a switch to a live preview of the kid's desktop from the parent's own session. No
+such switch exists on this box: `bin/omarchy-kids-exit --finish` ends a *kid's own* session from
+inside it (`docs/exit.md`), there is nothing today that starts one as a preview from the parent's
+side, and that file notes `Seat.SwitchToGreeter()` outright fails on Omarchy 4.0.2 while a session
+is live. A button that only printed an apology would be a control that does nothing (I-6), so
+Done offers only **Return to my desktop** and Omy's line says `<Name>` signs in from the portal
+next time the screen locks or the computer starts. Building a real preview switch is separate,
+later work.
 
 ## The answers-file layout
 
@@ -234,8 +235,8 @@ per line, `@esc`/`@ctrlc` for the two keys a file can't press.
 
 Every one of this wizard's choice screens is `tui_screen_choose` (`docs/tui.md`), and it matches a
 line against exactly four things for each option, in this order: the option's **value** (the short
-id shown before `|` in this file's own `choices=(...)` arrays — e.g. Done's two options are
-`parent|Return to my desktop|` and `kid|Open <Name>'s desktop|`), its **label** verbatim (e.g.
+id shown before `|` in this file's own `choices=(...)` arrays — e.g. Done has one option,
+`parent|Return to my desktop|`), its **label** verbatim (e.g.
 `Return to my desktop`, capital R, no trailing period), the **whole rendered line** verbatim
 (`1) Return to my desktop`), or a bare **1-based number** (`1`). Nothing else matches — not a
 lowercase or partial label, not the first word of one. Typing `return` for Done's first option
@@ -491,7 +492,7 @@ friendly_web_mode, friendly_wifi_mode, validate_budget_minutes,
 validate_lights_out, and every lib/tui.sh tui_screen_* function. Not
 meant to be executed or sourced on its own.
 
-One row per key, thirteen keys in six groups (Web, Screen time, Apps,
+One row per key, twelve keys in six groups (Web, Screen time, Apps,
 Wi-Fi, Desktop, Data), Appendix B order within each group. name/avatar/
 band (A3-A5) and password (A12) are collected by their own screens
 before either path reaches here, so they're not rows; onboarded is a
@@ -499,8 +500,8 @@ system-managed flag no screen ever offers a parent, so it isn't either.
 
 Every row's value lives in the SAME plain variable Simple's own A7/A8/
 A9/A10/A11 screens use (WEB_MODE, BUDGET_MIN, ALLOWLIST_IDS, ...) — one
-source of truth regardless of which path set it — plus seven variables
-Simple never touches (DNS_MODE, SITES, MENU_MODE, HISTORY_VISIBLE,
+source of truth regardless of which path set it — plus five variables
+Simple never touches (DNS_MODE, SITES, HISTORY_VISIBLE,
 BUDGET_MIN_WEEKEND, LIGHTS_OUT_WEEKEND). adv_varname maps a key to its
 variable's name; adv_get/adv_set read and write it by that name (the
 same indirect-by-name idiom lib/tui.sh's _tui_array_copy uses, for the

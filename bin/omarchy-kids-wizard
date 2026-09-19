@@ -371,15 +371,16 @@ APPS_MODE="pack"
 ALLOWLIST_IDS=""
 WIFI_MODE=""
 LEVEL=""
-# The four Advanced-only cells Simple never shows a screen for (issue #20).
+# The three Advanced-only cells Simple never shows a screen for (issue #20).
 DNS_MODE=""
 SITES=""
-MENU_MODE=""
 HISTORY_VISIBLE=""
 NO_PASSWORD=0
 KID_PASSWORD=""
 PARENT_PASSWORD=""
 APPLY_OK=1
+APPLY_STARTED=0
+APPLY_FAILURE_TAIL=()
 FAILED_STEP=""
 APPLY_AUTH_EXPIRED=0
 
@@ -443,7 +444,11 @@ while ((STEP <= TOTAL_STEPS)); do
       ;;
     130)
       stop_prefetch
-      echo "Left setup. Nothing changed." >&2
+      if ((APPLY_STARTED)); then
+        echo "Left setup. Apply already made its changes." >&2
+      else
+        echo "Left setup. Nothing changed." >&2
+      fi
       exit 130
       ;;
     *)

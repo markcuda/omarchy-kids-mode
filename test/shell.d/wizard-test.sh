@@ -478,6 +478,8 @@ check_contains "$rm_out" "✗ Setting up Ada's account" "the failing step is mar
 check_contains "$rm_out" "FAKE-PROVISION: refusing on purpose" "the failing command's own output is shown (the tail)"
 check_not_contains "$rm_out" "FAKE-WEB" "Apply stops at the first failure and never reaches a later step"
 check_contains "$rm_out" 'Setup stopped at "Setting up Ada'"'"'s account"' "Done explains which step stopped it"
+check_contains "$rm_out" "Last lines from the setup log:" "Done carries the failed step's tail into its own card"
+check_not_contains "$rm_out" "see the lines above" "Done no longer points at a cleared screen"
 check_contains "$(cat "$RM_LOG" 2>/dev/null)" "FAKE-PROVISION: refusing on purpose" \
   "a real run actually writes the technical log at OMARCHY_KIDS_SETUP_LOG"
 

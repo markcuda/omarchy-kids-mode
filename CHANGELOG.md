@@ -24,6 +24,11 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Changed
 
+- Wizard honesty pass (I-6): the Advanced checklist no longer offers the unenforced `menu` row,
+  the history row asks about the parent's view (R-DATA-4), Done carries the failed step's own
+  tail instead of pointing at a screen it just cleared, Done no longer offers a preview button
+  that only apologised, the summary draws one card instead of two, the password question follows
+  the band's `password_optional` data, and leaving after Apply no longer claims nothing changed.
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.
