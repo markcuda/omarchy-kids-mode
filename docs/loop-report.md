@@ -665,3 +665,11 @@ Backlog now: R-ASK-2 (owner decision), research-derived favorites/recents or con
 password didn't work. Try again.") instead of only shaking the tile. `portal-test` pins both
 strings; `docs/portal.md` records the live check as still VM-only. The empty
 `docs/spec-proposal-per-app-limits` branch was deleted.
+
+### 2026-09-19, seventh round — portal help and worded failure
+
+`fix/portal-help` (`aa0c036`, off main) closes a deep-review finding: the SDDM greeter now names
+its keys at the bottom ("← → Choose · Enter Sign in · Ctrl+Shift+P Power off", switching to
+"Enter Sign in · Esc Back" while typing) and answers a wrong password with "That password didn't
+work. Try again." instead of a shake alone. portal-test pins both strings; docs/portal.md records
+them and still marks the live check as outstanding (VM only).
