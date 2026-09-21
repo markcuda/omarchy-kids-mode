@@ -52,7 +52,10 @@ requirement ids, then the tail of `docs/loop-report.md` before choosing work.
 
 Read `docs/dogfood-2026-09-21.md` first — it is the live pass report and the source for items 1-3.
 
-1. **SPEC amendment, doc only (owner asked for it, 2026-09-21)**: collapse R-DESK-3 / Appendix E to
+1. **SPEC amendment — DRAFTED, awaiting owner review. Do not redo it.** `docs/phase1/
+   SPEC-AMENDMENT-two-kid-modes.md` on branch `docs/spec-amendment-two-kid-modes` (`64c73c5`);
+   the five open questions at its end are the owner's. The item below is kept as the record of
+   what the draft does: collapse R-DESK-3 / Appendix E to
    two kid modes — `grid` (today's Level 1) and `desktop` (today's Level 2) — with band defaults
    **3-8 grid, 9+ desktop**; restate Level 3 as a parent-only "stock desktop", hidden until the
    menu-trim schema is verified on a real Omarchy box (`share/menu/omarchy-kids-trimmed.jsonc`
