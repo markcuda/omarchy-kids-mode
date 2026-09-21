@@ -508,14 +508,13 @@ ShellRoot {
                 // The grid never grows past the room below the clock/time-left
                 // line and above the key-hint footer: a tall pack must scroll,
                 // not hide a selected tile off-screen (review B4).
-                // A short screen (the live 960x540 VM) cannot fit two 169px
-                // rows plus the old 56px gaps; on those the clock-to-grid gap
-                // and the footer padding shrink so both rows and their focus
-                // rings sit inside the frame (live review finding).
-                readonly property bool shortScreen: root.height < 640
-                readonly property real topInset: (shortScreen ? 20 : root.margin) + clockText.height + (shortScreen ? 8 : root.margin) +
+                // A short screen (the live 960x540 VM) fits two rows because
+                // root.margin itself is compact there (32px, see the margin
+                // property); the insets keep their flat shape so the clock,
+                // the time-left line and the footer stay non-overlapping.
+                readonly property real topInset: root.margin + clockText.height + root.margin +
                     (timeLeftText.visible ? timeLeftText.height + 8 : 0)
-                readonly property real bottomInset: gridHelp.visible ? gridHelp.height + (shortScreen ? 12 : 40) : root.margin
+                readonly property real bottomInset: gridHelp.visible ? gridHelp.height + 40 : root.margin
                 readonly property real rowsHeight: Math.ceil(root.tiles.length / Math.max(1, root.columns)) * cellHeight
                 anchors.top: parent.top
                 anchors.topMargin: topInset
