@@ -421,6 +421,31 @@ ShellRoot {
                 font.pixelSize: 16
             }
 
+            // Level 1 has no search and no Escape; the footer says only what
+            // the keys do (I-5) and hides when there is nothing to open.
+            Text {
+                id: gridHelp
+                z: 1
+                visible: !root.desktopMode && root.tiles.length > 0
+                anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 20 }
+                text: "↑ ↓ ← → Choose    Enter Open"
+                color: theme.caption
+                font.family: theme.fontFamily
+                font.pixelSize: 16
+            }
+
+            // An empty manifest must say so, not show a blank window.
+            Text {
+                id: emptyGrid
+                visible: !root.desktopMode && root.tiles.length === 0
+                anchors.centerIn: parent
+                text: "Nothing is set up here yet.\nAsk a grown-up for help."
+                color: theme.caption
+                font.family: theme.fontFamily
+                font.pixelSize: 20
+                horizontalAlignment: Text.AlignHCenter
+            }
+
             GridView {
                 id: grid
                 visible: !root.desktopMode

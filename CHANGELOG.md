@@ -52,6 +52,9 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
   from `bar.fontFamily`, falling back to `qs.Commons`' `Style`), so no kid surface renders in Qt's
   platform font while the launcher renders JetBrains Mono. `test/shell.d/qml-fonts-test.sh` scans
   every `share/**/*.qml` Text block and fails on the next one that resolves no family.
+- Level 1's launcher gains a key-hint footer ("↑ ↓ ← → Choose    Enter Open") that hides when there
+  is nothing to open, and an empty manifest now shows "Nothing is set up here yet."
+  instead of a blank window.
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.

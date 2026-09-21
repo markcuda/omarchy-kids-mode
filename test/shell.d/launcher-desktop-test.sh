@@ -17,6 +17,12 @@ assert.match(desktopSource, /Super \+ Shift \+ K: Grown-up exit/,
   'the Level 2 footer must name the grown-up exit, not the Ask modal');
 assert.doesNotMatch(desktopSource, /Ask a grown-up/,
   'the Level 2 footer must not reuse the Ask modal name for the exit bind');
+assert.match(source, /id: gridHelp[\s\S]{0,80}visible: !root\.desktopMode && root\.tiles\.length > 0/,
+  'the Level 1 key-hint footer must hide when there is nothing to open');
+assert.match(source, /← → Choose {4}Enter Open"/, 'the Level 1 footer must name the grid keys');
+assert.match(source, /id: emptyGrid\s+visible: !root\.desktopMode && root\.tiles\.length === 0/,
+  'an empty Level 1 grid must show the empty state');
+assert.match(source, /Nothing is set up here yet/, 'the empty state must say what is wrong');
 const nav = require(path.join(dir, 'share/launcher/gridnav.js'));
 const entries = [
   { id: 'paint', label: 'Tux Paint', installed: true, argv: ['/approved/paint'] },
