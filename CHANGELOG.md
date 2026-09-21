@@ -80,6 +80,9 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 - The login portal names the keys at the bottom ("← → Choose · Enter Sign in · Ctrl+Shift+P Power
   off", and "Enter Sign in · Esc Back" while typing) and words a failed password ("That password
   didn't work. Try again.") instead of only shaking the tile (I-5, I-6).
+- The fail-closed "Ask a grown-up" screen now uses the theme resolver's accent and the shared
+  rounded border instead of a hardcoded 256-colour and a one-off double border, and its words
+  send the child to a grown-up rather than naming a CLI command (I-6).
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.
