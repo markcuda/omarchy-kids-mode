@@ -55,6 +55,10 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 - Level 1's launcher gains a key-hint footer ("↑ ↓ ← → Choose    Enter Open") that hides when there
   is nothing to open, and an empty manifest now shows "Nothing is set up here yet."
   instead of a blank window.
+- Panel writes now carry their result into the next card (`PANEL_NOTICE`): a preview says
+  "Preview only — nothing was changed", a success says "Change applied", and a failure shows the
+  command's own last line; a rejected password says so instead of returning a blank card, and a
+  site-list write that fails is distinguished from a policy apply that fails.
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.
