@@ -4,7 +4,7 @@ Start by reading, in this order: PROGRESS.md (where the project is, both machine
 works, the tooling lessons), AGENTS.md — especially "Before you call a ticket done", the six
 failure shapes every blocking review finding has taken — then docs/GOAL.md, then SPEC.md and the
 spec under docs/specs/ for whatever you pick up. Repo:
-https://github.com/markcuda/omarchy-kids-sandbox
+https://github.com/markcuda/omarchy-kids-mode
 
 ## What this is
 

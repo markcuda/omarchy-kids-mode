@@ -24,6 +24,9 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Changed
 
+- Repository identity: the project now lives at `markcuda/omarchy-kids-mode`; the old sandbox
+  repository is archived, and the hub's planning history (CORE.md, SPOKES.md, PATH-*.md,
+  research/) is kept on the `hub-archive-2026-09-19` branch.
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.

@@ -1,4 +1,4 @@
-# Working in omarchy-kids-sandbox
+# Working in omarchy-kids-mode
 
 Read this, then `SPEC.md`, before touching anything. The spec is the source of truth; issues
 reference its requirement ids (`R-WEB-3`). If a ticket and the spec disagree, the spec wins and
@@ -6,7 +6,7 @@ the ticket gets a comment.
 
 ## What this is
 
-The sandbox path of Omarchy Kids Mode: an app on a normal Omarchy install. One real Unix account
+Kids Mode for Omarchy: an app on a normal Omarchy install. One real Unix account
 per kid, the parent never restricted, one parent password. Hub and decisions:
 <https://github.com/markcuda/omarchy-kids-mode> (`PATH-SANDBOX.md`).
 
@@ -167,4 +167,4 @@ portals, firmware) run on the laptop itself.
 
 ## GitHub Account Rule
 
-This repository is locked to `markcuda/omarchy-kids-sandbox` using the `markcuda` GitHub account. Before pushes, PRs, or GitHub CLI operations, verify `.codex/repo-lock.json`, `git remote -v`, and `gh auth status`. Do not use another GitHub account for this repo unless the user explicitly changes the lock.
+This repository is locked to `markcuda/omarchy-kids-mode` using the `markcuda` GitHub account. Before pushes, PRs, or GitHub CLI operations, verify `.codex/repo-lock.json`, `git remote -v`, and `gh auth status`. Do not use another GitHub account for this repo unless the user explicitly changes the lock.
