@@ -728,3 +728,12 @@ when the iteration closed.
 (grid, navigation, launch, exit modal, portal; desktop layer and windowed picker), what is still
 open (two apps side by side, Super+K, the wifi shell), and that the stock desktop stays
 unverified. Docs only; found by the I-6 sweep.
+
+### 2026-09-21, loop iteration: GCompris first-run/config proposal
+
+`docs/gcompris-proposal` (`9d9d26f`): the live review's GCompris findings (first-run welcome
+dialog; the app's own wrench and quit) become a proposal with the observed on-disk evidence
+(`~/.config/gcompris/gcompris-qt.conf`: `fullscreen=true`, `kiosk=false`,
+`exitConfirmation=false`, `[Internal] exeCount`/`lastGCVersionRan`). Recommends a provisioning
+seed of that config (convenience in the kid's home, never a lock), gated on one VM run to confirm
+`kiosk=true` hides the controls and which state suppresses the welcome dialog. No code.
