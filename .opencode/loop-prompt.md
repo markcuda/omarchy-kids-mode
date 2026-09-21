@@ -6,8 +6,11 @@ requirement ids, then the tail of `docs/loop-report.md` before choosing work.
 
 ## Non-negotiables (from AGENTS.md and the paused handoff)
 
-- Never push, never open or merge PRs, never `git push`, never use `gh`. All work stays local on a
-  topic branch off `main`. The gh account lock is not satisfied on this machine.
+- `origin` is `markcuda/omarchy-kids-mode` and the gh CLI is switched to `markcuda`. Push topic
+  branches to `origin` so the work is visible, but **never push `main`, never open or merge PRs**;
+  merges stay with the owner's gate. Verify `.codex/repo-lock.json` and `gh auth status` first.
+- The owner's Omarchy dogfooding machine is off-limits until the owner explicitly starts that
+  session: no ssh, no flashing, no remote commands.
 - Never run anything under `test/live/` or `scripts/vm-*.sh`, never launch QEMU/Hyprland/Quickshell,
   never `--apply`, `provision`, `remove` for real, never write under `/etc`. This is a dev machine.
 - Never publish or move `.local/recovery/spec-08-session-lock-engagement-PRIVATE.md`; it stays
