@@ -649,8 +649,17 @@ assert.strictEqual(root.statusText, "Joining OpenNet…", "new join clears stale
 const scansBeforeFailure = scans;
 joinProcess.running = false;
 joinExited(2);
-assert.strictEqual(root.statusText, "Couldn't join. Check the password and try again.");
+assert.strictEqual(root.statusText, "Couldn't join. Try again, or ask a grown-up.");
 assert.strictEqual(scans, scansBeforeFailure, "failed join does not refresh");
+
+// A protected network still blames the password, not the network.
+root.networks = root.parseList("HomeNet:80:WPA2:\n");
+root.currentIndex = 0;
+root.statusText = "";
+root.beginJoin();
+joinProcess.running = false;
+joinExited(2);
+assert.strictEqual(root.statusText, "Couldn't join. Check the password and try again.");
 NODE
   check_status "$?" "0" "picker handlers preserve retry, password delivery, and join feedback"
 else

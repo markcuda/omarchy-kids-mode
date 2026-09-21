@@ -697,3 +697,17 @@ trip cannot pin a band default; import validates first, refuses duplicates/syste
 hazards, and replaces the profile in one atomic move before the theme side effect and manifest
 rebuild run once. The review itself is kept at `docs/reviews/2026-09-19-conf-export-import.md` on
 that branch. conf-test green.
+
+### 2026-09-21, integration and UI-bug round
+
+Because every earlier fix lived on its own branch, the fable UI review found `main` still had all
+the old defects. The loop merged all 23 topic branches onto **`integration/dogfood-2026-09-19`**
+(conflicts resolved once: `.gitignore` unions, CHANGELOG unions, both launcher assertion blocks,
+both `docs/time.md` bullets, the panel usage and P4 rows). Then it squashed the review's top bugs:
+the Level 1 grid caps its height and clips, the time-left line sits below the clock and the grid
+accounts for it, long names elide in the exit/Time's Up cards, Wi-Fi's open-network failure no
+longer blames a password, the portal words a missing session or zero accounts, both password
+modals treat a verifier outage (exit 2) as "can't check right now" instead of a wrong password,
+the Ask done sentence is capitalised and stays 3 s, and the panel says "Changes already made stay"
+instead of "nothing changes". Mac suite (with shellcheck installed) is 48/48 before this round;
+re-run after.

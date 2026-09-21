@@ -37,6 +37,12 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Changed
 
+- UI review fixes: the Level 1 grid clips instead of hiding a selected tile, the time-left line
+  sits below the clock instead of over it, long names elide in the exit and Time's Up cards, an
+  open-network join failure no longer blames a password, the portal says when no accounts or no
+  session are configured, both password modals tell a verifier outage (exit 2) apart from a wrong
+  password without counting it toward the lockout, the Ask card's done sentence is capitalised and
+  stays 3 s, and the panel no longer claims "nothing changes" after its own writes.
 - Repository identity: the project now lives at `markcuda/omarchy-kids-mode`; the old sandbox
   repository is archived, and the hub's planning history (CORE.md, SPOKES.md, PATH-*.md,
   research/) is kept on the `hub-archive-2026-09-19` branch.

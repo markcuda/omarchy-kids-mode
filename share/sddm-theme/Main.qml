@@ -146,6 +146,9 @@ Rectangle {
         for (var i = 0; i < root.users.length; i++) {
             if (root.users[i].name === userModel.lastUser) { root.currentIndex = i; break }
         }
+        if (root.users.length === 0) {
+            root.statusMessage = "No accounts to show yet. A grown-up can fix this."
+        }
     }
 
     // --- same harvest trick for sessionModel, so a kid's Enter always
@@ -179,7 +182,10 @@ Rectangle {
 
     function loginUser(user, password) {
         var sessionIndex = root.sessionIndexForUser(user)
-        if (sessionIndex < 0) return
+        if (sessionIndex < 0) {
+            root.statusMessage = "This desktop isn't set up yet. A grown-up can fix it."
+            return
+        }
         sddm.login(user.name, password, sessionIndex)
     }
 
@@ -188,6 +194,7 @@ Rectangle {
     property bool passwordMode: false
     property bool loginFailed: false
     property int failCount: 0
+    property string statusMessage: ""
 
     function currentUser() {
         return (root.currentIndex >= 0 && root.currentIndex < root.users.length) ? root.users[root.currentIndex] : null
@@ -197,6 +204,7 @@ Rectangle {
         root.currentIndex = i
         root.passwordMode = false
         root.loginFailed = false
+        root.statusMessage = ""
         keyScope.forceActiveFocus() // the closed password field would otherwise keep the arrows
     }
 
@@ -389,6 +397,20 @@ Rectangle {
         anchors.topMargin: 24
         anchors.horizontalCenter: parent.horizontalCenter
         text: "That password didn't work. Try again."
+        color: root.colError
+        font.family: root.fontFam
+        font.pixelSize: 16
+    }
+
+    // A setup problem says so instead of a silent Enter (I-6; review B6).
+    Text {
+        id: setupStatus
+        visible: root.statusMessage !== ""
+        anchors { bottom: keyHelp.top; horizontalCenter: parent.horizontalCenter; bottomMargin: 8 }
+        width: parent.width - 64
+        horizontalAlignment: Text.AlignHCenter
+        wrapMode: Text.WordWrap
+        text: root.statusMessage
         color: root.colError
         font.family: root.fontFam
         font.pixelSize: 16

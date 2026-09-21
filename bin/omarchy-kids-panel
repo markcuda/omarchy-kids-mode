@@ -44,6 +44,11 @@ else
   DRY_RUN="${DRY_RUN:-1}"
 fi
 
+# The panel is not setup: a write may already have landed, so the wizard's
+# "nothing changes" wording would be false here (I-6; UI review B2).
+TUI_LEAVE_MESSAGE="Leave Kids Mode? Changes already made stay."
+TUI_FOOTER_DEFAULT="Enter select · Esc back · Ctrl+C leave"
+
 die() {
   echo "omarchy-kids-panel: $1" >&2
   exit "${2:-2}"

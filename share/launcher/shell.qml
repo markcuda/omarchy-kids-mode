@@ -479,11 +479,20 @@ ShellRoot {
             GridView {
                 id: grid
                 visible: !root.desktopMode
+                // The grid never grows past the room below the clock/time-left
+                // line and above the key-hint footer: a tall pack must scroll,
+                // not hide a selected tile off-screen (review B4).
+                readonly property real topInset: root.margin + clockText.height + root.margin +
+                    (timeLeftText.visible ? timeLeftText.height + 8 : 0)
+                readonly property real bottomInset: gridHelp.visible ? gridHelp.height + 40 : root.margin
+                readonly property real rowsHeight: Math.ceil(root.tiles.length / Math.max(1, root.columns)) * cellHeight
                 anchors.top: parent.top
-                anchors.topMargin: root.margin + clockText.height + root.margin
+                anchors.topMargin: topInset
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: Math.min(root.availableWidth, cellWidth * root.neededColumns)
-                height: Math.max(cellHeight, Math.ceil(root.tiles.length / Math.max(1, root.columns)) * cellHeight)
+                height: Math.min(rowsHeight,
+                    Math.max(cellHeight, parent.height - topInset - bottomInset))
+                clip: true
                 cellWidth: root.cellSize
                 cellHeight: root.cellSize
                 model: root.tiles
@@ -625,7 +634,7 @@ ShellRoot {
             visible: !root.desktopMode && label !== ""
             anchors.top: clockText.bottom
             anchors.right: parent.right
-            anchors.topMargin: root.margin
+            anchors.topMargin: 8
             anchors.rightMargin: root.margin
             color: root.remainingSeconds <= 300 ? theme.warning : theme.caption
             font.family: theme.fontFamily

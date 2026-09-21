@@ -240,7 +240,7 @@ NODE
     fail "Main.qml does not log the finalized portal tile count"
   fi
   if grep -qF 'function loginUser(user, password)' "$MAIN_QML" &&
-    grep -qF 'if (sessionIndex < 0) return' "$MAIN_QML" &&
+    grep -qF 'if (sessionIndex < 0) {' "$MAIN_QML" &&
     [[ "$(grep -cF 'return -1' "$MAIN_QML")" -ge 1 ]] &&
     ! grep -qF 'return sessionModel.lastIndex' "$MAIN_QML"; then
     pass "Main.qml refuses login when a pinned session is missing"

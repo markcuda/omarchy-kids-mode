@@ -139,6 +139,9 @@ PanelWindow {
                     Text {
                         font.family: theme.fontFamily
                         anchors.horizontalCenter: parent.horizontalCenter
+                        width: parent.width - 32
+                        horizontalAlignment: Text.AlignHCenter
+                        elide: Text.ElideRight
                         text: "Time's up, " + root.displayName + "!"
                         color: theme.foreground
                         font.pixelSize: 26

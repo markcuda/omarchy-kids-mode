@@ -116,10 +116,14 @@ check_contains "$qml_content" 'font.pixelSize: 32' \
 # a flat root.margin shared with the clock (the old, overlapping shape).
 check_contains "$qml_content" 'id: clockText' \
   "the clock has an id the grid's own layout can bind to"
-check_contains "$qml_content" 'anchors.topMargin: root.margin + clockText.height + root.margin' \
+check_contains "$qml_content" 'readonly property real topInset: root.margin + clockText.height + root.margin' \
   "grid top = clock bottom (clockText's own root.margin inset + its height) + one more root.margin gap"
-check "$(grep -c '^[[:space:]]*anchors.topMargin: root.margin$' "$QML" || true)" "3" \
-  "clock, search box and time-left indicator use flat insets; the grid remains below the clock"
+check_contains "$qml_content" 'anchors.topMargin: topInset' \
+  "the grid anchors below the clock via the shared top inset"
+check_contains "$qml_content" 'clip: true' \
+  "the grid clips instead of growing past the window"
+check "$(grep -c '^[[:space:]]*anchors.topMargin: root.margin$' "$QML" || true)" "2" \
+  "clock and desktop-only search box use flat insets; the grid and time-left line do not overlap them"
 
 # Labels in the theme font (docs/theming.md) -- every Text element in the
 # every Text/TextInput in shell.qml must set font.family, not rely on Qt's

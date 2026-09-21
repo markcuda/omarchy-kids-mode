@@ -65,7 +65,7 @@ PanelWindow {
     // see onGranted()/submitLater() for the on-the-spot wording).
     Timer {
         id: closeTimer
-        interval: 1600
+        interval: 3000
         onTriggered: Qt.quit()
     }
 
@@ -92,6 +92,11 @@ PanelWindow {
             root.verifying = false
             if (exitCode === 0) {
                 root.onGranted()
+            } else if (exitCode === 2) {
+                // Transport/apply failure, not a wrong password (ask exits 2
+                // for tool errors): don't count it toward the lockout.
+                passwordInput.text = ""
+                root.hint = "Can't check the password right now. Try again in a moment."
             } else {
                 root.onWrongPassword()
             }
@@ -103,7 +108,7 @@ PanelWindow {
     // approve anything, so it does not try (review S1).
     function onGranted() {
         root.wrongCount = 0
-        root.doneMessage = "Got it! " + root.desc + " is ready now."
+        root.doneMessage = "Got it! " + root.desc.charAt(0).toUpperCase() + root.desc.slice(1) + " is ready now."
         root.done = true
         closeTimer.restart()
     }

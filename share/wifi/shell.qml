@@ -150,6 +150,9 @@ PanelWindow {
                 root.refreshList(true)
             } else if (exitCode === 3) {
                 root.statusText = "Wi-Fi needs a grown-up right now."
+            } else if (root.selectedNetwork() && !root.needsPassword(root.selectedNetwork())) {
+                // An open network never asked for a password, so don't blame one.
+                root.statusText = "Couldn't join. Try again, or ask a grown-up."
             } else {
                 root.statusText = "Couldn't join. Check the password and try again."
             }

@@ -84,6 +84,11 @@ PanelWindow {
             root.verifying = false
             if (exitCode === 0) {
                 root.onVerified()
+            } else if (exitCode === 2) {
+                // The verifier is unreachable (parent-auth exits 2): not a
+                // wrong password, so it must not count toward the lockout.
+                passwordInput.text = ""
+                root.hint = "Can't check the password right now. Try again in a moment."
             } else {
                 root.onWrongPassword()
             }
@@ -174,6 +179,9 @@ PanelWindow {
                     Text {
                         font.family: theme.fontFamily
                         anchors.horizontalCenter: parent.horizontalCenter
+                        width: parent.width - 32
+                        horizontalAlignment: Text.AlignHCenter
+                        elide: Text.ElideRight
                         text: root.displayName
                         color: theme.foreground
                         font.pixelSize: 24
