@@ -211,6 +211,11 @@ cmd_add() {
   # the extension-loading flag the kids policy always refuses.
   run install_kids_chromium_flags "$account"
 
+  # R-DESK-4 on a Level 3 desktop: hide Omarchy's parent-only menu rows
+  # (install/remove/update/setup) with the verified user extension. Root-owned
+  # and read-only for the kid; it is presentation, not a lock.
+  run install_kids_menu_trim "$account"
+
   # R-DESK, issue #53: the kid's desktop matches the house look at first
   # login -- docs/theming.md. "$CONF_BIN" set is the one writer; nothing here
   # touches theme files directly.

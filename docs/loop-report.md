@@ -787,3 +787,14 @@ the stock bindings/envs/looknfeel/input/windows modules directly and runs its ow
 the two systemd/dbus imports, then `omarchy-kids-session-start` (which execs
 `omarchy-launch-shell` at level 3). `levels-test.sh` keeps the stock-module assertions and adds a
 guard that autostart/first-run provisioning can never come back (comments excluded).
+
+### 2026-09-21, loop iteration: the menu trim reaches a kid at last
+
+Stacked on `fix/level3-menu-trim`. `fix/level3-menu-seed`: provisioning gains
+`install_kids_menu_trim` (writes the verified omarchy-menu extension into the kid's own
+`~/.config/omarchy/extensions/omarchy-menu.jsonc` when the effective `menu` is `trimmed`) and calls
+it after the chromium-flags override. A missing shipped file warns and skips instead of failing a
+provision (I-6). `provision-test.sh` stages `share/menu/` and asserts the seeded file with its
+`when: "false"` rows; provision-test green, menu-trimmed-test green, shellcheck clean. The
+follow-up live Level 3 check (menu rows gone, no first-run chatter) is the remaining gate before
+Level 3 is offered in the pickers.

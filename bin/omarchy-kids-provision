@@ -181,6 +181,36 @@ install_kids_chromium_flags() {
   fi
 }
 
+# --- omarchy-menu trim (R-DESK-4) --------------------------------------
+
+# install_kids_menu_trim ACCOUNT — writes the omarchy-menu user extension into
+# the kid's own ~/.config/omarchy/extensions/ when their profile says
+# menu=trimmed (the band default for 3-5, 6-8 and 9-12). The extension hides
+# the parent-only rows (install, remove, update, setup) by re-stating each id
+# with when: "false" — the real merge shape, verified against Omarchy 4.0.2's
+# menu plugin (docs/levels.md). It is the kid's own file, so it is
+# presentation, never a lock: their account still denies every action behind
+# those rows. Kid-owned so their shell can rewrite it like any user config.
+install_kids_menu_trim() {
+  local account="$1" home ext_dir dest mode src
+  mode="$("$CONF_BIN" get "$account" menu 2>/dev/null || true)"
+  [[ "$mode" == "trimmed" ]] || return 0
+  src="$SHARE/menu/omarchy-kids-trimmed.jsonc"
+  if [[ ! -f "$src" ]]; then
+    # Presentation only, so a package without the file must not fail a
+    # provision; say so rather than installing nothing silently (I-6).
+    echo "warning: $src is missing; skipping the omarchy-menu trim for $account" >&2
+    return 0
+  fi
+  home="$(home_dir_for "$account")"
+  ext_dir="$home/.config/omarchy/extensions"
+  install -d -m 0755 "$ext_dir"
+  dest="$ext_dir/omarchy-menu.jsonc"
+  install -m 0644 "$src" "$dest"
+  chown "$account:$account" "$dest" 2>/dev/null ||
+    echo "  (could not chown $dest to $account -- fine outside a real root run)" >&2
+}
+
 # --- thin dispatch: one lib/provision-<verb>.sh per subcommand -------------
 
 # shellcheck source=lib/provision-add.sh
