@@ -1,0 +1,35 @@
+name: 🧒 Kid-test report (filed by a parent)
+description: Your child tried something. Tell us what happened — no names, photos, or exact ages.
+title: "[Kid-test] "
+labels: ["kid-test"]
+body:
+  - type: input
+    id: what
+    attributes:
+      label: What did they try? (link or description)
+    validations:
+      required: true
+  - type: dropdown
+    id: age
+    attributes:
+      label: Age band
+      options: ["3–5", "5–7", "8–10", "11–12", "13+"]
+    validations:
+      required: true
+  - type: textarea
+    id: worked
+    attributes:
+      label: What worked, what confused them, what made them laugh?
+    validations:
+      required: true
+  - type: textarea
+    id: bypass
+    attributes:
+      label: Did they get around anything they shouldn't have? (real bypasses → SECURITY.md, just say "reported privately")
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Confirmation
+      options:
+        - label: I'm the parent/guardian, I was there, and there are no identifying details here.
+          required: true

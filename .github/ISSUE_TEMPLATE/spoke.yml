@@ -1,0 +1,27 @@
+name: 🧩 Spoke
+description: Propose or register a spoke repo (theme, plugin, game, pack, tool).
+title: "[Spoke] "
+labels: ["spoke"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Name
+      placeholder: "omarchy-kids-tux-theme"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What it ships
+    validations:
+      required: true
+  - type: input
+    id: repo
+    attributes:
+      label: Repo URL (if it exists yet)
+  - type: dropdown
+    id: status
+    attributes:
+      label: Status
+      options: ["Idea — looking for collaborators", "I'm building it", "Working — ready to list"]

@@ -1,0 +1,14 @@
+title: "[Idea] "
+labels: ["type: idea"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What's the idea?
+      description: Half-formed is fine. Ideas that gather steam get promoted to an Issue or an RFC.
+    validations:
+      required: true
+  - type: textarea
+    id: who
+    attributes:
+      label: Who benefits (age, parent, teacher)?

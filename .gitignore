@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 /test/live/config.env
 /test/live/out/
+.DS_Store
+.opencode/opencode-loop/

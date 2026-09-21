@@ -8,7 +8,7 @@ Live tests — that never writes anything and never fixes anything. A FAIL here 
 
 v1 (this repo's earlier stub, replaced by this issue) hardcoded a single `KID_USER` account and a
 handful of checks against an installer-path layout (`resolved.conf.d`, a single Chromium policy,
-`limine.conf`'s `editor_enabled`) that never matched this sandbox path's actual architecture —
+`limine.conf`'s `editor_enabled`) that never matched this project's actual architecture —
 per-kid accounts, per-band policy files, the LUKS-slot boot chain, the portal, PAM. v2 replaces
 all of it.
 

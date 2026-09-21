@@ -79,6 +79,6 @@ Mode's reach.
 
 ---
 
-*Omarchy Kids Mode, sandbox path. Not affiliated with DHH, 37signals, or the Omarchy project.
-Something on this card wrong, or a kid found a way around one of these? See `SECURITY.md` on the
-hub (`omarchy-kids-mode`) for how to report it privately.*
+*Omarchy Kids Mode. Not affiliated with DHH, 37signals, or the Omarchy project. Something on this
+card wrong, or a kid found a way around one of these? See `SECURITY.md` in this repository for how
+to report it privately.*

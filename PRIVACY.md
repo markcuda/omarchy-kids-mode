@@ -67,5 +67,5 @@ A) — not a paraphrase of it:
 ## If you think this is wrong
 
 A way for Kids Mode to record more than this list, or to send anything off the machine, is a
-security bug, not a feature request — report it privately per the hub's `SECURITY.md`
+security bug, not a feature request — report it privately per this repository's `SECURITY.md`
 (<https://github.com/markcuda/omarchy-kids-mode/blob/main/SECURITY.md>), not in a public issue.

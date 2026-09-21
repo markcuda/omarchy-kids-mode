@@ -1,0 +1,38 @@
+name: 💡 Idea
+description: Something Kids Mode should do. Small ideas welcome — parents especially.
+title: "[Idea] "
+labels: ["idea"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea, in a sentence or two
+      placeholder: "When a kid opens a second app, the screen splits 50/50 and the mascot shows the arrow keys."
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Install & accounts
+        - Parent setup
+        - Child onboarding / mascot
+        - Web safety
+        - The growing desktop (levels)
+        - Apps & games
+        - Screen time
+        - Themes & fun
+        - Something else
+  - type: textarea
+    id: why
+    attributes:
+      label: Why? (a real moment with a real kid, if you have one)
+  - type: dropdown
+    id: help
+    attributes:
+      label: Can you help make it happen?
+      options:
+        - I'd like to build it
+        - I can test with my kids
+        - Just the idea for now

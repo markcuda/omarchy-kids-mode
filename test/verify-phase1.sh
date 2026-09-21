@@ -1,6 +1,6 @@
 #!/bin/bash
-# Phase-1 fact collector: answers the hub's five unknowns as far as read-only checks can,
-# and prints the manual steps for the rest. Output: report you can paste into the hub.
+# Phase-1 fact collector: answers the project's five unknowns as far as read-only checks can,
+# and prints the manual steps for the rest. Output: a report you can paste into an issue.
 set -uo pipefail
 echo "# Phase 1 verification — $(hostname) — $(date -u +%F)"
 echo

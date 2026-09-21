@@ -1,7 +1,7 @@
-# Omarchy Kids Mode, sandbox path: specification v1.1
+# Omarchy Kids Mode: specification v1.1
 
-Status: **draft for review**, 2026-09-02. Desktop defaults updated by Mark on 2026-09-07 (#200). Decisions come from the hub's
-[PATH-SANDBOX.md](https://github.com/markcuda/omarchy-kids-mode/blob/main/PATH-SANDBOX.md) plus
+Status: **draft for review**, 2026-09-02. Desktop defaults updated by Mark on 2026-09-07 (#200). Decisions come from the design record on the `two-paths` branch
+([PATH-SANDBOX.md](https://github.com/markcuda/omarchy-kids-mode/blob/two-paths/PATH-SANDBOX.md)) plus
 the thirty-question design session that followed. Requirement ids (`R-WEB-3`) are referenced by
 the issues. Appendices A–G are the build-ready detail v1 lacked.
 
@@ -31,7 +31,7 @@ malcontent; timekpr; machine-wide DNS or browser policy; localization (English f
 - **Level**: 1 (one app, fullscreen), 2 (split), 3 (tiling). Parent-set in v1.
 - **Lock**: a root-owned artifact that constrains a kid session. **Fence**: a lock that is a deterrent, not a wall; labeled as such in the UI.
 - **Portal**: the login screen with face tiles.
-- **Path**: this repo is the sandbox path; the installer path is upstream (hub `PATH-INSTALLER.md`).
+- **Path**: this repository is the complete app; the installer-path record is on the `two-paths` branch (`PATH-INSTALLER.md`).
 
 ## 3. Invariants
 

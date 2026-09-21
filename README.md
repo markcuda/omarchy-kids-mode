@@ -5,11 +5,12 @@ Each kid gets a profile that is a real account underneath, with root-owned scree
 parent-owned browser policy, a login portal, and a parent panel. A Super triple-tap and the
 parent password get the parent back out. Core is untouched.
 
-This is the one repository for the project. The planning history that used to live on `main` —
-`PATH-SANDBOX.md`, `PATH-INSTALLER.md`, `CORE.md`, `SPOKES.md`, `research/` — is kept on the
-**`hub-archive-2026-09-19`** branch; the installer path is built upstream from that record
-([PATH-INSTALLER.md](https://github.com/markcuda/omarchy-kids-mode/blob/hub-archive-2026-09-19/PATH-INSTALLER.md)).
-The two paths share the parent command and its feature commands.
+This is the one repository for the project. The design records live here: `CORE.md`, `SPOKES.md`
+and `research/`; `PATH-SANDBOX.md` and `PATH-INSTALLER.md`, which describe the two paths this
+app came out of, are on the **`two-paths`** branch
+([PATH-INSTALLER.md](https://github.com/markcuda/omarchy-kids-mode/blob/two-paths/PATH-INSTALLER.md)).
+The two paths share the parent command and its feature commands. The old hub history is kept on
+the `hub-archive-2026-09-19` branch.
 
 ## Status: v1 build in progress
 
@@ -82,6 +83,6 @@ and `test/all`. [`AGENTS.md`](AGENTS.md)'s Layout table is the map.
 ## Rules
 
 MIT, same as Omarchy. Never collects anything about a child; nothing leaves the machine. A way for
-a kid to get around this is a bug: report privately per the hub's
-[SECURITY.md](https://github.com/markcuda/omarchy-kids-mode/blob/main/SECURITY.md). Everything
+a kid to get around this is a bug: report privately per
+[SECURITY.md](SECURITY.md). Everything
 here must work from the keyboard alone. Not affiliated with DHH, 37signals, or the Omarchy project.

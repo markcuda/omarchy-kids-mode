@@ -25,7 +25,7 @@ autonomous loop works from; `docs/loop-report.md` is the running account.
    box, never restricted themselves, with one password (their own), and remove it cleanly.
 6. **It is installed on the Air itself and dogfooded on real hardware**: the portal path (greeter
    tile, password, launcher, exit modal, Finish, Pause, screen time) under the owner's theme, with
-   the owner never restricted and a clean removal proven. The AUR upload and the hub PR are not
+   the owner never restricted and a clean removal proven. The AUR upload and the upstream PR are not
    part of done (Mark, 2026-09-04); the cold-boot-kid path stays VM-proven.
 7. **The community findings are folded in or decided**: #88 (signed ask requests), #89
    (hardened root helpers), #90 (the ADR on per-kid accounts), #91 (show_missing).

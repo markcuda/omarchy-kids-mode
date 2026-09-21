@@ -80,7 +80,7 @@ checks that repair it after updates and at boot.
 Kids Mode never silently restricts the parent's home, browser, DNS, or session. A parent can
 explicitly ask it to add its bar widget or hide Kids Mode apps in the parent's application menu;
 those are the opt-in parent actions allowed by SPEC.md I-1. If an operation changes the parent's
-account without that choice, stop and report it through `SECURITY.md` on the hub.
+account without that choice, stop and report it through this repository's `SECURITY.md`.
 
 ## Updating
 

@@ -7,8 +7,9 @@ the ticket gets a comment.
 ## What this is
 
 Kids Mode for Omarchy: an app on a normal Omarchy install. One real Unix account
-per kid, the parent never restricted, one parent password. Hub and decisions:
-<https://github.com/markcuda/omarchy-kids-mode> (`PATH-SANDBOX.md`).
+per kid, the parent never restricted, one parent password. This is the one repository for the
+project; the design records are `CORE.md`, `SPOKES.md` and `research/` here, plus
+`PATH-SANDBOX.md`/`PATH-INSTALLER.md` on the `two-paths` branch.
 
 ## Rules that override everything
 
@@ -118,7 +119,7 @@ a minute here saves.
 - Commit messages: what and why, one topic per commit. AI-assisted work is welcome; say so in
   the PR, and a human reads every line.
 - Anything a kid could use to get around a lock is a security issue: report it privately per the
-  hub's `SECURITY.md`, not in a public issue.
+  repository's `SECURITY.md`, not in a public issue.
 
 ## Conventions
 

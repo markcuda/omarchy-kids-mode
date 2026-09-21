@@ -157,8 +157,7 @@ all, since `omarchy-kids-data` already refuses to touch Chromium in that case.
   there's no `--json`/`--csv` flag.
 - **No `PRIVACY.md`.** R-DATA-5 ("`PRIVACY.md` states all of this in plain words") isn't delivered
   by this issue — there's no `PRIVACY.md` anywhere in this checkout, and `AGENTS.md`'s own file-
-  layout table doesn't list one either, so it isn't clear whether it belongs in this repo or the
-  hub (`PATH-SANDBOX.md`'s home, per `AGENTS.md`'s "Hub and decisions" line). This doc (`docs/
+  layout table doesn't list one either, so it isn't clear where it belongs. This doc (`docs/
   data.md`) carries R-DATA-5's content in the meantime — what's recorded, where, who can read it,
   retention, and export/delete, all below — until that's settled.
 
