@@ -335,17 +335,44 @@ cmd_show() {
   done
 }
 
-# cmd_import KID FILE — apply every key=value line from an exported file.
-# Every line is validated before the first write, so a bad file changes
-# nothing; system-managed markers (password/onboarded) are refused.
+# cmd_export KID — the kid's own overrides, one key=value per line, plus
+# inherited values as comments. A round trip therefore re-applies only what
+# was overridden, instead of pinning every inherited value. Read-only: the
+# password hash lives in shadow, not here.
+cmd_export() {
+  local kid="${1:?omarchy-kids-conf export <kid>}" key profile value out lines
+  profile="$(profile_file "$kid")"
+  [[ -e "$profile" ]] || die "kid '$kid' has no profile ($profile)"
+  lines="# omarchy-kids-conf export for $kid"$'\n'
+  for key in "${SCHEMA_KEYS[@]}"; do
+    # password/onboarded are system-managed markers, not parent settings.
+    case "$key" in password | onboarded) continue ;; esac
+    if value="$(conf_get "$profile" "$key")"; then
+      lines+="$key=$value"$'\n'
+    else
+      out="$(resolve "$kid" "$key")"
+      value="${out%%$'\t'*}"
+      lines+="# $key=$value (inherited)"$'\n'
+    fi
+  done
+  printf '%s' "$lines"
+}
+
+# cmd_import KID FILE — apply the overrides in FILE. Every line is
+# validated before anything is written, then the profile is replaced in
+# one mv: a bad file, or a failure mid-write, leaves the profile untouched.
 cmd_import() {
   local kid="${1:?omarchy-kids-conf import <kid> <file>}" file="${2:?omarchy-kids-conf import <kid> <file>}"
-  [[ -r "$file" ]] || die "import: cannot read '$file'"
-  [[ -e "$(profile_file "$kid")" ]] || die "kid '$kid' has no profile ($(profile_file "$kid"))"
+  [[ -f "$file" && ! -L "$file" ]] ||
+    die "import: '$file' must be a regular file (not a symlink or a pipe)"
+  local profile tmp
+  profile="$(profile_file "$kid")"
+  [[ -e "$profile" ]] || die "kid '$kid' has no profile ($profile)"
   local -a keys=() values=()
-  local lineno=0 line key value
+  local lineno=0 line key value err seen=$'\n'
   while IFS= read -r line || [[ -n "$line" ]]; do
     lineno=$((lineno + 1))
+    line="${line%$'\r'}"
     [[ -z "$line" || "$line" == \#* ]] && continue
     [[ "$line" == *=* ]] || die "import: line $lineno is not key=value"
     key="${line%%=*}"
@@ -354,32 +381,40 @@ cmd_import() {
     case "$key" in
       password | onboarded) die "import: line $lineno: '$key' is system-managed" ;;
     esac
-    validate_value "$key" "$value" || die "import: line $lineno: invalid value for '$key'"
+    [[ "$seen" != *$'\n'"$key"$'\n'* ]] || die "import: line $lineno: duplicate key '$key'"
+    seen+="$key"$'\n'
+    if ! err="$(validate_value "$key" "$value" 2>&1)"; then
+      die "import: line $lineno: invalid value for '$key': ${err#omarchy-kids-conf: }"
+    fi
     keys+=("$key")
     values+=("$value")
   done <"$file"
   ((${#keys[@]})) || die "import: '$file' has no settings"
-  local i
+  local i theme_value=""
+  tmp="$(mktemp "$(dirname "$profile")/.import.XXXXXX")" || die "import: cannot create a scratch profile"
+  if ! cp -p "$profile" "$tmp"; then
+    rm -f "$tmp"
+    die "import: cannot copy the profile (nothing changed)"
+  fi
   for ((i = 0; i < ${#keys[@]}; i++)); do
-    cmd_set "$kid" "${keys[$i]}" "${values[$i]}" >/dev/null
+    if ! conf_set "$tmp" "${keys[$i]}" "${values[$i]}"; then
+      rm -f "$tmp"
+      die "import: failed writing '${keys[$i]}' (nothing changed)"
+    fi
+    [[ "${keys[$i]}" != theme ]] || theme_value="${values[$i]}"
   done
+  if ! mv -f "$tmp" "$profile"; then
+    rm -f "$tmp"
+    die "import: could not replace the profile (nothing changed)"
+  fi
+  # Side effects once, after the profile is in place; a theme apply failure
+  # is reported but does not undo the import (same rule as `set`).
+  if [[ -n "$theme_value" ]]; then
+    theme_apply_for "$kid" "$theme_value" || echo "omarchy-kids-conf: imported the 'theme' override but could not apply it to disk yet -- omarchy-kids-assert will retry" >&2
+    theme_reload_if_live "$kid"
+  fi
+  manifest_follow_profile "$kid"
   printf 'omarchy-kids-conf: imported %d setting(s) for %s\n' "${#keys[@]}" "$kid"
-}
-
-# cmd_export KID — every effective setting, one key=value per line, for
-# saving or diffing a profile. Read-only: the password hash is in shadow,
-# not here, so nothing secret is printed.
-cmd_export() {
-  local kid="${1:?omarchy-kids-conf export <kid>}" key out value
-  [[ -e "$(profile_file "$kid")" ]] || die "kid '$kid' has no profile ($(profile_file "$kid"))"
-  printf '# omarchy-kids-conf export for %s\n' "$kid"
-  for key in "${SCHEMA_KEYS[@]}"; do
-    # password/onboarded are system-managed markers, not parent settings.
-    case "$key" in password | onboarded) continue ;; esac
-    out="$(resolve "$kid" "$key")"
-    value="${out%%$'\t'*}"
-    printf '%s=%s\n' "$key" "$value"
-  done
 }
 
 cmd_reset() {
