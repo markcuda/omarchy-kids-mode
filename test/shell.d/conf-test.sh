@@ -266,6 +266,22 @@ out="$("$CONF" show kid-ada)"
 check "$(echo "$out" | awk '/^dns[ \t]/{print $NF}')" "band" "show: dns marks its band source"
 check "$(echo "$out" | awk '/^history_visible[ \t]/{print $NF}')" "band" "show: history visibility marks its band source"
 
+# --- export: every effective setting as key=value, no secrets -------------
+
+out="$("$CONF" export kid-ada)"
+check "$(echo "$out" | head -1)" "# omarchy-kids-conf export for kid-ada" \
+  "export: names the kid in a comment header"
+check "$(echo "$out" | awk -F= '/^level=/{print $2}')" "2" "export: level carries the effective band value"
+check "$(echo "$out" | awk -F= '/^web=/{print $2}')" "garden" "export: web carries the effective band value"
+check "$(echo "$out" | awk -F= '/^name=/{print $2}')" "Ada" "export: name is included"
+check "$(grep -c '^password=' <<<"$out")" "0" \
+  "export: never prints a password (the hash lives in shadow)"
+# An override is what export shows, not the band default it replaced.
+"$CONF" set kid-ada level 1 >/dev/null
+check "$("$CONF" export kid-ada | awk -F= '/^level=/{print $2}')" "1" \
+  "export: an override wins over the band default"
+"$CONF" unset kid-ada level >/dev/null
+
 # --- get: override -> band -> default fallback ----------------------------
 
 check "$("$CONF" get kid-ada level)" "2" "get: level falls back to band 6-8's desktop default"

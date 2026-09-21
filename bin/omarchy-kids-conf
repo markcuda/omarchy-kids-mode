@@ -75,6 +75,7 @@ Usage: $(basename "$0") <command> [args]
   set <kid> <key> <value>  write an override
   unset <kid> <key>        clear one override and inherit its default
   show <kid>                every key, its value, and where it came from
+  export <kid>              every effective setting as key=value (read-only)
   reset <kid>                clear overrides except band/name/avatar/password/onboarded
   bands                      list bands with their label and blurb
   band <band>                print one band's defaults
@@ -333,6 +334,22 @@ cmd_show() {
   done
 }
 
+# cmd_export KID — every effective setting, one key=value per line, for
+# saving or diffing a profile. Read-only: the password hash is in shadow,
+# not here, so nothing secret is printed.
+cmd_export() {
+  local kid="${1:?omarchy-kids-conf export <kid>}" key out value
+  [[ -e "$(profile_file "$kid")" ]] || die "kid '$kid' has no profile ($(profile_file "$kid"))"
+  printf '# omarchy-kids-conf export for %s\n' "$kid"
+  for key in "${SCHEMA_KEYS[@]}"; do
+    # password/onboarded are system-managed markers, not parent settings.
+    case "$key" in password | onboarded) continue ;; esac
+    out="$(resolve "$kid" "$key")"
+    value="${out%%$'\t'*}"
+    printf '%s=%s\n' "$key" "$value"
+  done
+}
+
 cmd_reset() {
   local kid="${1:?omarchy-kids-conf reset <kid>}" profile key
   profile="$(profile_file "$kid")"
@@ -527,6 +544,10 @@ main() {
     show)
       shift
       cmd_show "$@"
+      ;;
+    export)
+      shift
+      cmd_export "$@"
       ;;
     reset)
       shift
