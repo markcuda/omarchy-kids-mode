@@ -849,3 +849,10 @@ Live: after the launched app closed, a second Super+Q closed the *launcher* wind
 Super+Home. Fixed on `fix/launcher-height-fit` (`7e4f133` plus a test assertion): the launcher
 refuses a close request in both modes; desktop mode still folds the picker away. Reinstalled and
 re-checked live: two Super+Q presses leave the grid up (screenshot `l1-q.png` on the Mac).
+
+### 2026-09-21, loop iteration: Super+Q cannot blank the Level 1 grid
+
+Live finding: with the launched app closed, the launcher is the focused window, so the same
+Super+Q a kid uses on an app closed the launcher itself -- blank screen, no clients until
+Super+Home. `onClosing` refused the close only in desktop mode; both modes refuse now (desktop
+still folds the picker). Verified live: two Super+Q chords, the grid stays (`l1-q.png`).
