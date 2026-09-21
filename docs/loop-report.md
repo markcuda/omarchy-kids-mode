@@ -720,3 +720,11 @@ the "not installed yet" label is 14px (grid) / 16px (picker) at 0.75 opacity ove
 to 0.72 instead of 0.55, which the live review found unreadable. The unavailable tile is still
 visible, labelled, and skipped by navigation. Launcher tests pass; the full suite was running
 when the iteration closed.
+
+### 2026-09-21, loop iteration: docs claim fixed (I-6)
+
+`docs/levels.md` claimed the code "has never run against a real Hyprland or Quickshell"; the
+2026-09-21 live pass disproved that for Levels 1 and 2. The page now records what was verified
+(grid, navigation, launch, exit modal, portal; desktop layer and windowed picker), what is still
+open (two apps side by side, Super+K, the wifi shell), and that the stock desktop stays
+unverified. Docs only; found by the I-6 sweep.
