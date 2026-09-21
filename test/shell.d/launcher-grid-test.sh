@@ -126,6 +126,12 @@ check_contains "$qml_content" 'anchors.topMargin: topInset' \
   "the grid anchors below the clock via the shared top inset"
 check_contains "$qml_content" 'clip: true' \
   "the grid clips instead of growing past the window"
+check_contains "$qml_content" 'readonly property real fitCell: Math.max(root.minFitCell,' \
+  "the cell size is height-aware (fitCell), not width-only"
+check_contains "$qml_content" 'readonly property int minFitCell: 96' \
+  "the shrink has a 96px tap-target floor"
+check_contains "$qml_content" 'rowsNeeded: Math.max(1, Math.ceil(root.tiles.length / Math.max(1, root.neededColumns)))' \
+  "the row count comes from the same column count the layout uses"
 check "$(grep -c '^[[:space:]]*anchors.topMargin: root.margin$' "$QML" || true)" "2" \
   "clock and desktop-only search box use flat insets; the grid and time-left line do not overlap them"
 

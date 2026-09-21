@@ -120,6 +120,10 @@ ShellRoot {
         // their height on it, so both rows and their rings fit.
         readonly property int margin: root.desktopMode ? 24 : (root.height < 640 ? 32 : 56)
         readonly property int minTileWidth: 160
+        // The floor the grid may shrink a cell to when the screen is short;
+        // 96px is the tap-target minimum the launcher comments cite. Below it
+        // the grid clips rather than shrinking further.
+        readonly property int minFitCell: 96
         readonly property int targetColumns: 5
         readonly property real availableWidth: Math.max(minTileWidth, root.width - margin * 2)
         readonly property int cellSize: Math.max(minTileWidth, Math.floor(availableWidth / targetColumns))
@@ -508,15 +512,18 @@ ShellRoot {
                 // The grid never grows past the room below the clock/time-left
                 // line and above the key-hint footer: a tall pack must scroll,
                 // not hide a selected tile off-screen (review B4).
-                // A short screen (the live 960x540 VM) cannot fit two 169px
-                // rows plus the old 56px gaps; on those the clock-to-grid gap
-                // and the footer padding shrink so both rows and their focus
-                // rings sit inside the frame (live review finding).
-                readonly property bool shortScreen: root.height < 640
-                readonly property real topInset: (shortScreen ? 20 : root.margin) + clockText.height + (shortScreen ? 8 : root.margin) +
+                // A short screen (the live 875x492 / 960x540 frames) cannot fit
+                // two full-size rows: the cell shrinks to fit the rows into the
+                // height left below the clock/time-left line and above the
+                // footer, down to the tap-target floor, instead of clipping the
+                // last row and letting the footer overlap it (live finding).
+                readonly property real topInset: root.margin + clockText.height + root.margin +
                     (timeLeftText.visible ? timeLeftText.height + 8 : 0)
-                readonly property real bottomInset: gridHelp.visible ? gridHelp.height + (shortScreen ? 12 : 40) : root.margin
-                readonly property real rowsHeight: Math.ceil(root.tiles.length / Math.max(1, root.columns)) * cellHeight
+                readonly property real bottomInset: gridHelp.visible ? gridHelp.height + 40 : root.margin
+                readonly property int rowsNeeded: Math.max(1, Math.ceil(root.tiles.length / Math.max(1, root.neededColumns)))
+                readonly property real fitCell: Math.max(root.minFitCell,
+                    Math.min(root.cellSize, Math.floor((parent.height - topInset - bottomInset) / rowsNeeded)))
+                readonly property real rowsHeight: rowsNeeded * cellHeight
                 anchors.top: parent.top
                 anchors.topMargin: topInset
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -524,8 +531,8 @@ ShellRoot {
                 height: Math.min(rowsHeight,
                     Math.max(cellHeight, parent.height - topInset - bottomInset))
                 clip: true
-                cellWidth: root.cellSize
-                cellHeight: root.cellSize
+                cellWidth: fitCell
+                cellHeight: fitCell
                 model: root.tiles
                 currentIndex: root.currentIndex
                 interactive: false
