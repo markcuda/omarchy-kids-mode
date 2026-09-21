@@ -22,12 +22,16 @@ screen_request_detail() { # ID
   what="$(ask_field "$path" what)"
   minutes="$(ask_field "$path" minutes)"
   if [[ "$kind" == time ]]; then desc="$minutes more minute(s) of screen time"; else desc="$what"; fi
+  local kid_name kid_line
+  kid_name="$(kid_display_name "$kid")"
+  kid_line="$kid_name"
+  [[ "$kid_name" != "$kid" ]] && kid_line="$kid_name ($kid)"
 
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
-  local -a facts=("Kid: $kid" "Kind: $kind" "Asked for: $desc")
+  local -a facts=("Kid: $kid_line" "Kind: $kind" "Asked for: $desc")
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local choices=("approve|Approve|" "decline|Decline|" "back|Back|")
-  tui_screen_choose "Request from $kid" 1 1 0 "" choices "approve" "" facts
+  tui_screen_choose "Request from $kid_name" 1 1 0 "" choices "approve" "" facts
   local rc=$?
   ((rc == 130)) && return 130
   ((rc == 0)) || return 0
@@ -60,13 +64,14 @@ screen_requests() {
     fi
 
     local -a choices=()
-    local id kid kind what minutes asked_at desc age
+    local id kid kind what minutes asked_at desc age kid_name
     while IFS=$'\t' read -r id kid kind what minutes asked_at; do
       [[ -z "$id" ]] && continue
       if [[ "$kind" == time ]]; then desc="$minutes more minute(s)"; else desc="$kind: $what"; fi
       [[ "$asked_at" =~ ^[0-9]+$ ]] || asked_at=0 # never arithmetic on an unchecked field, docs/panel.md
       age="$(human_age "$(($(date +%s) - asked_at))")"
-      choices+=("$id|$kid — $desc ($age)|")
+      kid_name="$(kid_display_name "$kid")"
+      choices+=("$id|$kid_name — $desc ($age)|")
     done <<<"$rows"
     choices+=("back|Back|")
 

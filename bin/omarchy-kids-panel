@@ -221,6 +221,20 @@ validate_hostname() {
 
 kid_conf_get() { "$CONF_BIN" get "$1" "$2" 2>/dev/null; }
 
+# kid_display_name ACCOUNT — the profile's own name, else the account. A
+# profile name typed by the parent must not break the chooser's "|" row
+# separator or carry control characters into the card.
+kid_display_name() { # ACCOUNT
+  local account="$1" name
+  name="$(kid_conf_get "$account" name)"
+  name="${name//|/¦}"
+  name="${name//$'\t'/ }"
+  name="${name//$'\n'/ }"
+  name="${name//$'\r'/ }"
+  [[ "$name" =~ ^[[:space:]]*$ ]] && name=""
+  printf '%s' "${name:-$account}"
+}
+
 # count_open_requests [KID] — how many open requests, all kids or one.
 count_open_requests() {
   local -a args=(list-open "$QUEUE_DIR")
