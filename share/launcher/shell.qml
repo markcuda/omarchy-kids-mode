@@ -114,7 +114,11 @@ ShellRoot {
         // fewer than five per row -- grid.width below (columns actually
         // rendered * cellSize) drives GridNav.columnsFor() the same way it
         // always has, so this never disagrees with itself.
-        readonly property int margin: root.desktopMode ? 24 : 56
+        // A 960x540 live frame (review, 2026-09-21) showed the second row of
+        // tiles hugging the bottom edge with a large empty band under the
+        // clock. Short screens keep the flat-inset shape but spend less of
+        // their height on it, so both rows and their rings fit.
+        readonly property int margin: root.desktopMode ? 24 : (root.height < 640 ? 32 : 56)
         readonly property int minTileWidth: 160
         readonly property int targetColumns: 5
         readonly property real availableWidth: Math.max(minTileWidth, root.width - margin * 2)
@@ -448,9 +452,13 @@ ShellRoot {
                         Text {
                             visible: missing
                             text: "Not installed yet"
-                            color: theme.caption
+                            // Live review: 14px low-contrast grey was unreadable
+                            // for a kid or a parent behind them; the label stays
+                            // secondary but legible.
+                            color: theme.foreground
+                            opacity: 0.75
                             font.family: theme.fontFamily
-                            font.pixelSize: 14
+                            font.pixelSize: 16
                         }
                     }
                     MouseArea {
@@ -500,9 +508,14 @@ ShellRoot {
                 // The grid never grows past the room below the clock/time-left
                 // line and above the key-hint footer: a tall pack must scroll,
                 // not hide a selected tile off-screen (review B4).
-                readonly property real topInset: root.margin + clockText.height + root.margin +
+                // A short screen (the live 960x540 VM) cannot fit two 169px
+                // rows plus the old 56px gaps; on those the clock-to-grid gap
+                // and the footer padding shrink so both rows and their focus
+                // rings sit inside the frame (live review finding).
+                readonly property bool shortScreen: root.height < 640
+                readonly property real topInset: (shortScreen ? 20 : root.margin) + clockText.height + (shortScreen ? 8 : root.margin) +
                     (timeLeftText.visible ? timeLeftText.height + 8 : 0)
-                readonly property real bottomInset: gridHelp.visible ? gridHelp.height + 40 : root.margin
+                readonly property real bottomInset: gridHelp.visible ? gridHelp.height + (shortScreen ? 12 : 40) : root.margin
                 readonly property real rowsHeight: Math.ceil(root.tiles.length / Math.max(1, root.columns)) * cellHeight
                 anchors.top: parent.top
                 anchors.topMargin: topInset
@@ -541,7 +554,9 @@ ShellRoot {
                     height: grid.cellHeight - 20
                     radius: 16
                     color: missing ? theme.background : (GridView.isCurrentItem ? theme.tileFill : theme.cardFill)
-                    opacity: missing ? 0.55 : 1.0
+                    // Dimmed enough to read as unavailable, not so much that its
+                    // honest label stops being legible (review, 2026-09-21).
+                    opacity: missing ? 0.75 : 1.0
                     // Highlight ring in the theme accent (docs/theming.md) --
                     // only the current tile gets a border at all.
                     border.width: GridView.isCurrentItem ? 4 : 0
@@ -606,13 +621,16 @@ ShellRoot {
                         }
 
                         // The manifest does not make an unavailable app look runnable.
+                        // Live review: 12px low-contrast grey was unreadable; still
+                        // secondary, now legible.
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             visible: missing
                             text: "not installed yet"
-                            color: theme.caption
+                            color: theme.foreground
+                            opacity: 0.75
                             font.family: theme.fontFamily
-                            font.pixelSize: 12
+                            font.pixelSize: 14
                             wrapMode: Text.WordWrap
                             width: parent.parent.width - 16
                             horizontalAlignment: Text.AlignHCenter

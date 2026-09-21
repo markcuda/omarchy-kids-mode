@@ -808,3 +808,11 @@ opens the picker on the first tile that can act, and passes it to every move. Th
 visible and labelled; it is simply skipped. `launcher-grid-test.sh` now asserts the skip cases and
 `launcher-desktop-test.sh` supplies the `GridNav` and `tiles` globals its harness had been
 getting away without. The Mac suite ran 51 files with no failures (5 environment skips, unchanged).
+### 2026-09-21, loop iteration: Level 1 legibility and the 540px frame
+
+`fix/launcher-540p-legibility` (`bd5a84a`): short screens (under 640px tall, the live 960x540 VM)
+use 32px margins instead of 56px so both tile rows and their focus rings sit inside the frame
+with the flat-inset shape unchanged; the "not installed yet" label is 14px (grid) / 16px (picker)
+at 0.75 opacity over a tile dimmed to 0.72 instead of 0.55, which the live review found
+unreadable. The unavailable tile is still skipped by navigation. Launcher tests pass; the full
+suite was launched in the background at the end of the iteration.
