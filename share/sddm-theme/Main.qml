@@ -381,6 +381,32 @@ Rectangle {
         }
     }
 
+    // R-LOGIN: a wrong password is worded, not only shaken (I-6).
+    Text {
+        id: loginErrorText
+        visible: root.loginFailed
+        anchors.top: tileRow.bottom
+        anchors.topMargin: 24
+        anchors.horizontalCenter: parent.horizontalCenter
+        text: "That password didn't work. Try again."
+        color: root.colError
+        font.family: root.fontFam
+        font.pixelSize: 16
+    }
+
+    // I-5: the keys are discoverable, not memorized.
+    Text {
+        id: keyHelp
+        anchors.bottom: parent.bottom
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottomMargin: 24
+        text: root.passwordMode ? "Enter Sign in    ·    Esc Back"
+                                : "← → Choose    ·    Enter Sign in    ·    Ctrl+Shift+P Power off"
+        color: root.colMuted
+        font.family: root.fontFam
+        font.pixelSize: 16
+    }
+
     // --- keyboard (I-5: keyboard-complete) ---------------------------------
     FocusScope {
         id: keyScope

@@ -226,7 +226,8 @@ least one kid is provisioned (`docs/provision.md`):
    - Left/Right move the highlight between tiles.
    - Enter on the "no password" 3-5 tile logs straight in with no password field ever appearing.
    - Enter on a password-required tile shows a password field under that tile only.
-   - Typing a wrong password and pressing Enter: the tile shakes, the field clears, no login.
+   - Typing a wrong password and pressing Enter: the tile shakes, the field clears, no login, and
+     a line under the tiles says "That password didn't work. Try again."
    - Esc from the password field returns to plain tile navigation with the field gone.
    - The correct password logs in, and lands the account on the session AccountsService pinned
      it to (`omarchy-kids` for a kid, `omarchy` for the parent) — confirm with `loginctl
@@ -286,10 +287,12 @@ configuration from /usr/share/sddm/themes/omarchy-kids/theme.conf`, no QML warni
 face tile per account, clock, keyboard highlight. By keyboard only: Left moved the highlight
 to Cy, Enter opened the password field under the tile, the kid password logged in and SDDM
 started `omarchy-kids-session` for kid-cy, whose Hyprland and Level 1 launcher came up.
-Not yet exercised live: the wrong-password shake, the power-off chord, the parent password on
-a kid tile (needs #15), and the display-name and avatar polish in #39. `sddm-greeter-qt6
---test-mode` aborts inside a Hyprland session (stock theme too), so a real boot into the portal
-is the only way to see the theme.
+The bottom of the screen names the keys — "← → Choose · Enter Sign in · Ctrl+Shift+P Power off",
+switching to "Enter Sign in · Esc Back" while typing — and a failed password is worded, not only
+shaken. Not yet exercised live: the wrong-password shake and wording, the power-off chord, the
+parent password on a kid tile (needs #15), and the display-name and avatar polish in #39.
+`sddm-greeter-qt6 --test-mode` aborts inside a Hyprland session (stock theme too), so a real boot
+into the portal is the only way to see the theme.
 
 **Issue #39's fixes (display name, parent detection via `theme.conf.user`, avatars via
 `.face.icon`) have not yet been verified against this VM or any other real engine.** Step 8 of

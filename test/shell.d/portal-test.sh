@@ -100,6 +100,15 @@ print(s.count('{'), s.count('}'), s.count('('), s.count(')'))
     fi
   done
 
+  # I-5/I-6: the portal says why a password failed and which keys work.
+  for needle in "That password didn't work. Try again." "Ctrl+Shift+P" "Enter Sign in"; do
+    if grep -qF "$needle" "$MAIN_QML"; then
+      pass "Main.qml shows the words: $needle"
+    else
+      fail "Main.qml is missing the words: $needle"
+    fi
+  done
+
   # Keyboard-complete (I-5, R-LOGIN-4): arrows, Enter, Escape all
   # handled, plus at least one generic Keys.onPressed (the power-off
   # chord).
@@ -108,6 +117,16 @@ print(s.count('{'), s.count('}'), s.count('('), s.count(')'))
       pass "Main.qml handles $needle"
     else
       fail "Main.qml missing $needle"
+    fi
+  done
+
+  # I-5/I-6: the keys are discoverable and a failed password is worded,
+  # not only shaken.
+  for needle in "That password didn't work. Try again." "Ctrl+Shift+P Power off" "Enter Sign in"; do
+    if grep -qF "$needle" "$MAIN_QML"; then
+      pass "Main.qml words: $needle"
+    else
+      fail "Main.qml missing the wording: $needle"
     fi
   done
 
