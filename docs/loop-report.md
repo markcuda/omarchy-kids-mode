@@ -690,3 +690,10 @@ R-ASK-2's owner decision.
 write, so a bad file changes nothing, and password/onboarded are refused as system-managed.
 conf-test covers a valid apply, an out-of-range value, an unknown key, and a system key. A fable
 review of the export/import pair was launched; its findings, if any, are the next step.
+
+The export/import review's findings were all closed in `ac85c3f` (still on `feat/conf-import`):
+export now lists only real overrides as live lines with inherited values commented, so a round
+trip cannot pin a band default; import validates first, refuses duplicates/system keys/CRLF
+hazards, and replaces the profile in one atomic move before the theme side effect and manifest
+rebuild run once. The review itself is kept at `docs/reviews/2026-09-19-conf-export-import.md` on
+that branch. conf-test green.
