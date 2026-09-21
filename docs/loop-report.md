@@ -833,3 +833,11 @@ and the missing-app caption caps at two lines. Verified live at 875x492: both ro
 key-hint footer sit inside the frame, nothing clips or overlaps. Known VM-only artifact: app icons
 fall back to letter badges because this guest's icon theme lacks the names (happens on the old
 build too). Live flow next: launching from the grid on this size.
+
+### 2026-09-21, loop iteration: short-screen tile content fits (live)
+
+`fix/launcher-height-fit` follow-ups: tile content scales with the cell, the missing-app caption
+caps at one line, the name drops to one line on short cells, and the tile clips. Live 875x492:
+ten tiles in two rows, every label inside its tile, footer clear (screenshot `l1-v5.png`).
+Labels elide at this size (five columns of ~118px); the icon badges are the VM's icon-theme
+artifact, not the launcher.
