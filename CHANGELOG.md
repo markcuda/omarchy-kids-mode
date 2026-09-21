@@ -43,6 +43,10 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
   level = 3 profiles still start); R-ASK-2's spec wording now matches the safe list → request
   card with **Approve** preselected. Both decisions are recorded in
   `docs/phase1/DECISIONS-NEEDED.md` §6.
+- Kid-facing wording: the Time's Up card reads root's `reason` and says "It's bedtime" when
+  lights-out triggered it (budget keeps the old line), counts down as "Closing in Ns", the Level 2
+  footer names **Super+Shift+K** as the grown-up exit instead of reusing the Ask modal's name, and
+  the exit card says Finish returns to the login screen.
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.

@@ -12,6 +12,11 @@ const fs = require('fs'), os = require('os'), path = require('path'), vm = requi
 const assert = require('assert/strict'), child = require('child_process');
 const dir = process.argv[2], bash = process.argv[3];
 const source = fs.readFileSync(path.join(dir, 'share/launcher/shell.qml'), 'utf8');
+const desktopSource = fs.readFileSync(path.join(dir, 'share/launcher/Desktop.qml'), 'utf8');
+assert.match(desktopSource, /Super \+ Shift \+ K: Grown-up exit/,
+  'the Level 2 footer must name the grown-up exit, not the Ask modal');
+assert.doesNotMatch(desktopSource, /Ask a grown-up/,
+  'the Level 2 footer must not reuse the Ask modal name for the exit bind');
 const nav = require(path.join(dir, 'share/launcher/gridnav.js'));
 const entries = [
   { id: 'paint', label: 'Tux Paint', installed: true, argv: ['/approved/paint'] },

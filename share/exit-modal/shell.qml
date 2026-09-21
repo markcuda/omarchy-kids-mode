@@ -237,7 +237,7 @@ PanelWindow {
                             }
                             Text {
                                 width: parent.width
-                                text: "Closes " + root.possessive(root.displayName) + " apps. You switch to your desktop."
+                                text: "Closes " + root.possessive(root.displayName) + " apps. You return to the login screen."
                                 color: theme.caption
                                 font.pixelSize: 11
                                 horizontalAlignment: Text.AlignHCenter

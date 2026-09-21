@@ -293,7 +293,7 @@ portal|Cy
 launcher|GCompris
 exit-modal|Finish for Cy
 ask|Ask a grown-up 15 more minutes
-times-up|Time's up Finishing in
+times-up|Time's up Closing in
 wifi-picker|Wi-Fi choose Enter join Esc close
 plugins-shelf|More apps Pick one
 wizard|Welcome Begin

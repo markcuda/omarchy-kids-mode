@@ -32,6 +32,7 @@ PanelWindow {
     // The account is supplied by id -un; the prefix is fixed at build time.
     readonly property string statusPath: "/run/omarchy-kids/time/" + root.kidAccount + ".json"
     property int secondsLeft: 0
+    property string reason: "budget"
     property bool mediaReady: false
 
     IpcHandler {
@@ -75,6 +76,7 @@ PanelWindow {
             return
         }
         root.secondsLeft = status.grace_deadline - status.last_tick
+        root.reason = status.reason === "lights-out" ? "lights-out" : "budget"
         root.mediaReady = false
         root.visible = true
         countdown.restart()
@@ -144,7 +146,9 @@ PanelWindow {
 
                     Text {
                         width: parent.width
-                        text: "Your screen time for today is done."
+                        text: root.reason === "lights-out"
+                            ? "It's bedtime. This desktop is finishing up."
+                            : "Your screen time for today is done."
                         color: theme.caption
                         font.pixelSize: 15
                         horizontalAlignment: Text.AlignHCenter
@@ -153,7 +157,7 @@ PanelWindow {
 
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: "Finishing in " + root.secondsLeft + "s"
+                        text: "Closing in " + root.secondsLeft + "s"
                         color: root.secondsLeft <= 10 ? theme.error : theme.warning
                         font.pixelSize: 14
                     }
