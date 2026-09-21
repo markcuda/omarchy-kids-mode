@@ -902,3 +902,15 @@ reported the arithmetic honestly: "199 min used, 0 min left today (budget 60 + 7
 day of dogfooding, and `omarchy-kids-time grant kid-ada 120` (the product path) restored usable
 time. The launcher's time-left line is absent at zero remaining, which is by design (the Time's Up
 screen replaces it).
+
+### 2026-09-21, loop iteration: a grant shows in status after the daemon's next tick
+
+Live: `omarchy-kids-time grant kid-ada 120` printed "now N granted today", but an immediate
+`status` still reported the pre-grant published state ("0 min left today", "budget runs out at
+19:29"); about a minute later the daemon's next tick corrected it to "235 min left today (budget
+60 + 375 granted), budget runs out at 23:26". `cmd_status` prefers the root-published state file
+when it is today's, and the daemon owns that file, so a just-made grant is invisible until the next
+tick. Refinement candidate (not done): on grant, either have the daemon re-tick promptly or have
+`status` compare the published `last_tick` against the grant file's mtime and fall back to the
+ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
+the ledger.
