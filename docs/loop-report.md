@@ -824,3 +824,12 @@ suite was launched in the background at the end of the iteration.
 second of stillness and returns on movement. The option name, units and "0 for never" default were
 verified from the running compositor (`hyprctl -i 0 descriptions`), not guessed; `levels-test.sh`
 asserts both files keep it. Docs only otherwise.
+
+### 2026-09-21, loop iteration: the grid fits a short screen (live-verified)
+
+`fix/launcher-height-fit`: the cell is now height-aware (`fitCell`, floored at 96px) instead of
+width-only, the tile content (icon slot, fallback initial, labels, spacing) scales with the cell,
+and the missing-app caption caps at two lines. Verified live at 875x492: both rows and the
+key-hint footer sit inside the frame, nothing clips or overlaps. Known VM-only artifact: app icons
+fall back to letter badges because this guest's icon theme lacks the names (happens on the old
+build too). Live flow next: launching from the grid on this size.
