@@ -139,20 +139,19 @@ is readable, manifest construction appends a `chromium` tile with the fixed argv
 fixed argv for `/usr/bin/quickshell` and the packaged plugins shelf, with the band supplied as an
 environment argument. No tile is evaluated by a shell.
 
-**Installed/missing tiles (issue #42, I-6).** Every pack/`apps.extra` tile in the manifest also
-carries `installed: true|false` — a matched `.desktop` file, or (the bare-command fallback)
-`command -v` on the resolved executable, **never `pacman -Q`**, so this works the same for a pack app,
-an `apps.extra` id with no package at all, or any future non-pacman app source. By default
-(`apps.show_missing=no`, docs/conf.md) a missing app's tile is left out of the JSON entirely, with
-one log line naming why (`$RUN/session-<uid>.log`) — the live bug this issue fixes was a tile that
-rendered but did nothing on Enter. With `apps.show_missing=yes` the tile is kept instead, with
-`caption` set to `"installing..."` if the app's package is sitting in
-`bin/omarchy-kids-apps`' pending install queue (`OMARCHY_KIDS_ROOT/var/lib/omarchy-kids/apps-queue`,
-read here, never written) or `"not installed yet"` otherwise; `share/launcher/shell.qml` renders
-that tile greyed and the caption underneath the label, and refuses to launch it on Enter
-(`installed === false`, checked before `launchCurrent()` runs anything). An installed tile always
-carries `installed: true` and an empty `caption`. The synthetic `chromium`/`more-apps`/`kids-data`
-tiles are built into the manifest with fixed argv.
+**Installed/missing tiles (issue #42, I-6).** Every pack/`apps.extra` tile carries
+`installed: true|false` — a matched `.desktop` file, or (the bare-command fallback) `command -v`
+on the resolved executable, **never `pacman -Q`**, so this works the same for a pack app, an
+`apps.extra` id with no package at all, or any future non-pacman app source. `lib/launcher-map.sh`
+decides what happens to a missing tile: by default (`apps.show_missing=no`, docs/conf.md) the tile
+is left out of the map and manifest entirely, with one line on stderr naming why — the live bug
+this issue fixes was a tile that rendered but did nothing on Enter. With `apps.show_missing=yes`
+the tile is kept instead, `installed: false` and no argv; `share/launcher/shell.qml` renders it
+greyed with its `"not installed yet"` label underneath, skips it in arrow navigation, and refuses
+to launch it on Enter (`installed === false`, checked before `launchCurrent()` runs anything). A
+kept missing tile always reads `"not installed yet"`; the pending-install `"installing..."` caption
+is not implemented (docs/apps.md). The synthetic `chromium`/`more-apps`/`kids-data` tiles are built
+into the manifest with fixed argv.
 
 `share/launcher/shell.qml` reads the manifest through the fixed `omarchy-kids-session --manifest`
 command and polls only the small control file (`/run/user/<uid>/omarchy-kids/launcher-control`)

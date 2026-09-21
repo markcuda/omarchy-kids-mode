@@ -214,7 +214,7 @@ Exec=tuxpaint %F
 EOF
   cp "$TMP/apps/tuxpaint.desktop" "$TMP/root/usr/share/applications/"
 
-  # issue #42: session-start now marks a tile installed:true|false (a
+  # issue #42: lib/launcher-map.sh marks a tile installed:true|false (a
   # matched .desktop file, above, or the resolved exec's first word on
   # PATH -- never pacman) and, by default, omits a missing app's tile
   # entirely rather than shipping one Enter silently does nothing on
@@ -222,7 +222,7 @@ EOF
   # makes *it* count as installed here; the other six 6-8 pack apps are
   # deliberately left with neither, the live VM state issue #42
   # describes -- their omission (and its log line) is covered in detail
-  # by test/shell.d/session-start-test.sh, not re-tested here.
+  # by test/shell.d/session-manifest-test.sh, not re-tested here.
   cat >"$STUBS/gcompris" <<'EOF'
 #!/bin/bash
 exit 0

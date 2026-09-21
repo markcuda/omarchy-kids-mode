@@ -72,9 +72,10 @@ the queue file is left untouched so the next run — another `install`, or a man
 — tries again; this is the "retry from the panel" R-APPS-3 mentions, not a timer (no timer is built
 by this issue).
 
-`bin/omarchy-kids-session-start` also reads this same queue file (issue #42, docs/levels.md's "The
-launcher's tile list") — never writes it — to tell a launcher tile whose app is merely missing
-apart from one whose package is already on its way in: `"installing..."` vs. `"not installed yet"`.
+No launcher surface reads this queue yet (issue #42, docs/levels.md's "The launcher's tile list"):
+with `apps.show_missing=yes` a missing app's kept tile always reads `"not installed yet"`, so
+`"installing..."` versus `"not installed yet"` is not implemented. The queue remains this command
+and `install-queued`'s alone.
 
 ### `allowlist <kid>`
 
