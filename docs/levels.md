@@ -26,8 +26,15 @@ do not verify those compositor behaviors.
 
 
 What each level binds, how the Level 1/2 big-tile launcher gets its tiles, and how to check any
-of this on the test laptop's VM — this issue's code has never run against a real Hyprland or
-Quickshell, so treat everything under "Verify in the VM" as open until it has.
+of this on the test laptop's VM.
+
+Live status (2026-09-21, try-omarchy aarch64 VM, real SDDM logins; see
+`docs/dogfood-2026-09-21.md`): **Level 1 and Level 2 have both run against a real Hyprland and
+Quickshell.** Level 1 verified the fullscreen grid, keyboard navigation, launch, the exit modal,
+and the portal after logout; Level 2 verified the desktop hint layer and the windowed searchable
+picker. Still open from the checklist below: two apps open side by side, the `Super+K` cheat
+sheet, and every `share/wifi/shell.qml` claim (unchanged). The stock desktop (Level 3) remains
+unverified on a real box (`share/menu/omarchy-kids-trimmed.jsonc` is an admitted guess).
 
 ## The files
 
