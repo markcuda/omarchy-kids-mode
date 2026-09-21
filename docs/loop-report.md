@@ -767,3 +767,14 @@ seed of that config (convenience in the kid's home, never a lock), gated on one 
 `/var/lib/omarchy-kids/<kid>/launches.log` with hardened reads. Proposes recents-first manifest
 ordering (ordering only; argv and allowlist untouched; bounded, validated, deterministic ties),
 defers a Recent row and parent-pinned favorites, and records three owner decisions. No code.
+
+### 2026-09-21, loop iteration: Level 3 no longer runs Omarchy's parent setup
+
+`fix/level3-no-parent-autostart` (`50dcc4e` + the test follow-up): L3.lua required the
+`default.hypr.omarchy` umbrella, whose autostart execs `omarchy-provision-first-run`,
+power-profile init, udiskie and the post-boot hook on every start -- visible live as the kid's
+first-run notifications (Update System, Learn Keybindings, pending migrations). L3 now requires
+the stock bindings/envs/looknfeel/input/windows modules directly and runs its own start hook:
+the two systemd/dbus imports, then `omarchy-kids-session-start` (which execs
+`omarchy-launch-shell` at level 3). `levels-test.sh` keeps the stock-module assertions and adds a
+guard that autostart/first-run provisioning can never come back (comments excluded).
