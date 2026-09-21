@@ -25,6 +25,12 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
   root-owned 0644 session manifest; missing, linked, mutable, malformed, stale, and mismatched
   documents are refused without stdout.
 
+### Added
+
+- Panel P4 Machine (R-TRUST-2): Home gains a **Machine safety** row that runs
+  `omarchy-kids-check --json` and shows the verdict, every FAIL and WARN with its own detail, and
+  the passed/skipped counts; read-only, with **Check again** to refresh.
+
 ### Changed
 
 - Repository identity: the project now lives at `markcuda/omarchy-kids-mode`; the old sandbox
@@ -63,7 +69,6 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.
 
-### Added
 
 - The Level 1/2 launcher shows root's remaining time ("N minutes left", `GridNav.remainingLabel`),
   read from `/run/omarchy-kids/time/<kid>.json` and hidden in grace — display only, the launcher

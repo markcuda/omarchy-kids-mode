@@ -49,6 +49,7 @@ screen_home() {
     choices+=(
       "add|Add a kid|"
       "requests|Requests ($total_open)|"
+      "machine|Machine safety|The read-only safety report (R-TRUST-2)"
       "remove_kids_mode|Remove Kids Mode|"
       "quit|Quit|"
     )
@@ -69,6 +70,11 @@ screen_home() {
       add) exec "$WIZARD_BIN" ;;
       requests)
         screen_requests
+        rc=$?
+        ((rc == 130)) && return 130
+        ;;
+      machine)
+        screen_machine
         rc=$?
         ((rc == 130)) && return 130
         ;;
