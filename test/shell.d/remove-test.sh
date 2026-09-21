@@ -474,6 +474,15 @@ check_eq "$st" 1 "declining the confirmation exits 1"
 check_contains "$out" "cancelled" "declining names the cancellation"
 [[ -e "$ETC/kids/kid-ada.conf" ]] && pass "declining left the profile in place" || fail "declining must not remove the profile"
 
+# The piped prompt is the script path; a terminal gets the shared card
+# instead (static: the tty branch is not reachable in this suite).
+check_contains "$(cat "$BIN")" 'if [[ -t 0 ]]' \
+  "remove: a terminal takes the card confirmation path"
+check_contains "$(cat "$BIN")" 'tui_screen_input "Remove Kids Mode?"' \
+  "remove: the card uses lib/tui.sh's input screen"
+check_contains "$(cat "$BIN")" "printf 'Type \"yes\" to continue, anything else cancels: '" \
+  "remove: the piped path keeps the original one-line prompt"
+
 # --- real run: --yes, --parent-password-stdin ------------------------------
 
 : >"$ARGV_LOG"

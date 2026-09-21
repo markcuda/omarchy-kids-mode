@@ -14,6 +14,8 @@ source "$LIB/conf.sh"
 source "$LIB/posture.sh"
 # shellcheck source=lib/kids.sh
 source "$LIB/kids.sh"
+# shellcheck source=lib/tui.sh
+source "$LIB/tui.sh"
 # shellcheck source=lib/boot-mode.sh
 source "$LIB/boot-mode.sh"
 
@@ -512,10 +514,34 @@ print_uninstall_hint() {
   echo "  sudo pacman -R omarchy-kids"
 }
 
+# validate_yes_word CANDIDATE — the card's own validator: only the whole
+# word continues (the same token the piped path expects).
+validate_yes_word() { # CANDIDATE
+  [[ "$1" == "yes" ]] || {
+    echo 'Type "yes" (the whole word) to continue.'
+    return 1
+  }
+}
+
+# confirm_or_abort — the plan is already on screen. A human at a terminal
+# gets the shared card and may type the word; a script piping stdin keeps
+# the plain one-line prompt (test/shell.d/remove-test.sh drives that).
 confirm_or_abort() {
   local reply=""
-  printf 'Type "yes" to continue, anything else cancels: '
-  IFS= read -r reply || true
+  if [[ -t 0 ]]; then
+    tui_init || true
+    local rc=0
+    tui_screen_input "Remove Kids Mode?" 1 1 0 "" text \
+      'Type "yes" to continue; anything else cancels.' validate_yes_word || rc=$?
+    if ((rc != 0)); then
+      echo "omarchy-kids-remove: cancelled, nothing changed" >&2
+      exit $((rc == 130 ? 130 : 1))
+    fi
+    reply="$TUI_REPLY"
+  else
+    printf 'Type "yes" to continue, anything else cancels: '
+    IFS= read -r reply || true
+  fi
   if [[ "$reply" != "yes" ]]; then
     echo "omarchy-kids-remove: cancelled, nothing changed" >&2
     exit 1
