@@ -856,3 +856,12 @@ Live finding: with the launched app closed, the launcher is the focused window, 
 Super+Q a kid uses on an app closed the launcher itself -- blank screen, no clients until
 Super+Home. `onClosing` refused the close only in desktop mode; both modes refuse now (desktop
 still folds the picker). Verified live: two Super+Q chords, the grid stays (`l1-q.png`).
+
+### 2026-09-21, loop iteration: Level 2 picker at 875x492
+
+Verified live at this size: the L2 desktop hint layer and the windowed searchable picker
+("Find an app…", rows, "Not installed yet", the key footer) all fit and read well; the row layout
+does not need the height-fit that Level 1's grid did. Screenshot `l2-check.png`. Known trade-off
+at this size in Level 1: five columns leave ~98px tiles, so names elide ("GComp…"); the icons are
+the primary affordance for the youngest band, and the alternative (four columns) needs three rows
+that cannot fit the height.
