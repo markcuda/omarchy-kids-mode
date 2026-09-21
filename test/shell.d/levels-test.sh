@@ -139,8 +139,13 @@ done
 # --- L3 requires the real Omarchy defaults and unbinds the terminal -----
 
 l3_content="$(cat "$HYPR/L3.lua")"
-check_contains "$l3_content" 'require("default.hypr.omarchy")' "L3.lua requires default.hypr.omarchy"
-check_contains "$l3_content" 'hl.unbind("SUPER + RETURN")' "L3.lua unbinds the (assumed) terminal bind"
+check_contains "$l3_content" 'require("default.hypr.looknfeel")' \
+  "L3.lua requires the stock modules it wants directly, not the umbrella"
+check_contains "$l3_content" 'require("default.hypr.bindings.tiling")' \
+  "L3.lua keeps the stock bindings"
+check "$(grep -vE '^[[:space:]]*--' "$HYPR/L3.lua" | grep -cE 'default\.hypr\.(omarchy|autostart)|omarchy-provision-first-run' || true)" "0" \
+  "L3.lua never pulls in Omarchy's autostart or first-run provisioning (live finding)"
+check_contains "$l3_content" 'hl.unbind("SUPER + RETURN")' "L3.lua unbinds the terminal bind"
 check_contains "$l3_content" 'o.bind("SUPER + SHIFT + K"' "L3.lua adds the Appendix E exit-modal bind"
 check_contains "$l3_content" 'o.bind("SUPER + SHIFT + W", "Kids Mode: Wi-Fi", "omarchy-kids-wifi picker")' \
   "L3.lua adds the Wi-Fi picker bind"
