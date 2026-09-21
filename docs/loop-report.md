@@ -767,3 +767,13 @@ seed of that config (convenience in the kid's home, never a lock), gated on one 
 `/var/lib/omarchy-kids/<kid>/launches.log` with hardened reads. Proposes recents-first manifest
 ordering (ordering only; argv and allowlist untouched; bounded, validated, deterministic ties),
 defers a Recent row and parent-pinned favorites, and records three owner decisions. No code.
+
+### 2026-09-21, loop iteration: Level 3 menu trim, real format
+
+The live Level 3 pass showed the stock desktop works but the menu offers a kid
+Update System and Pending Omarchy Migrations. Reading Omarchy's menu plugin on the VM
+established the real mechanism: a user extension at `~/.config/omarchy/extensions/omarchy-menu.jsonc`,
+merged by id field-wise (`MenuModel.mergeMenuSources`), hidden with `when: "false"`. The
+`fix/level3-menu-trim` commit rewrites `share/menu/omarchy-kids-trimmed.jsonc` to that shape
+(install/remove/update/setup) and adds `menu-trimmed-test.sh`; the header's "unverified schema"
+warning is gone. Provisioning copies it into a trimmed kid's home next, then the live re-check.
