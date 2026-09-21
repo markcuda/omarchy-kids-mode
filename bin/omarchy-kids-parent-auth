@@ -1,5 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Verify a candidate parent password against omarchy-kids-authd
+# omarchy:hidden=true
 # Thin pam_exec client for omarchy-kids-authd (R-SEC-2). Reads nothing from
 # its own environment -- runs inside the kid's session (review S4). docs/authd.md.
 set -euo pipefail

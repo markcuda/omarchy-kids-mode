@@ -1,5 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Start the kid session surfaces from its validated manifest
+# omarchy:hidden=true
 # omarchy:args=[--help]
 # Runs once per kid Hyprland session (exec-once/hl.on); the validated manifest is the only session input.
 set -euo pipefail

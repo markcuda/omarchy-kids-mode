@@ -1,5 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Show the fail-closed "Ask a grown-up" screen before a kid's desktop starts
+# omarchy:hidden=true
 # Shown by omarchy-kids-session (SPEC.md R-DESK-2) when a fail-closed
 # check fails -- a tty message, not a modal, since Hyprland hasn't
 # started yet. See docs/session.md for why this is a placeholder.

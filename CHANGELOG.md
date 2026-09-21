@@ -32,6 +32,10 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
   tail instead of pointing at a screen it just cleared, Done no longer offers a preview button
   that only apologised, the summary draws one card instead of two, the password question follows
   the band's `password_optional` data, and leaving after Apply no longer claims nothing changed.
+- Command metadata: the ten internal commands (`authd`, `wifid`, `boot-login`, `session-start`,
+  `session`, `blocked`, `launcher-ctl`, `parent-auth`, `super-tap`, `time-ledger`) are marked
+  `omarchy:hidden=true`, the wizard header lists `--apply`, the time summary names `grant` and
+  `daemon`, and the panel's `--help` no longer cites spec ids at a parent.
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.

@@ -1,5 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Add a minute to today's screen-time ledger for every active kid
+# omarchy:hidden=true
 # omarchy:args=tick
 # The ONLY thing that ever writes a kid's screen-time usage (SPEC.md R-TIME-1..2, Appendix F); root, run every minute.
 # See lib/time.sh's header for the trust boundary this enforces, and docs/time.md for every env var.

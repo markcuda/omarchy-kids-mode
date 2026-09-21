@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # omarchy:summary=Verify a helper kid's identity and run their Wi-Fi request through nmcli, over a root-only socket
+# omarchy:hidden=true
 """omarchy-kids-wifid -- the Wi-Fi helper daemon (SPEC.md R-WIFI-2).
 
 A root, socket-activated verifier-and-doer, the same shape as

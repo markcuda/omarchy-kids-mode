@@ -1,5 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Watch for three Super taps within 1.5s and open the exit modal
+# omarchy:hidden=true
 # The "Super pressed three times within 1.5s" half of SPEC.md R-EXIT-1.
 # Meant for a Hyprland `bindr` (release) bind -- docs/exit.md.
 set -euo pipefail
