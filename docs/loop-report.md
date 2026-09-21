@@ -490,3 +490,210 @@ were removed, and Tokyo Night was restored. These checks do not replace their or
 The parent panel empty state was inspected on the laptop. Following Add a kid exposed #123:
 preview mode was not handed to the wizard. An owned wizard stub confirmed the mode loss without
 provisioning an account. Its explicit CLI mode handoff is drafted for independent review.
+
+## 2026-09-18 — review-driven drafting loop (deepseek drafting, fable reviewing)
+
+A headless loop turned the two 2026-09-18 read-only reviews (status + UI/UX, run with
+`claude-fable-5-1` high effort) into reviewed topic branches. No push, no PR, no VM run: the `gh`
+CLI's active account is not `markcuda` (repo lock), and rule 11 keeps drafting agents off the test
+VM. Everything below is local, for the gate runner.
+
+| Branch | What | State |
+| --- | --- | --- |
+| `fix/time-lock-engagement` (`9d038cf`, off main) | The root tick locks only the account's own graphical session (`Class=user`, `Type=wayland|x11`), verifies `LockedHint=yes` before recording success, retries failures, and keeps the deadline; a manager session no longer counts as active time (R-TIME-2, R-TIMEAUTH-4). | Reviewed (approve with nits, closed). Needs the VM lock scenario. |
+| `docs/truth-pass-2026-09-18` (`6f8639e`) | README, panel.md, exit.md, time.md, wizard.md, style.md, conf.md, the trimmed-menu comment and media/README checked against the code. | Reviewed twice: changes required, then approve. |
+| `fix/wizard-honesty` (`cccda92`, `3c43dec`; stacked on the docs branch) | Drops the Advanced App menu row (no level reads the key), fixes the history row to ask about the parent's view, carries a failed Apply's own tail into Done, removes the preview button that only apologised, draws the summary once, takes the 3-5 password question from band data, and leaves honestly after Apply; SPEC.md R-WIZ-1/R-WIZ-6/A14 amended to record the unshipped preview. | Reviewed; both rounds' findings closed. |
+| `fix/panel-write-results` (`2e10e59`, `a34a432`, off main) | `PANEL_NOTICE` carries preview / applied / failed (the command's last line) into the next card; a rejected password and a failed site-list write now say what happened. | Reviewed; findings closed. |
+| `fix/blocked-screen` (`2cdfa33`, off main) | The R-DESK-2 fail-closed screen takes the theme accent and shared rounded border and sends the child to a grown-up instead of naming a CLI command; new `blocked-test.sh`. | Not independently reviewed (small, tested). |
+
+Private: `.local/recovery/spec-08-session-lock-engagement-PRIVATE.md` is a fable-written spec for
+the missing Level 1/2 lock listener (options, interface, requirements, tickets). It describes the
+still-open lock weakness, so it stays out of the public tree until the owner approves publication.
+
+Machine notes for the next run: on this Mac `python3` resolves to a mise shim that can stall the
+suite under parallel load; `test/all` is green with
+`PATH=$HOME/.local/share/mise/installs/python/3.13.15/bin:$PATH`, except `packaging-test.sh`,
+which fails only because `shellcheck` is not installed here. The previously stalled
+`remove-test.sh` passed alone with that PATH.
+
+Open follow-ups the loop recorded but did not fix: `screen_done` maps a TUI error (2) to a normal
+finish; the remove command's own confirmation is still a plain `read` instead of the card idiom;
+Level 3 is still offered while unverified; the dead `menu`/`terminal` band keys remain accepted
+config. Level 1/2 lock engagement depends on the private spec above.
+
+### 2026-09-18, later — second round
+
+Continued the loop with the same drafting/review split. New local branches:
+
+| Branch | What | State |
+| --- | --- | --- |
+| `feat/panel-machine` (`b04206b`, `cd12088`; stacked on `fix/panel-write-results`) | P4 Machine: Home row and screen running `omarchy-kids-check --json`, verdict, every FAIL/WARN in full, counts, **Check again**. | Reviewed; shape validation, full details, `0x1f` parsing, the unprivileged note, and garbage/refresh tests closed in `cd12088`. |
+| `fix/panel-request-names` (`eb006a9`, `8c6d02a`; stacked on the Machine tip) | Requests show the profile name (account in parentheses on the card). | Review caught a wrong parent (rebased) and name-hygiene gaps (`|`, whitespace, control chars); fixed and tested. |
+| `test/theme-palette-parity` (`b8d2d35`, off main) | Pins the four hand-kept fallback palettes to `lib/theme.sh`; proven to fail on a one-character drift. | New test, no review needed. |
+| `docs/command-metadata` (`0779540`; on the docs truth branch) | `omarchy:hidden=true` on the eight internal commands, wizard args list `--apply`, time summary names `grant`, panel `--help` drops spec ids, style.md updated. | Batch review pending. |
+| `fix/kid-surface-words` (`20c1f43`, off main) | Time's Up is reason-aware ("It's bedtime") and says "Closing in Ns"; the Level 2 footer says "Grown-up exit"; the exit card says Finish returns to the login screen. | Batch review pending. |
+| `fix/launcher-empty-hints` (`27a4f7a`, off main) | Level 1 gains a key-hint footer and "Nothing is set up here yet." empty state; the font-count test moved 10→12. | Batch review pending. |
+
+Mac test note update: the launcher node tests need a real Node, not the mise shim —
+`PATH=$HOME/.local/share/mise/installs/node/20.19.0/bin:$HOME/.local/share/mise/installs/python/3.13.15/bin:$PATH`.
+
+Still not done: a card-mode panel test (the wizard's exists), `font.family` on the exit/Ask/plugins/
+Time's Up/toast surfaces, Level 3 gating (human decision), the dead `menu`/`terminal` band keys,
+and the remove command's own plain `read` confirmation.
+
+### 2026-09-18, third round — review fixes
+
+All three batch-reviewed branches closed their findings:
+
+- `fix/kid-surface-words` gained `87db426`: the media driver and its test now wait for "Closing in"
+  (the capture would have timed out), SPEC R-EXIT-1 quotes the shipped Finish subline, the
+  exit-test static block moved out of the flag-parsing group, and the reason assertion matches the
+  actual `root.reason === "lights-out"` branch.
+- `fix/launcher-empty-hints` gained `e50ffee`: the comment and CHANGELOG no longer claim a failed
+  manifest shows the empty state (a failed manifest hides the window first), `z: 1` keeps a tall
+  grid from painting over the footer, the test matches the Level 1 string, and both visibility
+  bindings are asserted.
+- `docs/command-metadata` gained `278d1f5`: the time summary names `daemon` too, and the panel
+  usage paragraph is reflowed.
+
+Review findings left as recorded open items: `blocked`/`session` are candidates for
+`omarchy:hidden`; the ledger's grace keeps its first `reason` for the whole countdown; and
+`docs/time.md`'s dated live record still quotes the old "Finishing in" wording.
+
+Full suite run at the end of the round (pinned Python and Node on PATH): **47 of 48 files pass**.
+The only failure is `packaging-test.sh`, and only on this Mac — it needs `shellcheck` (not
+installed) and its legacy disk-upgrade fixture needs Linux. All five new tests
+(`theme-palette-test.sh`, `blocked-test.sh`, plus the additions to `panel-test.sh`,
+`launcher-desktop-test.sh`, `launcher-grid-test.sh`, `time-test.sh`, `exit-test.sh`,
+`media-driver-test.sh`) are in that green set.
+
+### 2026-09-18, fourth round — fonts, triage, hygiene
+
+- `fix/qml-fonts` (`f306ca0`, `f81fc00`, off main): every Text/TextInput block under
+  `share/**/*.qml` now resolves a font family — the exit modal, Ask, plugins, Time's Up, the
+  toast, the remaining Wi-Fi rows, and the bar's two badges (`bar.fontFamily`, falling back to
+  `qs.Commons`' `Style`). Review caught a committed `share/.DS_Store`, nested-block gaps and a
+  too-loose `font:` escape in the new scanner; all fixed. `qml-fonts-test.sh` fails on the
+  pre-change tree; the scan covers every QML surface.
+- `docs/branch-triage-2026-09-18` (`f8e3917`, off main): the 79 unmerged remote branches sorted
+  for the gate runner — 45 already content-merged (deletion candidates), 19 clean merges, 15 need
+  a rebase. The loop's own branches are listed separately.
+- Hygiene: `docs/.DS_Store` and `share/.DS_Store` were untracked from every branch tip
+  (`a138f67`, `888eb9f`, `fa6bd88`, `f81fc00`); all local branches verified clean.
+
+### 2026-09-19, fifth round — settings, time-left, and the loop tooling
+
+- `feat/panel-all-settings` (`43decbd`, stacked on the panel branches): R-WIZ-8's remaining panel
+  settings — weekday and weekend budgets/lights-out, a Wi-Fi mode row, and a confirmed Reset to
+  band defaults; `friendly_wifi_mode` now lives in `lib/kids.sh`. Panel suite green; the fable
+  review was re-run after interruptions.
+- `feat/remaining-time` (`db65f28`, stacked on the launcher hints branch): the launcher reads root's
+  `/run/omarchy-kids/time/<kid>.json` display-only and shows "N minutes left" (Level 1 under the
+  clock, Level 2 top-right, hidden in grace); `GridNav.remainingLabel` owns the words, node-tested,
+  with `docs/time.md` recording what only the VM can prove.
+- R-ASK-2's "one keystroke" approve is **parked on the owner**: Enter-on-list approving directly
+  changes approve semantics; today it is list → detail with Approve preselected. Recorded rather
+  than guessed.
+- Tooling: `opencode-loop` installed (`~/.config/opencode/plugins`, `commands/`); the unattended
+  protocol is `.opencode/loop-prompt.md` with the backlog and stop conditions, plus
+  `docs/research/2026-09-18-kids-mode-landscape.md` (timekpr-nExt, Cozy Kids Launcher, others).
+- Next: apply the P2 review findings, then research-derived favorites/recents or config
+  export/import; per-app limits and weekly caps wait on a SPEC amendment.
+
+### 2026-09-18, fifth round — panel P2 coverage and the kid's clock
+
+- `feat/panel-all-settings` (`43decbd`; stacked on the panel branch chain): R-WIZ-8's "every
+  setting" is now covered — weekday **and weekend** budgets and lights-out rows, a Wi-Fi mode
+  screen (Ask me first / On their own, safely), and a confirmed Reset to band defaults that keeps
+  the account, name, face and password. `friendly_wifi_mode` moved into `lib/kids.sh` so the panel
+  and wizard cannot drift. Panel suite green; fable review pending (re-run; the first was killed
+  by an interrupted tool call).
+- `feat/remaining-time` (`db65f28`; stacked on the Level 1 hints branch): the launcher reads root's
+  published time state (read-only `FileView`) and shows "N minutes left" at Level 1 and on the
+  Level 2 desktop, hidden in grace. `GridNav.remainingLabel` owns the words and is node-tested;
+  docs/time.md records that the live file watch still needs the VM.
+- R-ASK-2's "approve/decline on one keystroke" is left open on purpose: the current list → detail
+  (Approve preselected) is two screens, but making Enter on the list approve directly changes
+  approve semantics and is the owner's call.
+
+The loop's `.opencode/loop-prompt.md` protocol (committed on `chore/loop-and-research`) carries
+this backlog for `opencode-loopd` when the session is not driving.
+
+### 2026-09-19, fifth round — settings coverage, time-left, loop tooling
+
+- `feat/panel-all-settings` (`43decbd`): P2 gets weekday **and weekend** budgets/lights-out, a
+  Wi-Fi mode row, and a confirmed Reset to band defaults; `friendly_wifi_mode` moved into
+  `lib/kids.sh`. Panel suite green; fable review re-run after interruptions.
+- `feat/remaining-time` (`db65f28`): the launcher reads root's `/run/omarchy-kids/time/<kid>.json`
+  display-only and shows "N minutes left" (Level 1 under the clock, Level 2 top-right, hidden in
+  grace); `GridNav.remainingLabel` owns the words, node- and static-tested. docs/time.md records
+  what only the VM can prove.
+- R-ASK-2's "one keystroke" approve is parked for the owner: Enter-on-list would change approve
+  semantics, so the current list → detail (Approve preselected) stays until that call is made.
+- Tooling: `opencode-loop` + `opencode-loopd` installed; the unattended protocol is
+  `.opencode/loop-prompt.md` (`5f2ec0d`) with the backlog and stop conditions, plus
+  `docs/research/2026-09-18-kids-mode-landscape.md`.
+- Next in the backlog: apply the P2 review findings, then favorites/recents from the launch log or
+  config export/import; per-app limits and weekly caps wait on a SPEC amendment.
+
+P2 review round closed in `484cd4b`: Back on the Wi-Fi screen no longer runs a write, the reset
+card lists what actually stays (account, name, face, band, password, theme, hand-added sites), the
+Wi-Fi labels/detail match `docs/wifi.md`'s real behavior, `friendly_wifi_mode` lives once in
+`lib/kids.sh`, the weekday rows say "weekday", and the Wi-Fi tests use an exact answer script with
+a real reset case. Panel and wizard suites green.
+
+Backlog item 4 landed as `fix/remove-confirm` (`b9af8da`): `omarchy-kids-remove` confirms through
+the shared card when a terminal is attached (type `yes` in full; Esc/Ctrl+C cancel) and keeps the
+original one-line prompt for pipes and scripts, with `--yes` unchanged. `remove-test` passes on the
+piped path and pins the tty branch statically; `trust-boundary-test` passes with the new
+`lib/tui.sh` source.
+
+### 2026-09-19, sixth round — remove's confirmation
+
+`fix/remove-confirm` (`b9af8da`, off main) closes backlog item 4: `omarchy-kids-remove` uses
+`lib/tui.sh`'s input card when a human is at a terminal (type `yes` in full; Esc/Ctrl+C cancel),
+while a pipe or script keeps the original one-line prompt and `--yes` still skips it. remove-test
+keeps the piped decline case and pins the tty branch; trust-boundary and remove suites green.
+
+Backlog now: R-ASK-2 (owner decision), research-derived favorites/recents or config export/import
+(`docs/research/2026-09-18-kids-mode-landscape.md`), then the I-6 deep-review pass.
+
+### 2026-09-19, seventh round — portal help and failure wording
+
+`fix/portal-help` (`aa0c036`, off main): the SDDM greeter now names its keys at the bottom
+(arrows/Enter/power-off, switching to Enter/Esc while typing) and words a wrong password ("That
+password didn't work. Try again.") instead of only shaking the tile. `portal-test` pins both
+strings; `docs/portal.md` records the live check as still VM-only. The empty
+`docs/spec-proposal-per-app-limits` branch was deleted.
+
+### 2026-09-19, seventh round — portal help and worded failure
+
+`fix/portal-help` (`aa0c036`, off main) closes a deep-review finding: the SDDM greeter now names
+its keys at the bottom ("← → Choose · Enter Sign in · Ctrl+Shift+P Power off", switching to
+"Enter Sign in · Esc Back" while typing) and answers a wrong password with "That password didn't
+work. Try again." instead of a shake alone. portal-test pins both strings; docs/portal.md records
+them and still marks the live check as outstanding (VM only).
+
+### 2026-09-19, eighth round — config export
+
+`feat/conf-export` (`bba578f`, off main): `omarchy-kids-conf export <kid>` prints every effective
+setting as `key=value`, resolved override > band > default, omitting password/onboarded; enough to
+save or diff a profile, and the safe half of the research-derived export/import item. conf-test
+covers the header, effective values, an override winning, and the omission. Import (validated,
+all-or-nothing) remains in the backlog, as does the per-app-limits/weekly-caps proposal and
+R-ASK-2's owner decision.
+
+### 2026-09-19, ninth round — validated config import
+
+`feat/conf-import` (`9a6e20e`, stacked on `feat/conf-export`): `omarchy-kids-conf import <kid>
+<file>` pairs with export — every line is parsed and validated through the schema before the first
+write, so a bad file changes nothing, and password/onboarded are refused as system-managed.
+conf-test covers a valid apply, an out-of-range value, an unknown key, and a system key. A fable
+review of the export/import pair was launched; its findings, if any, are the next step.
+
+The export/import review's findings were all closed in `ac85c3f` (still on `feat/conf-import`):
+export now lists only real overrides as live lines with inherited values commented, so a round
+trip cannot pin a band default; import validates first, refuses duplicates/system keys/CRLF
+hazards, and replaces the profile in one atomic move before the theme side effect and manifest
+rebuild run once. The review itself is kept at `docs/reviews/2026-09-19-conf-export-import.md` on
+that branch. conf-test green.
