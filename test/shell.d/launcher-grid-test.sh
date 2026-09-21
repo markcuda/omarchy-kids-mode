@@ -107,8 +107,10 @@ check_contains "$qml_content" 'radius: width / 2' \
   "the icon fallback is a rounded (circular) initial badge"
 check_contains "$qml_content" 'color: theme.accent' \
   "the icon fallback badge uses the theme accent colour"
-check_contains "$qml_content" 'font.pixelSize: 32' \
-  "the icon fallback initial is sized to roughly match a real 64px icon glyph"
+check_contains "$qml_content" 'font.pixelSize: Math.round(iconSize / 2)' \
+  "the icon fallback initial scales with the icon slot"
+check_contains "$qml_content" 'readonly property int iconSize: Math.max(28, Math.min(64, Math.round(grid.cellHeight * 0.40)))' \
+  "the tile content scales with a shrunken cell"
 
 # --- Live review fix: the clock must never overlap the grid -----------
 # A live 1280x800/nine-tile screenshot showed the clock (top-right, same

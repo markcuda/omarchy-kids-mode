@@ -552,6 +552,12 @@ ShellRoot {
                         var s = String(modelData.label || modelData.id || "?").trim()
                         return s.length > 0 ? s.charAt(0).toUpperCase() : "?"
                     }
+                    // A short screen shrinks the cell (grid.fitCell); the tile
+                    // content scales with it so the icon+label column never
+                    // spills past the tile and collides with the row below
+                    // (live 875x492 finding).
+                    readonly property int iconSize: Math.max(28, Math.min(64, Math.round(grid.cellHeight * 0.40)))
+                    readonly property int labelSize: Math.max(11, Math.min(18, Math.round(grid.cellHeight * 0.15)))
 
                     // issue #54: derived from the shared cell size (min
                     // 160px per the issue), inset from the cell itself so
@@ -571,13 +577,13 @@ ShellRoot {
 
                     Column {
                         anchors.centerIn: parent
-                        spacing: 8
+                        spacing: Math.max(4, Math.round(grid.cellHeight * 0.05))
 
                         Item {
                             id: iconSlot
                             anchors.horizontalCenter: parent.horizontalCenter
-                            width: 64
-                            height: 64
+                            width: iconSize
+                            height: iconSize
 
                             Image {
                                 id: iconImg
@@ -606,11 +612,10 @@ ShellRoot {
                                     text: initial
                                     color: theme.background
                                     font.family: theme.fontFamily
-                                    // Live review: bumped from 28 to 32 so the
-                                    // initial reads at roughly the same visual
-                                    // weight as a real 64px icon glyph in the
-                                    // same iconSlot, not visibly smaller.
-                                    font.pixelSize: 32
+                                    // Scaled with the icon slot (a short
+                                    // screen's cell is smaller than 64px): the
+                                    // initial stays at roughly half the slot.
+                                    font.pixelSize: Math.round(iconSize / 2)
                                     font.bold: true
                                 }
                             }
@@ -621,7 +626,9 @@ ShellRoot {
                             text: modelData.label || modelData.id || ""
                             color: theme.foreground
                             font.family: theme.fontFamily
-                            font.pixelSize: 18
+                            font.pixelSize: labelSize
+                            elide: Text.ElideRight
+                            maximumLineCount: 2
                             wrapMode: Text.WordWrap
                             width: parent.parent.width - 16
                             horizontalAlignment: Text.AlignHCenter
@@ -637,7 +644,7 @@ ShellRoot {
                             color: theme.foreground
                             opacity: 0.75
                             font.family: theme.fontFamily
-                            font.pixelSize: 14
+                            font.pixelSize: Math.max(10, labelSize - 4)
                             wrapMode: Text.WordWrap
                             width: parent.parent.width - 16
                             horizontalAlignment: Text.AlignHCenter
