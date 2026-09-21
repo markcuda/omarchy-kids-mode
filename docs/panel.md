@@ -16,7 +16,7 @@ omarchy-kids-panel [--dry-run] [--apply] [--help]
 command a write would run is printed instead of run. Pass `--apply` (or set `DRY_RUN=0`) for a real
 run.
 
-## Screens (Appendix A's P1-P3; P4/P5 are not built here — see "Not built here" below)
+## Screens (Appendix A's P1-P3; P4 and the P5 panel screen are not built — see "Not built here" below)
 
 | Screen | What's on it |
 | --- | --- |
@@ -129,23 +129,23 @@ run, panel-wide, not just for Apply.
 
 ## Not built here
 
-- **P4 Machine** and **P5 Confirm remove** (Remove Kids Mode itself, R-TRUST-4): nothing in this
-  checkout implements "Remove Kids Mode" yet — not the wizard, not this panel, not a standalone
-  command. Home's own "Remove Kids Mode" row says so plainly (I-6) instead of pretending to offer
-  it; removing kids one at a time from their own P2 screen is what this issue actually delivers.
+- **P4 Machine** (safety status on demand, R-TRUST-5): not built. **Remove Kids Mode** (R-TRUST-4)
+  *is* built: Home's row hands off to `bin/omarchy-kids-remove`, which prints its own plan and asks
+  again before touching anything (`lib/panel-home.sh`). **P5's parent-password confirm screen** is
+  not built either — `omarchy-kids-remove` asks its own confirmation in its own idiom.
 - **Weekend budget/lights-out variants** (`budget_min_weekend`, `lights_out_weekend`): editable
   through `omarchy-kids-conf set` directly today; the Screen Time screen only edits the weekday
   pair, matching the issue brief ("edit budget and lights-out").
 
-## File locations (overridable for tests, same convention as `docs/conf.md`/`docs/time.md`/`docs/ask.md`)
+## File locations (data settings and resolved paths)
 
-| What | Default path | Env override |
+| What | Default path | Seam |
 | --- | --- | --- |
-| Kid overrides directory, allow-list files | `/etc/omarchy-kids/kids/` | `OMARCHY_KIDS_ETC` |
-| `bands.toml`, `packs/` | `/usr/share/omarchy-kids/` | `OMARCHY_KIDS_SHARE` |
-| The ask queue | `/var/lib/omarchy-kids/queue/` | `OMARCHY_KIDS_ROOT` (scratch prefix) |
-| `lib/ask.py` (read directly for Requests, see above) | `lib/` beside `bin/`, else `/usr/lib/omarchy-kids` | `OMARCHY_KIDS_LIB` |
-| Each helper binary (`omarchy-kids-conf`/`-time`/`-ask`/`-apps`/`-web`/`-provision`/`-wizard`/`-data`) | resolved beside this script, else `PATH` | `OMARCHY_KIDS_<NAME>_BIN` |
+| Kid overrides directory, allow-list files | `/etc/omarchy-kids/kids/` | `OMARCHY_KIDS_ETC` (data setting) |
+| `bands.toml`, `packs/` | `/usr/share/omarchy-kids/` | `OMARCHY_KIDS_SHARE` (read by the helper commands, not the panel itself) |
+| The ask queue | `/var/lib/omarchy-kids/queue/` | `OMARCHY_KIDS_ROOT` (scratch-tree prefix) |
+| `lib/ask.py` (read directly for Requests, see above) | `lib/` beside `bin/`, else `/usr/lib/omarchy-kids` | resolved beside the command; no override |
+| Each helper binary (`omarchy-kids-conf`/`-time`/`-ask`/`-apps`/`-web`/`-provision`/`-wizard`/`-data`) | resolved beside this script (`kids_bin`); no fallback, no override | the `OMARCHY_KIDS_*_BIN`/`OMARCHY_KIDS_LIB` escapes were removed, `CHANGELOG.md` |
 
 `test/shell.d/panel-test.sh` drives every screen above through `OMARCHY_KIDS_TUI_ANSWERS`, checking
 both the exact `[dry-run] sudo ...` line a write prints and, in a real (`--apply`) run against a
@@ -180,7 +180,9 @@ unchanged and still default to a preview.
 
 ## Source header (moved from `bin/omarchy-kids-panel`, issue #49)
 
-Kept for reference; the file itself now carries a 3-line pointer instead.
+Kept for reference; the file itself now carries a 3-line pointer instead. This snapshot predates
+`bin/omarchy-kids-remove` (Home's Remove row now hands off to it) and the #58 removal of the
+`*_BIN`/`OMARCHY_KIDS_LIB` overrides it lists below.
 
 ```text
 omarchy-kids-panel — everything after the first run (SPEC.md R-WIZ-7,

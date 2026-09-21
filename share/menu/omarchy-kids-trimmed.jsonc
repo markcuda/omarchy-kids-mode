@@ -15,15 +15,14 @@
 // This is also, deliberately, not the only thing enforcing R-DESK-4:
 // Level 1 has no bar/shell at all (share/hyprland/L1.lua's exec-once
 // starts only the big-tile launcher, never omarchy-launch-shell), so
-// there is nothing to trim there. Level 2 does run Omarchy's own shell
-// (bin/omarchy-kids-session-start starts it the way autostart does),
-// but share/hyprland/L2.lua never binds Super+Space (or any other key)
-// to "omarchy-menu toggle" -- Super+Space is rebound to the Level 1/2
-// launcher instead (Appendix E). So even if this file's hiding
-// mechanism turns out not to be supported at all, no Level 1 or 2
-// keybinding reaches the untrimmed menu. What this file's hiding (if
-// supported) would additionally cover is mouse/bar access to the menu,
-// which is why it's still worth getting right rather than dropping.
+// there is nothing to trim there. Level 2 runs the Kids Mode launcher,
+// not Omarchy's own shell, and share/hyprland/L2.lua rebinds
+// Super+Space to that launcher instead of "omarchy-menu toggle"
+// (Appendix E). So even if this file's hiding mechanism turns out not
+// to be supported at all, no Level 1 or 2 keybinding reaches the
+// untrimmed menu. What this file's hiding (if supported) would
+// additionally cover is mouse/bar access to the menu, which is why
+// it's still worth getting right rather than dropping.
 {
   "hide": ["install", "update", "setup"]
 }

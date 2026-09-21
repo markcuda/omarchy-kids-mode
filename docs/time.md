@@ -5,8 +5,8 @@ owns elapsed-time calculation, the `allowed`/`warning`/`grace`/`finishing` decis
 locking, and session finish. This is issue #23 plus issue #68, ticket 1, issue #69, ticket 2,
 and issue #70, ticket 3.
 
-**Nothing here has run against a real Hyprland, Quickshell, or `loginctl`/systemd-logind** — see
-"What's unverified" below before trusting any of it in front of a kid.
+See "Verified live" below for what has run in the QEMU test VM, and "What's unverified" for the
+rest.
 
 ## The trust boundary — read this first
 
@@ -147,8 +147,8 @@ authority state. Root performs the 60-second finish transition independently.
 
 ### "Ask a grown-up" is R-ASK-1's own modal
 
-The button runs `omarchy-kids-ask time 15` (`docs/ask.md`): the "Ask a grown-up" modal opens over
-the Time's Up overlay, and a parent's password grants the minutes on the spot through
+The button runs `omarchy-kids-ask time 15` (`docs/ask.md`): the "Ask a grown-up" modal is wired to
+open over the Time's Up overlay, and a parent's password grants the minutes on the spot through
 `omarchy-kids-authd`, or "Ask later" queues the request for the panel. Either way the grant lands
 in the ledger, the daemon's next poll sees minutes left, and `dismiss_timesup` closes this overlay.
 The button still says "ask", not "get" (I-6): asking is the kid's part, granting is the parent's.
@@ -176,8 +176,6 @@ alone.
 - **The pre-reader full-screen countdown** (R-TIME-3's second half: "plus a full-screen countdown
   for pre-readers with icon and sound"). `share/time/toast.qml` is the same for every band today.
 - **Pushing lights-out for tonight only** (R-TIME-4). `grant` only ever extends the *budget*.
-- **The real R-ASK-1 "Ask a parent" modal** (a parent-password-gated on-the-spot grant, or a
-  queued request) — see "Ask a grown-up is a placeholder" above.
 - **`/run/omarchy-kids/status.json` has no reader yet** — it's written (R-BAR-3's shape) for the
   future parent-bar widget, R-BAR, which is a separate ticket.
 
@@ -217,6 +215,8 @@ check.
 - The kid adapter reflecting a live root warning/grace document and hiding the card after a root
   grant; the shell test covers the fixed state fixtures, but a kid seeing those surfaces in a real
   session is still unconfirmed.
+- The Ask modal opening over the Time's Up overlay (two keyboard-exclusive layer surfaces); the
+  modal alone, opened over the launcher, has been watched (`docs/ask.md` "Verified live").
 
 ## Verified live (2026-09-02, QEMU test VM; ticket 2)
 
