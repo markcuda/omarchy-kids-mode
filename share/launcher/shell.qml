@@ -35,11 +35,29 @@ ShellRoot {
         readonly property bool desktopMode: root.manifest.level === 2
         readonly property var tiles: desktopMode ? GridNav.filterTiles(root.manifest.tiles || [], searchInput.text)
                                                : (root.manifest.tiles || [])
+        // Parallel to `tiles`: true when the tile can act. A tile whose app is
+        // not installed stays visible with its honest label, but navigation
+        // must skip it -- a control that cannot act must not take the focus
+        // ring and swallow Enter (I-6). `launchInstalled` returns null for an
+        // unknown id; that is not `false`, so it stays navigable.
+        readonly property var tileAvailability: {
+            var list = root.tiles
+            var out = []
+            for (var i = 0; i < list.length; i++) {
+                out.push(root.launchInstalled((list[i] && list[i].id) || "") !== false)
+            }
+            return out
+        }
+        onTilesChanged: {
+            if (!GridNav.navigable(root.tileAvailability, root.currentIndex)) {
+                root.currentIndex = GridNav.firstAvailable(root.tiles.length, root.tileAvailability)
+            }
+        }
 
         function showPicker() {
             if (!root.manifest.account) return
             searchInput.text = ""
-            root.currentIndex = 0
+            root.currentIndex = GridNav.firstAvailable(root.tiles.length, root.tileAvailability)
             root.pickerOpen = true
             root.requestActivate()
             root.focusTries = 0
@@ -151,8 +169,8 @@ ShellRoot {
                 root.manifest = ({})
             }
             root.pickerOpen = root.manifest.level === 1
-            if (root.currentIndex >= root.tiles.length) {
-                root.currentIndex = Math.max(0, root.tiles.length - 1)
+            if (!GridNav.navigable(root.tileAvailability, root.currentIndex)) {
+                root.currentIndex = GridNav.firstAvailable(root.tiles.length, root.tileAvailability)
             }
         }
 
@@ -297,19 +315,19 @@ ShellRoot {
             // top/bottom edge (including a ragged last row) rather than
             // jumping to some other tile.
             Keys.onLeftPressed: (event) => {
-                root.currentIndex = GridNav.moveLeft(root.currentIndex)
+                root.currentIndex = GridNav.moveLeft(root.currentIndex, root.tiles.length, root.tileAvailability)
                 event.accepted = true
             }
             Keys.onRightPressed: (event) => {
-                root.currentIndex = GridNav.moveRight(root.currentIndex, root.tiles.length)
+                root.currentIndex = GridNav.moveRight(root.currentIndex, root.tiles.length, root.tileAvailability)
                 event.accepted = true
             }
             Keys.onUpPressed: (event) => {
-                root.currentIndex = GridNav.moveUp(root.currentIndex, root.columns)
+                root.currentIndex = GridNav.moveUp(root.currentIndex, root.columns, root.tiles.length, root.tileAvailability)
                 event.accepted = true
             }
             Keys.onDownPressed: (event) => {
-                root.currentIndex = GridNav.moveDown(root.currentIndex, root.columns, root.tiles.length)
+                root.currentIndex = GridNav.moveDown(root.currentIndex, root.columns, root.tiles.length, root.tileAvailability)
                 event.accepted = true
             }
             Keys.onReturnPressed: (event) => { root.launchCurrent(); event.accepted = true }
@@ -357,9 +375,9 @@ ShellRoot {
                     font.pixelSize: 22
                     clip: true
                     selectByMouse: true
-                    onTextChanged: root.currentIndex = 0
-                    Keys.onUpPressed: (event) => { root.currentIndex = GridNav.moveUp(root.currentIndex, root.columns); event.accepted = true }
-                    Keys.onDownPressed: (event) => { root.currentIndex = GridNav.moveDown(root.currentIndex, root.columns, root.tiles.length); event.accepted = true }
+                    onTextChanged: root.currentIndex = GridNav.firstAvailable(root.tiles.length, root.tileAvailability)
+                    Keys.onUpPressed: (event) => { root.currentIndex = GridNav.moveUp(root.currentIndex, root.columns, root.tiles.length, root.tileAvailability); event.accepted = true }
+                    Keys.onDownPressed: (event) => { root.currentIndex = GridNav.moveDown(root.currentIndex, root.columns, root.tiles.length, root.tileAvailability); event.accepted = true }
                     Keys.onReturnPressed: (event) => { root.launchCurrent(); event.accepted = true }
                     Keys.onEnterPressed: (event) => { root.launchCurrent(); event.accepted = true }
                     Keys.onEscapePressed: (event) => { root.dismissPicker(); event.accepted = true }
@@ -500,7 +518,10 @@ ShellRoot {
                 interactive: false
 
                 delegate: Rectangle {
-                    // Missing applications remain navigable but cannot launch.
+                    // Missing applications stay visible and carry their honest
+                    // "not installed yet" label, but navigation skips them
+                    // (root.tileAvailability): a control that cannot launch must
+                    // not take the focus ring and swallow Enter (I-6).
                     readonly property bool missing: root.launchInstalled(modelData.id || "") === false
                     // issue #54: the resolved icon source, or "" -- an
                     // empty Image source (Image.Null) never reaches

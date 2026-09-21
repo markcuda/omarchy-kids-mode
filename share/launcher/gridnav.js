@@ -44,20 +44,59 @@ function columnsFor(width, cellWidth) {
     return Math.max(1, Math.floor(width / cellWidth));
 }
 
-function moveLeft(index) {
-    return index > 0 ? index - 1 : index;
+// availability AVAIL -- optional array parallel to the tiles, where an
+// explicit `false` means the tile is shown (with its honest "not installed
+// yet" label) but cannot act, so navigation must skip it. Without this, a
+// missing tile took the focus ring and Enter on it did nothing and said
+// nothing (I-6: a control that cannot act must not take focus). A missing
+// entry, `null`, or no array at all means "navigable", so every caller that
+// passes no array keeps the previous behaviour.
+function navigable(avail, index) {
+    return !avail || avail[index] !== false;
 }
 
-function moveRight(index, length) {
-    return index + 1 < length ? index + 1 : index;
+// step INDEX DELTA LENGTH AVAIL -- walk in DELTA-sized steps until a
+// navigable tile or the edge; the edge (not a non-navigable tile) holds
+// still, so a grid whose every tile is unavailable keeps its index.
+function step(index, delta, length, avail) {
+    var i = index;
+    for (var guard = 0; guard < length; guard++) {
+        var next = i + delta;
+        if (next < 0 || next >= length) return index;
+        i = next;
+        if (navigable(avail, i)) return i;
+    }
+    return index;
 }
 
-function moveUp(index, columns) {
-    return index - columns >= 0 ? index - columns : index;
+// The first navigable tile, so a picker that opens on an unavailable row
+// starts on a tile that can act (0 when nothing can, which keeps the
+// behaviour of an empty/unknown manifest).
+function firstAvailable(length, avail) {
+    for (var i = 0; i < length; i++) {
+        if (navigable(avail, i)) return i;
+    }
+    return 0;
 }
 
-function moveDown(index, columns, length) {
-    return index + columns < length ? index + columns : index;
+function moveLeft(index, length, avail) {
+    if (!avail) return index > 0 ? index - 1 : index;
+    return step(index, -1, length, avail);
+}
+
+function moveRight(index, length, avail) {
+    if (!avail) return index + 1 < length ? index + 1 : index;
+    return step(index, 1, length, avail);
+}
+
+function moveUp(index, columns, length, avail) {
+    if (!avail) return index - columns >= 0 ? index - columns : index;
+    return step(index, -columns, typeof length === "number" ? length : index + 1, avail);
+}
+
+function moveDown(index, columns, length, avail) {
+    if (!avail) return index + columns < length ? index + columns : index;
+    return step(index, columns, length, avail);
 }
 
 // remainingLabel SECONDS -- the kid-visible "N minutes left", or "" when
@@ -78,6 +117,9 @@ if (typeof module !== "undefined") {
     module.exports = {
         filterTiles: filterTiles,
         columnsFor: columnsFor,
+        navigable: navigable,
+        step: step,
+        firstAvailable: firstAvailable,
         moveLeft: moveLeft,
         moveRight: moveRight,
         moveUp: moveUp,

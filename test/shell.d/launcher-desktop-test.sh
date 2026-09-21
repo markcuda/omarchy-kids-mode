@@ -31,12 +31,12 @@ const entries = [
 ];
 const launches = [];
 const root = { manifest: { account: 'kid-ada', level: 2, tiles: entries }, desktopMode: true,
-  currentIndex: 0, pickerOpen: false, requestActivate() {} };
+  tiles: entries, currentIndex: 0, pickerOpen: false, requestActivate() {} };
 Object.defineProperty(root, "visible", {get() { return this.pickerOpen; }});
 const searchInput = { text: 'old query', forceActiveFocus() {} };
 const launcherProcess = { command: [], startDetached() { launches.push(this.command.slice()); } };
 const context = { root, launcherProcess, logProcess: {}, searchInput,
-  keyScope: { forceActiveFocus() {} }, focusTimer: { restart() {} } };
+  keyScope: { forceActiveFocus() {} }, focusTimer: { restart() {} }, GridNav: nav };
 function bind(name) {
   const start = source.indexOf('        function ' + name + '(');
   assert(start >= 0, 'missing QML function ' + name);
