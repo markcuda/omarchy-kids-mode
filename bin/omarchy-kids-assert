@@ -131,14 +131,22 @@ source "$LIB/assert-limine.sh"
 
 main() {
   local boot_mode kids=() k
-  if ! boot_mode="$(boot_mode_get)"; then
-    echo "omarchy-kids-assert: cannot read trusted boot mode; no locks changed" >&2
-    exit 1
-  fi
-
   while IFS= read -r k; do
     [[ -n "$k" ]] && kids+=("$k")
   done < <(kids_list "$KIDS_DIR")
+
+  if ! boot_mode="$(boot_mode_get)"; then
+    # A fresh install has no boot mode and no kids: there is nothing to lock
+    # yet, and the pacman hook runs assert after every transaction, so failing
+    # here aborted a clean install (live finding, 2026-09-21). The moment one
+    # kid exists, a missing boot mode is a real fail-closed error again.
+    if [[ ${#kids[@]} -eq 0 ]]; then
+      [[ "$QUIET" -eq 1 ]] || echo "omarchy-kids-assert: no boot mode and no kids yet; nothing to assert"
+      exit 0
+    fi
+    echo "omarchy-kids-assert: cannot read trusted boot mode; no locks changed" >&2
+    exit 1
+  fi
 
   if [[ ${#kids[@]} -eq 0 ]]; then
     # units is machine-level, not per-kid (R-BOOT-3): needed even with

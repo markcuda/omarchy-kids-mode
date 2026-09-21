@@ -286,6 +286,17 @@ fi
 # --- lib/sock.sh ships: three commands source it now ----------------------
 if grep -qE 'install -m644 lib/\*\.sh' "$ROOT/PKGBUILD"; then
   pass "PKGBUILD installs lib/*.sh (covers the new lib/sock.sh)"
+if grep -q "^arch=('any')" "$PKGBUILD"; then
+  pass "PKGBUILD builds for any architecture (nothing is compiled; the aarch64 VM hit the old pin)"
+else
+  fail "PKGBUILD still pins one architecture"
+fi
+if grep -q '^ReadWritePaths=-/var/lib/omarchy-kids ' "$ROOT/systemd/omarchy-kids-authd.service" &&
+  grep -q '^ReadWritePaths=-/var/lib/omarchy-kids -/run/omarchy-kids$' "$ROOT/systemd/omarchy-kids-time-ledger.service"; then
+  pass "units tolerate a missing runtime dir before the first provisioning (no 226/NAMESPACE)"
+else
+  fail "a unit would refuse to start before /var/lib/omarchy-kids exists"
+fi
 else
   fail "PKGBUILD does not install lib/*.sh -- lib/sock.sh would be missing"
 fi

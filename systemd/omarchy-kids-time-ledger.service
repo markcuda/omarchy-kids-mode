@@ -22,4 +22,6 @@ ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectControlGroups=yes
 RestrictAddressFamilies=AF_UNIX
-ReadWritePaths=/var/lib/omarchy-kids /run/omarchy-kids
+# "-" on both: neither path exists before the first run (fresh install, or a box that has
+# never provisioned a kid); a missing path must not fail the unit with 226/NAMESPACE.
+ReadWritePaths=-/var/lib/omarchy-kids -/run/omarchy-kids

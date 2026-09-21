@@ -7,7 +7,11 @@ After=omarchy-kids-authd.socket
 [Service]
 # A GRANT applies the request as root: the queue under /var/lib and the kid's allow list and
 # overrides under /etc/omarchy-kids must stay writable behind ProtectSystem=strict.
-ReadWritePaths=/var/lib/omarchy-kids /etc/omarchy-kids
+# The leading "-" keeps a fresh install startable: /var/lib/omarchy-kids does not exist until
+# the first write, and without it systemd refused to start the unit (226/NAMESPACE) and its
+# socket hit the start limit (live finding, 2026-09-21). Once the directory exists it is
+# enforced like any other path.
+ReadWritePaths=-/var/lib/omarchy-kids /etc/omarchy-kids
 Type=simple
 ExecStart=/usr/bin/omarchy-kids-authd
 # Reads /etc/shadow and (optionally) /etc/omarchy-kids/machine.conf; never

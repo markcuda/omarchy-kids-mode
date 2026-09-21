@@ -1286,5 +1286,18 @@ else
   pass "invalid mode: assert stops before UKI or Limine access"
 fi
 
+# Fresh-install path: the pacman hook runs assert after every transaction, and
+# a brand-new box has neither a boot mode nor a kid. That must exit 0 or a clean
+# install aborts (live finding, 2026-09-21); the same missing mode with a kid
+# present stays the fail-closed error the invalid-mode case above covers.
+mv "$ETC/kids" "$ETC/kids.fresh-install-hold"
+grep -v '^boot=' "$ETC/machine.conf" >"$ETC/machine.conf.fresh" || true
+mv "$ETC/machine.conf.fresh" "$ETC/machine.conf"
+out="$(run_assert_clean --quiet 2>&1)"
+st=$?
+check_eq "$st" 0 "fresh install: no boot mode and no kids exits 0 (hook must not fail the transaction)"
+mv "$ETC/kids.fresh-install-hold" "$ETC/kids"
+conf_set "$ETC/machine.conf" boot portal
+
 echo "assert-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc
