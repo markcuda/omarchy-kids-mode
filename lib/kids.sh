@@ -519,6 +519,15 @@ friendly_web_mode() {
   esac
 }
 
+# friendly_wifi_mode MODE -- Appendix B's two Wi-Fi modes, parent words.
+friendly_wifi_mode() {
+  case "$1" in
+    parent) echo "Ask me first" ;;
+    helper) echo "On their own, safely" ;;
+    *) echo "$1" ;;
+  esac
+}
+
 # modal_already_open PIDFILE -- true if PIDFILE names a still-live process
 # whose /proc comm is quickshell. Not a `pgrep -f` substring match on argv:
 # a kid could start any process containing that string and wedge it shut.

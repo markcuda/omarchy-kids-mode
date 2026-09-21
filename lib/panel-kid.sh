@@ -1,8 +1,9 @@
 # shellcheck shell=bash
-# lib/panel-kid.sh — omarchy-kids-panel's P2 (one kid): time, web, apps,
-# plugins, data, desktop (level, theme — issue #53), password, remove —
-# screen_kid is the row menu that dispatches to each. Sourced by the
-# dispatcher; not meant to be executed directly.
+# lib/panel-kid.sh — omarchy-kids-panel's P2 (one kid): time (weekday and
+# weekend), web, Wi-Fi, apps, plugins, data, desktop (level, theme — issue
+# #53), password, reset to band defaults, remove — screen_kid is the row
+# menu that dispatches to each. Sourced by the dispatcher; not meant to be
+# executed directly.
 
 # --- P2: one kid -------------------------------------------------------------
 
@@ -14,10 +15,12 @@ KID_NOTICE=""
 screen_kid_time() { # ACCOUNT NAME
   local account="$1" name="$2"
   while true; do
-    local status_out budget lights line
+    local status_out budget lights budget_we lights_we line
     status_out="$("$TIME_BIN" status "$account" 2>&1)"
     budget="$(kid_conf_get "$account" budget_min)"
     lights="$(kid_conf_get "$account" lights_out)"
+    budget_we="$(kid_conf_get "$account" budget_min_weekend)"
+    lights_we="$(kid_conf_get "$account" lights_out_weekend)"
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local -a facts=()
     while IFS= read -r line; do facts+=("${line#"$account: "}"); done <<<"$status_out"
@@ -26,8 +29,10 @@ screen_kid_time() { # ACCOUNT NAME
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local choices=(
       "grant|Give more minutes today|"
-      "budget|Change today's daily budget (now $budget min)|"
-      "lights|Change lights-out time (now $lights)|"
+      "budget|Change weekday daily budget (now $budget min)|"
+      "lights|Change weekday lights-out (now $lights)|"
+      "budget_we|Change weekend daily budget (now $budget_we min)|"
+      "lights_we|Change weekend lights-out (now $lights_we)|"
       "back|Back|"
     )
     tui_screen_choose "$name's screen time" 1 1 0 "" choices "grant" "" facts
@@ -57,9 +62,79 @@ screen_kid_time() { # ACCOUNT NAME
         ((rc == 130)) && return 130
         ((rc == 0)) && run_priv "$CONF_BIN" set "$account" lights_out "$TUI_REPLY"
         ;;
+      budget_we)
+        tui_screen_input "How many minutes a day on weekends?" 1 1 0 "" \
+          text "A number, 1 to 1440." validate_budget_minutes
+        rc=$?
+        ((rc == 130)) && return 130
+        ((rc == 0)) && run_priv "$CONF_BIN" set "$account" budget_min_weekend "$TUI_REPLY"
+        ;;
+      lights_we)
+        tui_screen_input "Weekend lights-out at?" 1 1 0 "" \
+          text "24-hour time, like 20:00." validate_lights_out
+        rc=$?
+        ((rc == 130)) && return 130
+        ((rc == 0)) && run_priv "$CONF_BIN" set "$account" lights_out_weekend "$TUI_REPLY"
+        ;;
       back) return 0 ;;
     esac
   done
+}
+
+# screen_kid_wifi ACCOUNT NAME — the Wi-Fi mode that used to be wizard-only
+# (R-WIZ-8's "every setting"): parent (Ask) or helper (the root helper).
+# Labels come from lib/kids.sh's friendly_wifi_mode so the wizard and the
+# panel cannot drift.
+screen_kid_wifi() { # ACCOUNT NAME
+  local account="$1" name="$2" current mode_label
+  current="$(kid_conf_get "$account" wifi)"
+  if [[ "$current" == parent || "$current" == helper ]]; then
+    mode_label="$(friendly_wifi_mode "$current")"
+  else
+    current=""
+    mode_label="not set (the band's default applies)"
+  fi
+  # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
+  local facts=("Mode: $mode_label")
+  panel_notice_lines facts
+  # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
+  local choices=(
+    "parent|Ask me first|They can't join new Wi-Fi themselves; you join it from your account."
+    "helper|On their own, safely|The root helper joins what they ask for. The network can't change what's blocked."
+    "back|Back|"
+  )
+  tui_screen_choose "$name's Wi-Fi" 1 1 0 "" choices "$current" "" facts
+  local rc=$?
+  ((rc == 130)) && return 130
+  ((rc == 0)) || return 0
+  [[ "$TUI_REPLY" == back ]] && return 0
+  [[ "$TUI_REPLY" != "$current" ]] &&
+    run_priv "$CONF_BIN" set "$account" wifi "$TUI_REPLY"
+  return 0
+}
+
+# screen_kid_reset ACCOUNT NAME — clear per-kid overrides back to the
+# band's defaults, keeping the account, name, avatar and password
+# (omarchy-kids-conf reset). Confirmed, because it discards every custom
+# choice at once.
+screen_kid_reset() { # ACCOUNT NAME
+  local account="$1" name="$2"
+  # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
+  local facts=(
+    "Time limits, web mode, Wi-Fi, desktop level and starter-app choices go"
+    "back to this band's defaults. Their account, name, face, band,"
+    "password, theme and any sites you added by hand stay."
+    ""
+    "It does not undo screen time already used today."
+  )
+  # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
+  local choices=("reset|Reset|" "back|Keep my settings|")
+  tui_screen_choose "Reset $name to band defaults?" 1 1 0 "" choices "back" "" facts
+  local rc=$?
+  ((rc == 130)) && return 130
+  ((rc == 0)) || return 0
+  [[ "$TUI_REPLY" == reset ]] && run_priv "$CONF_BIN" reset "$account"
+  return 0
 }
 
 screen_kid_web() { # ACCOUNT NAME
@@ -477,10 +552,12 @@ screen_kid() { # ACCOUNT
     local choices=(
       "time|Screen time|"
       "web|Web|"
+      "wifi|Wi-Fi|"
       "apps|Apps|"
       "data|Data|"
       "desktop|Desktop|"
       "password|Password|"
+      "reset|Reset to band defaults|"
       "remove|Remove this kid|"
       "back|Back|"
     )
@@ -503,6 +580,11 @@ screen_kid() { # ACCOUNT
         rc=$?
         ((rc == 130)) && return 130
         ;;
+      wifi)
+        screen_kid_wifi "$account" "$name"
+        rc=$?
+        ((rc == 130)) && return 130
+        ;;
       apps)
         screen_kid_apps "$account" "$name"
         rc=$?
@@ -520,6 +602,11 @@ screen_kid() { # ACCOUNT
         ;;
       password)
         screen_kid_password "$account" "$name"
+        rc=$?
+        ((rc == 130)) && return 130
+        ;;
+      reset)
+        screen_kid_reset "$account" "$name"
         rc=$?
         ((rc == 130)) && return 130
         ;;

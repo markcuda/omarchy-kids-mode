@@ -27,6 +27,10 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Added
 
+- Panel P2 now covers the rest of R-WIZ-8's "every setting": weekday **and weekend** daily
+  budgets and lights-out times, a **Wi-Fi** mode row (Ask me first / On their own, safely), and a
+  confirmed **Reset to band defaults** that keeps the account, name, face, band, password, theme
+  and any sites added by hand.
 - Panel P4 Machine (R-TRUST-2): Home gains a **Machine safety** row that runs
   `omarchy-kids-check --json` and shows the verdict, every FAIL and WARN with its own detail, and
   the passed/skipped counts; read-only, with **Check again** to refresh.
