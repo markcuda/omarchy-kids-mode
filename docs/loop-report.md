@@ -711,3 +711,13 @@ modals treat a verifier outage (exit 2) as "can't check right now" instead of a 
 the Ask done sentence is capitalised and stays 3 s, and the panel says "Changes already made stay"
 instead of "nothing changes". Mac suite (with shellcheck installed) is 48/48 before this round;
 re-run after.
+
+### 2026-09-21, loop iteration: Discord kids-repo survey and add-on model (doc only)
+
+Owner asked for a survey of the repos listed in the Omarchy community thread and a first design
+for parent-controlled add-ons. `docs/research/2026-09-21-discord-plugin-survey.md` records the
+18 harvested links (5 non-repo), per-repo verdicts with licenses, the fold-into-core ideas, the
+add-on model (root-owned hash-pinned registry, open surfaces, parent approval at setup, updates
+re-approved on surface/exec change), the collisions (school-mode and ok-extras both claim
+`/etc/omarchy-kids/...`), and five owner questions. The thread's virtualized scroller would not
+yield more links to scripted scrollTop, so coverage is the loaded set. No code changed.
