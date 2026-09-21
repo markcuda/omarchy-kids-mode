@@ -86,10 +86,13 @@ ShellRoot {
         }
 
         onClosing: (event) => {
-            if (root.desktopMode) {
-                event.accepted = false
-                root.dismissPicker()
-            }
+            // The launcher is the whole desktop in Level 1: if the same
+            // Super+Q that closes an app can also close it, a kid ends up on
+            // a blank screen with no way back (live finding, 2026-09-21).
+            // Refuse in both modes; desktop mode also folds the picker away.
+            // The exit modal and the session's own end remain the ways out.
+            event.accepted = false
+            if (root.desktopMode) root.dismissPicker()
         }
         // issue #43: this used to be a hardcoded `4` that drifted out of
         // sync with what GridView actually renders (five columns, seen live
