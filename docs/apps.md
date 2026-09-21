@@ -255,8 +255,10 @@ that file's header comment for exactly how.
 
 ## Verify in the VM
 
-This has never run against a real `pacman`, `systemd`, or `.local/share/applications` menu —
-everything below is open until it has:
+Live status (2026-09-21, try-omarchy VM): the install path has now run against a real `pacman` —
+`omarchy-kids-apps install 6-8 --now --apply` installed the band's packages (GCompris among them)
+and skipped the AUR one with the documented R-APPS-1 notice. Still open below: the
+`.local/share/applications` menu checks and the list/queue assertions:
 
 1. `omarchy-kids-apps list 6-8` on a fresh box: confirm every pack app shows `missing`.
 2. `omarchy-kids-apps install 6-8` (default, no `--apply`): confirm it only prints the plan and
