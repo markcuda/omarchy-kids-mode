@@ -368,10 +368,12 @@ adv_edit() {
         "helper|On their own, safely|They can join school or café Wi-Fi. The network can't change what's blocked."
       ;;
     level)
+      # Level 3 is hidden for v1 (docs/phase1/DECISIONS-NEEDED.md): its binds
+      # and the omarchy-provision-first-run sudo question are unverified.
+      # Existing level = 3 profiles still start; only this picker hides it.
       adv_edit_enum level "How should $DISPLAY_NAME's desktop work?" "$step" "$total" \
         "1|App grid|Big app tiles. One app fills the screen." \
-        "2|Simplified desktop|Super+Space finds apps. Windows can sit side by side." \
-        "3|Full desktop (advanced)|The existing Omarchy desktop and its broader controls."
+        "2|Simplified desktop|Super+Space finds apps. Windows can sit side by side."
       ;;
     history_visible)
       adv_edit_enum history_visible "Can you see $DISPLAY_NAME's browsing history?" "$step" "$total" \

@@ -277,8 +277,10 @@ screen_kid_level() { # ACCOUNT NAME
   local choices=(
     "1|App grid|Big app tiles. One app fills the screen."
     "2|Simplified desktop|Super+Space finds apps. Windows can sit side by side."
-    "3|Full desktop (advanced)|The existing Omarchy desktop and its broader controls."
   )
+  # Level 3 is hidden for v1 (docs/phase1/DECISIONS-NEEDED.md): its binds and
+  # the omarchy-provision-first-run sudo question are unverified on a real box.
+  # An existing profile with level = 3 still starts; only the picker hides it.
   tui_screen_choose "$name's desktop" 1 1 0 "Changes apply next time they sign in." choices "$current"
   local rc=$?
   ((rc == 130)) && return 130
