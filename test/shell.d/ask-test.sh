@@ -587,11 +587,17 @@ fi
 
 [[ -f "$ROOT_DIR/share/ask/shell.qml" ]] && pass "share/ask/shell.qml exists" || fail "share/ask/shell.qml missing"
 
-echo "ask-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
-exit $rc
 
 # --- grant time <n>: the minutes travel in <what> (seen live: rejected before it was sent) ---
 out="$(printf 'pw\n' | "$BIN" grant time 7 2>&1)"
 st=$?
 check_not_contains "$out" "rejected before it was sent" "grant time 7 carries minutes into the request"
 [[ $st -ne 0 ]] && pass "grant time 7 fails only on the missing verifier" || fail "grant time 7 should not succeed without a verifier"
+
+# share/ask/shell.qml: the empty password field says whose password is wanted
+# (live review, 2026-09-21 -- same fix as the exit modal).
+check_contains "$(cat "$ROOT_DIR/share/ask/shell.qml")" '"Your password"' \
+  "the ask modal's empty field says whose password is wanted"
+
+echo "ask-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
+exit $rc
