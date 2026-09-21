@@ -872,3 +872,13 @@ Level 1: Enter on the grid opened GCompris fullscreen (`l1-app.png`). Level 2: E
 windowed picker did the same (`l2-app.png`). Together with the earlier pass this closes the
 875x492 sweep: fit, navigation, launch, close-refusal, both modes; the only VM artifact left is
 the icon theme falling back to letter badges (reproduces on the guest's own build).
+
+### 2026-09-21, loop iteration: the parent password field says what it wants
+
+Live review + fix: the exit modal and the Ask modal both showed an empty password field with no
+hint whose password was wanted. Both now show a non-interactive "Your password" while empty
+(`e944e7d`, `c602a37`); verified live in the VM over a running app (`exit-hint.png`) and in the
+Ask modal (`ask-hint.png`, "Ask a grown-up · 15 more minutes of screen time"). While wiring the
+Ask assertion, a real test bug surfaced: `ask-test.sh` echoed its RESULT and exited mid-file, so
+its grant-time assertions never ran; the result/exit pair is at the end now and they pass
+(`350f2c9`).
