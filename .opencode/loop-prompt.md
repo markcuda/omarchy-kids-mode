@@ -58,3 +58,19 @@ requirement ids, then the tail of `docs/loop-report.md` before choosing work.
 - Two attempts at the same fix fail; write the finding into the loop report and leave the branch.
 - The worktree is dirty when you start: inspect `git status`, and if it is not your own work,
   record it in the loop report and stop.
+
+## Standing decisions (2026-09-19) and current backlog
+
+`docs/phase1/DECISIONS-NEEDED.md` §6 records the owner's choices: R-ASK-2 keeps the list → card
+with Approve preselected (SPEC amended), Pause stays unshipped, #98 waits for #109 with portal
+mode the recommended v1 boot path, Level 3 is hidden from the three pickers (done), and the
+per-app/weekly proposal's open questions are answered in its own file.
+
+Backlog now:
+
+1. Favorites/recents from the launch log (root-owned manifest stays authoritative; kid-writable
+   ordering is not allowed).
+2. The I-6 deep pass over `share/` and `lib/`, then fix the safest finding.
+3. Config import already landed with export; next conf work only if a gap appears.
+4. Do not open code work on the per-app limits proposal until the owner opens ticket 0.
+5. Everything else waits on the human gate/dogfooding.
