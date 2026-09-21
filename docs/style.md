@@ -367,7 +367,7 @@ across the existing test files to justify it.
 - DHH, "Beautiful motivations" (world.hey.com/dhh/beautiful-motivations-6fef7c73), quoted only via
   `manual/01-welcome-to-omarchy.md`'s own link to it — not fetched separately; treat the manual's
   paraphrase ("productivity has always been downstream from motivation") as the primary citation.
-- This repo (markcuda/omarchy-kids-sandbox), branch `style-conventions`: `AGENTS.md`, `README.md`,
+- This repo (markcuda/omarchy-kids-mode), branch `style-conventions`: `AGENTS.md`, `README.md`,
   `bin/omarchy-kids`, `bin/omarchy-kids-exit`, `bin/omarchy-kids-check`, `bin/omarchy-kids-bar`,
   `bin/omarchy-kids-panel`, `bin/omarchy-kids-time-ledger`, `lib/conf.sh`, `lib/tui.sh`,
   `share/hyprland/L1.lua`, `share/bar/KidsModule.qml`.

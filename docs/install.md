@@ -19,7 +19,7 @@ If you'd rather read code than prose, `docs/packaging.md` covers the package sid
 There is no AUR package yet. Build from the complete checkout:
 
 ```sh
-git clone https://github.com/markcuda/omarchy-kids-sandbox
+git clone https://github.com/markcuda/omarchy-kids-mode
 cd omarchy-kids-sandbox
 makepkg -si
 ```

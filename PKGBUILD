@@ -17,7 +17,7 @@ pkgver=0.1.0
 pkgrel=1
 pkgdesc="Kids Mode as an app on a normal Omarchy install"
 arch=('x86_64')
-url="https://github.com/markcuda/omarchy-kids-sandbox"
+url="https://github.com/markcuda/omarchy-kids-mode"
 license=('MIT')
 # qt6-svg: SDDM renders share/avatars/*.svg (#39). networkmanager: wifid drives nmcli (#26).
 # quickshell: the modals and the Level 1 launcher exec it (#32). hyprland, sddm: the kid session

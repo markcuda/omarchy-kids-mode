@@ -1,6 +1,6 @@
 [Unit]
 Description=Collect and apply queued Omarchy Kids Mode "ask a parent" requests every minute (SPEC.md R-ASK-1)
-Documentation=https://github.com/markcuda/omarchy-kids-sandbox/blob/main/docs/ask.md
+Documentation=https://github.com/markcuda/omarchy-kids-mode/blob/main/docs/ask.md
 
 [Timer]
 OnBootSec=1min

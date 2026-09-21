@@ -1,6 +1,6 @@
 [Unit]
 Description=Omarchy Kids Mode parent-password verifier socket
-Documentation=https://github.com/markcuda/omarchy-kids-sandbox/blob/main/docs/authd.md
+Documentation=https://github.com/markcuda/omarchy-kids-mode/blob/main/docs/authd.md
 
 [Socket]
 ListenStream=/run/omarchy-kids/auth.sock

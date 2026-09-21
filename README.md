@@ -1,23 +1,20 @@
-# Omarchy Kids Mode - Sandbox Edition
+# Omarchy Kids Mode
 
-The **sandbox path** of [Omarchy Kids Mode](https://github.com/markcuda/omarchy-kids-mode): Kids
-Mode as an app on a normal Omarchy install. The parent keeps their own account and full desktop,
-never restricted. Each kid gets a profile that is a real account underneath. A Super triple-tap
-and the parent password get the parent back out. Core is untouched.
+Kids Mode for Omarchy: the parent keeps their own account and full desktop, never restricted.
+Each kid gets a profile that is a real account underneath, with root-owned screen time, a
+parent-owned browser policy, a login portal, and a parent panel. A Super triple-tap and the
+parent password get the parent back out. Core is untouched.
 
-A spoke of the Kids Mode hub. The design lives there:
-**[PATH-SANDBOX.md](https://github.com/markcuda/omarchy-kids-mode/blob/main/PATH-SANDBOX.md)**,
-sixteen settled decisions, what we borrowed and from whom, and the Phase 1 checks.
-
-The other path, chosen at install with one account and two passwords, is being built upstream by
-Pete: see the hub's
-[PATH-INSTALLER.md](https://github.com/markcuda/omarchy-kids-mode/blob/main/PATH-INSTALLER.md).
-The two share the parent command and its feature commands.
+This is the one repository for the project. The planning history that used to live on `main` —
+`PATH-SANDBOX.md`, `PATH-INSTALLER.md`, `CORE.md`, `SPOKES.md`, `research/` — is kept on the
+**`hub-archive-2026-09-19`** branch; the installer path is built upstream from that record
+([PATH-INSTALLER.md](https://github.com/markcuda/omarchy-kids-mode/blob/hub-archive-2026-09-19/PATH-INSTALLER.md)).
+The two paths share the parent command and its feature commands.
 
 ## Status: v1 build in progress
 
 The spec is **[SPEC.md](SPEC.md)**; the work is
-[issues in six milestones](https://github.com/markcuda/omarchy-kids-sandbox/milestones), in build
+[issues in six milestones](https://github.com/markcuda/omarchy-kids-mode/milestones), in build
 order. Results of the Phase 1 checks live in [`docs/phase1/`](docs/phase1/) (real hardware and the
 QEMU test VM described in [`docs/vm.md`](docs/vm.md)): **V2, V4, V5 and V7 pass**; **V1 is
 finished and failed** — that's the reason Pause isn't built yet, see

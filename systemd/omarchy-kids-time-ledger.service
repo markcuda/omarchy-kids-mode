@@ -1,6 +1,6 @@
 [Unit]
 Description=Omarchy Kids Mode screen-time ledger tick (R-TIME-1)
-Documentation=https://github.com/markcuda/omarchy-kids-sandbox/blob/main/docs/time.md
+Documentation=https://github.com/markcuda/omarchy-kids-mode/blob/main/docs/time.md
 
 [Service]
 Type=oneshot
