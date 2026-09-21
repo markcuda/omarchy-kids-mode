@@ -217,6 +217,18 @@ run the file against.
 
 ## Open questions / what could not be verified without Hyprland or Quickshell
 
+Live status (2026-09-21, `docs/dogfood-2026-09-21.md`): **items 3, 5 and 8 are answered for
+Levels 1 and 2.** Both configs loaded on a real Hyprland with no parse errors; the launcher read
+its manifest and control file, launched apps, moved the highlight with the arrows and rendered
+real icons through `Quickshell.iconPath()`; the Level 2 picker and desktop layer rendered as
+sibling Quickshell windows (the `PanelWindow`/desktop-mode shapes are real API). The live output
+there is 876x491 and the grid drew exactly the four columns `gridnav.js` computes for that width,
+so the issue #43 column model holds on a real surface too. Still open: item 1 and 2 (Level 3's
+terminal binds and `omarchy-sudo-passwordless`), item 4 (`hl.unbind`'s signature, Level 3 only),
+item 6 (the omarchy-menu extension schema) and item 7 (whether Omarchy ships its own volume/
+brightness wrappers); item 8's exact per-row layout on unusual geometries still deserves its own
+look.
+
 This repo had two of Omarchy's real `default.hypr.bindings.*` files to check syntax against
 (`bindings-tiling.lua`, `bindings-utilities.lua`) and a handful of other `default.hypr.*` files,
 but no live Hyprland, no Quickshell, and no `default.hypr.bindings.applications` (where terminal
