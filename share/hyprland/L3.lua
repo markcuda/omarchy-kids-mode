@@ -4,12 +4,13 @@
 -- header). Appendix E: "Level 3: Omarchy defaults minus: terminal-
 -- launching binds under menu=trimmed (kept under full), omarchy-sudo-
 -- passwordless, screenshot-to-clipboard of other users' windows (n/a),
--- plus Super+Shift+K." Unlike L1/L2, Level 3 gets the *real* Omarchy
--- desktop -- require("default.hypr.omarchy") pulls in the same
--- bindings, looknfeel, input, envs, and windows a grown-up's session
--- gets (see hypr-omarchy.lua in the reference material this was written
--- against) -- and then this file removes exactly what Appendix E says
--- to remove.
+-- plus Super+Shift+K." Level 3 gets the *real* Omarchy desktop, but by
+-- requiring the stock modules individually rather than the
+-- default.hypr.omarchy umbrella: the umbrella also requires
+-- default.hypr.autostart, which execs `omarchy-provision-first-run` and the
+-- rest of Omarchy's per-session parent setup on every start (read live on the
+-- VM, 2026-09-21). Our own start hook below runs the shell, so the autostart
+-- module is replaced, not lost.
 -- Root-owned config (I-3): a fixed module path -- not $OMARCHY_PATH, and
 -- not the inherited package.path (Omarchy's user bootstrap.lua puts
 -- ~/.config and ~/.local/state first). Both are set by the session this
@@ -17,48 +18,40 @@
 -- (review §3.5).
 package.path = "/usr/share/omarchy/?.lua;/usr/share/lua/5.4/?.lua;/usr/share/lua/5.4/?/init.lua"
 require("default.hypr.helpers")
+local require_optional = require("default.hypr.require_optional")
 
-require("default.hypr.omarchy")
+-- The stock modules a grown-up's session gets, minus default.hypr.autostart
+-- (see the header). Bound modules are required the same way the umbrella does,
+-- so a box that sets _G.omarchy_default_bindings = false still gets its
+-- choice.
+if _G.omarchy_default_bindings ~= false then
+  require("default.hypr.bindings.media")
+  require("default.hypr.bindings.clipboard")
+  require("default.hypr.bindings.tiling")
+  require("default.hypr.bindings.utilities")
+  require("default.hypr.bindings.voxtype")
+  require_optional.module("default.hypr.bindings.applications")
+end
+require("default.hypr.envs")
+require("default.hypr.looknfeel")
+require("default.hypr.input")
+require("default.hypr.windows")
+require_optional.module("omarchy.current.theme.hyprland")
 
 -- --- Unbind: terminal-launching binds (menu=trimmed) --------------------
 --
--- UNVERIFIED, and the most important gap in this file to close before
--- shipping: default.hypr.bindings.applications -- the module that binds
--- terminal-launching keys (and, per Appendix E, something called
--- "omarchy-sudo-passwordless") -- was not in the reference material
--- used to write this file (only bindings-tiling.lua and
--- bindings-utilities.lua were available, and neither mentions a
--- terminal or sudo at all). hl.unbind here is assumed to take the same
--- key-combo string o.bind's first argument does and remove whatever is
--- bound to it -- bindings-utilities.lua's selection-layer comment
--- describes exactly this operation as risky *only* because it could
--- strip a user's own rebinding of that key from their personal
--- ~/.config/hypr files; L3.lua has no such personal layer (R-DESK-6:
--- the kid's ~/.config/hypr is never read), so unbinding by key here
--- carries none of that risk.
+-- Verified on the VM (2026-09-21) with a `menu = trimmed` kid at Level 3:
+-- `hyprctl binds` shows no SUPER + RETURN bind at all, and the session's sudo
+-- and polkit checks still deny (docs/dogfood-2026-09-21.md). The unbind below
+-- is kept so the rule holds on a build that does bind a terminal launcher; it
+-- is not what keeps the kid out of a shell on today's box.
 --
--- SUPER + RETURN for the default terminal is assumed from near-universal
--- Hyprland/tiling-WM convention, not confirmed against Omarchy's actual
--- default.hypr.bindings.applications. Confirm the real terminal bind (and
--- whether Omarchy has more than one, e.g. a second terminal or a file
--- manager also gated by menu=trimmed) with `omarchy-menu-keybindings` or
--- `hyprctl binds` on a running Omarchy 4.0.2 box, then fix this list.
+-- The "omarchy-sudo-passwordless" question this header used to flag is now
+-- answered: it is not a keybind, it was Omarchy's autostart running
+-- `omarchy-provision-first-run` for whoever logs in, and this file no longer
+-- requires that module (see the requires above). A kid's sudo refusal is the
+-- account's own permissions, checked live, not this file.
 hl.unbind("SUPER + RETURN")
-
--- "omarchy-sudo-passwordless" is deliberately NOT guessed at here. Two
--- reasons: (1) a wrong key-combo guess for hl.unbind risks silently
--- unbinding an unrelated real binding that happens to share that combo,
--- which is worse than doing nothing; (2) reading default.hypr.autostart
--- (this repo's hypr-autostart.lua reference copy) suggests it may not be
--- a keybind at all -- it calls `omarchy-provision-first-run` on every
--- hyprland.start, which sounds like the more likely place passwordless
--- sudo gets granted (a first-run convenience for Omarchy's single-user
--- desktop model), not a key someone presses. If that's right, requiring
--- default.hypr.omarchy above re-runs that provisioning for the kid too,
--- which R-DESK-3/the Appendix G bypass matrix ("Kid runs sudo -> No
--- grant") says must never happen. This needs a real Omarchy box to
--- confirm one way or the other and is called out in the PR/issue rather
--- than silently "fixed" with a guess; see docs/levels.md.
 
 -- --- Add: the exit modal bind (Appendix E) -------------------------------
 o.bind("SUPER + SHIFT + K", "Kids Mode: parent", "omarchy-kids-exit")
@@ -83,7 +76,14 @@ o.bind("SUPER + SHIFT + W", "Kids Mode: Wi-Fi", "omarchy-kids-wifi picker")
 o.bind("SUPER + SUPER_L", "Kids Mode: exit (tap Super three times)", "omarchy-kids-super-tap", { release = true })
 
 -- --- Start the session (starts Omarchy's shell, not the L1 launcher) ----
+-- The first two commands are the systemd/dbus environment imports Omarchy's
+-- autostart made before launching the shell; without them the session's user
+-- services and portals come up with an empty environment. The parent-only
+-- parts of that module (omarchy-provision-first-run, power-profiles, udiskie,
+-- the post-boot hook) are deliberately not run for a kid.
 hl.on("hyprland.start", function()
+  hl.exec_cmd("systemctl --user import-environment $(env | cut -d'=' -f 1)")
+  hl.exec_cmd("dbus-update-activation-environment --systemd --all")
   hl.exec_cmd("omarchy-kids-session-start")
 end)
 
