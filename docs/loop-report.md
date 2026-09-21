@@ -816,3 +816,11 @@ with the flat-inset shape unchanged; the "not installed yet" label is 14px (grid
 at 0.75 opacity over a tile dimmed to 0.72 instead of 0.55, which the live review found
 unreadable. The unavailable tile is still skipped by navigation. Launcher tests pass; the full
 suite was launched in the background at the end of the iteration.
+
+### 2026-09-21, loop iteration: idle pointer hidden (live review)
+
+`fix/hide-idle-cursor` (`87111e3` + the test commit): both L1.lua and L2.lua set
+`cursor = { inactive_timeout = 1 }` so a pointer parked on a keyboard-only surface fades after a
+second of stillness and returns on movement. The option name, units and "0 for never" default were
+verified from the running compositor (`hyprctl -i 0 descriptions`), not guessed; `levels-test.sh`
+asserts both files keep it. Docs only otherwise.

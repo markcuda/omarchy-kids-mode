@@ -75,6 +75,11 @@ hl.config({
   general = { gaps_in = 0, gaps_out = 0, border_size = 0 },
   decoration = { rounding = 0 },
   animations = { enabled = false },
+  -- Hide the idle pointer: the live review found a mouse cursor parked
+  -- mid-grid on a keyboard-only first paint. The option name is verified
+  -- on the running compositor (`hyprctl getoption cursor:inactive_timeout`
+  -- reports a float, default 0, unset); movement brings it straight back.
+  cursor = { inactive_timeout = 1 },
 })
 
 -- UNVERIFIED: this file does not set up monitors at all (see the note
