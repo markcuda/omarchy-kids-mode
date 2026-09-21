@@ -59,10 +59,12 @@ Read `docs/dogfood-2026-09-21.md` first — it is the live pass report and the s
    says its own format is a guess). Cover: A11 copy, the band table, the `level` config enum and
    its migration, `test/shell.d/levels-test.sh`, `docs/levels.md`. Do not change code until the
    owner reviews the doc.
-2. **Level 1 live-UI defects** from `docs/dogfood-2026-09-21.md` items 4-10: unavailable tile
-   focusable (I-6), focus-ring inconsistency, 960×540 grid margin, "not installed yet" size and
-   contrast, cursor on first paint. Fix the safe ones with tests; the GCompris first-run dialog
-   and its wrench/quit become a proposal (needs a packaging decision).
+2. **Level 1/2 live-UI defects** from `docs/dogfood-2026-09-21.md`: the unavailable row is
+   focusable and Enter on it silently does nothing in **both** the Level 1 grid and the Level 2
+   picker (I-6; skip unavailable tiles in navigation or say why). Also: focus-ring inconsistency,
+   960×540 grid margin, "not installed yet" size and contrast, cursor on first paint. Fix the safe
+   ones with tests; the GCompris first-run dialog and its wrench/quit become a proposal (needs a
+   packaging decision).
 3. **Packaging fixes** from `docs/dogfood-2026-09-21.md` items 1-3: `PKGBUILD` `arch=('any')`,
    `docs/install.md` `cd omarchy-kids-mode`, and the fresh-install ordering (runtime dirs exist
    and an unprovisioned box does not fail the package install).
@@ -92,4 +94,7 @@ Read `docs/dogfood-2026-09-21.md` first — it is the live pass report and the s
   the owner reviews the doc.**
 - 2026-09-21 (owner, this session): per-app limits / weekly caps and Pause stay frozen.
 - Config import landed with export; next conf work only if a gap appears.
-- Level 1 is dogfooded and live-verified; Level 2 is not yet (owner-supervised).
+- Level 1 and Level 2 are both dogfooded and live-verified (try-omarchy VM, 2026-09-21); the stock
+  desktop (level 3) is still owner-gated.
+- The Level 2 live pass found the unavailable row focusable in the picker too, and that Enter on
+  it is silent; both modes need the same I-6 fix (backlog item 2).
