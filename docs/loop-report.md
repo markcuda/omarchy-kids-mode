@@ -711,3 +711,12 @@ modals treat a verifier outage (exit 2) as "can't check right now" instead of a 
 the Ask done sentence is capitalised and stays 3 s, and the panel says "Changes already made stay"
 instead of "nothing changes". Mac suite (with shellcheck installed) is 48/48 before this round;
 re-run after.
+
+### 2026-09-21, loop iteration: Level 1 legibility and the 540px frame
+
+`fix/launcher-540p-legibility` (`bd5a84a`): short screens (under 640px tall -- the live 960x540
+VM) spend 32px on the flat insets instead of 56px, so both tile rows and their focus rings fit;
+the "not installed yet" label is 14px (grid) / 16px (picker) at 0.75 opacity over a tile dimmed
+to 0.72 instead of 0.55, which the live review found unreadable. The unavailable tile is still
+visible, labelled, and skipped by navigation. Launcher tests pass; the full suite was running
+when the iteration closed.
