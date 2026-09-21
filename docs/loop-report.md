@@ -798,3 +798,13 @@ provision (I-6). `provision-test.sh` stages `share/menu/` and asserts the seeded
 `when: "false"` rows; provision-test green, menu-trimmed-test green, shellcheck clean. The
 follow-up live Level 3 check (menu rows gone, no first-run chatter) is the remaining gate before
 Level 3 is offered in the pickers.
+### 2026-09-21, loop iteration: unavailable tiles no longer take focus (I-6)
+
+The live passes (fable on Level 1, the Level 2 dogfood) both found the same shape: a tile whose
+app is not installed showed its honest label but accepted the focus ring, and Enter on it silently
+did nothing. Fixed in `fix/launcher-skip-unavailable` (`ef17b2d`): `gridnav.js` gained
+availability-aware stepping plus `firstAvailable()`, `shell.qml` builds the availability array,
+opens the picker on the first tile that can act, and passes it to every move. The tile stays
+visible and labelled; it is simply skipped. `launcher-grid-test.sh` now asserts the skip cases and
+`launcher-desktop-test.sh` supplies the `GridNav` and `tiles` globals its harness had been
+getting away without. The Mac suite ran 51 files with no failures (5 environment skips, unchanged).

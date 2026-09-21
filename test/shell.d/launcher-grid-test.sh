@@ -45,14 +45,18 @@ check_contains "$qml_content" 'import "gridnav.js" as GridNav' \
   "shell.qml imports gridnav.js"
 check_contains "$qml_content" 'GridNav.columnsFor(grid.width, grid.cellWidth)' \
   "shell.qml derives its column count from the GridView's own width/cellWidth, not a hardcoded number"
-check_contains "$qml_content" 'GridNav.moveLeft(root.currentIndex)' \
-  "Left key uses the shared move function"
-check_contains "$qml_content" 'GridNav.moveRight(root.currentIndex, root.tiles.length)' \
-  "Right key uses the shared move function"
-check_contains "$qml_content" 'GridNav.moveUp(root.currentIndex, root.columns)' \
-  "Up key uses the shared move function"
-check_contains "$qml_content" 'GridNav.moveDown(root.currentIndex, root.columns, root.tiles.length)' \
-  "Down key uses the shared move function"
+check_contains "$qml_content" 'GridNav.moveLeft(root.currentIndex, root.tiles.length, root.tileAvailability)' \
+  "Left key uses the shared move function and skips unavailable tiles"
+check_contains "$qml_content" 'GridNav.moveRight(root.currentIndex, root.tiles.length, root.tileAvailability)' \
+  "Right key uses the shared move function and skips unavailable tiles"
+check_contains "$qml_content" 'GridNav.moveUp(root.currentIndex, root.columns, root.tiles.length, root.tileAvailability)' \
+  "Up key uses the shared move function and skips unavailable tiles"
+check_contains "$qml_content" 'GridNav.moveDown(root.currentIndex, root.columns, root.tiles.length, root.tileAvailability)' \
+  "Down key uses the shared move function and skips unavailable tiles"
+check_contains "$qml_content" 'GridNav.firstAvailable(root.tiles.length, root.tileAvailability)' \
+  "a picker that opens on an unavailable tile starts on one that can act"
+check_contains "$qml_content" 'readonly property var tileAvailability' \
+  "shell.qml builds the availability array the move functions skip on"
 check_contains "$qml_content" 'Keys.onReturnPressed' "Return launches the highlighted tile"
 check_contains "$qml_content" 'root.launchCurrent()' "Enter/Return calls launchCurrent()"
 check_contains "$qml_content" 'command: ["/usr/bin/omarchy-kids-session", "--manifest"]' \
@@ -173,6 +177,21 @@ if command -v node >/dev/null 2>&1; then
     // Down at the bottom-right tile (no tile below) clamps.
     results.push('down9=' + G.moveDown(9, cols, 10));
 
+    // A tile whose app is not installed is shown with its honest label but
+    // skipped by navigation (I-6): Enter on it could neither launch nor
+    // explain. `false` in the availability array marks such a tile.
+    var avail = [true, false, true, true, true, true, true, true, false, true];
+    results.push('skipRight=' + G.moveRight(0, 10, avail));
+    results.push('skipLeft=' + G.moveLeft(2, 10, avail));
+    results.push('skipDown=' + G.moveDown(3, cols, 10, avail));
+    results.push('downAvail=' + G.moveDown(0, cols, 10, avail));
+    var availHead = [false, true, true];
+    results.push('firstHead=' + G.firstAvailable(3, availHead));
+    var availNone = [false, false, false];
+    results.push('firstNone=' + G.firstAvailable(3, availNone));
+    results.push('holdNone=' + G.moveRight(0, 3, availNone));
+    results.push('legacyRight=' + G.moveRight(0, 3));
+
     // columnsFor() never returns 0 or a negative number, even for
     // degenerate (not-yet-laid-out) width/cellWidth values -- avoids a
     // divide-by-zero-shaped bug the moment shell.qml starts up before
@@ -199,7 +218,7 @@ if command -v node >/dev/null 2>&1; then
     if (G.remainingLabel('60') !== '') throw Error('remainingLabel rejects strings');
     console.log(results.join(' '));
   " "$JS" 2>&1)"
-  check "$out" "columns=5 down3=8 right7=8 right9=9 left0=0 left5=4 up2=2 down9=9 cols0=1 colsNeg=1" \
+  check "$out" "columns=5 down3=8 right7=8 right9=9 left0=0 left5=4 up2=2 down9=9 skipRight=2 skipLeft=0 skipDown=3 downAvail=5 firstHead=1 firstNone=0 holdNone=0 legacyRight=1 cols0=1 colsNeg=1" \
     "gridnav.js index math matches issue #43's live scenario (node)"
   check_contains "$qml_content" "readonly property string timeStatusPath" \
     "shell.qml reads root's time state path (docs/time.md)"
