@@ -865,3 +865,10 @@ does not need the height-fit that Level 1's grid did. Screenshot `l2-check.png`.
 at this size in Level 1: five columns leave ~98px tiles, so names elide ("GComp…"); the icons are
 the primary affordance for the youngest band, and the alternative (four columns) needs three rows
 that cannot fit the height.
+
+### 2026-09-21, loop iteration: launch flows verified on the small screen
+
+Level 1: Enter on the grid opened GCompris fullscreen (`l1-app.png`). Level 2: Enter in the
+windowed picker did the same (`l2-app.png`). Together with the earlier pass this closes the
+875x492 sweep: fit, navigation, launch, close-refusal, both modes; the only VM artifact left is
+the icon theme falling back to letter badges (reproduces on the guest's own build).
