@@ -646,6 +646,8 @@ ShellRoot {
                             font.family: theme.fontFamily
                             font.pixelSize: Math.max(10, labelSize - 4)
                             wrapMode: Text.WordWrap
+                            maximumLineCount: 2
+                            elide: Text.ElideRight
                             width: parent.parent.width - 16
                             horizontalAlignment: Text.AlignHCenter
                         }
