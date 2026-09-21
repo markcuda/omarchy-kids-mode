@@ -750,3 +750,12 @@ add-on model (root-owned hash-pinned registry, open surfaces, parent approval at
 re-approved on surface/exec change), the collisions (school-mode and ok-extras both claim
 `/etc/omarchy-kids/...`), and five owner questions. The thread's virtualized scroller would not
 yield more links to scripted scrollTop, so coverage is the loaded set. No code changed.
+
+### 2026-09-21, loop iteration: GCompris first-run/config proposal
+
+`docs/gcompris-proposal` (`9d9d26f`): the live review's GCompris findings (first-run welcome
+dialog; the app's own wrench and quit) become a proposal with the observed on-disk evidence
+(`~/.config/gcompris/gcompris-qt.conf`: `fullscreen=true`, `kiosk=false`,
+`exitConfirmation=false`, `[Internal] exeCount`/`lastGCVersionRan`). Recommends a provisioning
+seed of that config (convenience in the kid's home, never a lock), gated on one VM run to confirm
+`kiosk=true` hides the controls and which state suppresses the welcome dialog. No code.
