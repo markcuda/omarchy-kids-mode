@@ -102,12 +102,12 @@ malcontent; timekpr; machine-wide DNS or browser policy; localization (English f
 
 ### R-WIZ Wizard and panel
 
-- R-WIZ-1 Flow (Appendix A): Welcome → Begin → parent password → kid's name → face → age → Simple or Advanced → per-choice screens (Simple) or the table (Advanced) → kid password → summary → Apply → Done with two buttons.
+- R-WIZ-1 Flow (Appendix A): Welcome → Begin → parent password → kid's name → face → age → Simple or Advanced → per-choice screens (Simple) or the table (Advanced) → kid password → summary → Apply → Done with one action (R-WIZ-6's preview is not shipped).
 - R-WIZ-2 Omy speaks on Welcome and Done; every other screen speaks plainly and uses the kid's name.
 - R-WIZ-3 Simple shows one choice per screen: two options, one reason line each, the band default preselected. Advanced shows every cell as a grouped checklist with pickers.
 - R-WIZ-4 Prefetch: from the age screen on, the band's starter pack downloads into the pacman cache (`pacman -Sw`) in the background through a root helper; changed selections need no undo. Apply installs from cache; AUR builds continue after Apply.
 - R-WIZ-5 Apply renders like the installer's dashboard: header, one line per step with done marks, one bar, a tip; the technical log goes to a support file.
-- R-WIZ-6 Done offers **Return to my desktop** and **Open <name>'s desktop** (which switches to the kid's session as a preview, at that kid's level, with a banner "You're seeing what <name> sees. Super+Shift+K to come back").
+- R-WIZ-6 Done offers **Return to my desktop**. **Not shipped as of 2026-09-18:** Omarchy 4.0.2 has no way to start a live preview of the kid's session from the parent's session, so A14 offers no preview button; see `docs/wizard.md` "Why Done has no Open desktop button".
 - R-WIZ-7 The app's home screen lists kids with a settings gear; add-a-kid runs the per-kid screens only (parent password, name, face, age, Simple/Advanced, choices, kid password, summary, apply).
 - R-WIZ-8 Panel per kid: time today and this week, top apps, browsing history (if enabled), open requests, every setting, reset password, pause/finish if live, remove. Machine: safety status, firmware step, Remove Kids Mode.
 - R-WIZ-9 Bash + gum in Omarchy's floating terminal. Screens are data (`tui/screens/*.toml`), the renderer is one library. Header where the logo sits (Omy placeholder), step counter, Esc back, Ctrl+C leaves with nothing changed, colors from the parent's theme.
@@ -221,7 +221,7 @@ Groups: `omarchy-kids`, `omarchy-kids-<band>` (four), `omarchy-parents` (the own
 
 ### 5.2 Flows
 
-**First run.** Drawer → floating terminal → Welcome (Omy) → Begin → parent password (verifier) → name → face → age (prefetch starts) → Simple/Advanced → choices → kid password → summary → Apply: snapshot, machine setup, boot hook + initramfs rebuild, provision kid, policy, LUKS slot, install from cache → check → Done (Omy) → Return / Open <name>'s desktop.
+**First run.** Drawer → floating terminal → Welcome (Omy) → Begin → parent password (verifier) → name → face → age (prefetch starts) → Simple/Advanced → choices → kid password → summary → Apply: snapshot, machine setup, boot hook + initramfs rebuild, provision kid, policy, LUKS slot, install from cache → check → Done (Omy) → Return to my desktop.
 
 **Startup.** Power on → disk prompt → the slot that opened it → autologin that account for this boot → parent lands on their desktop as today; a kid lands on their Level desktop; unknown → portal.
 
@@ -303,7 +303,7 @@ Voice: Omy on A1 and A14; plain elsewhere. `<K>` is the kid's name, `<Kp>` the p
 | A13a | Advanced table | groups Web / Time / Apps / Wi-Fi / Desktop / Data; space toggles, slash filters, Enter picks | checklist |
 | A13b | Apply | one line per step with ✓, one bar, tip line; log to `/var/log/omarchy-kids/setup.log` | none |
 | A13c | Safety check | green/red list; firmware step red with "Print the parent card" | Enter |
-| A14 | Done | "<K>'s desktop is ready." Omy: "Next time the computer starts, <K> can just type their password." Buttons **Return to my desktop** · **Open <Kp> desktop** | arrows |
+| A14 | Done | "<K>'s desktop is ready." Omy: "Next time the computer starts, <K> signs in from the login screen." One button **Return to my desktop** (the preview button is not shipped; the login-screen line is true in disk and portal mode and for no-password kids) | arrows |
 
 Consents asked once, on A13 as two extra lines with defaults on: "Add Super+Shift+K to open Kids Mode on my desktop" and "Show my kids' status in my top bar".
 

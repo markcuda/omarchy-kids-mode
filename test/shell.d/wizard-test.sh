@@ -327,7 +327,7 @@ check_contains "$out" "omarchy-kids-conf set kid-ada web filtered" "Apply writes
 check_contains "$out" "omarchy-kids-conf set kid-ada dns cleanbrowsing-family" "Apply writes the dns override chosen in Advanced"
 check_contains "$out" "omarchy-kids-conf set kid-ada budget_min 75" "Apply writes the budget_min override chosen in Advanced"
 check_not_contains "$out" "omarchy-kids-conf set kid-ada wifi" "a row never opened in Advanced writes no override"
-check_not_contains "$out" "omarchy-kids-conf set kid-ada menu" "a row never opened in Advanced writes no override"
+check_not_contains "$out" "[Desktop] App menu" "the unenforced App menu row is not offered"
 
 # --- issue #53: the Desktop group's theme row -- default is the parent's
 # own current theme (tokyo-night, from $HOME above), not a band value;
@@ -346,7 +346,7 @@ answers="$(answers_file begin parentpw123 Ada fox 6-8 advanced \
   theme catppuccin-latte "done" secret1 secret1 apply parent)"
 run_wizard "$answers"
 check_status "$WIZ_STATUS" 0 "picking a different theme in Advanced still completes"
-check_contains "$out" "[Desktop] Theme" "the checklist groups the theme row under Desktop, with level and menu"
+check_contains "$out" "[Desktop] Theme" "the checklist groups the theme row under Desktop with level"
 check_contains "$out" "omarchy-kids-conf set kid-ada theme catppuccin-latte" \
   "Apply writes the theme override chosen in Advanced"
 
@@ -478,8 +478,41 @@ check_contains "$rm_out" "✗ Setting up Ada's account" "the failing step is mar
 check_contains "$rm_out" "FAKE-PROVISION: refusing on purpose" "the failing command's own output is shown (the tail)"
 check_not_contains "$rm_out" "FAKE-WEB" "Apply stops at the first failure and never reaches a later step"
 check_contains "$rm_out" 'Setup stopped at "Setting up Ada'"'"'s account"' "Done explains which step stopped it"
+check_contains "$rm_out" "Last lines from the failed step:" "Done carries the failed step's tail into its own card"
+check "$(awk '
+  /Last lines from the failed step:/ { header = NR }
+  header && /FAKE-PROVISION: refusing on purpose/ { found = 1 }
+  END { print(found ? "yes" : "no") }' <<<"$rm_out")" "yes" \
+  "the tail content lands after Done's own header, not only above it"
+check_not_contains "$rm_out" "see the lines above" "Done no longer points at a cleared screen"
 check_contains "$(cat "$RM_LOG" 2>/dev/null)" "FAKE-PROVISION: refusing on purpose" \
   "a real run actually writes the technical log at OMARCHY_KIDS_SETUP_LOG"
+
+# Leaving after a real Apply must not claim "nothing changed" (I-6), and
+# Done must not offer a choice that no longer exists.
+rm_leave_out="$(
+  PATH="$RM_STUBS:$PATH" \
+    OMARCHY_KIDS_ETC="$RM_ETC" \
+    OMARCHY_KIDS_SHARE="$SHARE" \
+    OMARCHY_KIDS_SETUP_LOG="$RM_LOG" \
+    OMARCHY_KIDS_TUI_ANSWERS="$(answers_file begin parentpw123 Ada fox 6-8 simple garden default pack parent 1 secret1 secret1 apply @ctrlc yes)" \
+    DRY_RUN=0 "$(wizard_for "$RM_STUBS")" 2>&1
+)"
+check_status "$?" 130 "leaving from Done after Apply still exits 130"
+check_contains "$rm_leave_out" "Apply already made its changes" \
+  "the leave message after Apply says the changes stay"
+rm_kid_out="$(
+  PATH="$RM_STUBS:$PATH" \
+    OMARCHY_KIDS_ETC="$RM_ETC" \
+    OMARCHY_KIDS_SHARE="$SHARE" \
+    OMARCHY_KIDS_SETUP_LOG="$RM_LOG" \
+    OMARCHY_KIDS_TUI_ANSWERS="$(answers_file begin parentpw123 Ada fox 6-8 simple garden default pack parent 1 secret1 secret1 apply kid)" \
+    DRY_RUN=0 "$(wizard_for "$RM_STUBS")" 2>&1
+)"
+check_not_contains "$rm_kid_out" "Open Ada's desktop" \
+  "Done offers no preview button any more"
+check_contains "$rm_kid_out" "does not match any choice on 'Done'" \
+  "an answer the old preview button used is refused, not silently accepted"
 
 RM_STUBS_SUDO="$(mktemp)" # reused by the default-mode section below
 cp "$RM_STUBS/sudo" "$RM_STUBS_SUDO"

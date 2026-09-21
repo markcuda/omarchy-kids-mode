@@ -71,7 +71,7 @@ password survive a reset; everything else falls back to their band.
 | `lights_out`, `lights_out_weekend` | `HH:MM` | band | per band |
 | `wifi` | `parent` `helper` | band | per band |
 | `history_visible` | `yes` `no` | band | per band |
-| `menu` | `trimmed` `full` | band | per band (trimmed for Levels 1-2, full for Level 3) |
+| `menu` | `trimmed` `full` | band | per band (trimmed for bands 3-5, 6-8 and 9-12; full for 13+), but no level reads it yet and the wizard no longer offers a row for it (`docs/wizard.md`) |
 | `theme` | id from the system themes dir (`$OMARCHY_PATH/themes`) | parent-theme — required | — (`omarchy-kids-provision add` sets it to the parent's current theme; `docs/theming.md`) |
 | `allowlist` | comma-separated launcher ids | band's pack | the full starter pack |
 | `sites` | comma-separated hosts | band's pack | the band's `[garden]` list |

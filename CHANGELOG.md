@@ -27,6 +27,11 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 - Repository identity: the project now lives at `markcuda/omarchy-kids-mode`; the old sandbox
   repository is archived, and the hub's planning history (CORE.md, SPOKES.md, PATH-*.md,
   research/) is kept on the `hub-archive-2026-09-19` branch.
+- Wizard honesty pass (I-6): the Advanced checklist no longer offers the unenforced `menu` row,
+  the history row asks about the parent's view (R-DATA-4), Done carries the failed step's own
+  tail instead of pointing at a screen it just cleared, Done no longer offers a preview button
+  that only apologised, the summary draws one card instead of two, the password question follows
+  the band's `password_optional` data, and leaving after Apply no longer claims nothing changed.
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.
@@ -77,7 +82,6 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 - `omarchy-provision-user` failing inside `omarchy-kids-provision add` is a warning with a
   migrations fallback, not a failed add (no offline Node tarball in the VM)
 
-### Changed
 
 - Kid screen-time display now follows the root-published runtime state; the kid path no longer
   calculates budget or lights-out policy, and the Time's Up card no longer has a finish action

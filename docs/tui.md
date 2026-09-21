@@ -160,10 +160,11 @@ statuses — the installer's own contract, vendored here as knowledge (not code)
 
 A real gum widget already reports Esc as `1` and Ctrl+C as `130` on its own (Ctrl+C arrives as a
 raw-mode byte, never a `SIGINT` gum has to catch), so the library only has to read gum's exit
-status. Hitting Ctrl+C always shows one more prompt first — "Leave setup? Nothing has been changed
-yet." — and only exits `130` if that's confirmed; declining redraws the screen that was
-interrupted. A second Ctrl+C right there also means leave, so nobody can get stuck by mashing the
-same key.
+status. Hitting Ctrl+C always shows one more prompt first — by default "Leave setup? Nothing has
+been changed yet.", overridable through `TUI_LEAVE_MESSAGE` when an earlier screen has already
+written (the wizard sets it after a real Apply) — and only exits `130` if that's confirmed;
+declining redraws the screen that was interrupted. A second Ctrl+C right there also means leave,
+so nobody can get stuck by mashing the same key.
 
 `tui_screen_confirm` is the odd one out: gum's own confirm widget can't tell Esc from choosing
 "No" (both are exit `1`), and for a plain yes/no screen that's the right answer anyway — either way

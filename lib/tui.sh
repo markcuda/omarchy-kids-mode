@@ -14,6 +14,9 @@ TUI_ANS_CTRLC="@ctrlc"
 TUI_FOOTER_DEFAULT="Enter continue · Esc back · Ctrl+C leave (nothing changes)"
 # shellcheck disable=SC2034 # for callers' first screen (no Esc target yet), not used here
 TUI_FOOTER_FIRST="Enter continue · Ctrl+C leave (nothing changes)"
+# Overridable so a caller that has already written something (the wizard
+# after Apply) does not claim nothing changed. See _tui_confirm_leave.
+TUI_LEAVE_MESSAGE="Leave setup? Nothing has been changed yet."
 
 TUI_MODE="" # "interactive" or "file", set by tui_init
 TUI_HAVE_GUM=0
@@ -249,11 +252,11 @@ tui_header() {
   fi
 }
 
-# _tui_confirm_leave -- "Leave setup? Nothing has been changed yet."
-# Returns 0 (leave) or 1 (redraw the interrupted screen). A second Ctrl+C
-# here also means leave.
+# _tui_confirm_leave -- "$TUI_LEAVE_MESSAGE" (default: "Leave setup?
+# Nothing has been changed yet."). Returns 0 (leave) or 1 (redraw the
+# interrupted screen). A second Ctrl+C here also means leave.
 _tui_confirm_leave() {
-  local msg="Leave setup? Nothing has been changed yet."
+  local msg="$TUI_LEAVE_MESSAGE"
   if [[ "$TUI_MODE" == file ]]; then
     local ans
     _tui_next_answer || {

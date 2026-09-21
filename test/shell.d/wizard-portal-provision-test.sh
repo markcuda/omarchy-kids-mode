@@ -57,7 +57,7 @@ run_case() { # mode expected_args expected_input expected_status
       DRY_RUN=0 NO_PASSWORD=0 DISPLAY_NAME="Ben" BAND=6-8 AVATAR=fox
       KID_PASSWORD=kid-secret PARENT_PASSWORD=parent-secret
       LEVEL=standard WEB_MODE=ask WIFI_MODE=ask BUDGET_MIN=60 LIGHTS_OUT=21:00
-      ALLOWLIST_IDS=one DNS_MODE=secure SITES=none MENU_MODE=visible HISTORY_VISIBLE=yes
+      ALLOWLIST_IDS=one DNS_MODE=secure SITES=none HISTORY_VISIBLE=yes
       BUDGET_MIN_WEEKEND=75 LIGHTS_OUT_WEEKEND=21:00 THEME=Latte
       run_priv_stdin() { sudo -n "$@"; }
       maybe_override() { :; }

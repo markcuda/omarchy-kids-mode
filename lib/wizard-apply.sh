@@ -72,7 +72,6 @@ apply_step_account() {
   maybe_override allowlist "$ALLOWLIST_IDS" "$(pack_field "$BAND" id | paste -sd, -)" || rc=$?
   maybe_override dns "$DNS_MODE" "$(band_field "$BAND" dns)" || rc=$?
   maybe_override sites "$SITES" "$(pack_sites "$BAND")" || rc=$?
-  maybe_override menu "$MENU_MODE" "$(band_field "$BAND" menu)" || rc=$?
   maybe_override history_visible "$HISTORY_VISIBLE" "$(band_field "$BAND" history_visible)" || rc=$?
   maybe_override budget_min_weekend "$BUDGET_MIN_WEEKEND" "$(band_field "$BAND" budget_min_weekend)" || rc=$?
   maybe_override lights_out_weekend "$LIGHTS_OUT_WEEKEND" "$(band_field "$BAND" lights_out_weekend)" || rc=$?
@@ -114,7 +113,7 @@ apply_step_safety() {
 # run only) to $SETUP_LOG (R-WIZ-5). FUNC's own exit code, via
 # PIPESTATUS, decides ✓/✗ -- docs/wizard.md "Apply's five steps".
 run_apply_step() {
-  local func="$2" tmp rc
+  local func="$2" tmp rc line
   tmp="$(mktemp)"
   if [[ "$DRY_RUN" == "1" ]]; then
     "$func" 2>&1 | tee "$tmp"
@@ -124,6 +123,7 @@ run_apply_step() {
     rc="${PIPESTATUS[0]}"
     if ! sudo -n tee -a "$SETUP_LOG" <"$tmp" >/dev/null; then
       rc=1
+      APPLY_LOG_FAILED=1
     fi
     if ! sudo -n -v >/dev/null 2>&1; then
       APPLY_AUTH_EXPIRED=1
@@ -133,6 +133,8 @@ run_apply_step() {
     echo
     echo "\"$1\" failed. Last lines:"
     tail -n 10 "$tmp"
+    APPLY_FAILURE_TAIL=()
+    while IFS= read -r line; do APPLY_FAILURE_TAIL+=("$line"); done < <(tail -n 6 "$tmp")
   fi
   rm -f "$tmp"
   return "$rc"
@@ -158,6 +160,8 @@ screen_apply() {
 
   tui_progress steps 0 "You can watch this happen — nothing here needs another click."
 
+  APPLY_FAILURE_TAIL=()
+  APPLY_LOG_FAILED=0
   APPLY_OK=1
   if ! prepare_apply_log; then
     APPLY_OK=0
@@ -166,6 +170,12 @@ screen_apply() {
     echo
     echo "Authorization expired or the setup log is unavailable. Return to Step 2 to verify again."
     return 1
+  fi
+  # Only a real run has changed anything, so only then is leaving a
+  # "your changes stay" situation (I-6).
+  if [[ "$DRY_RUN" != "1" ]]; then
+    APPLY_STARTED=1
+    TUI_LEAVE_MESSAGE="Leave setup? Apply has already made its changes; they stay."
   fi
   for ((i = 0; i < total; i++)); do
     run_apply_step "${steps[i]}" "${funcs[i]}"
@@ -198,31 +208,38 @@ screen_apply() {
   return 0
 }
 
-# A14: Done. Two buttons, no third choice -- issue #37's "Show kids in my
-# bar?" prompt would break every answers_file(...) test, so Omy's line
-# mentions omarchy-kids-bar instead (AGENTS.md: spec wins).
+# A14: Done. One action: an "open the desktop" preview does not exist on
+# Omarchy 4.0.2, so offering the button would be a control that cannot work
+# (SPEC.md R-WIZ-6's amendment, docs/wizard.md).
 screen_done() {
-  local headline
+  local headline omy footer
   if ((APPLY_OK)); then
     headline="$DISPLAY_NAME's setup is complete. Final safety checks run when they sign in."
-  else
-    headline="Setup stopped at \"$FAILED_STEP\" — see the lines above for what went wrong."
-  fi
-  local omy="$headline Next time the computer starts, $DISPLAY_NAME can just type their password."
-  if ((APPLY_OK)); then
+    omy="$headline Next time the computer starts, $DISPLAY_NAME signs in from the login screen."
     omy+=" Want a peek at $DISPLAY_NAME from your own bar? Run 'omarchy-kids-bar enable' any time — it only changes what you ask it to."
+  else
+    headline="Setup stopped at \"$FAILED_STEP\"."
+    if ((APPLY_LOG_FAILED)); then
+      omy="$headline The failed step's own lines are below."
+    else
+      omy="$headline Details are in the setup log: $SETUP_LOG"
+    fi
   fi
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local choices=(
     "parent|Return to my desktop|"
-    "kid|Open $DISPLAY_NAME's desktop|"
   )
-  tui_screen_choose "Done" 15 "$TOTAL_STEPS" 1 "$omy" choices "parent"
-  local rc=$?
-  if [[ "$TUI_REPLY" == kid ]]; then
-    echo
-    echo "There's no live preview switch yet on this box (see docs/wizard.md) —"
-    echo "$DISPLAY_NAME logs in from the portal next time the screen locks or the computer starts."
+  # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
+  local body=()
+  if ((!APPLY_OK)) && ((${#APPLY_FAILURE_TAIL[@]})); then
+    body+=("Last lines from the failed step:")
+    body+=("${APPLY_FAILURE_TAIL[@]}")
   fi
+  footer="Enter finish"
+  if ((APPLY_STARTED)); then
+    footer="Enter finish · Ctrl+C leave (changes stay)"
+  fi
+  tui_screen_choose "Done" 15 "$TOTAL_STEPS" 1 "$omy" choices "parent" "$footer" body
+  local rc=$?
   return $((rc == 130 ? 130 : 0))
 }
