@@ -30,6 +30,14 @@ requirement ids, then the tail of `docs/loop-report.md` before choosing work.
   Then run the one test file you touched first (`bash test/shell.d/<name>-test.sh`), and run
   `test/all -j 4` before committing. On this Mac only `packaging-test.sh` fails (no shellcheck,
   Linux-only fixture); anything else failing is yours to fix.
+- Fast live decisions: `jev` (on PATH) calls TypeSafe's System One model (`jev-latest`), text-only
+  and quick (seconds, not the minutes fable takes), for live-dogfood choices like "which finding
+  first", "does this output show a failure", "which check likely failed". It reads its key from a local secrets store; never copy
+  the key or the SOPS file into this repo. Usage: `jev --brief request.json` where request is
+  `{"state": ..., "questions": {"id": {"type": "noul|choice|score", "instructions": ..., "criteria": ...}}}`;
+  a noul's criteria is `{"true": ..., "false": ...}`, a choice's is a map option-id -> description.
+  Always pass criteria; without them the probabilities are not decisive. Text-only: it cannot see
+  screenshots, so it complements the fable reviewer rather than replacing it.
 - Independent review: use the headless fable reviewer for every non-trivial change:
   write the review prompt to a file, then
   `claude -p --model claude-fable-5-1 --effort medium --permission-mode manual --permission-prompts none --strict-mcp-config --allowedTools "Read,Grep,Glob,Bash(git log:*),Bash(git show:*),Bash(git diff:*)" --disallowedTools "Edit,Write,NotebookEdit,WebFetch,WebSearch,Task" < prompt > report`.
