@@ -177,8 +177,11 @@ build on top of.
 
 ## Verify in the VM
 
-This has never run against a real Hyprland, SDDM, or `pam_namespace` setup — everything below is
-open until it has:
+Live status (2026-09-21, try-omarchy aarch64 VM): the session entry has now run against a real
+Hyprland, SDDM and `pam_namespace` setup. Both modes logged in through SDDM's
+`omarchy-kids.desktop`, the R-DESK-2 preflight passed, and the private noexec `/tmp` and
+`/dev/shm` checks passed in the child's PAM namespace (`docs/dogfood-2026-09-21.md`). The list
+below is kept as the re-verification checklist for a fresh box:
 
 1. Provision a kid (`docs/provision.md`) so `/etc/omarchy-kids/kids/<account>.conf` and every
    R-DESK-2 lock actually exist, then pin that account to the `omarchy-kids` session via
