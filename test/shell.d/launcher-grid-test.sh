@@ -134,6 +134,8 @@ check_contains "$qml_content" 'readonly property int minFitCell: 96' \
   "the shrink has a 96px tap-target floor"
 check_contains "$qml_content" 'rowsNeeded: Math.max(1, Math.ceil(root.tiles.length / Math.max(1, root.neededColumns)))' \
   "the row count comes from the same column count the layout uses"
+check_contains "$qml_content" 'event.accepted = false' \
+  "the launcher refuses a close request (Super+Q cannot blank the Level 1 desktop)"
 check "$(grep -c '^[[:space:]]*anchors.topMargin: root.margin$' "$QML" || true)" "2" \
   "clock and desktop-only search box use flat insets; the grid and time-left line do not overlap them"
 
