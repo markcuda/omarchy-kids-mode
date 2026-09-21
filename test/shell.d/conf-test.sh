@@ -730,4 +730,47 @@ PATH="$BOOT_PATH" "$BOOT_CONF" machine set boot disk >/dev/null
 check "$?" 0 "machine set boot: explicit repair adds a missing boot key"
 check "$(cat "$BOOT_ETC/machine.conf")" $'parent=mark\nboot=disk' "machine set boot: repaired state has one boot key"
 
+# --- import: validated, all-or-nothing ------------------------------------
+
+imp="$TMP/import.conf"
+cat >"$imp" <<'EOF'
+# settings for one kid
+level=1
+web=filtered
+EOF
+"$CONF" import kid-ada "$imp" >/dev/null
+check "$("$CONF" get kid-ada level)" "1" "import: a valid file applies its overrides"
+check "$("$CONF" get kid-ada web)" "filtered" "import: every valid line applies"
+"$CONF" unset kid-ada level >/dev/null
+"$CONF" unset kid-ada web >/dev/null
+
+cat >"$imp" <<'EOF'
+level=1
+budget_min=99999
+EOF
+if "$CONF" import kid-ada "$imp" >/dev/null 2>&1; then
+  fail "import: an out-of-range value must be refused"
+else
+  pass "import: an out-of-range value is refused"
+fi
+check "$("$CONF" get kid-ada level)" "2" "import: a bad file changes nothing (level)"
+
+cat >"$imp" <<'EOF'
+nonsense=1
+EOF
+if "$CONF" import kid-ada "$imp" >/dev/null 2>&1; then
+  fail "import: an unknown key must be refused"
+else
+  pass "import: an unknown key is refused"
+fi
+
+cat >"$imp" <<'EOF'
+password=set
+EOF
+if "$CONF" import kid-ada "$imp" >/dev/null 2>&1; then
+  fail "import: a system-managed key must be refused"
+else
+  pass "import: a system-managed key is refused"
+fi
+
 exit $fail

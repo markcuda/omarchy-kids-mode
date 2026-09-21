@@ -76,6 +76,7 @@ Usage: $(basename "$0") <command> [args]
   unset <kid> <key>        clear one override and inherit its default
   show <kid>                every key, its value, and where it came from
   export <kid>              every effective setting as key=value (read-only)
+  import <kid> <file>       apply key=value settings, validated all-or-nothing
   reset <kid>                clear overrides except band/name/avatar/password/onboarded
   bands                      list bands with their label and blurb
   band <band>                print one band's defaults
@@ -334,6 +335,37 @@ cmd_show() {
   done
 }
 
+# cmd_import KID FILE — apply every key=value line from an exported file.
+# Every line is validated before the first write, so a bad file changes
+# nothing; system-managed markers (password/onboarded) are refused.
+cmd_import() {
+  local kid="${1:?omarchy-kids-conf import <kid> <file>}" file="${2:?omarchy-kids-conf import <kid> <file>}"
+  [[ -r "$file" ]] || die "import: cannot read '$file'"
+  [[ -e "$(profile_file "$kid")" ]] || die "kid '$kid' has no profile ($(profile_file "$kid"))"
+  local -a keys=() values=()
+  local lineno=0 line key value
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    lineno=$((lineno + 1))
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    [[ "$line" == *=* ]] || die "import: line $lineno is not key=value"
+    key="${line%%=*}"
+    value="${line#*=}"
+    is_valid_key "$key" || die "import: line $lineno: unknown key '$key'"
+    case "$key" in
+      password | onboarded) die "import: line $lineno: '$key' is system-managed" ;;
+    esac
+    validate_value "$key" "$value" || die "import: line $lineno: invalid value for '$key'"
+    keys+=("$key")
+    values+=("$value")
+  done <"$file"
+  ((${#keys[@]})) || die "import: '$file' has no settings"
+  local i
+  for ((i = 0; i < ${#keys[@]}; i++)); do
+    cmd_set "$kid" "${keys[$i]}" "${values[$i]}" >/dev/null
+  done
+  printf 'omarchy-kids-conf: imported %d setting(s) for %s\n' "${#keys[@]}" "$kid"
+}
+
 # cmd_export KID — every effective setting, one key=value per line, for
 # saving or diffing a profile. Read-only: the password hash is in shadow,
 # not here, so nothing secret is printed.
@@ -548,6 +580,10 @@ main() {
     export)
       shift
       cmd_export "$@"
+      ;;
+    import)
+      shift
+      cmd_import "$@"
       ;;
     reset)
       shift
