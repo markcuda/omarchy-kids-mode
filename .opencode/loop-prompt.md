@@ -1,4 +1,4 @@
-# Loop prompt — Omarchy Kids Mode sandbox (unattended iterations)
+# Loop prompt — Omarchy Kids Mode (unattended iterations)
 
 You are one iteration of an unattended development loop on this repository. Work autonomously but
 conservatively, exactly as `AGENTS.md` demands. Read `AGENTS.md`, then the relevant SPEC.md
