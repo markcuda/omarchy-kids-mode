@@ -9,8 +9,10 @@ requirement ids, then the tail of `docs/loop-report.md` before choosing work.
 - `origin` is `markcuda/omarchy-kids-mode` and the gh CLI is switched to `markcuda`. Push topic
   branches to `origin` so the work is visible, but **never push `main`, never open or merge PRs**;
   merges stay with the owner's gate. Verify `.codex/repo-lock.json` and `gh auth status` first.
-- The owner's Omarchy dogfooding machine is off-limits until the owner explicitly starts that
-  session: no ssh, no flashing, no remote commands.
+- The owner's test laptop stays off-limits until the owner starts that session: no ssh, no
+  flashing. The **try-omarchy VM on this Mac is the dogfood target** and the loop drives it:
+  ssh, session restarts, installing our files there, screenshots. The recipe (wrappers, guest
+  sudo, level switching, QMP keys) lives in `.local/VM-DOGFOOD.md` -- untracked, never commit it.
 - Never run anything under `test/live/` or `scripts/vm-*.sh`, never launch QEMU/Hyprland/Quickshell,
   never `--apply`, `provision`, `remove` for real, never write under `/etc`. This is a dev machine.
 - Never publish or move `.local/recovery/spec-08-session-lock-engagement-PRIVATE.md`; it stays
@@ -48,6 +50,17 @@ requirement ids, then the tail of `docs/loop-report.md` before choosing work.
   `main` is behind it and stays untouched. Stack on an existing loop branch only when a change
   depends on it, and say so in the commit.
 
+## Dogfood first (owner's standing order, 2026-09-21)
+
+Each iteration starts with one live loop on the VM, not with the backlog: read
+`.local/VM-DOGFOOD.md`, check the kid session (journal plus a screenshot), exercise one flow
+(a level's login, the menu, an app launch, `omarchy-kids-check --live`), and choose the
+iteration's work from what the screen and the journals show. Fix it on a topic branch with
+tests, push, reinstall the changed files into the VM **from their branch** (never from the
+integration copies -- that mistake invalidated a Level 3 check on 2026-09-21), and re-verify
+live before closing the iteration. Leave the kid able to log in; the parent's session is never
+touched (I-1). The backlog below is what to do when the live pass finds nothing.
+
 ## Backlog, in order (pick the first that is actionable and unblocked)
 
 Read `docs/dogfood-2026-09-21.md` first — it is the live pass report and the source for items 1-3.
@@ -80,7 +93,8 @@ Read `docs/dogfood-2026-09-21.md` first — it is the live pass report and the s
 
 ## Stop conditions (write state, then stop the iteration)
 
-- A change needs a human decision (`docs/phase1/DECISIONS-NEEDED.md`), a VM run, or real hardware.
+- A change needs a human decision (`docs/phase1/DECISIONS-NEEDED.md`) or real hardware.
+- The VM is unreachable, or a kid cannot log in: record the state in the loop report and stop.
 - Two attempts at the same fix fail; write the finding into the loop report and leave the branch.
 - The worktree is dirty when you start: inspect `git status`, and if it is not your own work,
   record it in the loop report and stop.
