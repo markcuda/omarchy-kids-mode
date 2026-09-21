@@ -93,6 +93,11 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
   never computes or enforces the deadline.
 - `omarchy-kids-conf export <kid>` prints every effective setting as `key=value` (read-only) for
   saving or diffing a profile; `password`/`onboarded` are omitted as system-managed markers.
+- `omarchy-kids-conf export <kid>` prints the kid's own overrides as `key=value`, with inherited
+  values shown as `# key=value (inherited)` comments so a round trip never pins them;
+  `password`/`onboarded` are omitted. `import <kid> <file>` validates every line first (refusing
+  unknown, duplicate, system-managed, and invalid values), then replaces the profile in one atomic
+  move, so a bad file changes nothing; the theme side effect and manifest rebuild run once after.
 - Configuration schema ticket 1 (#72): one package-owned declaration now covers every profile and
   `apps.*` key while preserving the existing `omarchy-kids-conf` commands and behavior.
 - Root screen-time state machine (#68, ticket 1): monotonic active seconds now feed root-owned

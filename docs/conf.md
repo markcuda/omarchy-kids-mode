@@ -193,7 +193,8 @@ omarchy-kids-conf source <kid> <key>       print override, band, or default
 omarchy-kids-conf set <kid> <key> <value>  write an override (validated against the table above)
 omarchy-kids-conf unset <kid> <key>        clear one override and inherit its default
 omarchy-kids-conf show <kid>                every key, its value, and where it came from
-omarchy-kids-conf export <kid>              every effective setting as key=value (read-only)
+omarchy-kids-conf export <kid>              the kid's own overrides, inherited values as comments
+omarchy-kids-conf import <kid> <file>       apply those overrides, validated then replaced atomically
 omarchy-kids-conf reset <kid>                clear overrides except band/name/avatar/theme/password/onboarded
 omarchy-kids-conf bands                      list bands with their label and blurb
 omarchy-kids-conf band <band>                print one band's defaults

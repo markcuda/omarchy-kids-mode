@@ -266,20 +266,27 @@ out="$("$CONF" show kid-ada)"
 check "$(echo "$out" | awk '/^dns[ \t]/{print $NF}')" "band" "show: dns marks its band source"
 check "$(echo "$out" | awk '/^history_visible[ \t]/{print $NF}')" "band" "show: history visibility marks its band source"
 
-# --- export: every effective setting as key=value, no secrets -------------
+# --- export: the kid's overrides live, inherited values as comments -------
 
+imp="$TMP/import.conf"
 out="$("$CONF" export kid-ada)"
 check "$(echo "$out" | head -1)" "# omarchy-kids-conf export for kid-ada" \
   "export: names the kid in a comment header"
-check "$(echo "$out" | awk -F= '/^level=/{print $2}')" "2" "export: level carries the effective band value"
-check "$(echo "$out" | awk -F= '/^web=/{print $2}')" "garden" "export: web carries the effective band value"
-check "$(echo "$out" | awk -F= '/^name=/{print $2}')" "Ada" "export: name is included"
+check "$(echo "$out" | awk -F= '/^name=/{print $2}')" "Ada" "export: an override is a live line"
+check_contains "$out" "# level=2 (inherited)" "export: an inherited value is commented, not pinned"
+check_contains "$out" "# web=garden (inherited)" "export: inherited values are shown for reference"
+check "$(grep -c '^level=' <<<"$out")" "0" "export: inherited values are not importable lines"
 check "$(grep -c '^password=' <<<"$out")" "0" \
   "export: never prints a password (the hash lives in shadow)"
-# An override is what export shows, not the band default it replaced.
+
+# A round trip re-applies only overrides, so inherited settings stay inherited.
 "$CONF" set kid-ada level 1 >/dev/null
-check "$("$CONF" export kid-ada | awk -F= '/^level=/{print $2}')" "1" \
-  "export: an override wins over the band default"
+"$CONF" export kid-ada >"$imp"
+"$CONF" unset kid-ada level >/dev/null
+check "$("$CONF" get kid-ada level)" "2" "round trip: the override was cleared"
+"$CONF" import kid-ada "$imp" >/dev/null
+check "$("$CONF" get kid-ada level)" "1" "round trip: the override is restored"
+check "$("$CONF" source kid-ada web)" "band" "round trip: inherited values stay inherited"
 "$CONF" unset kid-ada level >/dev/null
 
 # --- get: override -> band -> default fallback ----------------------------
@@ -729,5 +736,47 @@ printf 'parent=mark\n' >"$BOOT_ETC/machine.conf"
 PATH="$BOOT_PATH" "$BOOT_CONF" machine set boot disk >/dev/null
 check "$?" 0 "machine set boot: explicit repair adds a missing boot key"
 check "$(cat "$BOOT_ETC/machine.conf")" $'parent=mark\nboot=disk' "machine set boot: repaired state has one boot key"
+
+# --- import: validated up front, applied in one atomic replace ------------
+
+imp="$TMP/import.conf"
+cat >"$imp" <<'EOF'
+# settings for one kid
+level=1
+web=filtered
+EOF
+"$CONF" import kid-ada "$imp" >/dev/null
+check "$("$CONF" get kid-ada level)" "1" "import: a valid file applies its overrides"
+check "$("$CONF" get kid-ada web)" "filtered" "import: every valid line applies"
+"$CONF" unset kid-ada level >/dev/null
+"$CONF" unset kid-ada web >/dev/null
+
+cat >"$imp" <<'EOF'
+level=1
+budget_min=99999
+EOF
+err="$("$CONF" import kid-ada "$imp" 2>&1)"
+st=$?
+check "$st" "2" "import: an out-of-range value exits 2"
+check_contains "$err" "line 2" "import: the refusal names the line"
+check_contains "$err" "budget_min" "import: the refusal names the key"
+check "$("$CONF" get kid-ada level)" "2" "import: a rejected file changes nothing"
+
+printf 'nonsense=1\n' >"$imp"
+err="$("$CONF" import kid-ada "$imp" 2>&1)"
+check_contains "$err" "unknown key 'nonsense'" "import: an unknown key is named"
+
+printf 'password=set\n' >"$imp"
+err="$("$CONF" import kid-ada "$imp" 2>&1)"
+check_contains "$err" "system-managed" "import: a system-managed key is refused"
+
+printf 'level=1\nlevel=1\n' >"$imp"
+err="$("$CONF" import kid-ada "$imp" 2>&1)"
+check_contains "$err" "duplicate key 'level'" "import: a duplicate key is refused"
+
+printf 'level=1\r\n' >"$imp"
+"$CONF" import kid-ada "$imp" >/dev/null
+check "$("$CONF" get kid-ada level)" "1" "import: a CRLF line is accepted"
+"$CONF" unset kid-ada level >/dev/null
 
 exit $fail
