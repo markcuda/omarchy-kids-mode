@@ -841,3 +841,11 @@ caps at one line, the name drops to one line on short cells, and the tile clips.
 ten tiles in two rows, every label inside its tile, footer clear (screenshot `l1-v5.png`).
 Labels elide at this size (five columns of ~118px); the icon badges are the VM's icon-theme
 artifact, not the launcher.
+
+### 2026-09-21, loop iteration: Super+Q cannot blank the Level 1 desktop
+
+Live: after the launched app closed, a second Super+Q closed the *launcher* window itself
+(`onClosing` refused only in desktop mode), leaving a blank screen with no clients until
+Super+Home. Fixed on `fix/launcher-height-fit` (`7e4f133` plus a test assertion): the launcher
+refuses a close request in both modes; desktop mode still folds the picker away. Reinstalled and
+re-checked live: two Super+Q presses leave the grid up (screenshot `l1-q.png` on the Mac).
