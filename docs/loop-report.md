@@ -682,3 +682,11 @@ save or diff a profile, and the safe half of the research-derived export/import 
 covers the header, effective values, an override winning, and the omission. Import (validated,
 all-or-nothing) remains in the backlog, as does the per-app-limits/weekly-caps proposal and
 R-ASK-2's owner decision.
+
+### 2026-09-19, ninth round — validated config import
+
+`feat/conf-import` (`9a6e20e`, stacked on `feat/conf-export`): `omarchy-kids-conf import <kid>
+<file>` pairs with export — every line is parsed and validated through the schema before the first
+write, so a bad file changes nothing, and password/onboarded are refused as system-managed.
+conf-test covers a valid apply, an out-of-range value, an unknown key, and a system key. A fable
+review of the export/import pair was launched; its findings, if any, are the next step.
