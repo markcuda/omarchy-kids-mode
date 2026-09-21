@@ -44,24 +44,34 @@ requirement ids, then the tail of `docs/loop-report.md` before choosing work.
   Read the report, close blocker/major findings, then commit. Do not commit before the review for
   root, security, or trust-boundary changes.
 - Do not modify `main`. Branch names: `fix/<topic>`, `feat/<topic>`, `docs/<topic>`, `test/<topic>`.
-  Stack on an existing loop branch only when a change depends on it, and say so in the commit.
+  Base every branch on `integration/dogfood-2026-09-19` (the dogfood union of all topic work);
+  `main` is behind it and stays untouched. Stack on an existing loop branch only when a change
+  depends on it, and say so in the commit.
 
 ## Backlog, in order (pick the first that is actionable and unblocked)
 
-1. **Panel P2 gaps (R-WIZ-8 "every setting")**: add Wi-Fi mode and weekend budget/lights-out rows,
-   and a reset-to-defaults action with honest labels. Tests in `test/shell.d/panel-test.sh`.
-2. **R-ASK-2 one-keystroke approve**: read the requirement first; today approving takes two screens.
-3. **Remaining-time indicator** on the Level 1/2 launcher, bound to root's published status; use
-   docs/time.md's status shape. Keep it display-only.
-4. **Remove command's confirmation** through the shared card idiom (currently a plain `read`), while
-   keeping piped `yes` working for scripts; `test/shell.d/remove-test.sh` owns it.
-5. **Docs**: keep `docs/loop-report.md` current (add a dated entry per iteration), and fix any
-   claim you find that the code contradicts (I-6).
-6. **Research-derived features** (`docs/research/2026-09-18-kids-mode-landscape.md`): favorites and
-   recents from the launch log; config export/import. Per-app limits and weekly caps need a SPEC
-   amendment first — draft it as a doc, do not code it without the owner.
-7. If the backlog is empty: run the deep-review style pass over `share/` and `lib/` for I-6 label
-   violations and write up tickets as docs, then fix the safest one.
+Read `docs/dogfood-2026-09-21.md` first — it is the live pass report and the source for items 1-3.
+
+1. **SPEC amendment, doc only (owner asked for it, 2026-09-21)**: collapse R-DESK-3 / Appendix E to
+   two kid modes — `grid` (today's Level 1) and `desktop` (today's Level 2) — with band defaults
+   **3-8 grid, 9+ desktop**; restate Level 3 as a parent-only "stock desktop", hidden until the
+   menu-trim schema is verified on a real Omarchy box (`share/menu/omarchy-kids-trimmed.jsonc`
+   says its own format is a guess). Cover: A11 copy, the band table, the `level` config enum and
+   its migration, `test/shell.d/levels-test.sh`, `docs/levels.md`. Do not change code until the
+   owner reviews the doc.
+2. **Level 1 live-UI defects** from `docs/dogfood-2026-09-21.md` items 4-10: unavailable tile
+   focusable (I-6), focus-ring inconsistency, 960×540 grid margin, "not installed yet" size and
+   contrast, cursor on first paint. Fix the safe ones with tests; the GCompris first-run dialog
+   and its wrench/quit become a proposal (needs a packaging decision).
+3. **Packaging fixes** from `docs/dogfood-2026-09-21.md` items 1-3: `PKGBUILD` `arch=('any')`,
+   `docs/install.md` `cd omarchy-kids-mode`, and the fresh-install ordering (runtime dirs exist
+   and an unprovisioned box does not fail the package install).
+4. **Level 2 VM verification** is owner-supervised live work, never from the loop; when it runs,
+   its findings land in `docs/dogfood-2026-09-21.md` and this backlog grows from them.
+5. Favorites/recents from the launch log (root-owned manifest stays authoritative).
+6. The I-6 deep pass over `share/` and `lib/`, then fix the safest finding.
+7. Everything else waits on the human gate/dogfooding (Pause, per-app limits, the per-app/weekly
+   proposal needs ticket 0).
 
 ## Stop conditions (write state, then stop the iteration)
 
@@ -70,18 +80,16 @@ requirement ids, then the tail of `docs/loop-report.md` before choosing work.
 - The worktree is dirty when you start: inspect `git status`, and if it is not your own work,
   record it in the loop report and stop.
 
-## Standing decisions (2026-09-19) and current backlog
+## Standing decisions
 
-`docs/phase1/DECISIONS-NEEDED.md` §6 records the owner's choices: R-ASK-2 keeps the list → card
-with Approve preselected (SPEC amended), Pause stays unshipped, #98 waits for #109 with portal
-mode the recommended v1 boot path, Level 3 is hidden from the three pickers (done), and the
-per-app/weekly proposal's open questions are answered in its own file.
-
-Backlog now:
-
-1. Favorites/recents from the launch log (root-owned manifest stays authoritative; kid-writable
-   ordering is not allowed).
-2. The I-6 deep pass over `share/` and `lib/`, then fix the safest finding.
-3. Config import already landed with export; next conf work only if a gap appears.
-4. Do not open code work on the per-app limits proposal until the owner opens ticket 0.
-5. Everything else waits on the human gate/dogfooding.
+- 2026-09-19 (`docs/phase1/DECISIONS-NEEDED.md` §6): R-ASK-2 keeps the list → card with Approve
+  preselected (SPEC amended), Pause stays unshipped, #98 waits for #109 with portal mode the
+  recommended v1 boot path, Level 3 hidden from the three pickers (done), per-app/weekly
+  proposal's questions answered in its own file.
+- 2026-09-21 (owner, this session): two kid modes are the direction — `grid` and `desktop`,
+  band defaults **3-8 grid, 9+ desktop**, parent override per kid, Level 3 as a parent-only
+  "stock desktop" until verified. The SPEC amendment is backlog item 1; **no code changes until
+  the owner reviews the doc.**
+- 2026-09-21 (owner, this session): per-app limits / weekly caps and Pause stay frozen.
+- Config import landed with export; next conf work only if a gap appears.
+- Level 1 is dogfooded and live-verified; Level 2 is not yet (owner-supervised).
