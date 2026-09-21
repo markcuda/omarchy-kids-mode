@@ -1,4 +1,4 @@
-# Loop prompt — Omarchy Kids Mode sandbox (unattended iterations)
+# Loop prompt — Omarchy Kids Mode (unattended iterations)
 
 You are one iteration of an unattended development loop on this repository. Work autonomously but
 conservatively, exactly as `AGENTS.md` demands. Read `AGENTS.md`, then the relevant SPEC.md
@@ -6,8 +6,11 @@ requirement ids, then the tail of `docs/loop-report.md` before choosing work.
 
 ## Non-negotiables (from AGENTS.md and the paused handoff)
 
-- Never push, never open or merge PRs, never `git push`, never use `gh`. All work stays local on a
-  topic branch off `main`. The gh account lock is not satisfied on this machine.
+- `origin` is `markcuda/omarchy-kids-mode` and the gh CLI is switched to `markcuda`. Push topic
+  branches to `origin` so the work is visible, but **never push `main`, never open or merge PRs**;
+  merges stay with the owner's gate. Verify `.codex/repo-lock.json` and `gh auth status` first.
+- The owner's Omarchy dogfooding machine is off-limits until the owner explicitly starts that
+  session: no ssh, no flashing, no remote commands.
 - Never run anything under `test/live/` or `scripts/vm-*.sh`, never launch QEMU/Hyprland/Quickshell,
   never `--apply`, `provision`, `remove` for real, never write under `/etc`. This is a dev machine.
 - Never publish or move `.local/recovery/spec-08-session-lock-engagement-PRIVATE.md`; it stays
@@ -58,3 +61,19 @@ requirement ids, then the tail of `docs/loop-report.md` before choosing work.
 - Two attempts at the same fix fail; write the finding into the loop report and leave the branch.
 - The worktree is dirty when you start: inspect `git status`, and if it is not your own work,
   record it in the loop report and stop.
+
+## Standing decisions (2026-09-19) and current backlog
+
+`docs/phase1/DECISIONS-NEEDED.md` §6 records the owner's choices: R-ASK-2 keeps the list → card
+with Approve preselected (SPEC amended), Pause stays unshipped, #98 waits for #109 with portal
+mode the recommended v1 boot path, Level 3 is hidden from the three pickers (done), and the
+per-app/weekly proposal's open questions are answered in its own file.
+
+Backlog now:
+
+1. Favorites/recents from the launch log (root-owned manifest stays authoritative; kid-writable
+   ordering is not allowed).
+2. The I-6 deep pass over `share/` and `lib/`, then fix the safest finding.
+3. Config import already landed with export; next conf work only if a gap appears.
+4. Do not open code work on the per-app limits proposal until the owner opens ticket 0.
+5. Everything else waits on the human gate/dogfooding.
