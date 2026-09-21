@@ -34,6 +34,7 @@ check_count() {
 
 check_count 'id: finishButton' 1 "modal has exactly one Finish action"
 check_count 'MouseArea {' 1 "modal has exactly one action target"
+check_count '"Your password"' 1 "the empty field says whose password is wanted (live review)"
 check_absent 'id: pauseButton' "modal has no Pause action"
 check_absent 'Pause' "modal has no Pause copy"
 check_absent 'pauseAvailable' "modal has no Pause availability state"

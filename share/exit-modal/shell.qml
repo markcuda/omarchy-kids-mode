@@ -209,6 +209,21 @@ PanelWindow {
                             font.pixelSize: 18
                             clip: true
                         }
+                        // QtQuick's TextInput has no placeholderText: the live
+                        // review (2026-09-21) found an empty field beside the
+                        // *kid's* face with no clue that the parent's password
+                        // is wanted. Shown only while empty, never clickable.
+                        Text {
+                            anchors.fill: parent
+                            anchors.margins: 12
+                            verticalAlignment: Text.AlignVCenter
+                            visible: passwordInput.text.length === 0
+                            text: "Your password"
+                            color: theme.foreground
+                            opacity: 0.5
+                            font.family: theme.fontFamily
+                            font.pixelSize: 18
+                        }
                     }
 
                     Text {
