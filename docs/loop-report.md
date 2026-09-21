@@ -728,3 +728,11 @@ when the iteration closed.
 (grid, navigation, launch, exit modal, portal; desktop layer and windowed picker), what is still
 open (two apps side by side, Super+K, the wifi shell), and that the stock desktop stays
 unverified. Docs only; found by the I-6 sweep.
+
+### 2026-09-21, loop iteration: idle pointer hidden (live review)
+
+`fix/hide-idle-cursor` (`87111e3` + the test commit): both L1.lua and L2.lua set
+`cursor = { inactive_timeout = 1 }` so a pointer parked on a keyboard-only surface fades after a
+second of stillness and returns on movement. The option name, units and "0 for never" default were
+verified from the running compositor (`hyprctl -i 0 descriptions`), not guessed; `levels-test.sh`
+asserts both files keep it. Docs only otherwise.
