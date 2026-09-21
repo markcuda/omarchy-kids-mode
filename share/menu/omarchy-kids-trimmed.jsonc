@@ -1,28 +1,31 @@
-// omarchy-kids-trimmed.jsonc — root-owned omarchy-menu extension for
-// Levels 1 and 2 (SPEC.md R-DESK-4, Q23).
+// omarchy-kids-trimmed.jsonc — the omarchy-menu user extension for a kid whose
+// profile says `menu=trimmed` (SPEC.md R-DESK-4).
 //
-// UNVERIFIED SCHEMA. omarchy-menu's extension/plugin format was not
-// available in the reference material this repo was written against
-// (only two of Omarchy's default.hypr.bindings.* files were available,
-// no omarchy-menu source or docs), so the shape below -- a "hide" list
-// of entry ids -- is a guess at the simplest schema that could satisfy
-// R-DESK-4's wording ("through a root-owned menu extension"), not a
-// confirmed one. Confirm the real extension format on a running Omarchy
-// 4.0.2 box before wiring this in anywhere, and correct the entry ids
-// (install/update/setup below are also guesses at what omarchy-menu
-// calls those rows).
+// VERIFIED MECHANISM (try-omarchy VM, Omarchy 4.0.2, 2026-09-21). omarchy-menu
+// is a Quickshell plugin; it reads the stock entries from
+// /usr/share/omarchy/default/omarchy/omarchy-menu.jsonc and merges the user
+// extension at $HOME/.config/omarchy/extensions/omarchy-menu.jsonc
+// (shell/plugins/menu/Menu.qml, `userMenuPath`). MenuModel.mergeMenuSources()
+// merges the two **by id**, field by field, the user file winning. An entry is
+// hidden when its `when:` shell expression evaluates false
+// (Menu.qml `evaluateGuards`). So a hide is the same id with `when: "false"` —
+// not a "hide" list, which this file used to guess at.
 //
-// This is also, deliberately, not the only thing enforcing R-DESK-4:
-// Level 1 has no bar/shell at all (share/hyprland/L1.lua's exec-once
-// starts only the big-tile launcher, never omarchy-launch-shell), so
-// there is nothing to trim there. Level 2 runs the Kids Mode launcher,
-// not Omarchy's own shell, and share/hyprland/L2.lua rebinds
-// Super+Space to that launcher instead of "omarchy-menu toggle"
-// (Appendix E). So even if this file's hiding mechanism turns out not
-// to be supported at all, no Level 1 or 2 keybinding reaches the
-// untrimmed menu. What this file's hiding (if supported) would
-// additionally cover is mouse/bar access to the menu, which is why
-// it's still worth getting right rather than dropping.
+// Where it is applied: provisioning copies this file into the kid's own
+// ~/.config/omarchy/extensions/omarchy-menu.jsonc when the profile's
+// `menu = trimmed` (default for bands 3-5, 6-8 and 9-12). It is the kid's own
+// file, so it is presentation, not a lock: a kid who edits it can see the rows
+// again, and every action behind them still fails their account's permissions
+// (polkit/sudo deny). The enforcement is the account, never this file (I-3).
+//
+// Levels 1 and 2 never reach this menu at all: Level 1 runs no shell, and
+// Level 2 runs the Kids launcher with Super+Space rebound to its own picker
+// (Appendix E). This file is what makes Level 3's stock desktop honest for a
+// kid, alongside the kid's trimmed shell.json (no omarchy.system-update
+// widget, which is where "Pending Omarchy Migrations" comes from).
 {
-  "hide": ["install", "update", "setup"]
+  "install": {"when": "false"},
+  "remove": {"when": "false"},
+  "update": {"when": "false"},
+  "setup": {"when": "false"}
 }
