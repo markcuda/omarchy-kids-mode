@@ -711,3 +711,14 @@ modals treat a verifier outage (exit 2) as "can't check right now" instead of a 
 the Ask done sentence is capitalised and stays 3 s, and the panel says "Changes already made stay"
 instead of "nothing changes". Mac suite (with shellcheck installed) is 48/48 before this round;
 re-run after.
+
+### 2026-09-21, loop iteration: packaging fixes from the live pass
+
+`fix/install-packaging` (`dd60c2f`): `PKGBUILD` is now `arch=('any')` (nothing is compiled; the
+aarch64 VM was blocked by the old pin), `docs/install.md` says `cd omarchy-kids-mode`, the authd
+and time-ledger units mark `/var/lib/omarchy-kids` (and `/run/omarchy-kids`) optional so a
+missing runtime dir cannot fail startup with 226/NAMESPACE, and `omarchy-kids-assert` exits 0
+with a quiet line when there is no boot mode *and* no kid yet -- so the pacman hook no longer
+aborts a clean install -- while a missing mode with a kid present stays fail-closed.
+`pkgbuild-test.sh` and `assert-test.sh` gained the regression assertions; all three touched
+tests pass and the full suite was at 49/51 with zero failures when the loop iteration closed.
