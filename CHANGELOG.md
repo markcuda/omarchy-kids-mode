@@ -24,6 +24,10 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Changed
 
+- Level 3 is hidden from the wizard's and panel's desktop-level pickers for v1 (existing
+  level = 3 profiles still start); R-ASK-2's spec wording now matches the safe list → request
+  card with **Approve** preselected. Both decisions are recorded in
+  `docs/phase1/DECISIONS-NEEDED.md` §6.
 - Kid session startup now reads one caller-bound validated manifest for level, theme, web, tiles,
   budget, and lights-out values, and executes the selected surface directly without desktop scans
   or runtime launcher JSON.

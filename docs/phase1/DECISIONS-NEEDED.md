@@ -36,3 +36,19 @@ before the first upload.
 The findings worth sending upstream are written up (the `ignore-auto-dns` Wi-Fi helper,
 `success=done` parent-unlock PAM line placement, SDDM's no-greeter-after-hard-terminate
 behaviour, the Limine snapshot-entry bypass). Posting on omacom/omarchy#9750 is yours.
+
+## 6. Decisions taken under the owner's standing order (2026-09-19)
+
+Mark, 2026-09-19: "1-5 choose sensical defaults. we will dogfood it later." The five items below
+are decided; the VM evidence still waits for a dogfooding session.
+
+| # | Question | Decision | Why |
+| --- | --- | --- | --- |
+| 1 | R-ASK-2 "approve/decline on one keystroke" | Keep the safe flow: Enter opens the request's card with **Approve** preselected, one more Enter approves. SPEC.md's R-ASK-2 wording is amended to match. | Approving performs a real action (a grant, an install) and cannot be undone from the panel; a stray Enter on the list must not do it. |
+| 2 | Pause (R-EXIT-3/4) | Not offered for v1. It waits for the PAM-on-a-spare-VT helper and its own Phase 1 check (option 1 in the 2026-09-02 entry), or upstream multi-user, whichever comes first. | The SDDM route failed on hardware and left the laptop's input devices dead until a udev re-trigger (V1). I-6: no control that is not enforced. |
+| 3 | #98 / #109 boot transitions | Do not merge #98 before #109's template fix lands; portal mode is the recommended v1 configuration. #97 stays blocked behind #98; #99's VM proof moves into the dogfooding session. | A power cut during a single-UKI rebuild can leave the machine unbootable; no rush while the portal path is the supported one. |
+| 4 | Level 3 | Hidden from the wizard and panel pickers for v1; existing `level = 3` profiles still start. Queued as the loop's next code item. | Its binds and the `omarchy-provision-first-run` passwordless-sudo question are unverified on a real box. |
+| 5 | Per-app limits / weekly caps proposal | The seven open questions in `docs/research/2026-09-19-per-app-limits-and-weekly-caps-proposal.md` take the proposal's recommended answers, now recorded there as decisions. | Sensible defaults; no code until a ticket is opened. |
+
+The R-ASK-2 amendment and the Level 3 hiding are tracked in commits on
+`docs/decisions-2026-09-19` and the follow-up branch named in the loop prompt.
