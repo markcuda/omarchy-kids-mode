@@ -740,3 +740,18 @@ One new key goes in `share/config/schema.toml`, group `Apps`.
 7. **Retention for per-app minutes.**
    - Ninety days, as proposed?
    - Or one year, like usage?
+
+## Decisions (2026-09-19, owner's standing order: "choose sensical defaults")
+
+The open questions above are answered; these are the defaults to build against if the owner
+opens ticket 0:
+
+1. **Band defaults:** `weekly_min = 0` and `day_start = 04:00` for every band — changes nothing
+   for existing kids.
+2. **After-midnight lights-out hole:** fixed inside W2.
+3. **Week start:** Monday, fixed.
+4. **Kid visibility:** the weekly figure shows only in warnings and on the card, not on the
+   launcher clock.
+5. **Shared runtimes:** apps launched inside shared runtimes stay unlimitable; no `cmdline` match.
+6. **Appendix D:** the `kind` enum may gain `apptime` when this is built.
+7. **Retention:** per-app minutes keep 90 days, matching the other per-app data.
