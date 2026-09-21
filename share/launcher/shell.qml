@@ -565,6 +565,9 @@ ShellRoot {
                     // the 96px tap-target floor even at the smallest cell.
                     width: grid.cellWidth - 20
                     height: grid.cellHeight - 20
+                    // Nothing the shrunken layout cannot fit may paint outside
+                    // the tile and collide with its neighbours (live 875x492).
+                    clip: true
                     radius: 16
                     color: missing ? theme.background : (GridView.isCurrentItem ? theme.tileFill : theme.cardFill)
                     // Dimmed enough to read as unavailable, not so much that its
@@ -628,7 +631,10 @@ ShellRoot {
                             font.family: theme.fontFamily
                             font.pixelSize: labelSize
                             elide: Text.ElideRight
-                            maximumLineCount: 2
+                            // One line when the cell is short, two otherwise:
+                            // the name and the missing caption together must
+                            // fit the tile (live 875x492).
+                            maximumLineCount: grid.cellHeight < 150 ? 1 : 2
                             wrapMode: Text.WordWrap
                             width: parent.parent.width - 16
                             horizontalAlignment: Text.AlignHCenter
@@ -646,7 +652,7 @@ ShellRoot {
                             font.family: theme.fontFamily
                             font.pixelSize: Math.max(10, labelSize - 4)
                             wrapMode: Text.WordWrap
-                            maximumLineCount: 2
+                            maximumLineCount: 1
                             elide: Text.ElideRight
                             width: parent.parent.width - 16
                             horizontalAlignment: Text.AlignHCenter
