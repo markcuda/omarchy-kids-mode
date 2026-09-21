@@ -172,6 +172,7 @@ PanelWindow {
                     }
 
                     Text {
+                        font.family: theme.fontFamily
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: root.displayName
                         color: theme.foreground
@@ -190,6 +191,7 @@ PanelWindow {
 
                         TextInput {
                             id: passwordInput
+                            font.family: theme.fontFamily
                             anchors.fill: parent
                             anchors.margins: 12
                             echoMode: TextInput.Password
@@ -202,6 +204,7 @@ PanelWindow {
                     }
 
                     Text {
+                        font.family: theme.fontFamily
                         width: parent.width
                         visible: root.hint.length > 0
                         text: root.hint
@@ -227,6 +230,7 @@ PanelWindow {
                             width: parent.width - 16
                             spacing: 4
                             Text {
+                                font.family: theme.fontFamily
                                 width: parent.width
                                 text: "Finish for " + root.displayName
                                 color: theme.foreground
@@ -236,6 +240,7 @@ PanelWindow {
                                 wrapMode: Text.WordWrap
                             }
                             Text {
+                                font.family: theme.fontFamily
                                 width: parent.width
                                 text: "Closes " + root.possessive(root.displayName) + " apps. You return to the login screen."
                                 color: theme.caption

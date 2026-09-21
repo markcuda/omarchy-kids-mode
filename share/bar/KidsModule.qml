@@ -211,6 +211,7 @@ Panel {
                     anchors.centerIn: parent
                     text: parent.modelData.initial
                     color: Color.background
+                    font.family: root.bar ? root.bar.fontFamily : Style.font.family
                     font.pixelSize: 10
                     font.bold: true
                 }
@@ -228,6 +229,7 @@ Panel {
                 anchors.centerIn: parent
                 text: String(root.openRequestCount)
                 color: Color.background
+                font.family: root.bar ? root.bar.fontFamily : Style.font.family
                 font.pixelSize: 10
                 font.bold: true
             }

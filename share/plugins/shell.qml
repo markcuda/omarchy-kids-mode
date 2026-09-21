@@ -127,6 +127,7 @@ PanelWindow {
                     spacing: 16
 
                     Text {
+                        font.family: theme.fontFamily
                         width: parent.width
                         text: "More apps"
                         color: theme.foreground
@@ -135,6 +136,7 @@ PanelWindow {
                     }
 
                     Text {
+                        font.family: theme.fontFamily
                         width: parent.width
                         text: "Pick one, then press Enter to ask a grown-up."
                         color: theme.caption
@@ -145,6 +147,7 @@ PanelWindow {
                     // --- Loading / empty / error states (I-6: never a
                     //     blank screen with no explanation) --------------
                     Text {
+                        font.family: theme.fontFamily
                         width: parent.width
                         visible: !root.loaded
                         text: "Looking for apps to add…"
@@ -153,6 +156,7 @@ PanelWindow {
                     }
 
                     Text {
+                        font.family: theme.fontFamily
                         width: parent.width
                         visible: root.loaded && root.loadError.length > 0
                         text: root.loadError
@@ -162,6 +166,7 @@ PanelWindow {
                     }
 
                     Text {
+                        font.family: theme.fontFamily
                         width: parent.width
                         visible: root.loaded && root.loadError.length === 0 && root.shelf.length === 0
                         text: "Nothing here yet -- check back later!"
@@ -198,6 +203,7 @@ PanelWindow {
                                 spacing: 4
 
                                 Text {
+                                    font.family: theme.fontFamily
                                     width: parent.width
                                     text: (modelData.name || modelData.id || "")
                                         + (modelData.age ? "  ·  ages " + modelData.age + "+" : "")
@@ -208,6 +214,7 @@ PanelWindow {
                                 }
 
                                 Text {
+                                    font.family: theme.fontFamily
                                     width: parent.width
                                     text: modelData.description || ""
                                     color: theme.caption

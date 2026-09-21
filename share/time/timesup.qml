@@ -137,6 +137,7 @@ PanelWindow {
                     }
 
                     Text {
+                        font.family: theme.fontFamily
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: "Time's up, " + root.displayName + "!"
                         color: theme.foreground
@@ -145,6 +146,7 @@ PanelWindow {
                     }
 
                     Text {
+                        font.family: theme.fontFamily
                         width: parent.width
                         text: root.reason === "lights-out"
                             ? "It's bedtime. This desktop is finishing up."
@@ -156,6 +158,7 @@ PanelWindow {
                     }
 
                     Text {
+                        font.family: theme.fontFamily
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: "Closing in " + root.secondsLeft + "s"
                         color: root.secondsLeft <= 10 ? theme.error : theme.warning
@@ -180,6 +183,7 @@ PanelWindow {
                                 width: parent.width - 16
                                 spacing: 4
                                 Text {
+                                    font.family: theme.fontFamily
                                     width: parent.width
                                     text: "Ask a grown-up"
                                     color: theme.foreground
@@ -189,6 +193,7 @@ PanelWindow {
                                     wrapMode: Text.WordWrap
                                 }
                                 Text {
+                                    font.family: theme.fontFamily
                                     width: parent.width
                                     text: "for more time"
                                     color: theme.caption

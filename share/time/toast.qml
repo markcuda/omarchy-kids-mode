@@ -63,12 +63,14 @@ PanelWindow {
             // font/svg set of its own for UI chrome (only
             // share/avatars/*.svg, which are per-kid, not decorative).
             Text {
+                font.family: theme.fontFamily
                 text: "⏰" // alarm clock
                 font.pixelSize: 28
                 color: theme.warning
             }
 
             Text {
+                font.family: theme.fontFamily
                 width: parent.width - 40
                 text: root.message
                 color: theme.foreground

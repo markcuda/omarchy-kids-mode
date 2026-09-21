@@ -245,6 +245,7 @@ PanelWindow {
                     spacing: 16
 
                     Text {
+                        font.family: theme.fontFamily
                         text: "Wi-Fi"
                         color: theme.foreground
                         font.pixelSize: 24
@@ -281,6 +282,7 @@ PanelWindow {
                                 spacing: 12
 
                                 Text {
+                                    font.family: theme.fontFamily
                                     text: modelData.ssid
                                     color: theme.foreground
                                     font.pixelSize: 16
@@ -289,11 +291,13 @@ PanelWindow {
                                     elide: Text.ElideRight
                                 }
                                 Text {
+                                    font.family: theme.fontFamily
                                     text: modelData.security.length > 0 ? "🔒" : "open"
                                     color: theme.caption
                                     font.pixelSize: 14
                                 }
                                 Text {
+                                    font.family: theme.fontFamily
                                     text: modelData.signal + "%"
                                     color: theme.caption
                                     font.pixelSize: 14
@@ -318,6 +322,7 @@ PanelWindow {
                         spacing: 12
 
                         Text {
+                            font.family: theme.fontFamily
                             width: parent.width
                             text: root.selectedNetwork() ? ("Password for " + root.selectedNetwork().ssid) : ""
                             color: theme.foreground
@@ -335,6 +340,7 @@ PanelWindow {
 
                             TextInput {
                                 id: passwordInput
+                                font.family: theme.fontFamily
                                 anchors.fill: parent
                                 anchors.margins: 12
                                 echoMode: TextInput.Password
