@@ -882,3 +882,13 @@ Ask modal (`ask-hint.png`, "Ask a grown-up · 15 more minutes of screen time"). 
 Ask assertion, a real test bug surfaced: `ask-test.sh` echoed its RESULT and exited mid-file, so
 its grant-time assertions never ran; the result/exit pair is at the end now and they pass
 (`350f2c9`).
+
+### 2026-09-21, loop iteration: the Ask request path, end to end
+
+Dogfooded live without the GUI: `omarchy-kids-ask submit time 15` as kid-ada wrote the kid-owned
+outbox entry; the ask-collect timer moved it into the root queue (a manual `collect` found 0 left,
+`list` showed it); `approve <id> --apply` ran `omarchy-kids-time grant kid-ada 15` and marked the
+request approved ("now 75 granted today"). Together with the modal render check this closes
+R-ASK-1..3 on the live box: a kid can ask, the root side collects and decides, and the decision
+applies through the ledger. `cmd_collect` scans every user's outbox with an owner check, not the
+kid-written `kid` field (review S2/S3), which the run confirms.
