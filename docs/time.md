@@ -36,7 +36,7 @@ change it.
 | `lib/time.sh` | Shared bash helpers: the clock, day-boundary/weekend, budget/lights-out resolution, ledger/grant reads and (root-only) writes |
 | `lib/time.py` | The one place this needs real calendar math — day rollover and weekday, portable across the dev machine's BSD `date` and the target's GNU `date` (same reasoning as `lib/conf.py`) |
 | `bin/omarchy-kids-time-ledger` | Root: `tick` accounts monotonic active seconds, writes each kid's runtime state, and refreshes `/run/omarchy-kids/status.json` (R-BAR-3) |
-| `systemd/omarchy-kids-time.timer` + `omarchy-kids-time-ledger.service` | Runs `tick` once a minute |
+| `systemd/omarchy-kids-time.timer` + `omarchy-kids-time-ledger.service` | Runs `tick` every 30 seconds |
 | `bin/omarchy-kids-time` | The kid-side daemon, plus `status`/`grant` |
 | `share/time/toast.qml` | The small "N minutes left" warning (R-TIME-3) |
 | `share/time/timesup.qml` | The full-screen "Time's up" overlay (R-TIME-4) |
@@ -69,15 +69,18 @@ build-time seam for deterministic tests. No inherited value selects the root clo
 
 1. Reads today's logical day, weekend flag, and one monotonic timestamp.
 2. Lists every session (`loginctl list-sessions --no-legend`), keeping the ones whose account has
-   a root-owned profile and whose session is `Active=yes`, `LockedHint=no`, and not paused.
+   a root-owned profile and whose session is the account's own graphical session (`Class=user`,
+   `Type=wayland|x11`) with `Active=yes`, `LockedHint=no`, and not paused. logind also creates a
+   `Class=manager` session per user; it is neither a lock target nor active time.
 3. For every known kid, initializes or validates `/run/omarchy-kids/time/<kid>.json`. A first tick
    records the timestamp without adding time. Later active intervals add whole minutes to
    `usage/<day>` and retain the sub-minute remainder in runtime state. Inactive intervals add zero.
 4. Recomputes `allowed`, `warning`, `grace`, or `finishing` from the current budget, grant, logical
    day, and lights-out schedule. Warning thresholds are retained in the state document.
-5. On entry to `grace`, asks `loginctl` to lock each active, unlocked session for that kid. The
-   request is recorded with its reason and result, and a failed lock never changes the state to
-   `allowed`.
+5. On entry to `grace`, asks `loginctl` to lock each active, unlocked graphical session for that
+   kid, then waits a bounded moment for every target to report `LockedHint=yes`. The request and
+   the *verified* result are recorded; a session that never reports the lock counts as failed, and
+   a failed lock never changes the state to `allowed`. The grace deadline runs either way.
 6. At the monotonic grace deadline, calls the resolved sibling `omarchy-kids-exit --finish --kid
    <account>`. A failed call remains `finishing` and is retried on the next tick. A successful call
    is recorded and is not repeated for the same enforcing state.
@@ -202,9 +205,10 @@ check.
 - Every Quickshell-specific name in `share/time/toast.qml` and `share/time/timesup.qml`, including
   the `FileView` status reader and the fixed root-state path. The card's keyboard-only ask action
   reuses the detached-command shape verified in `share/ask/shell.qml`.
-- `loginctl show-session <id> -p Active -p LockedHint`'s exact output shape on the real target
-  (this repo has never run against a real `systemd-logind`) — `test/shell.d/time-test.sh` stubs
-  it, so the *parsing* is tested, not the real command's actual output.
+- `loginctl show-session <id> -p Active -p LockedHint -p Class -p Type`'s exact output shape on
+  the real target (this repo has never run against a real `systemd-logind`) —
+  `test/shell.d/time-test.sh` stubs it, so the *parsing* is tested, not the real command's actual
+  output.
 - Whether a background `&`'d `omarchy-kids-time daemon`, started from
   `omarchy-kids-session-start` before it `exec`s the launcher/shell, actually survives that `exec`
   and keeps running for the life of the session (expected — backgrounded jobs aren't children of
@@ -320,7 +324,7 @@ Kept for reference; the file itself now carries a 3-line pointer instead.
 ```text
 omarchy-kids-time-ledger: the ONLY thing that ever writes a kid's
 screen-time usage (SPEC.md R-TIME-1..2, Appendix F). Root, run from
-systemd/omarchy-kids-time.timer (every minute) via
+systemd/omarchy-kids-time.timer (every 30 seconds) via
 omarchy-kids-time-ledger.service.
 
 Trust boundary (see lib/time.sh's header for the long version): the
