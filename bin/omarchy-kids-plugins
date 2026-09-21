@@ -151,7 +151,7 @@ cmd_shelf() {
   fi
   require_jq
 
-  if ((all)) && ((!json)); then
+  if ((all)) && ((! json)); then
     echo "omarchy-kids-plugins: --all: showing unverified Kids listings too — install still refuses anything not verified"
   fi
 

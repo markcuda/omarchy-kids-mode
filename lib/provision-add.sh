@@ -58,7 +58,7 @@ cmd_add() {
   if ((want_password && no_password)); then
     die "add: --password-stdin and --no-password are mutually exclusive"
   fi
-  if ((!want_password && !no_password)); then
+  if ((! want_password && ! no_password)); then
     die "add: needs --password-stdin or --no-password"
   fi
   if ((no_password)); then

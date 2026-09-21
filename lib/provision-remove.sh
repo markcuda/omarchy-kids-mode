@@ -94,7 +94,7 @@ cmd_remove() {
 
   # R-FND-6: the account, then its home.
   run userdel "$account"
-  if ((!keep_home)); then
+  if ((! keep_home)); then
     local dest parent_home
     parent_home="$(parent_home_dir "$MACHINE_CONF")"
     dest="$parent_home/Kids Mode/$display_name"

@@ -172,7 +172,7 @@ _tui_style() {
   local -a flags=() text=()
   local sep=0 a
   for a in "$@"; do
-    if ((!sep)) && [[ "$a" == "--" ]]; then
+    if ((! sep)) && [[ "$a" == "--" ]]; then
       sep=1
       continue
     fi

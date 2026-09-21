@@ -621,7 +621,7 @@ main() {
     die "LUKS options are not available in portal mode"
   fi
 
-  if ((PARENT_PW_STDIN)) && ((!REAL_DRY_RUN)); then
+  if ((PARENT_PW_STDIN)) && ((! REAL_DRY_RUN)); then
     IFS= read -r PARENT_PASSWORD || die "--parent-password-stdin needs a line on stdin"
   fi
 
