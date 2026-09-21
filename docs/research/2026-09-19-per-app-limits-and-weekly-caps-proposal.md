@@ -30,10 +30,12 @@
 
 **What is missing**
 
-- `docs/research/2026-09-18-kids-mode-landscape.md` does not exist in this checkout. `docs/research/` holds only `2026-09-03-community-scan.md`, which mentions neither timekpr nor Cozy Kids Launcher.
-- The only timekpr-nExT material in the tree is the archived prior-art note `docs/archive/project-hub/research/02-prior-art-kids-linux-and-parental-controls.md:11,111`. It calls PlayTime a process-based limiter built on logind.
-- I have not read anything about Cozy Kids Launcher's per-app schedules. This proposal makes no claim about how it works.
-- If the landscape document exists elsewhere, review this proposal against it before ticket 0.
+- `docs/research/2026-09-18-kids-mode-landscape.md` (on this branch) is the landscape survey this
+  proposal comes from; it covers timekpr-nExT's PlayTime and weekly limits and Cozy Kids
+  Launcher's per-app schedules.
+- The archived prior-art note `docs/archive/project-hub/research/02-prior-art-kids-linux-and-parental-controls.md:11,111` also covers timekpr-nExT; it calls PlayTime a process-based limiter built on logind.
+- That landscape survey is second-hand from the projects' own READMEs, not from their source; this
+  proposal makes no claim beyond it.
 
 **The standing decision on timekpr**
 
