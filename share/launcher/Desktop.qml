@@ -6,6 +6,7 @@ import Quickshell.Wayland
 PanelWindow {
     id: desktop
     property string clock: ""
+    property string timeLeft: ""
     signal appsRequested()
     anchors { top: true; bottom: true; left: true; right: true }
     exclusionMode: ExclusionMode.Ignore
@@ -52,11 +53,21 @@ PanelWindow {
         }
     }
     Text {
+        id: desktopClock
         anchors { top: parent.top; right: parent.right; margins: 40 }
         text: desktop.clock
         color: theme.foreground
         font.family: theme.fontFamily
         font.pixelSize: 28
+    }
+    // Root says how much time is left; the launcher only shows it.
+    Text {
+        visible: desktop.timeLeft !== ""
+        anchors { top: desktopClock.bottom; right: parent.right; topMargin: 8; rightMargin: 40 }
+        text: desktop.timeLeft
+        color: theme.caption
+        font.family: theme.fontFamily
+        font.pixelSize: 16
     }
     Text {
         anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 32 }

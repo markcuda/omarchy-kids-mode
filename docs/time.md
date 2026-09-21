@@ -221,6 +221,10 @@ check.
   session is still unconfirmed.
 - The Ask modal opening over the Time's Up overlay (two keyboard-exclusive layer surfaces); the
   modal alone, opened over the launcher, has been watched (`docs/ask.md` "Verified live").
+- The launcher's own time-left line (`share/launcher/shell.qml` reading
+  `/run/omarchy-kids/time/<kid>.json` with a `FileView`, rendered through
+  `GridNav.remainingLabel`): the label logic is node-tested and the wiring is static-tested, but
+  the real file watch against root's live state has only been reasoned about, not watched.
 
 ## Verified live (2026-09-02, QEMU test VM; ticket 2)
 

@@ -61,6 +61,9 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Added
 
+- The Level 1/2 launcher shows root's remaining time ("N minutes left", `GridNav.remainingLabel`),
+  read from `/run/omarchy-kids/time/<kid>.json` and hidden in grace — display only, the launcher
+  never computes or enforces the deadline.
 - Configuration schema ticket 1 (#72): one package-owned declaration now covers every profile and
   `apps.*` key while preserving the existing `omarchy-kids-conf` commands and behavior.
 - Root screen-time state machine (#68, ticket 1): monotonic active seconds now feed root-owned

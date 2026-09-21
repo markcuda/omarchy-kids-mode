@@ -188,6 +188,36 @@ ShellRoot {
             path: (Quickshell.env("OMARCHY_KIDS_LAUNCHER_CONTROL") || (Quickshell.env("XDG_RUNTIME_DIR") + "/omarchy-kids/launcher-control"))
         }
 
+        // Root's published time state, read-only: the launcher shows the
+        // minutes root says are left and never computes or enforces them
+        // (docs/time.md). Hidden in grace, where Time's Up takes over.
+        readonly property string timeStatusPath: "/run/omarchy-kids/time/" + (root.manifest.account || "") + ".json"
+        property int remainingSeconds: -1
+
+        FileView {
+            id: timeStatus
+            path: root.manifest.account ? root.timeStatusPath : ""
+            watchChanges: true
+            printErrors: false
+            onLoaded: root.readTimeStatus()
+            onTextChanged: root.readTimeStatus()
+        }
+
+        function readTimeStatus() {
+            var status
+            try {
+                status = JSON.parse(timeStatus.text())
+            } catch (error) {
+                root.remainingSeconds = -1
+                return
+            }
+            if (!status || (status.state !== "allowed" && status.state !== "warning")) {
+                root.remainingSeconds = -1
+                return
+            }
+            root.remainingSeconds = Number(status.remaining_seconds)
+        }
+
         Timer {
             interval: 150
             running: true
@@ -587,10 +617,26 @@ ShellRoot {
                 onTriggered: parent.text = Qt.formatTime(new Date(), "hh:mm")
             }
         }
+
+        // Kids learn the time left here, not only from toasts (docs/time.md).
+        Text {
+            id: timeLeftText
+            readonly property string label: GridNav.remainingLabel(root.remainingSeconds)
+            visible: !root.desktopMode && label !== ""
+            anchors.top: clockText.bottom
+            anchors.right: parent.right
+            anchors.topMargin: root.margin
+            anchors.rightMargin: root.margin
+            color: root.remainingSeconds <= 300 ? theme.warning : theme.caption
+            font.family: theme.fontFamily
+            font.pixelSize: 16
+            text: label
+        }
     }
     Desktop {
         visible: root.desktopMode
         clock: clockText.text
+        timeLeft: GridNav.remainingLabel(root.remainingSeconds)
         onAppsRequested: root.showPicker()
     }
 }

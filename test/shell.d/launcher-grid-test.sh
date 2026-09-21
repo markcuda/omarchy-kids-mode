@@ -118,14 +118,14 @@ check_contains "$qml_content" 'id: clockText' \
   "the clock has an id the grid's own layout can bind to"
 check_contains "$qml_content" 'anchors.topMargin: root.margin + clockText.height + root.margin' \
   "grid top = clock bottom (clockText's own root.margin inset + its height) + one more root.margin gap"
-check "$(grep -c '^[[:space:]]*anchors.topMargin: root.margin$' "$QML" || true)" "2" \
-  "clock and desktop-only search box use flat insets; the grid remains below the clock"
+check "$(grep -c '^[[:space:]]*anchors.topMargin: root.margin$' "$QML" || true)" "3" \
+  "clock, search box and time-left indicator use flat insets; the grid remains below the clock"
 
 # Labels in the theme font (docs/theming.md) -- every Text element in the
 # every Text/TextInput in shell.qml must set font.family, not rely on Qt's
 # platform default.
-check "$(grep -c 'font.family: theme.fontFamily' "$QML" || true)" "12" \
-  "grid and searchable picker labels set the theme font"
+check "$(grep -c 'font.family: theme.fontFamily' "$QML" || true)" "13" \
+  "grid, searchable picker and time-left labels set the theme font"
 
 # No literal colour hex crept into this file (qml-theme-static-test.sh
 # checks every share/**/*.qml file; this re-checks just this one inline
@@ -184,10 +184,25 @@ if command -v node >/dev/null 2>&1; then
     if (G.filterTiles(choices, 'unknown').length !== 0) throw Error('filter invented a match');
     if (G.filterTiles(choices, '').length !== 3) throw Error('reopening should restore choices');
     if (G.filterTiles(choices, 'missing')[0].installed !== false) throw Error('missing state lost');
+
+    // remainingLabel: the kid-visible time left, display only.
+    if (G.remainingLabel(1800) !== '30 minutes left') throw Error('remainingLabel(1800)');
+    if (G.remainingLabel(61) !== '2 minutes left') throw Error('remainingLabel rounds up');
+    if (G.remainingLabel(60) !== '1 minute left') throw Error('remainingLabel singular');
+    if (G.remainingLabel(0) !== '') throw Error('remainingLabel(0)');
+    if (G.remainingLabel(-1) !== '') throw Error('remainingLabel(-1)');
+    if (G.remainingLabel(NaN) !== '') throw Error('remainingLabel(NaN)');
+    if (G.remainingLabel('60') !== '') throw Error('remainingLabel rejects strings');
     console.log(results.join(' '));
   " "$JS" 2>&1)"
   check "$out" "columns=5 down3=8 right7=8 right9=9 left0=0 left5=4 up2=2 down9=9 cols0=1 colsNeg=1" \
     "gridnav.js index math matches issue #43's live scenario (node)"
+  check_contains "$qml_content" "readonly property string timeStatusPath" \
+    "shell.qml reads root's time state path (docs/time.md)"
+  check_contains "$qml_content" "GridNav.remainingLabel(root.remainingSeconds)" \
+    "shell.qml renders GridNav.remainingLabel"
+  check_contains "$qml_content" 'timeLeft: GridNav.remainingLabel(root.remainingSeconds)' \
+    "shell.qml passes the label into the Level 2 desktop"
 else
   echo "SKIP gridnav.js index-math check: node not found"
 fi
