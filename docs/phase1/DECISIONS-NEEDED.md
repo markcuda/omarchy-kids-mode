@@ -52,3 +52,9 @@ are decided; the VM evidence still waits for a dogfooding session.
 
 The R-ASK-2 amendment and the Level 3 hiding are tracked in commits on
 `docs/decisions-2026-09-19` and the follow-up branch named in the loop prompt.
+
+**Update, 2026-09-21 (supersedes item 4's hiding):** the owner asked for Level 3 to be made to
+work properly and offered ("just make it work properly now"; "available, just with things hidden
+per the parental permissions"). The autostart and menu-trim work is on
+`fix/level3-no-parent-autostart` and `fix/level3-menu-trim`, verified live in
+`docs/dogfood-2026-09-21.md`, and the three pickers now offer Level 3.

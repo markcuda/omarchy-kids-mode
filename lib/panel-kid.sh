@@ -375,10 +375,10 @@ screen_kid_level() { # ACCOUNT NAME
   local choices=(
     "1|App grid|Big app tiles. One app fills the screen."
     "2|Simplified desktop|Super+Space finds apps. Windows can sit side by side."
+    "3|Full desktop|The grown-up Omarchy desktop. Install, update and setup rows are hidden; the account's permissions still refuse them."
   )
-  # Level 3 is hidden for v1 (docs/phase1/DECISIONS-NEEDED.md): its binds and
-  # the omarchy-provision-first-run sudo question are unverified on a real box.
-  # An existing profile with level = 3 still starts; only the picker hides it.
+  # Level 3 is offered now that its binds, menu trim and autostart were verified
+  # live on the VM (docs/dogfood-2026-09-21.md).
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local -a facts=()
   panel_notice_lines facts

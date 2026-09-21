@@ -256,10 +256,11 @@ screen_level() {
   local choices=(
     "1|App grid|Big app tiles. One app fills the screen."
     "2|Simplified desktop|Super+Space finds apps. Windows can sit side by side."
+    "3|Full desktop|The grown-up Omarchy desktop. Install, update and setup rows are hidden; the account's permissions still refuse them."
   )
-  # Level 3 is hidden for v1: its binds and the omarchy-provision-first-run
-  # sudo question are unverified on a real box (docs/phase1/DECISIONS-NEEDED.md).
-  # An existing profile with level = 3 still starts; only the picker hides it.
+  # Level 3 is offered now that its binds, menu trim and autostart were verified
+  # live on the VM (docs/dogfood-2026-09-21.md); the owner asked for it to be
+  # available with parent-only rows hidden.
   tui_screen_choose "How should $DISPLAY_NAME's desktop work?" 11 "$TOTAL_STEPS" 0 "" choices "$default"
   local rc=$?
   ((rc == 0)) || return $rc
