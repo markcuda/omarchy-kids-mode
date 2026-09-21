@@ -728,3 +728,11 @@ when the iteration closed.
 (grid, navigation, launch, exit modal, portal; desktop layer and windowed picker), what is still
 open (two apps side by side, Super+K, the wifi shell), and that the stock desktop stays
 unverified. Docs only; found by the I-6 sweep.
+
+### 2026-09-21, loop iteration: favorites/recents proposal
+
+`docs/favorites-recents-proposal` (`1c9a1a3`): recents need no new plumbing, since
+`data_fold_launches` already promotes the kid's runtime launch log into the root-owned
+`/var/lib/omarchy-kids/<kid>/launches.log` with hardened reads. Proposes recents-first manifest
+ordering (ordering only; argv and allowlist untouched; bounded, validated, deterministic ties),
+defers a Recent row and parent-pinned favorites, and records three owner decisions. No code.
