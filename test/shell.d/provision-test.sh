@@ -70,12 +70,14 @@ LOG="$TMP/log"
 ARGV_LOG="$LOG/argv.log"
 TREE="$TMP/tree"
 
-mkdir -p "$ETC/kids" "$SHARE/bands" "$SHARE/packs" "$SHARE/avatars" "$SHARE/policy" "$SCRATCH_ROOT" "$HOMEROOT" "$STUBS" "$LOG"
+mkdir -p "$ETC/kids" "$SHARE/bands" "$SHARE/packs" "$SHARE/avatars" "$SHARE/policy" "$SHARE/menu" "$SCRATCH_ROOT" "$HOMEROOT" "$STUBS" "$LOG"
 cp "$ROOT_DIR/share/bands/bands.toml" "$SHARE/bands/"
 cp "$ROOT_DIR"/share/packs/*.toml "$SHARE/packs/"
 cp "$ROOT_DIR"/share/avatars/*.svg "$SHARE/avatars/"
 # issue #44: install_kids_chromium_flags's source file.
 cp "$ROOT_DIR/share/policy/chromium-flags.conf" "$SHARE/policy/"
+# R-DESK-4: install_kids_menu_trim's source file.
+cp "$ROOT_DIR/share/menu/omarchy-kids-trimmed.jsonc" "$SHARE/menu/"
 touch "$ARGV_LOG"
 
 kids_tree "$TREE" "$ROOT_DIR"
@@ -309,6 +311,12 @@ out_portal="$(printf 'kidpass1\n' | "$BIN" add "Cy" --band 6-8 --avatar fox --pa
 st=$?
 check_eq "$st" 0 "portal add succeeds without a disk secret"
 check_contains "$out_portal" "Done: kid-cy" "portal add reports completion"
+if [[ -f "$HOMEROOT/home/kid-cy/.config/omarchy/extensions/omarchy-menu.jsonc" ]] &&
+  grep -q '"when": "false"' "$HOMEROOT/home/kid-cy/.config/omarchy/extensions/omarchy-menu.jsonc"; then
+  pass "portal add seeds the trimmed omarchy-menu extension for kid-cy"
+else
+  fail "portal add must seed the trimmed omarchy-menu extension for kid-cy"
+fi
 check_not_contains "$(cat "$ARGV_LOG")" "cryptsetup" "portal add makes no LUKS call"
 [[ -e "$ETC/kids/kid-cy.conf" ]] && pass "portal add creates the kid profile" || fail "portal add did not create kid-cy"
 
