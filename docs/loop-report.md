@@ -712,6 +712,19 @@ the Ask done sentence is capitalised and stays 3 s, and the panel says "Changes 
 instead of "nothing changes". Mac suite (with shellcheck installed) is 48/48 before this round;
 re-run after.
 
+### 2026-09-21, loop iteration: two-kid-modes SPEC amendment (doc only)
+
+Owner direction: two kid modes, band defaults 3-8 grid / 9+ desktop, parent override, Level 3 as a
+parent-only hidden stock desktop. Drafted `docs/phase1/SPEC-AMENDMENT-two-kid-modes.md` with
+before/after text for R-DESK-3/4/5, A11, Appendix B.2 and E, and the R-BAND table; storage keeps
+the numeric `level` values so no profile migration is needed. A self-review against
+`share/bands/bands.toml`, `share/config/schema.toml`, `test/shell.d/levels-test.sh` and
+`docs/conf.md` caught one honesty gap in the draft: `menu` is stored but read by no mode today
+(`docs/conf.md`:74), so the amendment now says the rename must ship the code that honors the key.
+The headless fable review produced no output (0-byte report; re-run later) and left nothing open
+that the self-review did not cover. No code changed. Five open questions wait on the owner; the
+Level 2 VM pass (owner-supervised) is the next truthfulness gate.
+
 ### 2026-09-21, loop iteration: Level 1 legibility and the 540px frame
 
 `fix/launcher-540p-legibility` (`bd5a84a`): short screens (under 640px tall -- the live 960x540
