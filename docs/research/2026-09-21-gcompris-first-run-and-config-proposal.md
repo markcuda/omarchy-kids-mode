@@ -70,3 +70,9 @@ Option 1, gated on a 15-minute live check on the VM:
    to documentation only (option 2)?
 2. If option 1: is one live VM check enough to adopt `kiosk=true`, or should we stay with just
    fullscreen/first-run seeding and document the rest?
+
+## Owner decision (2026-09-21): approved
+
+Pre-seed the config at provisioning, as proposed. Implementation waits on the one VM check
+(what `kiosk=true` hides; what suppresses the welcome dialog), then ships with a provisioning
+test asserting the seeded file exists and is kid-owned.

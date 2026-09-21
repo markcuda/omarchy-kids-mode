@@ -65,3 +65,8 @@ exists, with no change to what the launcher will run.
 2. If A: decay window for "recent" (recommended: 30 days) and how many recents lead (recommended:
    the whole pack, since packs are 8-12 tiles and moving one app to the front is the point).
 3. Add parent-pinned favorites (C) in the same change or later?
+
+## Owner decision (2026-09-21): not adopted
+
+Keep pack order; tiles do not reorder by recent use. The launch log stays what it is (history and
+the parent panel), and this proposal is kept for the record.

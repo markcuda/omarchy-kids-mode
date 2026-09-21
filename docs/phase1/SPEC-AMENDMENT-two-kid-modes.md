@@ -133,3 +133,12 @@ The `Level` column becomes `Mode` with values: 3-5 **Grid**, 6-8 **Grid**, 9-12 
    desktop"?
 5. Should 13+ ever default to Stock desktop in v1, or does Stock stay parent-only until the
    menu-extension check passes (recommended: parent-only)?
+
+## Owner decisions (2026-09-21)
+
+1. **6-8 defaults to Grid** (3-8 grid, 9+ desktop). The parent can choose either mode for any kid
+   at setup and change it at any time.
+2. **Keep the numeric `level` key**; labels only (1=grid, 2=desktop, 3=stock). No migration.
+3. **Level 3 is no longer hidden.** "Just make it work properly now": verify it on the real box
+   (menu trim, binds, sudo path) and offer it, with the parent's permissions deciding what is
+   hidden. This supersedes the 2026-09-19 "hidden in v1" decision.

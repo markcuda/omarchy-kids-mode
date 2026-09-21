@@ -168,3 +168,13 @@ Seam: an extension is **content the parent approves**, never control.
 4. Distribution: AUR packages the parent installs, or vendor MIT apps as optional dependencies?
    (GPL apps stay separate either way.)
 5. Surfaces for v1: tiles + sites + themes only, or also the kid-screen and panel-row surfaces?
+
+## Owner decisions (2026-09-21)
+
+1. **Plugins may run in the kid's session when a parent approves them** ("parents should be able to
+   install and approve anything they want their kid to run"). The registry pins the exact commit;
+   the parent selects it; root installs it. I-2 narrows to "nothing *we* ship phones home;
+   approved third-party code is the parent's call."
+2. **Our package ships barebones.** Downloads happen only from the parent's selections of apps
+   they want to pre-install; nothing is bundled or pre-fetched beyond a minimal catalog.
+3. **Re-approval only when the surface set or exec changes**; patch updates apply silently.
