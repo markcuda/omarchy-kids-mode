@@ -892,3 +892,13 @@ request approved ("now 75 granted today"). Together with the modal render check 
 R-ASK-1..3 on the live box: a kid can ask, the root side collects and decides, and the decision
 applies through the ledger. `cmd_collect` scans every user's outbox with an owner check, not the
 kid-written `kid` field (review S2/S3), which the run confirms.
+
+### 2026-09-21, loop iteration: the time gate and the ledger, live
+
+Dogfooded the time gate on this build: with `budget_min = 1` the kid's session showed Time's Up
+and ended (the daemon draws the screen at expiry and enforcement closes the session, so the
+overlay is transient by design -- `omarchy-kids-time` has no on-demand show mode). `status`
+reported the arithmetic honestly: "199 min used, 0 min left today (budget 60 + 75 granted)" after a
+day of dogfooding, and `omarchy-kids-time grant kid-ada 120` (the product path) restored usable
+time. The launcher's time-left line is absent at zero remaining, which is by design (the Time's Up
+screen replaces it).
