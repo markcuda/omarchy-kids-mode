@@ -1,5 +1,45 @@
 # Progress and handoff
 
+## Current — September 21, 2026: dogfooding loop state
+
+**Branch:** `integration/dogfood-2026-09-19` is the union of all topic work, in sync with
+`origin`. Never push `main`; topic branches go to `origin`.
+
+**Dogfooded live on the try-omarchy VM** (Arch aarch64, 875x492): the wizard, Level 1 (grid),
+Level 2 (desktop + picker) and Level 3 (stock desktop) all run; `omarchy-kids-check --live` is
+green; the Ask request path was exercised end to end (kid `submit` -> collect -> `approve` ->
+`omarchy-kids-time grant`).
+
+**Fixed from the live passes and merged:** the unavailable tile no longer takes focus; the grid
+fits short screens (height-aware cells, content scaled and clipped); the idle cursor hides; the
+exit modal and Ask modal say "Your password"; the launcher refuses a close request so `Super+Q`
+cannot blank the desktop; `PKGBUILD` is `arch=('any')` and a fresh install no longer fails its
+own hook or authd startup; Level 3's menu trim uses omarchy-menu's real extension
+(`~/.config/omarchy/extensions/omarchy-menu.jsonc`, `when: "false"` per id) and no longer runs
+Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips).
+
+**The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
+first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
+install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After
+restarting OpenCode:
+
+```
+/loop --safe --ask-never --no-overlap --progress-file PROGRESS.md --prompt-file .opencode/loop-prompt.md devam et
+```
+
+or headless: `opencode-loopd --project . --every 5m --prompt-file .opencode/loop-prompt.md --timeout 30m`
+(Loop 0.5.38 is installed globally; the mise global node is pinned so the shim resolves).
+
+**Waiting on the owner:** the two-mode SPEC amendment's five questions
+(`docs/phase1/SPEC-AMENDMENT-two-kid-modes.md`); the GCompris pre-seed (approved, needs one VM
+check of `kiosk=true`); the add-on model's five questions
+(`docs/research/2026-09-21-discord-plugin-survey.md`); whether Level 3 keeps the file-manager
+bind (`Super+Shift+F`) under `menu=trimmed`.
+
+**Next work without owner input:** the I-6 sweep over `share/` and `lib/`; live checks of the
+Ask modal's own submit keys and the Time's Up screen on this build; the portal after a kid exits;
+keeping `docs/loop-report.md` current.
+
 ## Paused — September 11, 2026
 
 Work is paused at Mark's request. Start with
