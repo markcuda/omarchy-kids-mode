@@ -184,6 +184,21 @@ Same night, after #44: the Web tile launched `/usr/lib/chromium/chromium` with t
 (basic password store, no extension flags, crash bubble hidden) and opened a clean new-tab page
 with no dialog of any kind; the launcher listed only the installed tiles (#42).
 
+Re-checked 2026-09-22 (same try-omarchy VM, chromium 153.0.8010.36), which closes one of the two
+gaps above: **DoH is live.** Chromium's own loader log says it found the managed file
+(`config_dir_policy_loader.cc: Found mandatory policy file: /etc/chromium/policies/managed/
+omarchy-kids-6-8.json`), logs no unknown- or invalid-policy warning for any of the fourteen keys,
+and then makes its DNS-over-HTTPS requests to our template (`NotifyBeforeURLRequest:
+https://family.cloudflare-dns.com/dns-query`), which only happens if `DnsOverHttpsMode` and
+`DnsOverHttpsTemplates` were accepted. Driving the Web tile again in the kid's own session: the
+new-tab page is still clean, and `example.com` still renders Chromium's "This page is blocked.
+Your organization doesn't allow you to view this site" -- the same result as 2026-09-03, with the
+same six-entry 6-8 allowlist. Two honest limits: `chrome://policy` cannot be dumped on this guest
+to read the per-key status table (headless `--dump-dom` hangs, and chrome:// URLs need
+`--allow-chrome-scheme-url`), so per-key runtime acceptance rests on the published-schema citation
+in `share/policy/README.md` plus the absence of loader warnings; and the 9-12/13+ filtered mode is
+still unchecked, since this box has only a 6-8 kid.
+
 ## Source header (moved from `bin/omarchy-kids-web`, issue #49)
 
 Kept for reference; the file itself now carries a 3-line pointer instead.
