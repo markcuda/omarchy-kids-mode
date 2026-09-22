@@ -94,9 +94,12 @@ tile. `lock_check_warn` is the same shape as `lock_check`, used for this one loc
   `limine_snapshots_ok` — narrative restatements of the same two locks the Locks catalog already
   lists, kept here too because the issue's own Boot section names them explicitly.
 - Portal mode instead reports `no-kid-luks-slots`, `no-mkinitcpio-dropin`, and
-  `stock-autologin`. These prove the Kids Mode slot map, active mkinitcpio drop-in, and temporary
-  SDDM autologin override are absent. They do not claim that an unrecorded LUKS key belongs to a
-  kid or that a stock autologin file must exist.
+  `stock-autologin`. These prove no kid LUKS slot is recorded, the mkinitcpio drop-in is inactive,
+  and the temporary SDDM autologin override is absent. A `luks-slots` file that maps only the
+  parent's own slot 0 (written by `machine set parent` on any box, `docs/boot.md` step 5) is not a
+  kid slot and passes; only a non-`0` entry fails. An existing file the checker can't read (a
+  non-root run against the root-owned 0600 file) is a WARN, not a pass. They do not claim that an
+  unrecorded LUKS key belongs to a kid or that a stock autologin file must exist.
 
 ### Login
 

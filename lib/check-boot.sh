@@ -151,12 +151,24 @@ boot_check_snapshots() {
   fi
 }
 
+# The parent's own slot-0 line is not a kid slot: `machine set parent`
+# writes it on every box (docs/boot.md step 5) and portal mode's boot-login
+# never reads it, so only a non-0 entry is a portal-mode leftover.
 boot_check_no_kid_luks_slots() {
-  local file="$CHECK_BOOT_SLOTS_FILE"
-  if [[ -e "$file" || -L "$file" ]]; then
-    add_result Boot "boot:no-kid-luks-slots" fail "$file exists; portal mode requires no Kids Mode slot map"
-  else
+  local file="$CHECK_BOOT_SLOTS_FILE" entries
+  if [[ ! -e "$file" && ! -L "$file" ]]; then
     add_result Boot "boot:no-kid-luks-slots" pass "$file is absent; no kid slot is recorded"
+    return
+  fi
+  if [[ ! -r "$file" ]]; then
+    add_result Boot "boot:no-kid-luks-slots" warn "cannot verify: $file exists but is not readable here"
+    return
+  fi
+  entries="$(luks_slots_kid_entries "$file")"
+  if [[ -n "$entries" ]]; then
+    add_result Boot "boot:no-kid-luks-slots" fail "$file records kid LUKS slot(s); portal mode must not install a kid slot"
+  else
+    add_result Boot "boot:no-kid-luks-slots" pass "$file maps only the parent's own slot; no kid slot is recorded"
   fi
 }
 
