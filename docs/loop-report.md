@@ -1041,3 +1041,22 @@ Still open (recorded for the owner): `lib/kids.sh`'s `modal_*` helpers have no e
 file-wide one would false-fail on the `KIDS_UNITS` array, which names the assert *service*), and
 bare `kill` cannot be forbidden -- it would hit `killactive`-style dispatchers, so a word-bounded
 form would be needed if ever wanted.
+
+### 2026-09-22, loop iteration: the modal pidfile helpers guarded too
+
+Dogfooded (session healthy; the box's four known FAILs). Closed the recorded follow-up:
+`lib/kids.sh`'s `modal_*` pidfile helpers (which every kid overlay uses to track and close its own
+process) had no equivalent of the enforcement table. They are now extracted per function -- an
+`awk` that handles one-line and multi-line bodies -- and checked against the same shared table; a
+plain line range would have swept in the `KIDS_UNITS` array just below, whose
+`omarchy-kids-assert.service` entry is a service name, not kid-side enforcement. A missing helper
+fails loudly rather than passing vacuously. The review's minors were applied: the one-line test is
+anchored to a trailing brace (a header with a brace expansion no longer truncates the body), all
+three names are pinned, the failure output prints the real `lib/kids.sh` line numbers rather than
+offsets into the extracted blob, and the header pattern admits digits. Verified: `loginctl` and
+`pkill` injected into `modal_close` fail the check with their real line numbers, `KIDS_UNITS` is
+tolerated, the suite is green; the review found nothing blocking.
+
+Still open (accepted, recorded for the owner): bare `kill` cannot be forbidden (it would hit
+`killactive`-style dispatchers), and a column-0 `}` inside a helper body would end extraction early
+-- nothing today has one.
