@@ -69,8 +69,8 @@ PanelWindow {
 
     // parseList TEXT -> [{ssid, signal, security, inUse}], de-duplicated
     // by SSID (the same network shows once per BSSID otherwise), sorted
-    // by signal strength, strongest first. See the UNTESTED header above
-    // for why plain split(":") is a known-imperfect parse of nmcli -t.
+    // by signal strength, strongest first. See docs/wifi.md for why plain
+    // split(":") is a known-imperfect parse of nmcli -t.
     function parseList(text) {
         var seen = {}
         var out = []
