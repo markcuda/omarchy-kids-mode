@@ -914,3 +914,19 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-21, loop iteration: the wifi picker had run; the docs said never (live)
+
+Dogfooded the Wi-Fi picker's `helper` mode: set the kid's `wifi=helper`, installed the repo's
+`share/wifi/shell.qml` (the VM's packaged one was stale -- it lacked the open-network message and
+some font bindings), and launched `omarchy-kids-wifi picker` in the kid session. It loaded and
+rendered "Wi-Fi", "No networks found", the accent-bordered "Try again" button, and "Enter try
+again · Esc close" over the desktop (the VM has no wireless device, so `omarchy-kids-wifi list`
+returned an empty OK) -- proving the layer shape and the list Process ran. No code defect. Fixed the
+docs on `fix/wifi-docs-live-status` (`30c5d3a`): `docs/wifi.md` no longer says the picker "has
+never run against a real Quickshell", leaves the non-empty `SplitParser` path, the join/password
+flows, Esc and the `Super+Shift+W` bind as still unverified, and drops the nearby "the picker
+overlay needs the laptop's card" contradiction; the picker's dangling "UNTESTED header above"
+comment now points at `docs/wifi.md`. fable review MERGE (one pre-existing note fixed). The same
+install-hygiene trap as `timesup.qml` appeared again: the VM's packaged files are older than the
+branches, so a live check must install the file under test first.
