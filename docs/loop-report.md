@@ -1060,3 +1060,24 @@ tolerated, the suite is green; the review found nothing blocking.
 Still open (accepted, recorded for the owner): bare `kill` cannot be forbidden (it would hit
 `killactive`-style dispatchers), and a column-0 `}` inside a helper body would end extraction early
 -- nothing today has one.
+
+### 2026-09-22, loop iteration: what the dogfood VM is actually running
+
+Dogfooded (session healthy at Level 2, 36 min left, no autologin drop-in; the box's four known
+FAILs, 46 PASS). Rather than start another fix on that surface, closed a hole in how our own live
+claims are read: the guest's checkout is old and its installed files were placed by hand iteration
+by iteration, so "verified live on the VM" can describe code the base does not have. Reconstructed
+the installed set empirically -- each installed file's md5 against every one of the 78 local heads'
+blobs, with the PKGBUILD's two build-time substitutions applied, and reported only files that
+differ from `integration/dogfood-2026-09-19` (`.local/VM-PROVENANCE-2026-09-22.md`, untracked;
+`/tmp/vm-provenance.py`). The result is legible: 18 files match exactly one topic branch (the
+deliberate installs, each named in the recipe), 2 share one change across several on-base heads
+(`lib/data.py`'s US-separator reader; `L2.lua`'s "inert at Level 2" note), and 17 match only
+heads *not* descended from the base -- the guest simply predates a base commit (e.g.
+`omarchy-kids-authd` lacks base's `omarchy:hidden=true`), which is why a naive "does it match some
+branch" test called them drift. The recipe's "all green on 2026-09-21" line was false and is
+replaced by the box's real four FAILs and what each means. No product code changed.
+
+Still open (recorded for the owner): the four VM FAILs are this box's history, not defects --
+re-running `omarchy-kids-assert` and re-provisioning `kid-ada`'s band group would clear two of
+them but disturbs the session the loop keeps up for dogfooding, so they stay.
