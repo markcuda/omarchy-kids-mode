@@ -10,7 +10,7 @@ screen), and one command to prune it once it's past its retention window.
 | --- | --- | --- | --- |
 | Active minutes per day | `/var/lib/omarchy-kids/<kid>/usage/<day>` — `lib/time.sh`'s own tree, R-TIME-1 | 1 year | `omarchy-kids-data summary`/`retention` (this issue only reads/prunes it — the ledger itself is docs/time.md's) |
 | App launches (Level 1 tiles only) | `/var/lib/omarchy-kids/<kid>/launches.log` | 90 days | `omarchy-kids-data launches`/`summary`/`retention` |
-| Ask-a-parent requests | `/var/lib/omarchy-kids/queue/*.json` (Appendix D, `lib/ask.py`) | 90 days | `omarchy-kids-data retention` prunes it; docs/panel.md/docs/ask.md read it |
+| Ask-a-parent requests | `/var/lib/omarchy-kids/queue/*.json` (Appendix D, `lib/ask.py`) | 90 days | `omarchy-kids-data retention` prunes it; docs/panel.md and docs/ask.md read it |
 | Browsing history | the kid's own `~/.config/chromium/Default/History` (Chromium's own SQLite db) | the browser's own retention — R-WEB-2 already sets `SavingBrowserHistoryDisabled: false` and `AllowDeletingBrowserHistory: false`, so this package never prunes it | `omarchy-kids-data sites`/`summary`, gated by `history_visible` (below) |
 
 **Never recorded, anywhere in this package (R-DATA-2):** keystrokes, screenshots, file contents,
@@ -240,7 +240,7 @@ Commands:
 `launches`/`summary`'s minutes-and-apps parts read only root-owned-
 but-world-readable files (lib/time.sh's usage/<day>, lib/data.sh's
 launches.log — same convention every other unprivileged read in this
-package already uses, docs/time.md/docs/panel.md). `sites`, and the
+package already uses, docs/time.md and docs/panel.md). `sites`, and the
 top-sites part of `summary`, read a kid's own Chromium profile under
 their home, which this account can't reach unless it *is* that kid or
 is root — see require_root_or_self below. `mine` is meant to be run

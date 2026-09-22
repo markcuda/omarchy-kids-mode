@@ -265,8 +265,9 @@ indent already matches.
 
 **Fix.** Trim `L1.lua`/`L2.lua`/`L3.lua`'s header and per-`require` rationale to one line each
 ("why this module, or why not"), and move the multi-paragraph module-by-module audit trail into
-`docs/session.md` or a new `docs/hyprland-levels.md`, leaving a pointer comment
-("see docs/hyprland-levels.md for why `default.hypr.envs` is not required here") in the source.
+`docs/session.md` or `docs/levels.md` (which holds the per-level rationale today, including why
+`default.hypr.envs` is not required), leaving a pointer comment
+("see docs/levels.md for why `default.hypr.envs` is not required here") in the source.
 
 ## 10. QML style
 
