@@ -6,9 +6,11 @@
 `origin`. Never push `main`; topic branches go to `origin`.
 
 **Dogfooded live on the try-omarchy VM** (Arch aarch64, 875x492): the wizard, Level 1 (grid),
-Level 2 (desktop + picker) and Level 3 (stock desktop) all run; `omarchy-kids-check --live` is
-green; the Ask request path was exercised end to end (kid `submit` -> collect -> `approve` ->
-`omarchy-kids-time grant`).
+Level 2 (desktop + picker) and Level 3 (stock desktop) all run; the Ask request path was
+exercised end to end (kid `submit` -> collect -> `approve` -> `omarchy-kids-time grant`).
+`omarchy-kids-check --live` passes its boot and live sections; the box still shows drift FAILs
+(extra `input`/`video` groups and a stale `/etc/omarchy-kids/hyprland`) that `omarchy-kids-assert`
+would reconcile.
 
 **Fixed from the live passes and merged:** the unavailable tile no longer takes focus; the grid
 fits short screens (height-aware cells, content scaled and clipped); the idle cursor hides; the
@@ -17,6 +19,12 @@ cannot blank the desktop; `PKGBUILD` is `arch=('any')` and a fresh install no lo
 own hook or authd startup; Level 3's menu trim uses omarchy-menu's real extension
 (`~/.config/omarchy/extensions/omarchy-menu.jsonc`, `when: "false"` per id) and no longer runs
 Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips).
+
+**Fixed on topic branches awaiting merge:** `apps.show_missing` is enforced again so the default
+omits a missing app's tile (`fix/show-missing-regression`, live-verified); a portal box's
+parent-only LUKS slot map no longer fails `boot:no-kid-luks-slots` (`fix/boot-no-kid-luks-slots`,
+live-verified). The packaging fixes are on `fix/install-packaging` (`PKGBUILD` `arch=('any')`,
+`docs/install.md`, the fresh-install ordering).
 
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
