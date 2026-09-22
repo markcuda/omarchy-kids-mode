@@ -6,9 +6,15 @@
 `origin`. Never push `main`; topic branches go to `origin`.
 
 **Dogfooded live on the try-omarchy VM** (Arch aarch64, 875x492): the wizard, Level 1 (grid),
-Level 2 (desktop + picker) and Level 3 (stock desktop) all run; `omarchy-kids-check --live` is
-green; the Ask request path was exercised end to end (kid `submit` -> collect -> `approve` ->
-`omarchy-kids-time grant`).
+Level 2 (desktop + picker, two apps tiled 50/50) and Level 3 (stock desktop) all run; the Ask
+request path was exercised end to end (kid `submit` -> collect -> `approve` ->
+`omarchy-kids-time grant`). `omarchy-kids-check --live` is **never** green on this box -- 46 PASS,
+4 FAIL, 3 WARN -- and the four FAILs are that machine's history, not product defects:
+`account:kid-ada:band-group` and `lock:groups:kid-ada` (the kid predates the band group the
+provisioner now creates), `lock:hyprland-configs` (the hand-installed dogfood `L2.lua`), and
+`firmware:password` (a physical step, marked done by hand). Live evidence is also
+**branch-specific**: the guest runs files installed by hand from topic branches, and
+`.local/VM-PROVENANCE-2026-09-22.md` (untracked) resolves which branch each one came from.
 
 **Fixed from the live passes and merged:** the unavailable tile no longer takes focus; the grid
 fits short screens (height-aware cells, content scaled and clipped); the idle cursor hides; the
@@ -18,10 +24,16 @@ own hook or authd startup; Level 3's menu trim uses omarchy-menu's real extensio
 (`~/.config/omarchy/extensions/omarchy-menu.jsonc`, `when: "false"` per id) and no longer runs
 Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips).
 
-**Fixed on a topic branch awaiting merge:** `fix/stale-threshold-name` -- the trust-boundary
-denylist for the kid-side time display named `time_toast_thresholds`, which does not exist (the
-function is `time_warning_thresholds`), so the check was blind to it; the name is fixed and the
-denylist extended to the other policy entry points.
+**Fixed on topic branches awaiting the merge gate:** 33 branches are ahead of the integration line,
+each test-green alone. They are the live-pass fixes (time-status freshness after a grant, the Level
+2 duplicate cursor rule, the toast icon per message, the picker no longer slicing the desktop hint,
+the panel's reset claims, the time read diagnostics, the WARNs for unreadable files, the doc
+references and stale live claims) plus `fix/stale-threshold-name`, which now carries the
+trust-boundary work: the denylist named `time_toast_thresholds`, a function that does not exist (it
+is `time_warning_thresholds`), and has since been extended to every kid overlay enumerated from
+`share/`, the dispatcher exit spelling, and `lib/kids.sh`'s `modal_*` helpers. The append-only
+`PROGRESS.md`/`docs/loop-report.md` conflict as keep-both; `docs/levels.md`, `docs/time.md` and
+`share/hyprland/L2.lua` need a human ordering, so the gate is the owner's.
 
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
@@ -41,9 +53,13 @@ check of `kiosk=true`); the add-on model's five questions
 (`docs/research/2026-09-21-discord-plugin-survey.md`); whether Level 3 keeps the file-manager
 bind (`Super+Shift+F`) under `menu=trimmed`.
 
-**Next work without owner input:** the I-6 sweep over `share/` and `lib/`; live checks of the
-Ask modal's own submit keys and the Time's Up screen on this build; the portal after a kid exits;
-keeping `docs/loop-report.md` current.
+**Next work without owner input:** none the loop can reach. The mechanical sweeps came back clean
+(docs links, docs-cited functions and paths, test-grep alternations, command/doc/test inventory,
+SPEC-id traceability, conventions and file modes, repo-wide `shellcheck -x -S warning`, the
+ignore/untracked audit, and this iteration's installed-file provenance reconstruction);
+`docs/loop-report.md` is current through this iteration. Everything left is behind an owner
+decision (above), the merge gate, the test laptop's hardware (Wi-Fi join, captive portal, a
+band-3-5 kid, the portal's wrong-password path), or a real boot on the laptop.
 
 ## Paused — September 11, 2026
 
