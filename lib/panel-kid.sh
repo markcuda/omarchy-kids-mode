@@ -114,16 +114,17 @@ screen_kid_wifi() { # ACCOUNT NAME
 }
 
 # screen_kid_reset ACCOUNT NAME — clear per-kid overrides back to the
-# band's defaults, keeping the account, name, avatar and password
-# (omarchy-kids-conf reset). Confirmed, because it discards every custom
-# choice at once.
+# band's defaults, keeping identity (account, name, avatar, band, password,
+# onboarded) and theme (omarchy-kids-conf reset). Confirmed, because it
+# discards every custom choice at once.
 screen_kid_reset() { # ACCOUNT NAME
   local account="$1" name="$2"
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local facts=(
-    "Time limits, web mode, Wi-Fi, desktop level and starter-app choices go"
-    "back to this band's defaults. Their account, name, face, band,"
-    "password, theme and any sites you added by hand stay."
+    "Every other screen for this kid goes back to the band's defaults:"
+    "time, web (and safe-search DNS), Wi-Fi, apps, data, desktop level"
+    "and menu. Any sites you added by hand go back too."
+    "The account, name, face, band, password and theme stay."
     ""
     "It does not undo screen time already used today."
   )
