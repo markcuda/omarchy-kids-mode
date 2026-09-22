@@ -1022,3 +1022,22 @@ overclaiming label and the multi-line indent -- are closed too).
 Still open (recorded for the owner): `hyprctl dispatch exit` cannot be blanket-denied because the
 launcher legitimately uses `hyprctl` for focus, so it stays a hole outside the two time overlays,
 and `lib/kids.sh`'s `modal_*` helpers have no equivalent guard.
+
+### 2026-09-22, loop iteration: the dispatcher exit spelling, and two more routes
+
+Dogfooded (session healthy; the box's four known FAILs). Extended the overlay table's remaining
+holes, and the review blocked the first try for a good reason: `dispatch[^[:alpha:]]*exit` misses
+the spelling this repository actually uses -- `hl.dsp.exit()`, which `bin/omarchy-kids-exit` asks
+Hyprland's Lua dispatcher for -- while the launcher's legitimate focus call is `hl.dsp.focus(...)`,
+so a bare `exit` was not the shape to forbid. The dispatcher shape now has its own check, matched
+against the file with newlines removed (a wrapped QML array cannot evade it) and with a
+prefix-tolerant pattern that trips `hl.dsp.exit` and leaves `hl.dsp.focus` alone. The line-based
+table drops that entry and gains the D-Bus route to logind
+(`busctl`/`gdbus`/`qdbus`/`dbus-send`/`login1`, unused today), and the time-overlay rationale now
+says a count -- not a name -- is what justifies its stricter check. Verified: same-line and wrapped
+`hl.dsp.exit` both fail the check, the launcher's focus line passes, and the suite is green.
+
+Still open (recorded for the owner): `lib/kids.sh`'s `modal_*` helpers have no equivalent guard (a
+file-wide one would false-fail on the `KIDS_UNITS` array, which names the assert *service*), and
+bare `kill` cannot be forbidden -- it would hit `killactive`-style dispatchers, so a word-bounded
+form would be needed if ever wanted.
