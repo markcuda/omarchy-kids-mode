@@ -229,11 +229,13 @@ item 6 (the omarchy-menu extension schema) and item 7 (whether Omarchy ships its
 brightness wrappers); item 8's exact per-row layout on unusual geometries still deserves its own
 look.
 
-This repo had two of Omarchy's real `default.hypr.bindings.*` files to check syntax against
-(`bindings-tiling.lua`, `bindings-utilities.lua`) and a handful of other `default.hypr.*` files,
-but no live Hyprland, no Quickshell, and no `default.hypr.bindings.applications` (where terminal
-launching and, per Appendix E, "omarchy-sudo-passwordless" are presumably bound). Everything
-below needs a real Omarchy 4.0.2 box or the VM to close out:
+When this checklist was first written the repo had two of Omarchy's real
+`default.hypr.bindings.*` files to check syntax against (`bindings-tiling.lua`,
+`bindings-utilities.lua`) and a handful of other `default.hypr.*` files, but no live Hyprland and
+no `default.hypr.bindings.applications` (where terminal launching and, per Appendix E,
+"omarchy-sudo-passwordless" are presumably bound). Levels 1 and 2 have since run live (see the
+live-status note above); what is left here is the Level 3 set, which needs the VM or a real
+Omarchy 4.0.2 box to close out:
 
 1. **The exact Level 3 terminal-launching bind(s).** L3.lua unbinds `SUPER + RETURN` on the
    near-universal Hyprland/tiling-WM convention that Super+Return opens a terminal — not
