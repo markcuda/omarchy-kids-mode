@@ -914,3 +914,30 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the packaging fix the handoff called merged was not
+
+Dogfooded first (session healthy at Level 2, Blinken and KTuberling tiled 50/50, clean journal,
+timer toasts the only session-log lines); the live pass found nothing new, so the iteration went to
+the backlog's first actionable item, the packaging fixes. Checking whether they were really in the
+union turned up the opposite of the handoff: `PROGRESS.md` calls `PKGBUILD arch=('any')` and the
+fresh-install ordering "merged", but `integration/dogfood-2026-09-19` still pins `arch=('x86_64')`,
+its two units have no optional-path allowance, and its assert exits 1 on a box with no boot mode and
+no kid -- so the pacman hook would abort a clean install and the aarch64 dogfood VM cannot build the
+package from the union at all. All of it lives only on `fix/install-packaging`, which is based 150
+commits back and would delete newer work if merged as-is. Re-landed the four changes on the current
+tip (`fix/fresh-install-ordering`): `arch=('any')`, `StateDirectory`/`ConfigurationDirectory` so the
+socket-activated authd starts and can write on a box that has never had those directories,
+`-` on the `ReadWritePaths` entries, the `docs/install.md` clone path, and `.SRCINFO`'s arch. Two
+fable review rounds blocked it first: the first for the assert's early exit 0 (it made the `units`
+row, the no-kids notice and two exit-code sentences false, and skipped the machine-level lock issue
+#46 exists for -- fixed by falling through to the existing no-kids branch so `units` still runs and
+decides the exit code), for a running authd that could not write `/var/lib` on a fresh box, and for
+`.SRCINFO`; the second found the same EROFS trap surviving on the `/etc/omarchy-kids` bind (the
+wizard's A2 password check starts authd before Apply). Every new assertion was mutation-checked:
+reverting the assert fix fails five, and dropping `ConfigurationDirectory`, either `StateDirectory`
+or either `-` fails the pkgbuild pins. Suite green (52 files, five environment skips).
+
+Recorded for the owner: `fix/install-packaging` is superseded by this branch and should not be
+merged as-is; and `PROGRESS.md`'s "merged" paragraph on the integration line is wrong in two places
+(PKGBUILD arch, fresh-install ordering), which a docs correction still has to fix there.

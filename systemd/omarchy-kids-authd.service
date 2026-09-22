@@ -7,11 +7,20 @@ After=omarchy-kids-authd.socket
 [Service]
 # A GRANT applies the request as root: the queue under /var/lib and the kid's allow list and
 # overrides under /etc/omarchy-kids must stay writable behind ProtectSystem=strict.
-ReadWritePaths=/var/lib/omarchy-kids /etc/omarchy-kids
+# StateDirectory/ConfigurationDirectory make systemd create both paths (root:root 0755, the mode
+# the commands that normally create them use) before the sandbox is built, so the ReadWritePaths
+# binds below are real from the unit's first start. Without them a socket-activated authd on a
+# fresh box started before anything had written either directory -- the wizard's A2 password
+# check starts it before Apply -- systemd skipped the missing paths, and both the first GRANT and
+# the wizard's own check died (review, 2026-09-22). The leading "-" keeps the unit startable if a
+# path ever vanishes again.
+StateDirectory=omarchy-kids
+ConfigurationDirectory=omarchy-kids
+ReadWritePaths=-/var/lib/omarchy-kids -/etc/omarchy-kids
 Type=simple
 ExecStart=/usr/bin/omarchy-kids-authd
-# Reads /etc/shadow and (optionally) /etc/omarchy-kids/machine.conf; never
-# writes anything, so lock the rest of the filesystem down.
+# Reads /etc/shadow and (optionally) /etc/omarchy-kids/machine.conf, and writes
+# only inside the two bound paths above; lock the rest of the filesystem down.
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes

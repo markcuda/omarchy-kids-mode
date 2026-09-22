@@ -64,9 +64,11 @@ needing --apply.
   --dry-run   Report what would change; write nothing.
   -h, --help  Show this help and exit.
 
-Exit codes: 0 everything selected is (or now is) fine; 1 the trusted boot
-mode is invalid or a selected lock cannot be fixed. A busy boot-mode lock
-skips boot work after a bounded wait and does not fail non-boot repair.
+Exit codes: 0 everything selected is (or now is) fine, and with no kids
+provisioned there is nothing to select but units; 1 the trusted boot mode is
+invalid or missing while a kid is provisioned, or a selected lock cannot be
+fixed. A busy boot-mode lock skips boot work after a bounded wait and does not
+fail non-boot repair.
 EOF
 }
 
@@ -131,14 +133,23 @@ source "$LIB/assert-limine.sh"
 
 main() {
   local boot_mode kids=() k
-  if ! boot_mode="$(boot_mode_get)"; then
-    echo "omarchy-kids-assert: cannot read trusted boot mode; no locks changed" >&2
-    exit 1
-  fi
-
   while IFS= read -r k; do
     [[ -n "$k" ]] && kids+=("$k")
   done < <(kids_list "$KIDS_DIR")
+
+  if ! boot_mode="$(boot_mode_get)"; then
+    # A fresh install has neither a boot mode nor a kid, and the pacman hook runs
+    # this after every transaction, so refusing here aborted a clean install
+    # (live finding, 2026-09-21). With no kids there is nothing boot-related to
+    # lock: fall through to the no-kids branch, which still asserts the
+    # machine-level units lock (issue #46) and decides the exit code from it.
+    # A missing mode with a kid provisioned stays the fail-closed refusal it
+    # always was.
+    if [[ ${#kids[@]} -gt 0 ]]; then
+      echo "omarchy-kids-assert: cannot read trusted boot mode; no locks changed" >&2
+      exit 1
+    fi
+  fi
 
   if [[ ${#kids[@]} -eq 0 ]]; then
     # units is machine-level, not per-kid (R-BOOT-3): needed even with

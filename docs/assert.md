@@ -14,8 +14,12 @@ this command calls (`lib/posture.sh`) is documented in full; this file only cove
 `omarchy-kids-assert` checks, when, and what it does when a check fails.
 
 Before any check or repair, assert validates `boot=disk|portal` through the trusted reader in
-`lib/boot-mode.sh`. Missing, unsafe, duplicate, or invalid state exits `1` before mutation. Assert
-then repairs mode-independent locks.
+`lib/boot-mode.sh`. Missing, unsafe, duplicate, or invalid state exits `1` before mutation — unless
+no kid is provisioned, where there is nothing boot-related to lock yet: then assert falls
+through to the no-kids path below, still asserts the machine-level `units` lock (issue #46), and
+lets that decide the exit code, because the pacman hook runs assert on a box that has never had a
+kid and must not fail the transaction. A kid present with an unreadable mode stays the refusal.
+Assert then repairs mode-independent locks.
 
 Before the boot section, assert waits up to five seconds for the root-owned
 `/run/omarchy-kids/boot-mode.lock`, reads the mode again while holding it, and keeps the lock through
@@ -111,10 +115,11 @@ One line per lock, `<status> <lock-id>`, status one of `ok` / `fixed` / `FAIL` /
 
 ## Exit codes
 
-- **0** — every lock is (or now is) fine, or nothing is provisioned.
-- **1** — the trusted boot mode is invalid or at least one selected lock could not be fixed. A busy
-  transition lock does not add a failure; it skips only the boot section. One bad non-boot lock
-  does not stop later checks.
+- **0** — every lock is (or now is) fine, or no kid is provisioned and the machine-level `units`
+  lock is (or now is) fine.
+- **1** — the trusted boot mode is unreadable while a kid is provisioned, or at least one selected
+  lock could not be fixed. A busy transition lock does not add a failure; it skips only the boot
+  section. One bad non-boot lock does not stop later checks.
 
 `--quiet` prints `fixed`/`FAIL` lines and the exceptional `skip boot-locks:unavailable` line. It
 suppresses `ok`, the expected portal skip, and the no-kids notice; the pacman hook and boot unit

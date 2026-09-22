@@ -15,12 +15,13 @@ makepkg -sf
 
 `-s` asks pacman to install missing declared dependencies. `-f` rebuilds an existing package with
 the same version. The current package is `0.1.0-1`, so the result is
-`omarchy-kids-0.1.0-1-x86_64.pkg.tar.zst`.
+`omarchy-kids-0.1.0-1-any.pkg.tar.zst` (nothing is compiled, so the
+architecture in the name is the PKGBUILD's `arch=('any')`).
 
 Install that package on the test system:
 
 ```sh
-sudo pacman -U omarchy-kids-0.1.0-1-x86_64.pkg.tar.zst
+sudo pacman -U omarchy-kids-0.1.0-1-any.pkg.tar.zst
 ```
 
 The package's install scriptlet then creates its groups and reloads systemd when systemd is
@@ -103,9 +104,14 @@ files are created later by the commands.
 The package does not create these runtime paths itself: `/etc/omarchy-kids/kids/<account>.conf`,
 `/etc/omarchy-kids/machine.conf`, `/etc/omarchy-kids/luks-slots`, the transition-owned
 `/etc/mkinitcpio.conf.d/omarchy_kids.conf`, Chromium policy files,
-polkit and PAM changes, SDDM runtime configuration, `/run/omarchy-kids/`, or
-`/var/lib/omarchy-kids/`. The wizard, provisioning, web, assertion, and removal commands create
-or remove them as their jobs require.
+polkit and PAM changes, or SDDM runtime configuration. The wizard, provisioning, web, assertion,
+and removal commands create or remove them as their jobs require; `/run/omarchy-kids` is created by
+the two socket units' own `DirectoryMode=0755`. `/var/lib/omarchy-kids` and `/etc/omarchy-kids`
+themselves are created by systemd's `StateDirectory=`/`ConfigurationDirectory=` on
+`omarchy-kids-authd.service` (root:root 0755, the same mode the commands use), because that
+socket-activated unit can start before the wizard's Apply has written either one; authd and the
+time ledger also carry `-` on their `ReadWritePaths` entries so a missing path cannot fail the unit
+with `226/NAMESPACE`.
 
 ### Groups
 
