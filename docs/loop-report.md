@@ -981,3 +981,13 @@ so this round records the state for the gate (it supersedes the 20-branch pictur
   Level 3's `Super+Shift+F` under `menu=trimmed`. Live-only work: the real-box menu trim, the
   laptop's Wi-Fi join/captive portal, a band-3-5 kid, the portal's wrong-password path.
 
+### 2026-09-22, loop iteration: third clean round
+
+Dogfooded the Level 2 session (the picker opens and closes, the two windows still tile) and
+finished the I-6 pass over the kid-facing commands: `bin/omarchy-kids-web`'s `launch` is sound -- it
+refuses to start Chromium unless the band's managed policy file is readable (R-WEB-4, fail closed),
+execs an argv array rather than a shell string, and takes its flags from the policy conf. Nothing
+else actionable: three consecutive rounds have found only the component-skew repair (VM state) and
+the gate picture, and every backlog item now needs an owner decision or hardware. Worth pausing the
+loop or pointing it at the owner's decisions instead of more sweeps.
+
