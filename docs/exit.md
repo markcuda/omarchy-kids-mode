@@ -234,9 +234,13 @@ Four things had to change to get there, all found live and now in the code:
   no greeter at all: a black screen until `systemctl restart sddm`. It stays as the last resort
   only.
 
-Not yet exercised live: the wrong-password shake and the 30 s lockout, Esc to close, and the
-parent password on a kid's tile at the portal (#15's PAM line is installed; a portal login with
-the parent password is the next check).
+Exercised live 2026-09-22 (try-omarchy VM), closing the first two of the three: `Super+Shift+K`
+opened the modal; a wrong password showed "That wasn't it."; the third miss turned the field red and
+showed "Too many tries. Try again in 30 seconds." with the key footer hidden while locked; and Esc
+closed the modal with the kid's Hyprland still running -- nothing written, no finish (the full entry
+is in `docs/loop-report.md`, branch `docs/loop-exit-modal-live`). The shake is an animation a still
+cannot capture. Still to check live: the parent password on a kid's tile at the portal (#15's PAM
+line is installed; a portal login with the parent password is the next check).
 
 Root-side finish, 2026-09-03: `omarchy-kids-exit --finish --kid kid-cy` run as root ended Cy's
 session through the compositor's Lua exit and SDDM started a fresh greeter, which is the path
