@@ -18,6 +18,13 @@ own hook or authd startup; Level 3's menu trim uses omarchy-menu's real extensio
 (`~/.config/omarchy/extensions/omarchy-menu.jsonc`, `when: "false"` per id) and no longer runs
 Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips).
 
+**Fixed on topic branches awaiting merge:** `apps.show_missing` is enforced again
+(`fix/show-missing-regression`); a portal box's parent-only LUKS slot map no longer fails
+`boot:no-kid-luks-slots` (`fix/boot-no-kid-luks-slots`); the plugins shelf no longer shifts fields
+on a no-age entry (`fix/plugins-shelf-field-shift`); a non-time `ask` request keeps its `asked_at`
+(`fix/ask-list-empty-minutes-shift`); `session-start` reads the manifest's fields without an
+empty-field shift (`fix/session-start-manifest-fields`). Packaging fixes: `fix/install-packaging`.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After
@@ -36,9 +43,11 @@ check of `kiosk=true`); the add-on model's five questions
 (`docs/research/2026-09-21-discord-plugin-survey.md`); whether Level 3 keeps the file-manager
 bind (`Super+Shift+F`) under `menu=trimmed`.
 
-**Next work without owner input:** the I-6 sweep over `share/` and `lib/`; live checks of the
-Ask modal's own submit keys and the Time's Up screen on this build; the portal after a kid exits;
-keeping `docs/loop-report.md` current.
+**Next work without owner input:** the empty-field tab-collapse class still in
+`bin/omarchy-kids-data`'s browse rows (`read -r t host title visits`, shifting when a page has no
+title); the I-6 sweep over `share/` and `lib/`; the Time's Up screen and the portal after a kid
+exits on this build; keeping `docs/loop-report.md` current. (The Ask modal's submit keys are
+live-verified.)
 
 ## Paused — September 11, 2026
 
