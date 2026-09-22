@@ -107,7 +107,8 @@ dry-run posture is passed through as `--dry-run`.
 
 R-ASK-3 calls the queue format "stable and documented for a future home-network approver"; this
 panel is the first such approver, so it reads `lib/ask.py`'s own `list-open`/`show` directly
-(tab-separated, exact fields) instead of parsing `omarchy-kids-ask list`'s human-formatted columns,
+(0x1f-separated, exact fields; `minutes` is empty for non-time kinds) instead of parsing
+`omarchy-kids-ask list`'s human-formatted columns,
 which pad for a terminal, not a parser. Approve/decline themselves still go through
 `omarchy-kids-ask approve|decline <id> --apply` — this panel never writes a queue record itself,
 same "one thing writes the format" rule `docs/conf.md` applies to a kid's profile.
@@ -253,9 +254,10 @@ at a thin spy that logs its own argv and then runs the real thing):
 Reading the queue: R-ASK-3 says the queue format is "stable and
 documented for a future home-network approver" -- this panel is the
 first such approver, so the Requests screen reads
-lib/ask.py's own `list-open`/`show` directly (tab-separated, exact
-fields) instead of scraping omarchy-kids-ask's human-formatted `list`
-output, which pads columns for a terminal, not a parser.
+lib/ask.py's own `list-open`/`show` directly (0x1f-separated, exact
+fields; `minutes` is empty for non-time kinds) instead of scraping
+omarchy-kids-ask's human-formatted `list` output, which pads columns for
+a terminal, not a parser.
 ```
 
 ## Source header (moved from `bin/omarchy-kids`, issue #49)

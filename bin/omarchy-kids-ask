@@ -479,7 +479,7 @@ cmd_list() {
     return 0
   fi
   printf '%-28s %-12s %-8s %-24s %s\n' ID KID KIND WHAT ASKED_AT
-  printf '%s\n' "$rows" | while IFS=$'\t' read -r id rkid kind what minutes asked_at; do
+  printf '%s\n' "$rows" | while IFS=$'\x1f' read -r id rkid kind what minutes asked_at; do
     [[ "$kind" == time ]] && what="${minutes} min"
     printf '%-28s %-12s %-8s %-24s %s\n' "$id" "$rkid" "$kind" "$what" "$asked_at"
   done

@@ -81,6 +81,11 @@ Every **open** (undecided) request, all kids or one, one line each: id, kid, kin
 for `time`), and when it was asked. Nothing decided ever shows here — that's the whole point of a
 one-keystroke panel. The command requires `is_root` before reading the queue.
 
+The machine-readable form behind this is `lib/ask.py list-open`'s stdout — one row per request,
+fields `id`, `kid`, `kind`, `what`, `minutes`, `asked_at`, separated by ASCII 0x1f (US), not tab:
+`minutes` is an empty field for a non-`time` request, and a tab (IFS whitespace) makes bash `read`
+collapse the run and shift `asked_at` into it. The panel reads this directly (docs/panel.md).
+
 ### `approve <id>` / `decline <id>` — root
 
 `approve` performs the action (dispatch below), then marks the record `approved`, `by: "panel"`.

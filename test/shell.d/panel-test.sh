@@ -429,6 +429,18 @@ check_contains "$out" "Kid: kid-cy" "real: the card falls back to the account"
 check_not_contains "$out" "Kid: kid-cy (kid-cy)" \
   "real: the card does not repeat the account as if it were a name"
 
+# A non-time request has no `minutes`; its row's age must be real, not the
+# epoch-zero "20700d ago" the old tab-IFS read produced when asked_at
+# shifted into the empty minutes field.
+req_site="$(python3 "$ROOT_DIR/lib/ask.py" write "$QUEUE_DIR" --kid kid-ada --kind site --what example.org)"
+req_site="${req_site%.json}"
+answers="$(answers_file requests back quit)"
+run_panel "$answers"
+check_status "$PANEL_STATUS" 0 "a non-time request renders in the Requests list"
+check_contains "$out" "site: example.org (just now)" \
+  "the Requests list shows a real age for a non-time request (asked_at did not shift)"
+rm -f "$QUEUE_DIR/$req_site.json"
+
 # --- real: remove a kid, wrong confirmation -> nothing runs -------------
 
 : >"$ARGV_LOG"

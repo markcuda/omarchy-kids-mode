@@ -283,8 +283,15 @@ def cmd_list_open(argv):
                 asked_at,
             )
         )
+    # US-separated, not tab: `minutes` is an empty field for a non-time
+    # request, and bash `read` with a tab IFS collapses the run, shifting
+    # `asked_at` into it (every consumer reads this as fields). 0x1f is
+    # not IFS whitespace, so an empty field survives; strip it (and CR/LF)
+    # from values so a kid-authored `what` cannot forge one.
     for row in rows:
-        print("\t".join(str(v) for v in row))
+        print("\u001f".join(
+            str(v).replace("\u001f", " ").replace("\n", " ").replace("\r", " ")
+            for v in row))
 
 
 def cmd_reopen(argv):
