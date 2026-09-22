@@ -34,7 +34,9 @@ Quickshell.** Level 1 verified the fullscreen grid, keyboard navigation, launch,
 and the portal after logout; Level 2 verified the desktop hint layer and the windowed searchable
 picker. Two apps open side by side was checked live on 2026-09-22 (Blinken and KTuberling, 446x496
 each at 960x540, and `Super+Shift+Left` swapped them), so it is no longer open; still open from the
-checklist below: every `share/wifi/shell.qml` claim (unchanged). The Level 2 `Super+K` cheat sheet
+checklist below: `share/wifi/shell.qml`'s network-dependent parts (its overlay, list Process, empty
+state, `Try again` and Esc were verified live 2026-09-22, but the list render, password step and
+join outcomes still need a wireless card -- `docs/wifi.md`). The Level 2 `Super+K` cheat sheet
 was checked live on 2026-09-22 and **does nothing there**: `omarchy-menu-keybindings` summons its
 menu with `omarchy-shell shell summon`, which needs a running Omarchy shell, and a Level 2 session
 runs the kids launcher instead (only Level 3's start hook runs `omarchy-launch-shell`); the command
