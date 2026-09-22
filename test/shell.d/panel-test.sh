@@ -1,6 +1,7 @@
 #!/bin/bash
 # Tests bin/omarchy-kids-panel (SPEC.md R-WIZ-7, R-WIZ-8, R-ASK-2,
-# R-TIME-4/5, R-FND-6; issue #21). Drives every screen through
+# R-TIME-4/5, R-FND-6; issue #21). Drives the Home, kid, Screen time, Wi-Fi,
+# Apps, Desktop, Reset, Remove, Requests and machine screens through
 # OMARCHY_KIDS_TUI_ANSWERS, same convention as test/shell.d/wizard-test.sh.
 #
 # Two kinds of check here:

@@ -57,10 +57,11 @@ dry-run posture is passed through as `--dry-run`.
 
 ### One kid (P2)
 
-- **Screen time** shows `omarchy-kids-time status <kid>` verbatim, then three actions:
-  "Give more minutes today" (`omarchy-kids-time grant <kid> <n>`, R-TIME-4: extends *today's*
-  budget only), and editing `budget_min` / `lights_out` (`omarchy-kids-conf set`), each validated
-  the same way the wizard validates them (1-1440 minutes; `HH:MM`, 24-hour).
+- **Screen time** shows `omarchy-kids-time status <kid>` verbatim, then its rows:
+  "Give more minutes today" (`omarchy-kids-time grant <kid> <n>`, R-TIME-4: extends *today's* budget
+  only), and editing each of `budget_min` / `budget_min_weekend` / `lights_out` /
+  `lights_out_weekend` (`omarchy-kids-conf set`), each validated the same way the wizard validates
+  them (1-1440 minutes; `HH:MM`, 24-hour).
 - **Web** shows the band's mode (`omarchy-kids-conf get <kid> web`). A `none`/`filtered` kid gets an
   info screen only — R-WEB-3 says those modes take no allow list, and I-6 means this panel doesn't
   offer to edit one that wouldn't do anything; **Remove a site** is likewise only offered when the
@@ -137,9 +138,6 @@ exact command a write would run, panel-wide, not just for Apply.
 
 - **P5 Confirm remove**: the panel has no parent-password confirm screen; Home's row hands off to
   `bin/omarchy-kids-remove`, which prints its own plan and asks its own confirmation.
-- **Weekend budget/lights-out variants** (`budget_min_weekend`, `lights_out_weekend`): editable
-  through `omarchy-kids-conf set` directly today; the Screen Time screen only edits the weekday
-  pair, matching the issue brief ("edit budget and lights-out").
 
 ## File locations (data settings and resolved paths)
 
@@ -151,11 +149,13 @@ exact command a write would run, panel-wide, not just for Apply.
 | `lib/ask.py` (read directly for Requests, see above) | `lib/` beside `bin/`, else `/usr/lib/omarchy-kids` | resolved beside the command; no override |
 | Each helper binary (`omarchy-kids-conf`/`-time`/`-ask`/`-apps`/`-web`/`-provision`/`-wizard`/`-data`) | resolved beside this script (`kids_bin`); no fallback, no override | the `OMARCHY_KIDS_*_BIN`/`OMARCHY_KIDS_LIB` escapes were removed, `CHANGELOG.md` |
 
-`test/shell.d/panel-test.sh` drives every screen above through `OMARCHY_KIDS_TUI_ANSWERS`, checking
-both the exact `[dry-run] sudo ...` line a write prints and, in a real (`--apply`) run against a
-pass-through `sudo` fake and a thin argv-logging "spy" in front of each real helper binary, that the
-write actually happened (a budget really changed on disk, an app is really hidden, a request is
-really marked approved) — and that a mistyped remove confirmation runs nothing at all.
+`test/shell.d/panel-test.sh` drives the Home, kid, Screen time, Wi-Fi, Apps, Desktop, Reset, Remove,
+Requests and machine screens through `OMARCHY_KIDS_TUI_ANSWERS`, checking both the exact
+`[dry-run] sudo ...` line a write prints and, in a real (`--apply`) run against a pass-through
+`sudo` fake and a thin argv-logging "spy" in front of each real helper binary, that the write
+actually happened (a budget really changed on disk, an app is really hidden, a request is really
+marked approved) — and that a mistyped remove confirmation runs nothing at all. Web, Data, the
+Plugins shelf and Password are not driven (see the 2026-09-21 note below).
 
 ## Verified live (2026-09-02, QEMU test VM)
 
@@ -165,7 +165,23 @@ more minutes today" → 10 printed the exact command in dry-run and, with `--app
 `sudo omarchy-kids-time grant kid-cy 10` after one warmed prompt; the status line updated to
 "9 min left today (budget 1 + 25 granted)". Kid rows answer to their number (or the full
 line), not the account name. Requests, Web, Apps, Password and Remove rows share the same
-code path and are not yet exercised live.
+code path; see the 2026-09-21 note below for which have since been exercised.
+
+## Verified live (2026-09-21, try-omarchy VM, preview mode)
+
+With `OMARCHY_KIDS_TUI_ANSWERS` over ssh (preview mode, no `--apply`), these read screens rendered
+from live root data: Home (kid rows with minutes used/left), the kid screen, Screen time, Web, Apps
+(the band's pack rows, shown/hidden), Data (today and this week), Desktop, and the Plugins shelf
+(which listed a fixture catalog, and the honest empty state without one). Not rendered in this
+pass: the Requests, Password and Remove screens, and the shelf's "Enter installs" path. The
+panel's writes are exercised by `panel-test.sh`, not this run: its dry-run lines are asserted for
+`grant`, `budget_min`, apps `hide`, the Desktop level and theme, both weekend settings, `wifi`,
+`reset` and `provision remove`, and its real-mode pass-through sudo fake runs about half of those
+against the scratch tree (`provision remove` is a faked spy that only logs its argv). Decline, apps `show`,
+the web allow-list write and its `omarchy-kids-web install`, plugins install, the weekday
+lights-out edit and the password path have no coverage there at all. The 2026-09-02 note above is
+where a write (`grant`) ran live. The Password screen is info-only (it points the parent at
+`sudo passwd <kid>`; it is not itself a write).
 
 ## The panel runs for real when a human opens it (2026-09-03)
 
