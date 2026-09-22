@@ -377,10 +377,16 @@ echo
 mkdir -p "$USAGE_DIR"
 echo 23 >"$USAGE_DIR/2026-09-01"
 echo 5 >"$USAGE_DIR/2026-09-02"
+# A granted top-up: its ".grant" sibling sorts after its day, which used to
+# make find_usage_days return non-zero and abort `mine` under set -e, and the
+# summary budget line must name the top-up rather than show base-only.
+echo 15 >"$USAGE_DIR/2026-09-02.grant"
 
 out="$(KIDS_TEST_ACCOUNT=kid-ada OMARCHY_KIDS_NOW="2026-09-02 10:00:00" "$DATA" summary kid-ada)"
 check_contains "$out" "today (2026-09-02)" "summary: today's date"
 check_contains "$out" "minutes used: 5" "summary: today's minutes"
+check_contains "$out" "budget 60 + 15 granted, 70 left" \
+  "summary: the budget line names the granted top-up (I-6), not base-only"
 check_contains "$out" "top apps:" "summary: top apps section present"
 check_contains "$out" "gcompris" "summary: gcompris shows among today's top apps"
 check_contains "$out" "top sites:" "summary: top sites section present (running as the kid)"

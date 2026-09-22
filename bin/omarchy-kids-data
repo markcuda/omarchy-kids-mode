@@ -222,12 +222,19 @@ cmd_summary() {
     echo "total: $total min"
     cutoff="${week_start}T04:00:00"
   else
-    local used budget remaining
+    local used budget remaining granted
     used="$(time_used_minutes "$kid" "$day")"
     budget="$(time_budget_minutes "$kid" "$weekend")"
     remaining="$(time_remaining_minutes "$kid" "$day" "$weekend")"
+    granted="$(time_granted_minutes "$kid" "$day")"
     echo "$kid: today ($day)"
-    echo "minutes used: $used (budget $budget, $remaining left)"
+    # Name the granted top-up too: without it "budget 60, 105 left" reads as
+    # impossible. Same shape as `omarchy-kids-time status`.
+    if ((granted > 0)); then
+      echo "minutes used: $used (budget $budget + $granted granted, $remaining left)"
+    else
+      echo "minutes used: $used (budget $budget, $remaining left)"
+    fi
     cutoff="${day}T04:00:00"
   fi
 
@@ -313,7 +320,9 @@ cmd_mine() {
 }
 
 # find_usage_days DIR — every "YYYY-MM-DD" ledger filename in DIR (no
-# ".grant" siblings), one per line.
+# ".grant" siblings), one per line. Always succeeds: a caller under `set -e`
+# must not abort because the last name it looked at was a ".grant" (which
+# sorts after its day), or `mine` would print nothing past its intro.
 find_usage_days() {
   local dir="$1" f base
   for f in "$dir"/*; do
@@ -321,6 +330,7 @@ find_usage_days() {
     base="$(basename "$f")"
     [[ "$base" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] && printf '%s\n' "$base"
   done
+  return 0
 }
 
 # --- retention ------------------------------------------------------------
