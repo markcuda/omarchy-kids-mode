@@ -914,3 +914,23 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-21, loop iteration: docs/levels.md still called the Level 3 pass unverified
+
+Dogfooding the panel live (main, kid, Screen time, Web, Apps, Desktop screens -- and the box was
+missing the matching `bin/omarchy-kids-panel`, so the panel errored `panel_notice_lines: command
+not found` until the whole panel file set was installed from the branch: an install-hygiene
+reminder, not a repo defect). The live pass found no code defect, so the iteration took the
+recorded I-6 candidate: `docs/levels.md` still said Level 3 was unverified on a real box and that
+`share/menu/omarchy-kids-trimmed.jsonc`'s shape was "a guess", both disproved by the 2026-09-21
+Level 3 pass (and the file's own header). Fixed on `fix/levels-live-status` (`8784df2`): the
+live-status paragraph and files-table row now record what ran (stock desktop, the extension's
+`when: "false"` rows hiding Install/Remove/Update/Setup, no first-run provisioning, two apps
+tiled); checklist item 6 is marked verified, item 2 answered for the provisioning worry, item 1
+checked, item 8's column model confirmed at the tested sizes, and item 3 left open with the real
+reason (the launcher and GCompris self-fullscreen, so the `fullscreen = true` windowrule was never
+exercised). The fable review needed several rounds, each closing a real overclaim (item 3's
+"answered", the `hyprctl binds` no-op conclusion -- it cannot separate "stock never binds it" from
+"the unbind worked" -- and a wrong #200 attribution), ending MERGE. Only `docs/levels.md` changed;
+`levels-test.sh` was unaffected. The panel-install mismatch is noted so future dogfood installs the
+whole component set.
