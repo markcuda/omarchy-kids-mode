@@ -1008,3 +1008,14 @@ run against a real logind, and named a four-property form the code does not use)
 Lesson worth keeping: the loop's live evidence is branch-specific. Any future doc-currency edit here
 must say which branch a "verified" claim belongs to, or it becomes a false claim on integration --
 the same "label claims" rule, one level up.
+
+### 2026-09-22, loop iteration: a repo-side record for the daemon's survival
+
+Closes the one major the fable review left open on the `docs/time.md` change: that doc's unverified
+list asks whether a background `&`'d `omarchy-kids-time daemon` survives
+`omarchy-kids-session-start`'s `exec`, and the only evidence was a VM session log a reader cannot
+see. Recorded here so the doc can cite it: the VM's `/run/user/1001/omarchy-kids/session-1001.log`
+shows the daemon started at 02:19:18 and still logging toasts hours later -- `toast: 10 minutes
+left` at 02:39:49 and 03:09:51, `5 minutes left` at 03:14:21, `1 minute left` at 03:18:51. So it
+does survive the `exec`; nothing in `test/shell.d/session-start-test.sh` asserts it (its time stub
+exits 0), which is the part still open.

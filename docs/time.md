@@ -215,8 +215,10 @@ files, so live evidence can describe code this branch does not have yet.
   live check of this file found the window sitting over the clock; it is not merged here.
 - Whether a background `&`'d `omarchy-kids-time daemon`, started from
   `omarchy-kids-session-start` before it `exec`s the launcher/shell, actually survives that `exec`
-  and keeps running for the life of the session (expected — backgrounded jobs aren't children of
-  the `exec`'d process — but never watched happen on a real Hyprland session).
+  and keeps running for the life of the session. The VM's own session log shows it does (started
+  02:19, still logging toasts at 03:18 on 2026-09-22; the lines are quoted in `docs/loop-report.md`
+  that day); what is still open is a repo-side test -- `test/shell.d/session-start-test.sh`'s time
+  stub exits 0 and asserts nothing about the daemon.
 - The kid adapter reflecting a live root warning/grace document and hiding the card after a root
   grant; the shell test covers the fixed state fixtures, but a kid seeing those surfaces in a real
   session is still unconfirmed.
