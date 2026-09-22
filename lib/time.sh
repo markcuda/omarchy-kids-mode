@@ -71,9 +71,15 @@ time_hm() {
   printf '%s\n' "${now#* }" | cut -c1-5
 }
 
-# time_minutes_since_midnight HH:MM — an integer 0..1439.
+# time_minutes_since_midnight HH:MM — an integer 0..1439. Anything that is not
+# a 24-hour HH:MM (an unreadable or malformed lights-out value) is refused with
+# a plain sentence, not bash's cryptic `10#: invalid integer constant`.
 time_minutes_since_midnight() {
   local hm="$1" h m
+  if [[ ! "$hm" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]]; then
+    printf 'omarchy-kids: %s is not a 24-hour HH:MM time\n' "${hm:-<empty>}" >&2
+    return 1
+  fi
   h="${hm%%:*}"
   m="${hm##*:}"
   # Force base-10: bash treats a leading zero ("09") as octal otherwise,
@@ -91,11 +97,19 @@ time_logical_day() {
 }
 
 # time_conf KID KEY — omarchy-kids-conf get KID KEY, resolved as our own sibling.
+# A failed read is named (kid and key) here, so a broken conf shows up as one
+# clear journal line instead of surfacing later as a bare arithmetic error
+# (live: a bad conf read produced "10#" further down). The status is still
+# conf's own: a value that comes back empty is passed through exactly as
+# before, where bash arithmetic reads it as 0 and the tick fails closed.
 time_conf() {
   local kid="$1" key="$2" bin
   bin="$(dirname "${BASH_SOURCE[0]}")/../bin/omarchy-kids-conf"
   [[ -x "$bin" ]] || bin=/usr/bin/omarchy-kids-conf
-  "$bin" get "$kid" "$key"
+  "$bin" get "$kid" "$key" || {
+    printf 'omarchy-kids: could not read %s for %s\n' "$key" "$kid" >&2
+    return 1
+  }
 }
 
 # time_budget_minutes KID WEEKEND(yes/no) — budget_min(_weekend), via the band (R-TIME-2).

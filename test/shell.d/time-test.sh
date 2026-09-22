@@ -232,6 +232,26 @@ check "$(sed -n 1p <<<"$out")" "2026-09-02" "logical-day: exactly 04:00 already 
 out="$(python3 "$DIR/lib/time.py" logical-day "2026-09-05 10:00:00")"
 check "$(sed -n 2p <<<"$out")" "yes" "logical-day: 2026-09-05 (Saturday) is a weekend"
 
+# lib/time.sh's own helpers: a plain sentence for a bad HH:MM and a named key
+# when conf can't be read (live: a bad conf read surfaced in the ledger tick as
+# bash's cryptic "10#: invalid integer constant").
+tt() { bash -c 'source "$1/lib/time.sh"; shift; "$@"' _ "$DIR" "$@"; }
+check "$(tt time_minutes_since_midnight 19:30)" "1170" \
+  "time_minutes_since_midnight: 19:30 is minute 1170 of the day"
+check "$(tt time_minutes_since_midnight 08:09)" "489" \
+  "time_minutes_since_midnight: 08:09 is base-10 minute 489, not octal"
+bad="$(tt time_minutes_since_midnight banana 2>&1)"; st=$?
+check "$st" 1 "time_minutes_since_midnight: a bad value exits non-zero"
+check_contains "$bad" "banana is not a 24-hour HH:MM time" \
+  "time_minutes_since_midnight: a bad value is refused with a sentence"
+check_not_contains "$bad" "invalid integer constant" \
+  "time_minutes_since_midnight: never bash's 10# error"
+
+bad="$(OMARCHY_KIDS_ETC="$ETC" bash -c 'source "$1/lib/time.sh"; time_conf kid-ada no_such_key' _ "$DIR" 2>&1)"; st=$?
+check "$st" 1 "time_conf: an unreadable key exits non-zero"
+check_contains "$bad" "could not read no_such_key for kid-ada" \
+  "time_conf: an unreadable key names the key and the kid"
+
 # Before the root timer's first tick, status keeps its parent-facing facts
 # by falling back to the read-only ledger calculation.
 set_now "2026-09-02 10:00:00"

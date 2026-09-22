@@ -87,6 +87,12 @@ build-time seam for deterministic tests. No inherited value selects the root clo
 7. Refreshes `/run/omarchy-kids/status.json` and folds launch logs. Those auxiliary writes remain
    best-effort; a runtime-state or ledger write failure does not become `allowed`.
 
+If a budget or lights-out value cannot be read at all (a broken `omarchy-kids-conf`, a hand-edited
+profile), the tick aborts on a named error before writing a fresh state, so the last published state
+stays in force and that tick runs no lock or finish. That fail-open window is on record as ticket W2
+(`docs/research/2026-09-19-per-app-limits-and-weekly-caps-proposal.md`), which proposes a `grace`
+state with reason `policy-invalid`.
+
 Tickets 1 and 2 moved accounting, decisions, locking, and finishing into the root tick. Ticket 3
 leaves the kid-side path as a compatibility display adapter; killing it no longer prevents root
 enforcement or changes the authority state.
