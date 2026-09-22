@@ -58,17 +58,25 @@ if ! MANIFEST_JSON="$($SESSION_BIN --manifest 2>/dev/null)" || [[ -z "$MANIFEST_
   exit 1
 fi
 
+# US (0x1f) separated, not tab: `.theme` is empty for a kid with no theme
+# override (docs/theming.md), and tab is IFS whitespace, so bash `read`
+# would collapse that empty field and shift every one after it. Read the
+# trailing allowlist too, so it cannot be absorbed into the last field.
 if ! MANIFEST_FIELDS="$($JQ_BIN -r '
   [.account, .band, (.level | tostring), .theme, .web,
    (.budget_min | tostring), (.budget_min_weekend | tostring),
-   .lights_out, .lights_out_weekend, (.allowlist | join(","))] | @tsv
+   .lights_out, .lights_out_weekend, (.allowlist | join(","))]
+  | map(tostring | gsub("\u001f"; " ") | gsub("\n"; " ") | gsub("\r"; " "))
+  | join("\u001f")
 ' <<<"$MANIFEST_JSON")"; then
   echo "omarchy-kids-session-start: validated manifest unavailable" >&2
   exit 1
 fi
-IFS=$'\t' read -r ACCOUNT BAND LEVEL THEME WEB BUDGET_MIN BUDGET_MIN_WEEKEND \
-  LIGHTS_OUT LIGHTS_OUT_WEEKEND <<<"$MANIFEST_FIELDS"
-[[ -n "$ACCOUNT" && -n "$BAND" && -n "$LEVEL" && -n "$THEME" && -n "$WEB" &&
+IFS=$'\x1f' read -r ACCOUNT BAND LEVEL THEME WEB BUDGET_MIN BUDGET_MIN_WEEKEND \
+  LIGHTS_OUT LIGHTS_OUT_WEEKEND _ALLOWLIST <<<"$MANIFEST_FIELDS"
+# `.theme` may be empty (docs/theming.md: the kid follows the parent's); every
+# other field must be present or the manifest is unusable.
+[[ -n "$ACCOUNT" && -n "$BAND" && -n "$LEVEL" && -n "$WEB" &&
   -n "$BUDGET_MIN" && -n "$BUDGET_MIN_WEEKEND" && -n "$LIGHTS_OUT" &&
   -n "$LIGHTS_OUT_WEEKEND" ]] || {
   echo "omarchy-kids-session-start: validated manifest unavailable" >&2

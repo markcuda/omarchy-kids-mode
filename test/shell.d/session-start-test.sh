@@ -51,6 +51,8 @@ band=6-8
 level=1
 web=garden
 theme=tokyo-night
+lights_out=21:15
+lights_out_weekend=22:30
 EOF
 printf '{}\n' >"$POLICY"
 chmod 0640 "$POLICY"
@@ -141,10 +143,29 @@ check "$(grep '^OMARCHY_KIDS_BUDGET_MIN=' "$ENV_FILE")" "OMARCHY_KIDS_BUDGET_MIN
   "weekday budget comes from the manifest"
 check "$(grep '^OMARCHY_KIDS_BUDGET_MIN_WEEKEND=' "$ENV_FILE")" \
   "OMARCHY_KIDS_BUDGET_MIN_WEEKEND=60" "weekend budget comes from the manifest"
+check "$(grep '^OMARCHY_KIDS_LIGHTS_OUT=' "$ENV_FILE")" "OMARCHY_KIDS_LIGHTS_OUT=21:15" \
+  "weekday lights-out comes from the profile, not a schema default"
+check "$(grep '^OMARCHY_KIDS_LIGHTS_OUT_WEEKEND=' "$ENV_FILE")" \
+  "OMARCHY_KIDS_LIGHTS_OUT_WEEKEND=22:30" \
+  "weekend lights-out comes from the profile, not the trailing allowlist field"
 [[ ! -e "$RUN/launcher-$(id -u).json" ]] && pass "session-start creates no runtime launcher JSON" ||
   fail_ "session-start creates no runtime launcher JSON"
 [[ ! -e "$RUN/allowlist.json" ]] && pass "session-start creates no runtime allowlist JSON" ||
   fail_ "session-start creates no runtime allowlist JSON"
+
+# A kid with no theme override is valid (follows the parent's, docs/theming.md):
+# session-start must start and export an empty theme, not shift every later
+# field (the manifest carries theme "" for such a kid).
+conf_del "$ETC/kids/$ACCOUNT.conf" theme
+session_manifest build "$ACCOUNT" >/dev/null
+"$SESSION_START" >/dev/null
+check "$?" "0" "a kid with no theme override starts successfully"
+check "$(grep '^OMARCHY_KIDS_THEME=' "$ENV_FILE")" "OMARCHY_KIDS_THEME=" \
+  "an empty theme is exported empty, not shifted into the next field"
+check "$(grep '^OMARCHY_KIDS_WEB=' "$ENV_FILE")" "OMARCHY_KIDS_WEB=garden" \
+  "web mode is still correct when the theme is empty"
+check "$(grep '^OMARCHY_KIDS_BUDGET_MIN_WEEKEND=' "$ENV_FILE")" \
+  "OMARCHY_KIDS_BUDGET_MIN_WEEKEND=60" "weekend budget is still correct when the theme is empty"
 
 rm -f "$MANIFEST" "$ENV_FILE" "$ARGS_FILE"
 out="$("$SESSION_START" 2>&1 >/dev/null)"
