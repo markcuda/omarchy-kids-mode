@@ -265,6 +265,14 @@ else
   ok "trust boundary: no shell read of the kid's runtime log"
 fi
 
+# Root enforcement is named once here (AGENTS.md: one table, never a second list
+# that can drift): the lock, the ledger, the assert, the two parent paths that
+# write the ledger or finish a session, and the finish pair. The exit modal is
+# the one kid surface allowed the finish pair (it runs it after the parent
+# authenticates).
+overlay_root_re='loginctl|omarchy-kids-time-ledger|omarchy-kids-assert|omarchy-kids-time grant|omarchy-kids-bar end'
+overlay_finish_re='omarchy-kids-exit|--finish'
+
 # The kid time display path -- the daemon and every overlay helper it runs --
 # may show root's decision, but it must not make one. cmd_status and cmd_grant
 # are deliberately outside this range: one is the kid-side read, the other the
@@ -275,7 +283,7 @@ fi
 # so revisit this list rather than dropping the entry. Today the daemon shows
 # only what `state`/`warnings_fired` say.
 if hits="$(sed -n '/^show_toast()/,/^}/p;/^show_timesup()/,/^}/p;/^dismiss_timesup()/,/^}/p;/^warning_label()/,/^}/p;/^cmd_daemon()/,/^}/p' bin/omarchy-kids-time |
-  grep -nE 'time_remaining_minutes|time_next_boundary|time_warning_thresholds|time_is_lights_out|time_budget_minutes|time_lights_out|time_used_minutes|time_granted_minutes|remaining_seconds|loginctl|omarchy-kids-exit|--finish' || true)" &&
+  grep -nE "time_remaining_minutes|time_next_boundary|time_warning_thresholds|time_is_lights_out|time_budget_minutes|time_lights_out|time_used_minutes|time_granted_minutes|remaining_seconds|$overlay_root_re|$overlay_finish_re" || true)" &&
   [[ -n "$hits" ]]; then
   bad "trust boundary: kid time display still contains policy or finish capability:"
   printf '     %s\n' "$hits"
@@ -289,20 +297,44 @@ if grep -q 'time_state_read' bin/omarchy-kids-time &&
 else
   bad "trust boundary: kid time display lost root state or ask wiring"
 fi
-# The two display-only time overlays must never enforce: no lock, no finish, no
-# ledger, no assert, and no process of their own. Nothing in the suite executes
-# QML, so this textual check is the only guard on what they run; it asserts the
-# structure (no Process block in either file; no execDetached in toast.qml, and
-# exactly the one kid-side ask call in timesup.qml) as well as the names -- a
-# denylist alone would miss `execDetached(["hyprctl", "dispatch", "exit"])`.
-# time-test.sh carries a narrower duplicate for the finish command alone.
+# No overlay a kid's session can show may reach root enforcement. Every QML or JS
+# file under share/ is checked except the surfaces this repository does not own
+# for a kid session: the parent's bar widget and the SDDM portal. The file list
+# is enumerated, not hand-written, so a *new* overlay is checked from the day it
+# lands. Nothing in the suite executes QML, so this textual check is the only
+# guard on what these files run.
+overlay_hits=""
+while IFS= read -r q; do
+  [[ "$q" =~ ^share/(bar|sddm-theme)/ ]] && continue
+  if [[ ! -f "$q" ]]; then
+    overlay_hits+="$q: missing"$'\n'
+    continue
+  fi
+  re="$overlay_root_re"
+  [[ "$q" == share/exit-modal/* ]] || re="$re|$overlay_finish_re"
+  hits="$(grep -nE "$re" "$q" || true)"
+  [[ -n "$hits" ]] && overlay_hits+="$q: $hits"$'\n'
+done < <(find share -name '*.qml' -o -name '*.js' | sort)
+if [[ -n "$overlay_hits" ]]; then
+  bad "trust boundary: a kid overlay names a root enforcement command:"
+  printf '%s\n' "$overlay_hits" | sed 's/^/     /'
+else
+  ok "trust boundary: no kid overlay names the named enforcement commands (the exit modal may finish)"
+fi
+
+# The two display-only time overlays are stricter still: no process of their
+# own. Nothing in the suite executes QML, so the structure is asserted textually
+# -- no Process block in either file; no execDetached in toast.qml, and exactly
+# the one kid-side ask call in timesup.qml -- because a name denylist alone would
+# miss `execDetached(["hyprctl", "dispatch", "exit"])`. time-test.sh carries a
+# narrower duplicate for the finish command alone.
 overlay_hits=""
 for q in share/time/toast.qml share/time/timesup.qml; do
   if [[ ! -f "$q" ]]; then
     overlay_hits+="$q: missing"$'\n'
     continue
   fi
-  hits="$(grep -nE 'loginctl|omarchy-kids-exit|omarchy-kids-time-ledger|omarchy-kids-assert|--finish|Process[[:space:]]*\{' "$q" || true)"
+  hits="$(grep -nE "$overlay_root_re|$overlay_finish_re|Process[[:space:]]*\{" "$q" || true)"
   [[ -n "$hits" ]] && overlay_hits+="$q: $hits"$'\n'
 done
 toast_detach="$(grep -c 'execDetached' share/time/toast.qml || true)"
