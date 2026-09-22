@@ -309,6 +309,15 @@ exec "$ROOT_DIR/bin/omarchy-kids-provision" "\$@"
 EOF
 chmod +x "$STUBS/omarchy-kids-provision"
 
+# Only GCompris counts as installed, so the Apps screen's honest
+# "not installed" suffix is deterministic (apps list asks pacman -Q).
+cat >"$STUBS/pacman" <<'EOF'
+#!/bin/bash
+[[ "${1:-}" == "-Q" && "${2:-}" == "gcompris-qt" ]] && exit 0
+exit 1
+EOF
+chmod +x "$STUBS/pacman"
+
 export PATH="$STUBS:$PATH"
 
 for fake in omarchy-kids-conf omarchy-kids-time omarchy-kids-ask \
@@ -353,6 +362,10 @@ check_contains "$(cat "$ARGV_LOG")" "omarchy-kids-apps hide kid-ada gcompris" \
   "real: hiding an app actually calls apps hide"
 check_contains "$(cat "$ETC/kids/kid-ada.conf")" "apps.hidden=gcompris" \
   "real: the hidden app is really on disk afterward"
+check_contains "$out" "GCompris (shown)" \
+  "the apps screen marks an installed (shown) app without a suffix"
+check_contains "$out" "Tux Paint (shown, not installed)" \
+  "the apps screen says an allowed-but-missing app is not installed (I-6)"
 
 # --- real: the Wi-Fi mode really lands on disk --------------------------
 
