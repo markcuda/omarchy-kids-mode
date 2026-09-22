@@ -914,3 +914,24 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the trust-boundary denylist named a function that does not exist
+
+Dogfooded (session healthy; the box's four known FAILs), then tried a new mechanical angle --
+identifiers cited by docs and tests that do not exist in the tree. It found `time_toast_thresholds`,
+named in `test/shell.d/trust-boundary-test.sh`'s kid-time denylist and twice in `docs/time.md`. The
+10/5/1 decision function is `time_warning_thresholds` (`lib/time.sh:246`, called by the ledger at
+`bin/omarchy-kids-time-ledger:345`), so the denylist -- the check that the kid-side display can only
+*show* root's decision -- was blind to the one policy function the daemon must not call, and the
+docs pointed at a name no reader can find. Fixed on `fix/stale-threshold-name`; the denylist now
+also names the other policy entry points the review pointed out (`time_next_boundary`, the direct
+readers `time_budget_minutes`/`time_lights_out`/`time_used_minutes`/`time_granted_minutes`) plus
+`remaining_seconds`. Verified by injection: each added name fails the check when placed in
+`cmd_daemon`; `test/all` green; the fable review found nothing blocking.
+
+Review follow-ups recorded for the owner (pre-existing, outside that diff): the check's `sed` range
+covers only `cmd_daemon`, so a policy call in `show_toast`/`show_timesup`/`dismiss_timesup` would be
+invisible (the oneshot daemon tests in `time-test.sh` partly cover it), and `docs/time.md`'s
+Issue-#40 paragraph still says the function is "table-tested in `test/shell.d/time-test.sh`" (that
+file never calls it directly) and that every check logs a `toast-check:` line (no file under `bin/`
+emits it) -- both belong to that paragraph's staleness, which `fix/toast-clock-overlap` also edits.
