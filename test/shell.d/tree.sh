@@ -39,6 +39,7 @@ kids_stub() {
 }
 
 # kids_id_stub DIR ACCOUNT [UID] — `id` for DIR (put DIR on PATH).
+# KIDS_TEST_ACCOUNT/KIDS_TEST_UID/KIDS_TEST_GROUPS override what it answers.
 # `id -un` is how every command now answers "which account am I?", so a
 # test drives that the same way it already drives `loginctl`.
 kids_id_stub() {
@@ -55,6 +56,13 @@ case "\${1:-}" in
     else
       echo "\${KIDS_TEST_UID:-$uid}"
     fi
+    ;;
+  -Gn | -nG)
+    # The groups of the account this stub was built for (a test overrides
+    # KIDS_TEST_GROUPS; the "-" form keeps an explicit empty value empty). A
+    # named account is answered the same way, since that is the only account
+    # a test builds groups for.
+    echo "\${KIDS_TEST_GROUPS-omarchy-kids}"
     ;;
   *) exit 1 ;;
 esac

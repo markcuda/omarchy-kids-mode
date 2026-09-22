@@ -57,7 +57,7 @@ so this is the whole session command SDDM invokes for a kid tile.
    `Hyprland --config /etc/omarchy-kids/hyprland/L<level>.lua`. The kid's own `~/.config/hypr` is never read
    (R-DESK-6): `--config` picks the root-owned file exclusively.
 
-Every check's result — PASS or FAIL — is logged, one line per check, to
+Every check's result — PASS, FAIL or SKIP — is logged, one line per check, to
 `/run/user/<uid>/omarchy-kids/session-<uid>.log`
 — deliberately *not* `/run/omarchy-kids`, which is root-owned and this process never is root).
 
@@ -67,7 +67,7 @@ Every check's result — PASS or FAIL — is logged, one line per check, to
 | --- | --- | --- | --- |
 | a | Profile present at `/etc/omarchy-kids/kids/<account>.conf`, and `level`/`band`/`web` resolve | `profile present` | Yes |
 | b | `/etc/chromium/policies/managed/omarchy-kids-<band>.json` readable by this account, **unless** the profile's `web` is `none` (R-WEB-4) | `browser policy readable` | Yes |
-| c | `/etc/polkit-1/rules.d/40-omarchy-kids.rules` and `41-omarchy-kids-deny.rules` both exist | `polkit rules present` | Yes |
+| c | Polkit refuses a denied action outright. The rules directory is `0750 root:polkitd`, so the check asks polkit itself (`pkcheck`) instead of reading the files; `SKIP` when the invoking account has no Kids Mode profile (see below) | `polkit rules present` | Yes |
 | d | The mount containing the home from `getent passwd "$(id -un)"` contains `noexec` | `home noexec` | Yes |
 | e | `/tmp` is a private `tmpfs` with `nosuid,nodev,noexec` | `private /tmp noexec` | Yes |
 | f | `getty@tty2.service` through `getty@tty6.service` are all masked | `consoles masked` | Yes |
@@ -97,6 +97,15 @@ console and compositor-config checks, but reports the private `/tmp` and `/dev/s
 `sudo -u` process cannot prove them. Exits 1 on any other failed check, otherwise 0. It never
 starts the desktop or writes a session log. Normal login and `--check` still require every
 check, including both private temporary mounts.
+
+The polkit probe is a third `SKIP` case, and it is *not* limited to `--check-setup`: it only says
+something about a kid account, so an invoker with **no Kids Mode profile** — root (authorized
+outright, an empty `pkcheck` answer) or a grown-up's own account (left to the default policy,
+“requires authentication”) — gets `SKIP` with the reason, in every mode, instead of a verdict. Those
+two answers used to be read as “the deny rule is not active”, which was false (found 2026-09-22 by
+running `--check-setup` as root). A *profiled* kid always gets the probe, even if their group
+membership has drifted: that drift is what the check is for, and it fails closed. Run it as the kid,
+as the wizard does, for a verdict.
 
 ## `omarchy-kids-session --install-configs`
 

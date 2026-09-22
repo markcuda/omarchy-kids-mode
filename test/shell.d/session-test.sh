@@ -82,7 +82,12 @@ EOF
 cat >"$STUBS/pkcheck" <<'PK'
 #!/bin/bash
 ans="$(cat "${PKCHECK_ANSWER_FILE:-/dev/null}" 2>/dev/null)"
-[[ -z "$ans" ]] && ans="Not authorized."
+case "$ans" in
+  # polkit's answer when it authorizes outright (root, or an admin inside its
+  # window): no output at all, exit 0.
+  authorized) exit 0 ;;
+  "") ans="Not authorized." ;;
+esac
 printf '%s\n' "$ans" >&2
 [[ "$ans" == *authorized* ]] && exit 1 || exit 0
 PK
@@ -338,6 +343,61 @@ check_eq "$?" 1 "--check still rejects the caller's unsafe namespace"
 out="$("$BIN" 2>&1)"
 check_eq "$?" 1 "normal start still rejects the caller's unsafe namespace"
 [[ -e "$HYPRLAND_LOG" ]] && fail "unsafe namespace must not start Hyprland" || pass "unsafe namespace did not start Hyprland"
+
+# =====================================================================
+# 3b. Root: polkit authorizes root outright, so pkcheck answers nothing
+#     *because root is exempt*, not because the deny rule is off. The
+#     probe cannot tell those apart, so it must SKIP with the reason
+#     rather than blame the rule (found by running --check-setup as
+#     root, 2026-09-22).
+# =====================================================================
+
+# polkit's real answer for root is an empty line and exit 0; the stub can now
+# produce it, so the negative assertion below bites.
+reset_pass
+printf 'authorized\n' >"$PKCHECK_ANSWER_FILE"
+out="$(KIDS_TEST_UID=0 KIDS_TEST_ACCOUNT=root KIDS_TEST_GROUPS='' "$BIN" --check-setup 2>&1)"
+st=$?
+check_eq "$st" 1 "as root: exits 1 (root has no Kids Mode profile)"
+check_contains "$out" "not a Kids Mode kid" "as root: says root is not a kid"
+check_contains "$(printf '%s' "$out" | tr -s ' ')" "polkit rules present SKIP" \
+  "as root: the polkit probe is SKIP, not a verdict about the rule"
+check_contains "$out" "which polkit authorizes outright" "as root: the SKIP says why"
+if grep -qE "polkit rules present +FAIL|FAIL +polkit rules present" <<<"$out"; then
+  fail "as root: gives the polkit row a FAIL verdict about this account"
+else
+  pass "as root: the polkit row is not a verdict about this account"
+fi
+
+# A profiled kid still runs the probe even if their groups have drifted: that
+# drift is exactly what this check catches, so it must FAIL, not SKIP.
+reset_pass
+break_polkit
+out="$(KIDS_TEST_GROUPS=wheel "$BIN" 2>&1)"
+st=$?
+check_eq "$st" 1 "profiled kid without the group: the preflight still fails"
+check_contains "$out" "FAIL polkit rules present" \
+  "profiled kid without the group: the probe still gives a verdict"
+check_contains "$out" "the deny rule does not bind this account" \
+  "profiled kid without the group: the verdict names what it checked"
+[[ -e "$HYPRLAND_LOG" ]] && fail "profiled kid without the group: must not start Hyprland" ||
+  pass "profiled kid without the group: did not start Hyprland"
+
+# Another account the rule does not bind (the parent's own) gets the default
+# policy's "requires authentication", which says just as little about a kid.
+reset_pass
+break_polkit
+out="$(KIDS_TEST_ACCOUNT=parent KIDS_TEST_GROUPS=wheel "$BIN" --check-setup 2>&1)"
+st=$?
+check_eq "$st" 1 "as another account: exits 1 (it has no Kids Mode profile)"
+check_contains "$(printf '%s' "$out" | tr -s ' ')" "polkit rules present SKIP" \
+  "as another account: the polkit probe is SKIP too"
+check_contains "$out" "'parent' has no Kids Mode profile" "as another account: the SKIP says why"
+if grep -qE "polkit rules present +FAIL|FAIL +polkit rules present" <<<"$out"; then
+  fail "as another account: gives the polkit row a FAIL verdict about it"
+else
+  pass "as another account: the polkit row is not a verdict about it"
+fi
 
 for break_fn in break_policy break_polkit break_home break_getty break_level_conf; do
   reset_pass
