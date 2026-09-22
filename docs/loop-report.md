@@ -914,3 +914,16 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: a fresh grant shows in status at once
+
+Dogfooded the VM first (kid-ada at Level 2, session healthy, `omarchy-kids-check --live` all PASS
+except the expected `firmware:password` on a VM), then took the refinement the 2026-09-21 "a grant
+shows in status after the daemon's next tick" entry had left open. `omarchy-kids-time status` now
+keeps the published document only while it is also newer than today's grant file, so a grant a
+parent just made counts at once instead of showing "0 min left" (or an old boundary) until the
+root ledger tick's next pass. The document is not rewritten and enforcement is unchanged: the root
+tick still recomputes from the ledger and acts. `time-test.sh` covers the three states (fresh
+document, a grant newer than the tick, a tick since the grant) and fails without the guard;
+`test/all` green (52 files, five environment skips), `shellcheck -x` clean, and the fable reviewer
+found nothing blocking (six minors closed). Branch `fix/time-status-fresh-grant`.
