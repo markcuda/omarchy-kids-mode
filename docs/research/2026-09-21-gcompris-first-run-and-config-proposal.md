@@ -1,6 +1,10 @@
 # GCompris first-run dialog and its config/quit controls — proposal
 
-Status: proposed, needs the owner's decision. No code changes in this document.
+Status: **approved 2026-09-21 and implemented** — the live check it waited on ran 2026-09-22 (below)
+and the seeding is on branch `feat/gcompris-preseed` (`lib/provision-add.sh` +
+`install_kids_gcompris_config` in `bin/omarchy-kids-provision`, `docs/apps.md`, and the
+assertions in `test/shell.d/provision-test.sh`). This document keeps the proposal as written and
+records what the check found.
 
 ## The live findings (2026-09-21, try-omarchy VM)
 
@@ -8,7 +12,9 @@ The fable live review of the Level 1 screenshots (`docs/dogfood-2026-09-21.md`, 
 
 - On a kid's **first** launch, GCompris shows its own welcome dialog: a paragraph about
   "application settings" and "the language is American English (en_US)", dismissed only by a red X
-  that a six-year-old has to find.
+  that a six-year-old has to find. (2026-09-22: not *only* -- Escape dismisses it too, and the
+  changelog and dataset prompt that follow an update are keyboard-operable as well; see the check
+  below.)
 - GCompris's own bottom bar shows a **wrench** (its configuration) and a **power/quit** button to
   the kid.
 
@@ -27,12 +33,12 @@ the app's own config/quit chrome is controlled by `kiosk` among other keys.
 
 ## Options
 
-1. **Pre-seed the per-kid config at provisioning (recommended, needs one live check).** During
-   `omarchy-kids-provision` (or the account step of the wizard), write the kid's
-   `~/.config/gcompris/gcompris-qt.conf` with the settings we want before the app first runs:
-   `fullscreen=true` and a `_firstRun`-style marker if one exists (the run counters suggest the
-   dialog keys off `[Internal]`; the exact key needs one live verification), and evaluate
-   `kiosk=true` for hiding the wrench/quit.
+1. **Pre-seed the per-kid config at provisioning (recommended; the live check below settled what
+   it writes).** During `omarchy-kids-provision` (or the account step of the wizard), write the
+   kid's `~/.config/gcompris/gcompris-qt.conf` before the app first runs: `fullscreen=true`,
+   `kiosk=true` for the wrench/quit, and the `[Internal] lastGCVersionRan` marker — which the check
+   pinned as what suppresses the post-upgrade changelog and dataset prompt, the config existing
+   being what suppresses the "first time" welcome.
    - Precedent: the wizard already owns the kid's account creation, so writing one app's first-run
      state is a provisioning concern, not a new mechanism.
    - Honest boundary: this is **configuration, not enforcement** — it sets the app's own options,
@@ -45,14 +51,9 @@ the app's own config/quit chrome is controlled by `kiosk` among other keys.
 
 ## Recommendation
 
-Option 1, gated on a 15-minute live check on the VM:
-
-1. Create a throwaway account (or reset `kid-ada`'s GCompris state), write a candidate
-   `gcompris-qt.conf` before first launch, launch the app, and confirm the welcome dialog is gone
-   and which affordances `kiosk=true` actually hides.
-2. If `kiosk=true` hides the wrench/quit in a way that still lets the app be closed with
-   `Super+Q` (our bind) and does not break progress saving, adopt it; otherwise adopt only the
-   fullscreen/first-run seeding and **document the wrench/quit as app-owned** (option 2's honesty).
+Option 1, whose live check ran on 2026-09-22 — see the results section below: `kiosk=true` hides
+the wrench and the quit button and our `Super+Q` still closes the app, so it is adopted rather than
+documented away.
 
 ## What it would touch (when approved)
 
@@ -76,3 +77,32 @@ Option 1, gated on a 15-minute live check on the VM:
 Pre-seed the config at provisioning, as proposed. Implementation waits on the one VM check
 (what `kiosk=true` hides; what suppresses the welcome dialog), then ships with a provisioning
 test asserting the seeded file exists and is kid-owned.
+
+## Live check, 2026-09-22 (try-omarchy VM, gcompris-qt 26.1-1) — done
+
+Reset and re-seeded `kid-ada`'s config between launches; what the check found, by state:
+
+| config state at launch | what the kid sees |
+| --- | --- |
+| no config at all | "Welcome to GCompris! … for the first time … Your current language is American English (en_US)." with a red X |
+| config without `[Internal] lastGCVersionRan` | a "GCompris has been updated!" changelog, then a "Some activities have new dataset available" prompt with Apply/Cancel |
+| seeded: `fullscreen=true`, `kiosk=true`, `lastGCVersionRan=260100` | no dialog at all; the app opens straight to its home screen |
+
+- **The marker is `lastGCVersionRan`**, written as the app's own number (`major*10000 + minor*100 +
+  patch`: 26.1 -> 260100, read back from what the app itself wrote), not `exeCount`.
+- **`kiosk=true` hides the kill switch and the workshop**: the bottom bar loses its power/quit
+  button, the wrench and the menu; the home, help, favourites hint and search stay. Closing still
+  belongs to us — `Super+Q` ended the app even with a modal up, so the kiosk chrome cannot trap a
+  kid — and the app kept writing its own state (our two keys survived its rewrite, `exeCount`
+  advanced).
+- **The check also corrected the premise**: the finding above said the welcome dialog is dismissed
+  *only* by its red X. It is not — Escape dismissed the welcome and the changelog, and Tab then
+  Enter dismissed the dataset prompt. All of them are keyboard-operable; the dialogs are a nuisance
+  a kid can clear, not a mouse-only trap.
+- A minimal seeded file is enough: GCompris keeps our keys and fills in its own on first run, so the
+  provisioner does not have to write the app's full default set.
+
+What shipped with it: the seeding is conditional (`fullscreen`, `kiosk`, the marker when the
+packaged version can be read) and **never rewrites a config the app has already written**; a
+version that cannot be read is said out loud rather than guessed. `docs/apps.md` has the same facts
+for a reader who starts there.

@@ -286,6 +286,36 @@ the AUR-only Tux Paint with a line, and installed the other seven in one transac
 ninety seconds; `list` showed them installed and the launcher drew nine real tiles at the next
 login.
 
+## Per-app config we seed at provisioning: GCompris (2026-09-22)
+
+`omarchy-kids-provision add` writes one app's own config before that app has ever run:
+`<kid home>/.config/gcompris/gcompris-qt.conf`, with `fullscreen=true`, `kiosk=true` and
+`[Internal] lastGCVersionRan=<the packaged gcompris-qt version, in the app's own number form>`.
+`lib/provision-add.sh` calls `install_kids_gcompris_config` (`bin/omarchy-kids-provision`), which
+creates the file kid-owned, mode 0644, and **never rewrites one that already exists** — from its
+first run on, the file is the app's own state and the app owns it.
+
+This is configuration, not a lock (I-6). What it buys, each part verified live on the try-omarchy
+VM on 2026-09-22 and recorded in `docs/research/2026-09-21-gcompris-first-run-and-config-proposal.md`:
+
+- `kiosk=true` removes the app's own quit, configuration (wrench) and menu buttons from its bottom
+  bar. The kid still leaves the app with our `Super+Q` bind — checked with a modal up, so it does
+  not depend on the app's chrome — and the app still writes its own settings (`exeCount` rose across
+  the run, and our two keys survived its rewrite).
+- GCompris's one-time screens key off two different things, which is why the seed writes both a
+  config and the marker: with **no config at all** it shows its "Welcome to GCompris! ... for the
+  first time" dialog, and with a config but **no version marker** it shows a "has been updated!"
+  changelog followed by a dataset-reset prompt. Seeding the file removes the first; the marker
+  removes the second. All of them are dismissible by keyboard (Escape for the welcome and the
+  changelog, Tab then Enter for the dataset prompt's buttons), so a missing marker costs a
+  nuisance, not a trap.
+- The number is the app's own encoding (`major*10000 + minor*100 + patch`), read back from what the
+  app itself wrote: gcompris-qt 26.1 became `260100`. When the packaged version cannot be read, the
+  file is seeded without the marker and the provision says so on stderr rather than guessing.
+
+The check also corrected a claim in the proposal's own findings ("dismissed only by a red X that a
+six-year-old has to find"); the proposal records the correction inline.
+
 ## Source header (moved from `bin/omarchy-kids-apps`, issue #49)
 
 Kept for reference; the file itself now carries a 3-line pointer instead.

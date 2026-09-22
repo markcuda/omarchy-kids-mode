@@ -914,3 +914,70 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the GCompris check the owner's approval waited on
+
+Dogfooded first (Level 2 healthy, 94 min left, clean journal, `omarchy-kids-check --live` at 49
+PASS / 1 FAIL / 3 WARN -- only `firmware:password`, a physical step). The backlog's live-UI item
+ends with the GCompris first-run finding, and the proposal for it had been approved on 2026-09-21
+with exactly one thing outstanding: a live check of what `kiosk=true` hides and what suppresses the
+welcome dialog. That check is this iteration.
+
+Reset `kid-ada`'s config and re-seeded it between launches on the aarch64 VM (gcompris-qt 26.1-1),
+launching each time through our own picker:
+
+- No config: "Welcome to GCompris! ... for the first time" with a red X.
+- Config without `[Internal] lastGCVersionRan`: a "GCompris has been updated!" changelog, then a
+  "Some activities have new dataset available" prompt with Apply/Cancel.
+- Seeded with `fullscreen=true`, `kiosk=true` and `lastGCVersionRan=260100`: no dialog at all.
+
+So the marker is the version key (the app's own encoding, `major*10000+minor*100+patch`), not the
+run counter; `kiosk=true` removes the power/quit button, the wrench and the menu, leaving home,
+help, the favourites hint and search; `Super+Q` still closed the app with a modal up, so its chrome
+cannot trap a kid; and the app merged our two keys with its own on first run (`exeCount` rose). The
+check also corrected the finding's premise: those dialogs are **not** red-X-only -- Escape cleared
+the welcome and the changelog, Tab then Enter cleared the dataset prompt, so they are nuisances a
+kid can keyboard past, not mouse-only traps.
+
+With the check done and the owner's approval in hand, the seeding shipped on this branch:
+`install_kids_gcompris_config` + `gcompris_version_number` in `bin/omarchy-kids-provision`, called
+by `lib/provision-add.sh` like the menu trim, writing the kid's config kid-owned 0644 and **never
+rewriting one the app has already written**; when the packaged version cannot be read it seeds
+without the marker and says so rather than guessing. `docs/apps.md` states it is configuration, not
+a lock, and `docs/research/2026-09-21-gcompris-first-run-and-config-proposal.md` now carries the
+results table and the status change.
+
+Verified: `provision-test.sh` asserts the seeded file's content, mode and kid ownership (a `chown`
+stub, so the ownership is checked rather than attempted) plus the leave-alone path, and each new
+assertion was mutation-checked -- dropping the existing-file guard, `kiosk=true`, or the marker
+fails its own check and names it. Two of those assertions passed vacuously on the first two tries
+(a fourth add reshuffled the test's exact-content checks, and the account got slugged to
+`kid-ben-2`); both are now real, and the skip-path block runs last with its own boot-mode fixture.
+The suite is green, and the VM's GCompris config is back to exactly what it was before the check.
+
+The independent review then blocked the first shape of the writer, and it was right twice. Root was
+writing through a path a kid could have replaced -- `[[ -e ]]` passes over a *dangling* symlink, and
+`remove --keep-home` plus re-adding the same account leaves a home a Level 3 kid has had a shell in,
+which is rule 9's exact shape; the writer now refuses a symlink at either directory or the file and
+stages-then-renames (rename(2) replaces a link instead of following it), and the test plants a link
+to prove nothing is written through it. And the directory was being created root:root, which would
+have stopped Qt's QSettings from ever writing its lock and temp file beside the config -- the app
+would have kept showing its "has been updated" screen after every upgrade. The file *and* both
+directories are now handed to the kid (`install_kids_chromium_flags` had the same root-owned
+`.config` gap when it creates one, fixed alongside), and the test pins the three-path `chown`. Two
+smaller review findings are closed too: the arithmetic now forces decimal (`10#`), so a version like
+26.08 cannot abort a provision halfway, and the warning and `docs/apps.md` no longer claim the
+version marker is what suppresses the *welcome* dialog -- the check's own table shows the config
+existing is what does that, and the marker is what suppresses the post-upgrade changelog.
+
+A second review round found that the one-line directory chown added to
+`install_kids_chromium_flags` had reintroduced the same shape there (a chown dereferences a symlinked
+`~/.config`), so the guard became one shared helper and then, better, one preflight in `cmd_add`:
+`kid_home_writable_paths` is the single list of what `add` writes into a kid's home, and the add
+refuses -- before creating anything, exit 2, naming the path -- when any of them is a symlink. That
+covers the writers the test's own plant-a-link case exposed beyond the two this branch touched (the
+menu trim and the migration marker had the same exposure, and it is pre-existing rather than
+introduced here). The symlink is a deliberate bypass shape, so the reproduction lives in the
+untracked private area (`.local/recovery/FINDING-2026-09-22-kid-home-link-PRIVATE.md`) rather than in
+this report, per `SECURITY.md`; the mitigation is on this branch, and the owner may want a private
+advisory for the window before it merges.

@@ -146,11 +146,14 @@ unique_account() {
 # omarchy-provision-user when it doesn't exist -- guessed marker format,
 # TODO(#10). docs/provision.md "Known gap".
 mark_migrations_done() {
-  local account="$1" home migrations_src state_dir f
+  local account="$1" home migrations_src state_dir f stage
   home="$(home_dir_for "$account")"
   migrations_src="${OMARCHY_MIGRATIONS_DIR:-/usr/share/omarchy/migrations}"
   state_dir="$home/.local/state/omarchy"
   install -d -m 0700 "$state_dir"
+  # Staged and renamed like the app configs: a plain redirect would follow a
+  # symlink a kid could have planted at this exact path.
+  stage="$(mktemp "$state_dir/.migrations.log.XXXXXX")"
   {
     if [[ -d "$migrations_src" ]]; then
       for f in "$migrations_src"/*; do
@@ -158,7 +161,47 @@ mark_migrations_done() {
         printf '%s %s\n' "$(basename "$f")" "$(date -u +%FT%TZ)"
       done
     fi
-  } >"$state_dir/migrations.log"
+  } >"$stage"
+  # 0600 like the directory it sits in (root-owned 0700), and staged so the write
+  # cannot follow a link a kid planted at this exact path.
+  chmod 0600 "$stage"
+  mv -f "$stage" "$state_dir/migrations.log"
+  chown "$account:$account" "$state_dir" 2>/dev/null || true
+}
+
+# symlinked_kid_path PATH... -- prints the first PATH that is a symlink and fails.
+# Rule 9: root must never write through (or chown through) a path a kid could
+# have replaced, and `-L` is true for a dangling link, which a bare `-e` misses.
+# Every writer below runs at `add` time, when a kid's home may be one an earlier
+# account left behind (`remove --keep-home`) after that kid had a shell in it.
+symlinked_kid_path() {
+  local p
+  for p in "$@"; do
+    if [[ -L "$p" ]]; then
+      printf '%s\n' "$p"
+      return 1
+    fi
+  done
+  return 0
+}
+
+# kid_home_writable_paths HOME -- every path under a kid's home that `add`
+# writes into. The list is the one table for this rule; a writer that starts
+# writing somewhere new adds its path here, and the refusal below is what keeps
+# root from following a kid-planted link on any of them.
+kid_home_writable_paths() {
+  local home="$1"
+  printf '%s\n' \
+    "$home/.config" \
+    "$home/.config/chromium-flags.conf" \
+    "$home/.config/gcompris" \
+    "$home/.config/omarchy" \
+    "$home/.config/omarchy/extensions" \
+    "$home/.config/omarchy/extensions/omarchy-menu.jsonc" \
+    "$home/.local" \
+    "$home/.local/state" \
+    "$home/.local/state/omarchy" \
+    "$home/.local/state/omarchy/migrations.log"
 }
 
 # --- Chromium launch flags override (issue #44) -----------------------
@@ -170,12 +213,16 @@ install_kids_chromium_flags() {
   local account="$1" home config_dir dest stage
   home="$(home_dir_for "$account")"
   config_dir="$home/.config"
-  install -d -m 0755 "$config_dir"
   dest="$config_dir/chromium-flags.conf"
+  install -d -m 0755 "$config_dir"
   stage="$(mktemp "$config_dir/.chromium-flags.conf.XXXXXX")"
   cp -f "$SHARE/policy/chromium-flags.conf" "$stage"
   chmod 0644 "$stage"
   mv -f "$stage" "$dest"
+  # The file stays root:root deliberately (a kid must not put the flag back),
+  # but the directory is the kid's: root-owned, a kid's own apps could not save
+  # any config at all.
+  chown "$account:$account" "$config_dir" >/dev/null 2>&1 || true
   if ! chown root:root "$dest" >/dev/null 2>&1; then
     echo "  (could not chown $dest to root:root -- fine outside a real root run)" >&2
   fi
@@ -209,6 +256,78 @@ install_kids_menu_trim() {
   install -m 0644 "$src" "$dest"
   chown "$account:$account" "$dest" 2>/dev/null ||
     echo "  (could not chown $dest to $account -- fine outside a real root run)" >&2
+}
+
+# gcompris_version_number — the number GCompris itself writes into
+# lastGCVersionRan (major*10000 + minor*100 + patch). Verified 2026-09-22
+# against the value the app wrote on first run: gcompris-qt 26.1 -> 260100.
+# Prints nothing when the installed version cannot be read, and the caller then
+# seeds without the marker rather than guessing.
+gcompris_version_number() {
+  command -v pacman >/dev/null 2>&1 || return 0
+  local raw major minor patch
+  raw="$(pacman -Q gcompris-qt 2>/dev/null)" || return 0
+  raw="${raw##* }" # "gcompris-qt 26.1-1" -> "26.1-1"
+  raw="${raw%%-*}" # "26.1-1" -> "26.1"
+  IFS=. read -r major minor patch <<<"$raw"
+  [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ ]] || return 0
+  [[ "${patch:-0}" =~ ^[0-9]+$ ]] || patch=0
+  # 10# forces decimal: bash reads a leading zero as octal, so "26.08" would be
+  # an arithmetic error that takes the whole provision down with it.
+  printf '%s\n' "$((10#$major * 10000 + 10#$minor * 100 + 10#${patch:-0}))"
+}
+
+# install_kids_gcompris_config ACCOUNT — pre-seed GCompris's own config before
+# the app has run once (docs/apps.md; the proposal is
+# docs/research/2026-09-21-gcompris-first-run-and-config-proposal.md, approved
+# 2026-09-21 and VM-checked 2026-09-22). Configuration, not a lock: kiosk=true
+# hides the app's own quit, configuration and menu buttons (the kid still closes
+# it with Super+Q, our bind) and fullscreen=true matches every kid level. The
+# app shows its "first time" welcome when it has no config at all, and its
+# "has been updated" changelog plus a dataset prompt when it has one without the
+# [Internal] version marker: seeding the file removes the first, the marker the
+# second -- all verified live, all one-time, all keyboard-dismissible. The app
+# owns the file from its first run on, so an existing one is never rewritten.
+install_kids_gcompris_config() {
+  local account="$1" home config_dir dest stage version
+  home="$(home_dir_for "$account")"
+  config_dir="$home/.config/gcompris"
+  dest="$config_dir/gcompris-qt.conf"
+
+  # cmd_add's own preflight refuses a kid-planted link on every path this
+  # command writes (kid_home_writable_paths); staging then renaming keeps this
+  # writer safe on its own too, since rename(2) replaces a link at the
+  # destination instead of following it.
+  if [[ -e "$dest" ]]; then
+    if [[ ! -f "$dest" ]]; then
+      echo "warning: refusing to seed GCompris for $account: $dest is not a regular file" >&2
+      return 0
+    fi
+    echo "  ($account already has $dest -- left as the app wrote it)"
+    return 0
+  fi
+
+  version="$(gcompris_version_number)"
+  install -d -m 0755 "$config_dir"
+  stage="$(mktemp "$config_dir/.gcompris-qt.conf.XXXXXX")"
+  {
+    printf '[%%General]\nfullscreen=true\nkiosk=true\n'
+    if [[ -n "$version" ]]; then
+      printf '\n[Internal]\nlastGCVersionRan=%s\n' "$version"
+    fi
+  } >"$stage"
+  chmod 0644 "$stage"
+  mv -f "$stage" "$dest"
+  # The directories as well as the file: a root-owned ~/.config would stop the
+  # kid's own apps from saving anything, and Qt's QSettings needs to write its
+  # lock and temp file beside this one. Handing over a directory the kid already
+  # owns is a no-op, and chown is not recursive, so nothing inside changes owner.
+  if ! chown "$account:$account" "$home/.config" "$config_dir" "$dest" >/dev/null 2>&1; then
+    echo "  (could not chown $home/.config, $config_dir and $dest to $account -- fine outside a real root run)" >&2
+  fi
+  if [[ -z "$version" ]]; then
+    echo "warning: could not read the installed gcompris-qt version; $account will see GCompris's \"has been updated\" changelog and a dataset prompt once" >&2
+  fi
 }
 
 # --- thin dispatch: one lib/provision-<verb>.sh per subcommand -------------

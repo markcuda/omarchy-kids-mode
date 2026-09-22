@@ -4,3 +4,6 @@ __pycache__/
 /test/live/out/
 .DS_Store
 .opencode/opencode-loop/
+
+# Local working state, recipes and private findings -- never committed.
+.local/
