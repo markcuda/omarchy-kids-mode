@@ -935,3 +935,19 @@ invisible (the oneshot daemon tests in `time-test.sh` partly cover it), and `doc
 Issue-#40 paragraph still says the function is "table-tested in `test/shell.d/time-test.sh`" (that
 file never calls it directly) and that every check logs a `toast-check:` line (no file under `bin/`
 emits it) -- both belong to that paragraph's staleness, which `fix/toast-clock-overlap` also edits.
+
+### 2026-09-22, loop iteration: the denylist now covers the daemon's own helpers
+
+Dogfooded (session healthy; the box's four known FAILs). Took last review's follow-up: the trust
+boundary's kid-time denylist inspected only `cmd_daemon`, so a policy or finish call added to one of
+the daemon's overlay helpers (`show_toast`, `show_timesup`, `dismiss_timesup`, `warning_label`)
+would have been invisible to it. The window now covers those four plus `cmd_daemon`, with
+`cmd_status`/`cmd_grant` deliberately outside (the kid-side read and the parent path both touch the
+ledger legitimately), and a note that `remaining_seconds` is a state-file field a legitimate display
+read could need. Verified by injection into `show_toast` (invisible to the old window, now fails the
+check); `test/all` green; `shellcheck -x` clean; fable review nothing blocking.
+
+Still pre-existing and recorded for the owner: the check is intra-file, so a `Process` block added
+to `share/time/timesup.qml` or a `loginctl` in a `lib/kids.sh` `modal_*` helper would be invisible
+(the reviewer read both and the boundary holds today), and the dispatch block and globals sit
+outside the window as before.
