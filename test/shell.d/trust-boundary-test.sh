@@ -265,8 +265,16 @@ else
   ok "trust boundary: no shell read of the kid's runtime log"
 fi
 
-# The kid time path may display root's decision, but it must not make one.
-if hits="$(sed -n '/^cmd_daemon()/,/^}/p' bin/omarchy-kids-time |
+# The kid time display path -- the daemon and every overlay helper it runs --
+# may show root's decision, but it must not make one. cmd_status and cmd_grant
+# are deliberately outside this range: one is the kid-side read, the other the
+# parent path, and both legitimately touch the ledger.
+#
+# One entry is a state-file field, not a function: `remaining_seconds` is a
+# legitimate display read *if* the daemon ever shows "N minutes left" from it,
+# so revisit this list rather than dropping the entry. Today the daemon shows
+# only what `state`/`warnings_fired` say.
+if hits="$(sed -n '/^show_toast()/,/^}/p;/^show_timesup()/,/^}/p;/^dismiss_timesup()/,/^}/p;/^warning_label()/,/^}/p;/^cmd_daemon()/,/^}/p' bin/omarchy-kids-time |
   grep -nE 'time_remaining_minutes|time_next_boundary|time_warning_thresholds|time_is_lights_out|time_budget_minutes|time_lights_out|time_used_minutes|time_granted_minutes|remaining_seconds|loginctl|omarchy-kids-exit|--finish' || true)" &&
   [[ -n "$hits" ]]; then
   bad "trust boundary: kid time display still contains policy or finish capability:"
