@@ -915,6 +915,26 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
 
+### 2026-09-22, loop iteration: dogfood round, nothing to fix
+
+Dogfooded the parent panel's remaining screens live (Web, Desktop, and the theme picker it opens)
+and re-ran `omarchy-kids-check --live`. All honest: the Web screen says "Editable list: no -- this
+mode has no allow list" for a non-garden mode and lists the kid's own sites for garden; the Desktop
+screen shows the level and theme; the theme picker offers exactly the six system themes and exits on
+Esc, as its footer says. The live check is the box's usual 46 PASS plus its four known FAILs
+(band-group, groups, the `lock:hyprland-configs` my L2.lua install invalidated, firmware:password).
+
+Also read two libs not yet swept. `lib/theme.sh`'s `$OMARCHY_PATH` handling is the documented
+issue-#48 design (`docs/theming.md`), and the same variable being unset in a kid session is what the
+Level 2 cheat-sheet finding turned on. `lib/session-manifest.sh` renders the launcher's manifest to
+a stage in the root-owned manifest dir, schema-validates it, chowns it root:root 0644, publishes it
+atomically, and re-validates it when served, so the `mktemp` is never a kid-writable path into the
+kid's tile argv -- the "root-validated manifest" is real, not a comment.
+
+Nothing actionable this round. The loop's remaining work is the owner's gate: 32 branches ahead of
+integration, the SPEC amendment, the GCompris proposal, packaging, Level 2 verification,
+favorites/recents and W2.
+
 ### 2026-09-22, loop iteration: a component-set skew, found live on the panel
 
 Dogfooded the parent panel's remaining Kid screens live (Home, the Kid row menu, Screen time,
