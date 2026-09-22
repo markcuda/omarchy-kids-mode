@@ -1,0 +1,8 @@
+# docs/loop-report.md is an append-only running log: every loop branch adds its
+# own entry at the end and no branch rewrites an earlier one (verified across
+# the ~50 branches ahead of the gate). The built-in `union` merge driver keeps
+# both sides' entries on merge instead of conflicting on every single branch.
+#
+# PROGRESS.md is deliberately not listed: branches rewrite its top section, so a
+# union there would concatenate versions rather than merge them.
+docs/loop-report.md merge=union
