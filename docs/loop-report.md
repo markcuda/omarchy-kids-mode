@@ -953,3 +953,13 @@ Also confirmed the band data is consistent: four bands, each with a pack, a poli
 file, and `render_policy_json` merges the list only for garden bands (the 13+ list is a parked proxy
 blocklist, never merged), so R-WEB-3 holds. Nothing actionable this round; the remaining work is the
 owner's (DECISIONS-NEEDED §7).
+
+### 2026-09-22, loop iteration: conventions and file-mode audit, clean
+
+Dogfooded (session healthy; 46 PASS plus the box's four known FAILs) and audited the repo's own
+conventions mechanically: every bash command in `bin/` has `#!/bin/bash`, `set -euo pipefail`, an
+`omarchy:summary=` line and the executable bit; the two Python daemons (`omarchy-kids-authd`,
+`omarchy-kids-wifid`) carry `omarchy:summary=` and `omarchy:hidden=true`, and R-BUILD-1 sanctions a
+Python verifier ("a tiny Python or Perl helper") for both. Every tracked file's mode matches its
+kind once the executable set is read correctly (`bin/`, the `initcpio/` hook scripts, `scripts/`,
+`test/live/`, `test/phase1/`, `test/all`). Nothing to fix.
