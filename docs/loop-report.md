@@ -987,3 +987,28 @@ example and says the extension is the machine's.
 
 Still open (recorded for the owner): installing a built package on the test VM (`pacman -U`), which
 needs a real box and is the remaining half of that doc's own item.
+
+### 2026-09-22, loop iteration: the lock that caught the loop's own install
+
+Dogfooded first, and the app-launch flow this time: from the Level 2 picker, two arrow presses and
+Enter put Blinken on screen (verified with `ps -u kid-ada`), then `omarchy-kids-check --live` came
+back with **two** FAILs where the box has had one for days. The new one was
+`lock:hyprland-configs`, and it was the loop's own doing, not a defect: for the cursor verification
+two iterations ago I installed the union's `L1.lua`/`L2.lua` into `/etc/omarchy-kids/hyprland/`
+(the copy the session reads) and left `/usr/share/omarchy-kids/hyprland/` — the package's copy and
+the lock's source of truth — at the stale versions. The check reporting that drift is the lock
+working exactly as `docs/assert.md` describes; the recovery it names (`omarchy-kids-assert`)
+restores `/etc` *from* `/usr/share`, which would have put the stale configs back.
+
+Fixed by making both copies the union's (all five files now compare equal, and the box is back to
+49 PASS / 1 FAIL / 3 WARN), and the recipe now says so: install a config into both copies, not just
+the one the session reads.
+
+The iteration's other half came out of trying to do it the *proper* way — rebuild and reinstall the
+package — which is the packaging branch's own remaining "install it on the test VM" item. It is
+blocked on that box, and the reasons are worth having written down: the union cannot be built on
+aarch64 at all while `arch=('x86_64')` is unmerged (`makepkg` refuses it, which is why the guest's
+files were hand-copied in the first place), and `pacman -U` of a fresh build then stops on
+`conflicting files: /usr/lib/omarchy-kids/panel-machine.sh exists in filesystem` because the
+installed package predates files later hand-copied from branches. `docs/packaging.md`'s open item
+now records all of it, including that the `hyprland-configs` alarm is the check doing its job.

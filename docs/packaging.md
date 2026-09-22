@@ -60,7 +60,20 @@ but these items still need to happen:
   `usr/bin/omarchy-kids-conf`, `KIDS_PY` in `usr/lib/omarchy-kids/kids.sh`), 27 commands, 38 lib
   files, 77 data files, 13 units, both initcpio files, the 0644 pacman hook and the `.INSTALL`
   scriptlet, the twelve avatars, and a `KidsTheme.qml` beside each of the six standalone surfaces.
-  **Still open: installing that package on the test VM** (`pacman -U`) before publishing.
+  **Still open: installing that package on the test VM** (`pacman -U`) before publishing — and
+  that half is blocked by the same gap this branch closes, on the box that matters. Attempted
+  2026-09-22 on the aarch64 dogfood VM: (1) the *union* that box runs cannot be built there at all
+  (`makepkg` refuses `arch=('x86_64')`), which is why its installed files were hand-copied from
+  topic branches; (2) `pacman -U` of a fresh build then stops with
+  `conflicting files: /usr/lib/omarchy-kids/panel-machine.sh exists in filesystem` — the box's
+  installed package predates files that were later copied in by hand, so a reinstall needs
+  `--overwrite` (which would replace those branch-verified files with the union's) or a box that
+  has never been hand-installed onto; and (3) doing that surfaced a real, correct alarm:
+  `omarchy-kids-check --live` reported `lock:hyprland-configs` broken while `/etc/omarchy-kids/
+  hyprland/L*.lua` held a newer config than the package's `/usr/share` copy. The lock is doing its
+  job — the package is its source of truth, and the recovery it names (`omarchy-kids-assert`)
+  restores `/etc` from `/usr/share` — so anyone hand-installing one of those configs has to update
+  both copies, not just the one the session reads.
 - **Run the package lint checks.** `namcap`, Arch's package linter, should check `PKGBUILD` and
   the built package. Resolve or consciously accept its findings. This is maintainer validation,
   not something the install scriptlet provides (`PKGBUILD:15-35,37-109`).
