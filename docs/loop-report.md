@@ -984,3 +984,27 @@ Fixed on `docs/stale-launcher-claims`, stacked on `docs/fix-doc-references` (the
 real `systemd-logind`", yet the VM's ledger tick parses real `loginctl` output every 30s (one
 property per call, not the four-property form the doc names) -- whether that closes the item, or the
 lock transition is still the open part, needs a closer look before changing the text.
+
+### 2026-09-22, loop iteration: a docs claim is only as good as the branch it was observed on
+
+Dogfooded (session healthy; the box's four known FAILs) and took on `docs/time.md`'s "What's
+unverified" section, written before the VM ever ran the time engine. My first draft moved most items
+to "verified live" -- and the fable review blocked it: the evidence I leaned on was gathered against
+**branch** files, not this branch's. This branch still has the 96px toast margin (the live check of
+it found the window sitting over the clock; `fix/toast-clock-overlap` raises it to 144), the
+`FileView` with no `onFileChanged` reload (the time-left line was recorded frozen across ticks and a
+grant on `fix/launcher-time-left-refresh`, which fixes and live-verified it), and no recorded
+`LockedHint=yes` lock engagement (`fix/time-lock-engagement`; only `finish` ran live). One new claim
+("the card dismissed after a grant") also misread a log line that fires at the *next* session start.
+
+The corrected change keeps this branch's unverified list, adds a method note (the VM runs installed
+branch files, so read every live claim with the branch it was observed on -- `docs/loop-report.md`),
+points each item at the branch holding the evidence, and keeps exactly one claim verified: the
+tick's own `loginctl` calls (they run against the VM's real logind every 30 s, one property per
+call, and the usage accounting depends on parsing them -- the docs used to say the repo had never
+run against a real logind, and named a four-property form the code does not use). Also fixed the
+"Issue #40's fix" paragraph's closing claim that none of its three items had run live.
+
+Lesson worth keeping: the loop's live evidence is branch-specific. Any future doc-currency edit here
+must say which branch a "verified" claim belongs to, or it becomes a false claim on integration --
+the same "label claims" rule, one level up.

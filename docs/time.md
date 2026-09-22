@@ -202,29 +202,46 @@ check.
 
 ## What's unverified (check in the VM before this ships)
 
+Written before the 2026-09-21/22 VM runs. For any item here, check `docs/loop-report.md` -- and
+which branch the observation was made on -- before relying on it: the VM runs installed branch
+files, so live evidence can describe code this branch does not have yet.
+
 - Every Quickshell-specific name in `share/time/toast.qml` and `share/time/timesup.qml`, including
   the `FileView` status reader and the fixed root-state path. The card's keyboard-only ask action
   reuses the detached-command shape verified in `share/ask/shell.qml`.
-- `loginctl show-session <id> -p Active -p LockedHint -p Class -p Type`'s exact output shape on
-  the real target (this repo has never run against a real `systemd-logind`) —
-  `test/shell.d/time-test.sh` stubs it, so the *parsing* is tested, not the real command's actual
-  output.
+- `share/time/toast.qml`'s 96px top margin actually clearing `share/launcher/shell.qml`'s clock,
+  and the 6 s auto-dismiss (issue #40) — arithmetic from both files' own anchors/font sizes, never
+  checked against a real rendered frame of either. `fix/toast-clock-overlap` exists because the
+  live check of this file found the window sitting over the clock; it is not merged here.
 - Whether a background `&`'d `omarchy-kids-time daemon`, started from
   `omarchy-kids-session-start` before it `exec`s the launcher/shell, actually survives that `exec`
   and keeps running for the life of the session (expected — backgrounded jobs aren't children of
   the `exec`'d process — but never watched happen on a real Hyprland session).
-- `share/time/toast.qml`'s 96px top margin actually clearing `share/launcher/shell.qml`'s clock,
-  and the 6 s auto-dismiss (issue #40) — arithmetic from both files' own anchors/font sizes, never
-  checked against a real rendered frame of either.
 - The kid adapter reflecting a live root warning/grace document and hiding the card after a root
   grant; the shell test covers the fixed state fixtures, but a kid seeing those surfaces in a real
   session is still unconfirmed.
 - The Ask modal opening over the Time's Up overlay (two keyboard-exclusive layer surfaces); the
-  modal alone, opened over the launcher, has been watched (`docs/ask.md` "Verified live").
+  modal alone, opened over the launcher, has been watched (`docs/ask.md` "Verified live"), and
+  Enter on the Time's Up card opening the Ask modal over it is recorded on
+  `fix/launcher-time-left-refresh`, not here.
 - The launcher's own time-left line (`share/launcher/shell.qml` reading
   `/run/omarchy-kids/time/<kid>.json` with a `FileView`, rendered through
   `GridNav.remainingLabel`): the label logic is node-tested and the wiring is static-tested, but
-  the real file watch against root's live state has only been reasoned about, not watched.
+  the real file watch against root's live state has only been reasoned about, not watched. That
+  watch was recorded frozen across ticks and a grant on `fix/launcher-time-left-refresh`, which
+  fixes it and live-verified the fix; on this branch the `FileView` still has no `onFileChanged`
+  reload.
+- Whether the lock step engages: the VM's ticks reported the lock `not-needed` while a kid was
+  live, and `finishing`/`omarchy-kids-exit --finish` ran live; a Level 1/2 session going
+  `LockedHint=yes` under `lock_kid_sessions` is unproven (`fix/time-lock-engagement`).
+
+One item is verified live on this branch: the tick's own `loginctl` calls. It queries the VM's
+real `systemd-logind` every 30 s (`loginctl list-sessions --no-legend` and one
+`loginctl show-session <id> -p <prop>` per property -- `Class`, `Type`, `Active`, `LockedHint`),
+and the usage accounting depends on parsing that output; `test/shell.d/time-test.sh` stubs the
+calls as well. (This bullet used to name a four-property `show-session` form and say the repo had
+never run against a real logind.)
+
 
 ## Verified live (2026-09-02, QEMU test VM; ticket 2)
 
@@ -257,9 +274,11 @@ auto-dismisses in 6 s instead of 8; the threshold logic moved into a pure functi
 `current` back above it, so the stale-refire-after-a-grant bug above can't recur; and every check
 — fired or not — is logged as `toast-check: ... previous=N current=M fired={...} firing={...}` so
 a live run can show, from the log alone, exactly what the daemon saw at the 1-minute mark and at
-budget-exhausted-Time's-Up, closing both of this "Verified live" note's open questions. None of
-the three (the clock clearance, the re-fire fix, or the 1-minute/budget-exhausted confirmation)
-has run against a real session yet — see "What's unverified" above.
+budget-exhausted-Time's-Up, closing both of this "Verified live" note's open questions. The live
+runs since showed the warnings firing (10/5/1 in the 2026-09-22 session) and the clock clearance
+*not* holding — the window sat over the clock, which is what `fix/toast-clock-overlap` corrects —
+so read this paragraph's "not yet re-verified live" as "not on this branch"; see "What's
+unverified" above for the per-item state.
 
 The following source-header blocks are historical snapshots retained for review. Their old
 environment-variable test seams do not describe the ticket-1 implementation above.
