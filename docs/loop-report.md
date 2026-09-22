@@ -1015,7 +1015,24 @@ Closes the one major the fable review left open on the `docs/time.md` change: th
 list asks whether a background `&`'d `omarchy-kids-time daemon` survives
 `omarchy-kids-session-start`'s `exec`, and the only evidence was a VM session log a reader cannot
 see. Recorded here so the doc can cite it: the VM's `/run/user/1001/omarchy-kids/session-1001.log`
-shows the daemon started at 02:19:18 and still logging toasts hours later -- `toast: 10 minutes
-left` at 02:39:49 and 03:09:51, `5 minutes left` at 03:14:21, `1 minute left` at 03:18:51. So it
-does survive the `exec`; nothing in `test/shell.d/session-start-test.sh` asserts it (its time stub
-exits 0), which is the part still open.
+shows (lines quoted) the daemon started and still logging toasts hours later:
+`2026-09-22T02:19:18-0400 starting omarchy-kids-time daemon for 'kid-ada'`, then
+`2026-09-22T02:39:49-0400 toast: 10 minutes left`, `...T03:09:51-0400 toast: 10 minutes left`,
+`...T03:14:21-0400 toast: 5 minutes left`, `...T03:18:51-0400 toast: 1 minute left` (no daemon was
+launched by hand in that session). So it does survive the `exec`; nothing in
+`test/shell.d/session-start-test.sh` asserts it (its time stub exits 0), which is the part still
+open.
+
+### 2026-09-22, loop iteration: three time.md sentences re-scoped, and what is still entangled
+
+A re-review of the `docs/time.md` change found three sentences the first pass had left or made
+wrong, now corrected: the Ask-modal sentence at `docs/time.md:161` and its list bullet say the
+over-Time's-Up case *was* watched, against a hand-written `grace` status (`share/time/timesup.qml`,
+`share/ask/` and `session-start` are byte-identical to this branch's, so that observation applies
+here); the "Issue #40" paragraph's closing sentence no longer claims the warnings never ran (that
+code is this branch's and did fire 10/5/1 on 2026-09-22); and the `loginctl` item now says the call
+form is read from this branch's source rather than observed on the VM (which ledger build its ticks
+ran is not recorded). Left for the branches that own them: `docs/time.md:138-140` and
+`share/time/toast.qml:25-26` still say the 96px margin clears a roughly 40px clock, which
+`fix/toast-clock-overlap` changes and must correct with it, and `fix/launcher-time-left-refresh`
+owns the frozen-watch record.

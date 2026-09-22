@@ -159,8 +159,9 @@ The button still says "ask", not "get" (I-6): asking is the kid's part, granting
 Until 2026-09-03 this ran `omarchy-kids-time ask-grownup`, a placeholder from before
 `omarchy-kids-ask` existed that showed the R-DESK-2 "this desktop can't start safely" screen with
 "time 15" as the failed check. That subcommand is gone. The ask modal opening *over* the Time's Up
-overlay (two keyboard-exclusive layer surfaces) has not been watched live yet; the modal alone,
-opened over the launcher, has (`docs/ask.md` "Verified live").
+overlay (two keyboard-exclusive layer surfaces) has been watched once, against a hand-written
+`grace` status rather than a daemon-driven one (`docs/loop-report.md`, 2026-09-21); the modal
+alone, opened over the launcher, is in `docs/ask.md`'s "Verified live".
 
 ## Pause-awareness (R-TIME-2)
 
@@ -211,38 +212,37 @@ files, so live evidence can describe code this branch does not have yet.
   reuses the detached-command shape verified in `share/ask/shell.qml`.
 - `share/time/toast.qml`'s 96px top margin actually clearing `share/launcher/shell.qml`'s clock,
   and the 6 s auto-dismiss (issue #40) — arithmetic from both files' own anchors/font sizes, never
-  checked against a real rendered frame of either. `fix/toast-clock-overlap` exists because the
-  live check of this file found the window sitting over the clock; it is not merged here.
+  checked against a real rendered frame of either.
 - Whether a background `&`'d `omarchy-kids-time daemon`, started from
   `omarchy-kids-session-start` before it `exec`s the launcher/shell, actually survives that `exec`
-  and keeps running for the life of the session. The VM's own session log shows it does (started
-  02:19, still logging toasts at 03:18 on 2026-09-22; the lines are quoted in `docs/loop-report.md`
-  that day); what is still open is a repo-side test -- `test/shell.d/session-start-test.sh`'s time
-  stub exits 0 and asserts nothing about the daemon.
+  and keeps running for the life of the session (expected — backgrounded jobs aren't children of
+  the `exec`'d process). The VM's own session log shows it does (started 02:19, still logging
+  toasts at 03:18 on 2026-09-22; the lines are in `docs/loop-report.md` that day); what is still
+  open is a repo-side test -- `test/shell.d/session-start-test.sh`'s time stub exits 0 and asserts
+  nothing about the daemon.
 - The kid adapter reflecting a live root warning/grace document and hiding the card after a root
   grant; the shell test covers the fixed state fixtures, but a kid seeing those surfaces in a real
   session is still unconfirmed.
-- The Ask modal opening over the Time's Up overlay (two keyboard-exclusive layer surfaces); the
-  modal alone, opened over the launcher, has been watched (`docs/ask.md` "Verified live"), and
-  Enter on the Time's Up card opening the Ask modal over it is recorded on
-  `fix/launcher-time-left-refresh`, not here.
+- The Ask modal opening over a *daemon-driven* Time's Up overlay: it has been watched over a
+  hand-written `grace` status (`docs/loop-report.md`, 2026-09-21) and over the launcher
+  (`docs/ask.md` "Verified live"), but not over the daemon's own card.
 - The launcher's own time-left line (`share/launcher/shell.qml` reading
   `/run/omarchy-kids/time/<kid>.json` with a `FileView`, rendered through
   `GridNav.remainingLabel`): the label logic is node-tested and the wiring is static-tested, but
-  the real file watch against root's live state has only been reasoned about, not watched. That
-  watch was recorded frozen across ticks and a grant on `fix/launcher-time-left-refresh`, which
-  fixes it and live-verified the fix; on this branch the `FileView` still has no `onFileChanged`
-  reload.
-- Whether the lock step engages: the VM's ticks reported the lock `not-needed` while a kid was
-  live, and `finishing`/`omarchy-kids-exit --finish` ran live; a Level 1/2 session going
-  `LockedHint=yes` under `lock_kid_sessions` is unproven (`fix/time-lock-engagement`).
+  the real file watch against root's live state has only been reasoned about, not watched.
+- Whether the lock step engages: this branch carries the `LockedHint=yes` verification loop
+  (`fix/time-lock-engagement`, `9d038cf`, is merged into it), but no record shows a Level 1/2
+  session going `LockedHint=yes` under `lock_kid_sessions` -- the "lock step reported `not-needed`
+  while a kid was live" observation is from a pre-fix run. `finishing`/`omarchy-kids-exit --finish`
+  has run live.
 
-One item is verified live on this branch: the tick's own `loginctl` calls. It queries the VM's
-real `systemd-logind` every 30 s (`loginctl list-sessions --no-legend` and one
-`loginctl show-session <id> -p <prop>` per property -- `Class`, `Type`, `Active`, `LockedHint`),
-and the usage accounting depends on parsing that output; `test/shell.d/time-test.sh` stubs the
-calls as well. (This bullet used to name a four-property `show-session` form and say the repo had
-never run against a real logind.)
+The tick's own `loginctl` calls are this branch's code: `loginctl list-sessions --no-legend` once
+and one `loginctl show-session <id> -p <prop>` per property (`Class`, `Type`, `Active`,
+`LockedHint`) from `bin/omarchy-kids-time-ledger`, on a 30 s timer
+(`systemd/omarchy-kids-time.timer`), with `test/shell.d/time-test.sh` stubbing them. What is *not*
+recorded is which ledger build the VM's ticks ran (its package predates at least one topic branch),
+so the call form above is read from this branch's source, not observed there. (This bullet used to
+name a four-property `show-session` form and say the repo had never run against a real logind.)
 
 
 ## Verified live (2026-09-02, QEMU test VM; ticket 2)
@@ -277,10 +277,10 @@ auto-dismisses in 6 s instead of 8; the threshold logic moved into a pure functi
 — fired or not — is logged as `toast-check: ... previous=N current=M fired={...} firing={...}` so
 a live run can show, from the log alone, exactly what the daemon saw at the 1-minute mark and at
 budget-exhausted-Time's-Up, closing both of this "Verified live" note's open questions. The live
-runs since showed the warnings firing (10/5/1 in the 2026-09-22 session) and the clock clearance
-*not* holding — the window sat over the clock, which is what `fix/toast-clock-overlap` corrects —
-so read this paragraph's "not yet re-verified live" as "not on this branch"; see "What's
-unverified" above for the per-item state.
+warnings themselves are this branch's code (`bin/omarchy-kids-time` and `lib/time.sh` are the same
+on HEAD and the fix branches) and did fire live (10/5/1, 2026-09-22); the clock clearance is the
+one that did not hold (the window sat over the clock, `fix/toast-clock-overlap`) and the 6 s
+auto-dismiss has not been timed. See "What's unverified" above for the per-item state.
 
 The following source-header blocks are historical snapshots retained for review. Their old
 environment-variable test seams do not describe the ticket-1 implementation above.
