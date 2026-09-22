@@ -19,19 +19,30 @@ provisioner now creates), `lock:hyprland-configs` (the hand-installed dogfood `L
 **Fixed from the live passes and merged:** the unavailable tile no longer takes focus; the grid
 fits short screens (height-aware cells, content scaled and clipped); the idle cursor hides; the
 exit modal and Ask modal say "Your password"; the launcher refuses a close request so `Super+Q`
-cannot blank the desktop; `PKGBUILD` is `arch=('any')` and a fresh install no longer fails its
-own hook or authd startup; Level 3's menu trim uses omarchy-menu's real extension
+cannot blank the desktop; Level 3's menu trim uses omarchy-menu's real extension
 (`~/.config/omarchy/extensions/omarchy-menu.jsonc`, `when: "false"` per id) and no longer runs
 Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips).
 
-**Fixed on topic branches awaiting the merge gate:** 33 branches are ahead of the integration line,
-each test-green alone. They are the live-pass fixes (time-status freshness after a grant, the Level
+**Fixed on topic branches awaiting the merge gate:** 37 local branches carry commits the
+integration line does not have, each test-green alone — 33 of them rebased on its current tip, and
+four based on older commits (`fix/install-packaging`, superseded by `fix/fresh-install-ordering`
+below, `style/shfmt`, `docs/levels-live-status` (already superseded), `fix/launcher-insets-simplify`).
+They are the live-pass fixes (time-status freshness after a grant, the Level
 2 duplicate cursor rule, the toast icon per message, the picker no longer slicing the desktop hint,
 the panel's reset claims, the time read diagnostics, the WARNs for unreadable files, the doc
 references and stale live claims) plus `fix/stale-threshold-name`, which now carries the
 trust-boundary work: the denylist named `time_toast_thresholds`, a function that does not exist (it
 is `time_warning_thresholds`), and has since been extended to every kid overlay enumerated from
-`share/`, the dispatcher exit spelling, and `lib/kids.sh`'s `modal_*` helpers. The append-only
+`share/`, the dispatcher exit spelling, and `lib/kids.sh`'s `modal_*` helpers.
+
+The packaging fixes are deliberately **not** in the merged list above, though earlier revisions of
+this paragraph claimed them: the integration line still pins `arch=('x86_64')`, its units name
+runtime paths that do not exist before the first provisioning, and its assert exits 1 on a box with
+no kid and no boot mode, so the pacman hook aborts a clean install.
+`fix/fresh-install-ordering` re-lands all of it from the stale `fix/install-packaging`
+(`docs/loop-report.md`, 2026-09-22).
+
+The append-only
 `PROGRESS.md`/`docs/loop-report.md` conflict as keep-both; `docs/levels.md`, `docs/time.md` and
 `share/hyprland/L2.lua` need a human ordering, so the gate is the owner's.
 
