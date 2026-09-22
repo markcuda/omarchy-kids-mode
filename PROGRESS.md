@@ -18,6 +18,13 @@ own hook or authd startup; Level 3's menu trim uses omarchy-menu's real extensio
 (`~/.config/omarchy/extensions/omarchy-menu.jsonc`, `when: "false"` per id) and no longer runs
 Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips).
 
+**Merge-readiness for the ordered gate:** about twenty topic branches sit ahead of integration, and
+each appends to `PROGRESS.md` and `docs/loop-report.md`, so those two files conflict on every pair
+(a "keep both" resolution). Two real-file conflicts also want a look: `docs/levels.md` (the older
+`docs/levels-live-status` vs `fix/levels-live-status`) and `share/launcher/shell.qml` (the older
+`fix/launcher-insets-simplify` vs `fix/launcher-time-left-refresh`). Everything else auto-merges
+(checked pair by pair with `git merge-tree`).
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After
@@ -36,9 +43,10 @@ check of `kiosk=true`); the add-on model's five questions
 (`docs/research/2026-09-21-discord-plugin-survey.md`); whether Level 3 keeps the file-manager
 bind (`Super+Shift+F`) under `menu=trimmed`.
 
-**Next work without owner input:** the I-6 sweep over `share/` and `lib/`; live checks of the
-Ask modal's own submit keys and the Time's Up screen on this build; the portal after a kid exits;
-keeping `docs/loop-report.md` current.
+**Next work without owner input:** the live-unverified surfaces that remain need a real parent
+password (the portal after a kid exits) or hardware (a wifi join; a band-3-5 kid); the rest of the
+backlog is owner-gated (the two-mode SPEC amendment, the GCompris pre-seed, the add-on survey, the
+Level 3 file-manager bind under `menu=trimmed`).
 
 ## Paused — September 11, 2026
 
