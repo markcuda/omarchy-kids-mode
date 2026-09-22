@@ -914,3 +914,25 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-21, loop iteration: the Ask doc said the modal had never run (docs)
+
+Dogfooded Level 1 on the VM: the grid renders at 875x492, two arrow presses moved the ring, Enter
+launched Blinken (the launch log recorded it), and Super+Q closed it leaving the grid up (no blank
+screen). Re-confirmed the wifi picker's `parent`-mode refusal toast. No code defect. The iteration
+took an I-6 docs finding: `docs/ask.md` said `share/ask/shell.qml` "has not itself been run against
+a real Quickshell", which its own "Verified live (2026-09-02)" section contradicted, and that run
+described the outbox-`approved` flow the 2026-09-03 security fix removed. Fixed on
+`fix/ask-docs-live-status` (`14f47a3`): the modal has run -- 2026-09-02 render/input, 2026-09-03 the
+current `grant`/authd/`apply-grant` path (both in the QEMU test VM), and 2026-09-21 the CLI `submit`
++ collect-timer path on try-omarchy -- and the open items are the app/plugin/site kinds, the
+wrong-password lockout, the modal's own "Ask later" button and Esc. The fable review took three
+rounds, each cutting a claim the base branch's record did not support (the earlier sessions' modal
+and panel live runs are recorded only on branches not yet merged); MERGE. Docs only.
+
+Recorded so it is not lost: across these loop sessions the Ask modal's own keyboard path ("Ask
+later" via Tab+Enter, then collect and `decline --apply`), the modal's `app` kind (`the app
+"noage"` from the plugins shelf), and the parent panel's Home/kid/Data/Web/Apps/Desktop/Screen time
+screens were all exercised live on the try-omarchy VM, but those checks live in the loop entries on
+`fix/plugins-shelf-field-shift` and the panel branches, not on integration. When those merge,
+`docs/ask.md`'s and `docs/install.md`'s open lists can be narrowed.

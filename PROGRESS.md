@@ -18,6 +18,17 @@ own hook or authd startup; Level 3's menu trim uses omarchy-menu's real extensio
 (`~/.config/omarchy/extensions/omarchy-menu.jsonc`, `when: "false"` per id) and no longer runs
 Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips).
 
+**Fixed on topic branches awaiting merge:** `apps.show_missing` is enforced again
+(`fix/show-missing-regression`); a portal box's parent-only LUKS slot map no longer fails
+`boot:no-kid-luks-slots` (`fix/boot-no-kid-luks-slots`); the plugins shelf no longer shifts fields
+on a no-age entry; a non-time `ask` request keeps its `asked_at`; `session-start` reads the
+manifest's fields without an empty-field shift; `omarchy-kids-data` renders a no-title row without
+shifting its visit count, treats a malformed History as exit 2, and no longer lets a grant truncate
+the kid's data screen; the panel's Apps screen says when an app isn't installed; `docs/levels.md`
+matches the live Level 3 pass; the kid toast is sized to its message and clears the launcher clock;
+`docs/ask.md` no longer claims the modal never ran (`fix/ask-docs-live-status`). Packaging fixes:
+`fix/install-packaging`.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After
@@ -36,9 +47,11 @@ check of `kiosk=true`); the add-on model's five questions
 (`docs/research/2026-09-21-discord-plugin-survey.md`); whether Level 3 keeps the file-manager
 bind (`Super+Shift+F`) under `menu=trimmed`.
 
-**Next work without owner input:** the I-6 sweep over `share/` and `lib/`; live checks of the
-Ask modal's own submit keys and the Time's Up screen on this build; the portal after a kid exits;
-keeping `docs/loop-report.md` current.
+**Next work without owner input:** the I-6 sweep over `share/` and `lib/` (unverified surfaces left:
+the Time's Up screen, the portal after a kid exits, the wifi picker QML for `helper`-mode kids, the
+panel shelf screen, a band-3-5 launcher); the toast's short-screen placement; keeping
+`docs/loop-report.md` current. (The Ask modal's keyboard path and the panel's read screens are
+live-verified; their loop entries are on the unmerged topic branches.)
 
 ## Paused — September 11, 2026
 
