@@ -24,8 +24,9 @@ Omarchy's first-run provisioning. Full Mac suite green (52 files, five environme
 on a no-age entry (`fix/plugins-shelf-field-shift`); a non-time `ask` request keeps its `asked_at`
 (`fix/ask-list-empty-minutes-shift`); `session-start` reads the manifest's fields without an
 empty-field shift (`fix/session-start-manifest-fields`); `omarchy-kids-data sites` renders a
-no-title row without shifting its visit count (`fix/data-browse-empty-title`). Packaging fixes:
-`fix/install-packaging`.
+no-title row without shifting its visit count (`fix/data-browse-empty-title`); a malformed History
+is the documented exit-2 line, not a traceback (`fix/data-corrupt-history-traceback`, stacked on
+that one). Packaging fixes: `fix/install-packaging`.
 
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
@@ -45,10 +46,9 @@ check of `kiosk=true`); the add-on model's five questions
 (`docs/research/2026-09-21-discord-plugin-survey.md`); whether Level 3 keeps the file-manager
 bind (`Super+Shift+F`) under `menu=trimmed`.
 
-**Next work without owner input:** `lib/data.py`'s malformed-UTF-8-history path (a traceback
-instead of the promised exit-2 line); the I-6 sweep over `share/` and `lib/`; the Time's Up screen
-and the portal after a kid exits on this build; keeping `docs/loop-report.md` current. (The Ask
-modal's submit keys are live-verified.)
+**Next work without owner input:** the I-6 sweep over `share/` and `lib/`; the Time's Up screen and
+the portal after a kid exits on this build; keeping `docs/loop-report.md` current. (The Ask modal's
+submit keys are live-verified, and the data row-parse failures are exit-2 rather than tracebacks.)
 
 ## Paused — September 11, 2026
 
