@@ -26,7 +26,9 @@ on a no-age entry (`fix/plugins-shelf-field-shift`); a non-time `ask` request ke
 empty-field shift (`fix/session-start-manifest-fields`); `omarchy-kids-data sites` renders a
 no-title row without shifting its visit count (`fix/data-browse-empty-title`); a malformed History
 is the documented exit-2 line, not a traceback (`fix/data-corrupt-history-traceback`, stacked on
-that one). Packaging fixes: `fix/install-packaging`.
+that one); a granted top-up no longer truncates the kid's data screen and is named in the summary
+budget line (`fix/data-grants-in-summary`, stacked on that one). Packaging fixes:
+`fix/install-packaging`.
 
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
