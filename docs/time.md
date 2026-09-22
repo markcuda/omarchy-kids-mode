@@ -252,7 +252,7 @@ was unconfirmed.
 **Issue #40's fix, not yet re-verified live:** the toast now anchors below the launcher's clock
 instead of under it (a 96px top margin, up from 24px) and
 auto-dismisses in 6 s instead of 8; the threshold logic moved into a pure function,
-`lib/time.sh`'s `time_toast_thresholds` (table-tested in `test/shell.d/time-test.sh`), that fires
+`lib/time.sh`'s `time_warning_thresholds` (table-tested in `test/shell.d/time-test.sh`), that fires
 10/5/1 only on `previous > threshold ≥ current` and un-fires a threshold the moment a grant raises
 `current` back above it, so the stale-refire-after-a-grant bug above can't recur; and every check
 — fired or not — is logged as `toast-check: ... previous=N current=M fired={...} firing={...}` so
@@ -291,7 +291,7 @@ omarchy-kids-time-ledger.
                     unlocked (`loginctl show-session $XDG_SESSION_ID`),
                     shows a small toast the first time remaining
                     minutes crosses 10/5/1 downward (SPEC.md R-TIME-3;
-                    lib/time.sh's time_toast_thresholds is the pure
+                    lib/time.sh's time_warning_thresholds is the pure
                     decision, issue #40 -- a grant that raises
                     remaining minutes back above a threshold lets it
                     fire again next time it's crossed), and a

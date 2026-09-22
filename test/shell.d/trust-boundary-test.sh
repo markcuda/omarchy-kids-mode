@@ -267,7 +267,7 @@ fi
 
 # The kid time path may display root's decision, but it must not make one.
 if hits="$(sed -n '/^cmd_daemon()/,/^}/p' bin/omarchy-kids-time |
-  grep -nE 'time_remaining_minutes|time_is_lights_out|time_toast_thresholds|loginctl|omarchy-kids-exit|--finish' || true)" &&
+  grep -nE 'time_remaining_minutes|time_next_boundary|time_warning_thresholds|time_is_lights_out|time_budget_minutes|time_lights_out|time_used_minutes|time_granted_minutes|remaining_seconds|loginctl|omarchy-kids-exit|--finish' || true)" &&
   [[ -n "$hits" ]]; then
   bad "trust boundary: kid time display still contains policy or finish capability:"
   printf '     %s\n' "$hits"
