@@ -136,10 +136,14 @@ state produces no display action.
 ## Warnings and Time's Up (R-TIME-3, R-TIME-4)
 
 `share/time/toast.qml`: small, anchored top-right below the Level 1/2 launcher's own top-right
-clock (`share/launcher/shell.qml`) — a 96px top margin instead of the clock's 24px, clearing its
-roughly 40px height (issue #40; UNVERIFIED, see "What's unverified" below) — auto-dismiss (6 s, down
-from 8 s), **no keyboard grab** — deliberately not layer-shell-exclusive, so a kid mid-task never
-loses focus to it.
+clock (`share/launcher/shell.qml` for Level 1, `share/launcher/Desktop.qml` for Level 2) — a 144px
+top margin, clearing the clock's own top inset plus both its lines (the time text and the
+`N minutes left` line under it). The 2026-09-21 live check saw the toast window come up 320x32 at
+y=120 (top margin 96 then) with its message overflowing the window over the launcher's clock; the
+window now sizes to the message, and the 144px margin clears the clock block by arithmetic from
+the fonts — that block was not measured. Issue #40; auto-dismiss (6 s, down from 8 s), **no
+keyboard grab** — deliberately not layer-shell-exclusive, so a kid mid-task never loses focus to
+it.
 
 `share/time/timesup.qml` is full-screen and keyboard-exclusive (the same `PanelWindow` +
 `WlrLayershell` pattern as `share/exit-modal/shell.qml`). It reads the fixed root-state path,
@@ -213,9 +217,11 @@ check.
   `omarchy-kids-session-start` before it `exec`s the launcher/shell, actually survives that `exec`
   and keeps running for the life of the session (expected — backgrounded jobs aren't children of
   the `exec`'d process — but never watched happen on a real Hyprland session).
-- `share/time/toast.qml`'s 96px top margin actually clearing `share/launcher/shell.qml`'s clock,
-  and the 6 s auto-dismiss (issue #40) — arithmetic from both files' own anchors/font sizes, never
-  checked against a real rendered frame of either.
+- `share/time/toast.qml`'s 6 s auto-dismiss (issue #40), and whether `Qt.quit()` is the right way
+  to close a `PanelWindow` — never checked against a real rendered frame. (The 2026-09-21 live
+  check saw only the window geometry — 320x32 at y=120, its message overflowing — so the window is
+  now sized to the message and the top margin is 144px, both by arithmetic from the fonts; the
+  launcher's clock block itself was not measured. See above.)
 - The kid adapter reflecting a live root warning/grace document and hiding the card after a root
   grant; the shell test covers the fixed state fixtures, but a kid seeing those surfaces in a real
   session is still unconfirmed.
@@ -249,9 +255,11 @@ minutes down one per tick, "Time's up, kid-ada!" appeared at 0 with the fox avat
 countdown, and the 60 s auto-Finish returned a fresh greeter. Whether the 1-minute toast showed
 was unconfirmed.
 
-**Issue #40's fix, not yet re-verified live:** the toast now anchors below the launcher's clock
-instead of under it (a 96px top margin, up from 24px) and
-auto-dismisses in 6 s instead of 8; the threshold logic moved into a pure function,
+**Issue #40's fix, partly re-verified live (2026-09-21):** the toast anchors below the launcher's
+clock block — the old toast was a 32px-tall window whose message overflowed it, so the window now
+sizes to the message and the top margin is 144px (arithmetic, not a measured block) — and
+auto-dismisses in 6 s instead of 8 (the duration itself is still unchecked live); the threshold
+logic moved into a pure function,
 `lib/time.sh`'s `time_toast_thresholds` (table-tested in `test/shell.d/time-test.sh`), that fires
 10/5/1 only on `previous > threshold ≥ current` and un-fires a threshold the moment a grant raises
 `current` back above it, so the stale-refire-after-a-grant bug above can't recur; and every check

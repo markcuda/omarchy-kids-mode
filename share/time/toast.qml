@@ -22,13 +22,22 @@ PanelWindow {
         right: true
     }
     margins {
-        // 96, not 24: clears share/launcher/shell.qml's clock (also
-        // top-right, margins.top: 24, ~40px tall) -- UNVERIFIED, docs/time.md.
-        top: 96
+        // Clear the launcher's top-right clock block (the time and the
+        // "N minutes left" line under it). Both heights below are arithmetic
+        // from the font sizes, not measured: the block comes to ~98-102px on
+        // a short screen (launcher margin 32 under 640px tall) and ~122px on
+        // a taller one (margin 56); 144 clears the worst case with a ~22px
+        // cushion. The 2026-09-21 live check saw only the toast window's own
+        // geometry (320x32 at y=120, message overflowing), not the block.
+        top: 144
         right: 24
     }
     implicitWidth: 320
-    implicitHeight: card.implicitHeight + 32
+    // Size to the message, not to an empty Rectangle: a Rectangle with
+    // anchors.fill has no implicit height of its own, so this was 32px and
+    // the wrapped text overflowed the window over the clock. `cardContent`
+    // is the Row of glyph + text, whose implicit height tracks the wrap.
+    implicitHeight: cardContent.implicitHeight + 32
     color: "transparent"
     visible: true
 
@@ -55,6 +64,7 @@ PanelWindow {
         border.width: 2
 
         Row {
+            id: cardContent
             anchors.centerIn: parent
             width: parent.width - 32
             spacing: 12
