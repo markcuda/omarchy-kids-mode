@@ -938,6 +938,14 @@ wizard's A2 password check starts authd before Apply). Every new assertion was m
 reverting the assert fix fails five, and dropping `ConfigurationDirectory`, either `StateDirectory`
 or either `-` fails the pkgbuild pins. Suite green (52 files, five environment skips).
 
+Live-verified on the VM, since the fresh-box case itself cannot be reproduced there (its
+directories already exist): a transient unit carrying the same `StateDirectory`/
+`ConfigurationDirectory`/`ProtectSystem=strict` properties created both directories as
+`drwxr-xr-x root root` and wrote inside them, which is the mechanism the fix depends on; both unit
+files pass `systemd-analyze verify` on the box's systemd 261; and the reworked assert installed from
+this branch still exits 0 (`--quiet` and plain) with `kid-ada` present, repairing the same locks it
+did before. `PROGRESS.md` on this branch no longer claims the packaging work is merged.
+
 Recorded for the owner: `fix/install-packaging` is superseded by this branch and should not be
-merged as-is; and `PROGRESS.md`'s "merged" paragraph on the integration line is wrong in two places
-(PKGBUILD arch, fresh-install ordering), which a docs correction still has to fix there.
+merged as-is; the same "merged" correction was also made on `fix/stale-threshold-name`, where the
+sentence and the branch count were wrong too.
