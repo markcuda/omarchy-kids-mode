@@ -914,3 +914,18 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the L2 idle-pointer rule was set twice
+
+Dogfooded the VM first: kid-ada at Level 2, session healthy; opened the picker, launched Blinken
+with Enter, and closed it with Super+Q -- all correct, and the launcher's time-left line showed
+the earlier grant ("18 minutes left"). Then the I-6 pass over `share/` (the shelf's "never run
+against a real Quickshell" claim is already corrected on `fix/plugins-shelf-field-shift`, so
+nothing to redo there) found `share/hyprland/L2.lua` setting `cursor = { inactive_timeout = 1 }`
+twice under two overlapping comments -- a stale merge -- with `test/shell.d/levels-test.sh`
+asserting the L1/L2 rule twice to match. It is behaviour-neutral (same key, same value) but reads
+like a botched merge in a root-owned level config. Fixed on `fix/l2-duplicate-cursor-rule`: one
+call, one comment, one pair of assertions, plus a count guard over comment-stripped files that
+fails (`got 2`) if the duplicate returns. `levels-test.sh` green (guard verified against a
+reintroduced duplicate), `test/all` green (52 files, five skips), `shellcheck -x` clean, fable
+review nothing blocking.
