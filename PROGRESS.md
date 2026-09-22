@@ -18,6 +18,9 @@ own hook or authd startup; Level 3's menu trim uses omarchy-menu's real extensio
 (`~/.config/omarchy/extensions/omarchy-menu.jsonc`, `when: "false"` per id) and no longer runs
 Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips).
 
+**Fixed on topic branches awaiting merge:** the plugins shelf no longer shifts fields when an
+entry has no `age`, and the shelf is now live-verified end to end (`fix/plugins-shelf-field-shift`).
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After
@@ -36,9 +39,11 @@ check of `kiosk=true`); the add-on model's five questions
 (`docs/research/2026-09-21-discord-plugin-survey.md`); whether Level 3 keeps the file-manager
 bind (`Super+Shift+F`) under `menu=trimmed`.
 
-**Next work without owner input:** the I-6 sweep over `share/` and `lib/`; live checks of the
-Ask modal's own submit keys and the Time's Up screen on this build; the portal after a kid exits;
-keeping `docs/loop-report.md` current.
+**Next work without owner input:** the I-6 sweep over `share/` and `lib/`; the Time's Up screen
+and the portal after a kid exits on this build; a band-3-5 launcher's missing "More apps" tile and
+the panel's shelf screen (the only shelf paths still unverified); keeping `docs/loop-report.md`
+current. (The Ask modal's submit keys are live-verified: Tab picks "Ask later", Enter writes the
+request, collect moves it, `decline --apply` clears it.)
 
 ## Paused — September 11, 2026
 

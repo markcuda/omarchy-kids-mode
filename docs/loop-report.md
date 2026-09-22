@@ -914,3 +914,25 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-21, loop iteration: the plugins shelf parsed its own rows wrong (live)
+
+Live pass: the Ask modal's keyboard path (Tab picks "Ask later", Enter writes the request; the
+collect timer moved it to the root queue and `decline --apply` cleared it) works. Then the
+launcher's "More apps" shelf -- a file the docs admitted had never run against a real Quickshell --
+was launched on the VM. With an empty catalog it renders an honest empty state; with a hand-written
+two-entry fixture index it exposed a real bug: a no-age plugin's `age` came out "verified", its
+`verified` false, and the table's VERIFIED column printed the repo URL. Cause: `bin/
+omarchy-kids-plugins`' `index_rows` emitted tab-separated rows and `cmd_shelf` parsed them with
+`while IFS=$'\t' read`, but tab is IFS whitespace, so bash collapsed the entry's empty `age` field
+and every field after it shifted (I-6). Fixed on `fix/plugins-shelf-field-shift` (`06043b9`): rows
+use ASCII 0x1f (non-whitespace, so empty fields survive; stripped from values so an index entry
+cannot forge a field), and each field is coerced with `tostring` before stripping -- the fable
+review caught that jq's `gsub` raises on a numeric `age`, which would have silently truncated the
+whole shelf; a numeric-age fixture pins it. `plugins-test.sh`'s existing `noage` entry plus a new
+`numage` entry cover both. Live re-verified from the branch: `shelf --json` now reports noage
+`age:""` / `verified:true`, and the overlay rendered the non-empty shelf, moved the selection with
+Up/Down, and opened the Ask modal for that plugin on Enter -- so the surface is now verified end to
+end (`8aaa847` updates docs/plugins.md and the shelf header), leaving only the band-3-5 launcher and
+the panel's shelf screen open. Full Mac suite 52 files green; fable review MERGE after the gsub fix.
+The fixture index was removed from the VM afterwards.
