@@ -58,3 +58,28 @@ work properly and offered ("just make it work properly now"; "available, just wi
 per the parental permissions"). The autostart and menu-trim work is on
 `fix/level3-no-parent-autostart` and `fix/level3-menu-trim`, verified live in
 `docs/dogfood-2026-09-21.md`, and the three pickers now offer Level 3.
+
+## 7. Open decisions at the end of the 2026-09-22 loop
+
+By 2026-09-22 the loop had fixed and pushed everything it could reach on the try-omarchy VM, and
+four consecutive rounds found nothing left to change. Each item below is already drafted or
+proposed and waits only on the owner; none blocks merging the pushed branches, but each holds up
+the work that follows it.
+
+| # | Decision | Where the proposal and evidence are | What is needed |
+| --- | --- | --- | --- |
+| 1 | Collapse R-DESK-3/Appendix E to two kid modes (`grid`, `desktop`; band defaults 3-8 grid, 9+ desktop) | `docs/phase1/SPEC-AMENDMENT-two-kid-modes.md`, branch `docs/spec-amendment-two-kid-modes` (`64c73c5`) | Review the amendment; its five closing questions are yours. No code until then. |
+| 2 | GCompris's first-run dialog and its config/quit controls (a kid can leave the app or change its settings) | `docs/research/2026-09-21-gcompris-first-run-and-config-proposal.md`, branch `docs/gcompris-proposal` | A packaging decision: pre-seed the app config (`kiosk=true`), wrap/hide the controls, or accept them. |
+| 3 | The add-on (plugins) model | `docs/research/2026-09-21-discord-plugin-survey.md` | Its five questions are yours. |
+| 4 | Favorites/recents from the launch log (root-owned manifest stays authoritative) | `docs/favorites-recents-proposal` (`1c9a1a3`) | Three decisions: recents-first manifest ordering vs a Recent row; parent-pinned favorites; where recents appear. |
+| 5 | W2: the time tick fails open when a budget or lights-out value cannot be read (the last state stays in force; `time:timer` only proves the timer is active) | `docs/time.md`; ticket W2 in `docs/research/2026-09-19-per-app-limits-and-weekly-caps-proposal.md` | Whether W2 (a `grace` state with reason `policy-invalid`) ships before the next dogfood round. |
+| 6 | Does Level 3 keep the file-manager bind (`Super+Shift+F`) under `menu=trimmed`? | `share/hyprland/L3.lua`; `docs/levels.md` | Keep it, or unbind it with the rest of the trimmed rows. |
+
+**Live evidence only an owner-run session can produce** (the loop drives the VM, never the laptop):
+the Level 3 menu trim on a real Omarchy box (`share/menu/omarchy-kids-trimmed.jsonc` is an admitted
+guess), a Wi-Fi join through the helper plus a captive portal, a band-3-5 kid's level, and the
+portal's wrong-password path.
+
+**The gate:** 33 branches ahead of `integration/dogfood-2026-09-19` await the merge gate; the
+2026-09-22 "a gate picture" entry in `docs/loop-report.md` has the conflict map.
+
