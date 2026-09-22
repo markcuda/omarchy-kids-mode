@@ -49,16 +49,16 @@ but these items still need to happen:
   the generated result. Compare `PKGBUILD:15-35` with `.SRCINFO:1-27`.
 - **Build and inspect a clean package on Arch.** Run `makepkg -sf` from a clean clone that contains
   the whole checkout, inspect the package contents, and install it in the test VM before
-  publishing. The file list comes from `PKGBUILD:37-109`; this checkout has no recorded clean
+  publishing. The file list comes from `PKGBUILD:37-123`; this checkout has no recorded clean
   Arch build here.
 - **Run the package lint checks.** `namcap`, Arch's package linter, should check `PKGBUILD` and
   the built package. Resolve or consciously accept its findings. This is maintainer validation,
-  not something the install scriptlet provides (`PKGBUILD:15-35,37-109`).
+  not something the install scriptlet provides (`PKGBUILD:15-35,37-123`).
 - **Create and upload the AUR package repository.** No AUR repository or first upload exists yet
   (`docs/install.md:19-31`).
   Because `source=()` is empty, that repository must include every path read by `package()`,
   including `bin/`, `lib/`, `initcpio/`, `systemd/`, `share/`, `desktop/`, `pacman/`, and
-  `LICENSE` (`PKGBUILD:34,37-109`).
+  `LICENSE` (`PKGBUILD:34,37-123`).
 - **Choose the public scope.** `pkgver=0.1.0` describes this as an early build, and the runtime
   gaps remain documented in `docs/install.md` and the command docs. Decide whether the first AUR
   entry is an explicitly early package or wait for those checks before publishing
@@ -73,7 +73,7 @@ Already done in this checkout:
   still needs regeneration as described above.
 - `package()` installs the commands, support libraries, mkinitcpio files, all `.service`,
   `.socket`, and `.timer` units, shared data, the SDDM theme, pacman hook, desktop entries, and
-  license (`PKGBUILD:37-109`).
+  license (`PKGBUILD:37-123`).
 - `omarchy-kids.install` exists and defines `post_install`, `post_upgrade`, and `post_remove`
   (`omarchy-kids.install:23-36`).
 - The pacman hook is present and triggers after install, upgrade, and removal of any package, then

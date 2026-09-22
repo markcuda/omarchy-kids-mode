@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # omarchy:summary=Verify a parent password and apply an approved "ask" request, over a root-only socket
 # omarchy:hidden=true
+# python (a socket line protocol); the PKGBUILD bakes an absolute interpreter into this shebang rather than resolving it through $PATH (rule 9).
 """omarchy-kids-authd -- the parent-password verifier (R-SEC-1, R-SEC-2).
 
 A root, socket-activated oracle. Three request shapes, one per connection:
