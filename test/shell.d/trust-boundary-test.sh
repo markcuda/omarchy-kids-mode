@@ -289,6 +289,36 @@ if grep -q 'time_state_read' bin/omarchy-kids-time &&
 else
   bad "trust boundary: kid time display lost root state or ask wiring"
 fi
+# The two display-only time overlays must never enforce: no lock, no finish, no
+# ledger, no assert, and no process of their own. Nothing in the suite executes
+# QML, so this textual check is the only guard on what they run; it asserts the
+# structure (no Process block in either file; no execDetached in toast.qml, and
+# exactly the one kid-side ask call in timesup.qml) as well as the names -- a
+# denylist alone would miss `execDetached(["hyprctl", "dispatch", "exit"])`.
+# time-test.sh carries a narrower duplicate for the finish command alone.
+overlay_hits=""
+for q in share/time/toast.qml share/time/timesup.qml; do
+  if [[ ! -f "$q" ]]; then
+    overlay_hits+="$q: missing"$'\n'
+    continue
+  fi
+  hits="$(grep -nE 'loginctl|omarchy-kids-exit|omarchy-kids-time-ledger|omarchy-kids-assert|--finish|Process[[:space:]]*\{' "$q" || true)"
+  [[ -n "$hits" ]] && overlay_hits+="$q: $hits"$'\n'
+done
+toast_detach="$(grep -c 'execDetached' share/time/toast.qml || true)"
+timesup_detach="$(grep -c 'execDetached' share/time/timesup.qml || true)"
+if [[ "$toast_detach" != 0 ]]; then
+  overlay_hits+="share/time/toast.qml: $toast_detach execDetached call(s)"$'\n'
+fi
+if [[ "$timesup_detach" != 1 ]] || ! grep -q 'omarchy-kids-ask' share/time/timesup.qml; then
+  overlay_hits+="share/time/timesup.qml: expected exactly one execDetached, of omarchy-kids-ask"$'\n'
+fi
+if [[ -n "$overlay_hits" ]]; then
+  bad "trust boundary: a kid time overlay enforces, launches, or is missing:"
+  printf '     %s' "$overlay_hits"
+else
+  ok "trust boundary: the kid time overlays never enforce and keep only the ask call"
+fi
 
 echo "trust-boundary-test RESULT: $([[ $fail == 0 ]] && echo PASS || echo FAIL)"
 exit $fail
