@@ -639,7 +639,13 @@ ShellRoot {
                             // fit the tile (live 875x492).
                             maximumLineCount: grid.cellHeight < 150 ? 1 : 2
                             wrapMode: Text.WordWrap
-                            width: parent.parent.width - 16
+                            // As wide as its own name needs, up to what the
+                            // tile can hold. The old fixed box (the tile minus
+                            // a 16px inset) truncated ordinary names on the live
+                            // 960x540 frame -- "SuperTux" and "SuperTuxKart" both
+                            // rendered as "Super...", two tiles a six-year-old
+                            // cannot tell apart (2026-09-22).
+                            width: Math.min(implicitWidth, grid.cellWidth - 28)
                             horizontalAlignment: Text.AlignHCenter
                         }
 
@@ -657,7 +663,7 @@ ShellRoot {
                             wrapMode: Text.WordWrap
                             maximumLineCount: 1
                             elide: Text.ElideRight
-                            width: parent.parent.width - 16
+                            width: Math.min(implicitWidth, grid.cellWidth - 28)
                             horizontalAlignment: Text.AlignHCenter
                         }
                     }

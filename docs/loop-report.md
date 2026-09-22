@@ -914,3 +914,28 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the tiles a kid could not tell apart
+
+Dogfooded Level 1 this time (the loop has sat at Level 2 for many rounds): switched the box to
+`level 1`, restarted through the documented drop-in, and the grid came up at 960x540 with the clock,
+the time-left line, no idle cursor and the right footer. It also showed the thing five rounds of
+Level 2 dogfooding never could: the tile labels were truncated to the point of uselessness --
+"GComp...", "KTube...", "KLett...", "Kanag...", "More ..." and, worst, **two tiles both reading
+"Super..."** (SuperTux and SuperTuxKart). The label is the only identifier on a tile here: this
+guest has no icon theme, so every tile is a letter initial, and a six-year-old looking for SuperTux
+sees two identical tiles.
+
+The cause was a fixed label box: `width: parent.parent.width - 16`, i.e. the tile minus a 16px
+inset, so the text had less room than the tile did and ordinary names elided. The fix is the same
+box derived from what it should be -- the name's own width, capped by what the cell can hold
+(`Math.min(implicitWidth, grid.cellWidth - 28)`; the tile is `cellWidth - 20`, so -28 keeps the text
+inside it) -- applied to both the name and the "not installed yet" caption.
+
+Verified live on that frame by applying the same two lines to the installed copy (which carries a
+topic branch's picker fix, so a whole-file install would have dropped it) and restarting the
+session: **GCompris**, Blinken, **KLettres**, **Kanagram** and **SuperTux** now read in full, the
+longest two keep a distinguishable elision ("KTuber...", "SuperT..."), and "More apps" reads
+"More a..." instead of "More ...". `test/shell.d/launcher-grid-test.sh` pins the derivation, that
+both labels use it, and that the fixed inset box is gone; reverting the QML fails all three
+assertions. Suite green.
