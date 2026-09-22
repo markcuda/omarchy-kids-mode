@@ -23,14 +23,18 @@ cannot blank the desktop; Level 3's menu trim uses omarchy-menu's real extension
 (`~/.config/omarchy/extensions/omarchy-menu.jsonc`, `when: "false"` per id) and no longer runs
 Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips).
 
-**Fixed on topic branches awaiting the merge gate:** 37 local branches carry commits the
-integration line does not have, each test-green alone — 33 of them rebased on its current tip, and
-four based on older commits (`fix/install-packaging`, superseded by `fix/fresh-install-ordering`
-below, `style/shfmt`, `docs/levels-live-status` (already superseded), `fix/launcher-insets-simplify`).
+**Fixed on topic branches awaiting the merge gate:** 39 local branches carry commits the
+integration line does not have, each test-green alone (recount with
+`git rev-list --count integration/dogfood-2026-09-19..<branch>`; as of 2026-09-22, 35 are rebased
+on its current tip and four hang off older commits: `fix/install-packaging`, superseded by
+`fix/fresh-install-ordering` below, `style/shfmt`, `docs/levels-live-status` (already superseded),
+`fix/launcher-insets-simplify`).
 They are the live-pass fixes (time-status freshness after a grant, the Level
 2 duplicate cursor rule, the toast icon per message, the picker no longer slicing the desktop hint,
 the panel's reset claims, the time read diagnostics, the WARNs for unreadable files, the doc
-references and stale live claims) plus `fix/stale-threshold-name`, which now carries the
+references and stale live claims), plus `fix/portal-key-hints` (the greeter's footer no longer
+names a key that cannot act, with a qmllint check for the one surface no dogfood screenshot can
+reach), plus `fix/stale-threshold-name`, which now carries the
 trust-boundary work: the denylist named `time_toast_thresholds`, a function that does not exist (it
 is `time_warning_thresholds`), and has since been extended to every kid overlay enumerated from
 `share/`, the dispatcher exit spelling, and `lib/kids.sh`'s `modal_*` helpers.
