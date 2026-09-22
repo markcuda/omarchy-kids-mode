@@ -35,6 +35,17 @@ Two chain-throughs: `fix/launcher-insets-simplify` should merge first (or last) 
 branches, and `fix/fresh-install-ordering`/`fix/install-packaging` touch the same assert/units
 region. The `docs/time.md` and `docs/packaging.md` pairs are prose.
 
+### The packaging pair: one supersedes the other
+
+`fix/fresh-install-ordering` is a strict superset of `fix/install-packaging`: the same
+`arch=('any')` and the same `cd omarchy-kids-mode`, but its `bin/omarchy-kids-assert` falls through
+to the no-kids branch so the machine-level **units** lock is still asserted (the other exits 0
+early, skipping it), and its units add `StateDirectory`/`ConfigurationDirectory` plus `-` on *both*
+`ReadWritePaths` (the other only relaxes the first path, and does not make the directory exist, so
+the first GRANT on a fresh box still hits EROFS under `ProtectSystem=strict`). Merge
+`fix/fresh-install-ordering` and drop `fix/install-packaging`; resolve the conflict by taking its
+side wholesale, not by hand-unioning the two assert bodies.
+
 ## Shared running docs (nearly every loop branch edits these)
 
 | file | branches |
