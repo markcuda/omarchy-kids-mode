@@ -36,7 +36,9 @@ references and stale live claims), plus `fix/portal-key-hints` (the greeter's fo
 names a key that cannot act, with a qmllint check for the one surface no dogfood screenshot can
 reach), plus `feat/gcompris-preseed` (the seed of GCompris's own config that the owner approved on
 2026-09-21, whose live check ran 2026-09-22, together with the rule-9 refusal of a kid-planted
-symlink under a kept home), plus `fix/stale-threshold-name`, which now carries the
+symlink under a kept home), plus `docs/amendment-l3-evidence` (the SPEC amendment's "until the
+menu-trim schema is verified" gate, now checked against the box's own Omarchy source and the live
+Level 3 pass), plus `fix/stale-threshold-name`, which now carries the
 trust-boundary work: the denylist named `time_toast_thresholds`, a function that does not exist (it
 is `time_warning_thresholds`), and has since been extended to every kid overlay enumerated from
 `share/`, the dispatcher exit spelling, and `lib/kids.sh`'s `modal_*` helpers.
