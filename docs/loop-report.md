@@ -985,3 +985,21 @@ folded into `lib/kids.sh`"). The live docs cite the TUI demo at its real
 With this, the mechanical-reference family is exhausted: docs links, docs-cited functions, docs-cited
 code paths, test-grep alternations, command/doc/test inventory, SPEC id traceability, conventions and
 file modes have all been swept, and each found only what earlier rounds fixed.
+
+### 2026-09-22, loop iteration: a textual guard on the kid time overlays
+
+Dogfooded (session healthy; the box's four known FAILs). Closed the review's follow-up from the
+denylist round: nothing textual guarded the QML overlays a kid's session runs, so a `Process` block
+or an `execDetached` added to `share/time/timesup.qml` (or `toast.qml`) would be caught only if a
+behavioural test happened to exercise it -- and nothing in the suite executes QML. The
+trust-boundary test now checks both display-only overlays structurally: the file exists, no
+`Process {` block, no root enforcement name (`loginctl`, `omarchy-kids-exit`,
+`omarchy-kids-time-ledger`, `omarchy-kids-assert`, `--finish`), no `execDetached` in `toast.qml`,
+and exactly the one `omarchy-kids-ask` call in `timesup.qml`. `time-test.sh`'s narrower
+finish-command duplicate now points here. Verified by injection (a `Process` block in `toast.qml`
+fails the check); the suite is green; the review's two majors (a vacuous pass on a missing file, and
+a names-only set that missed the shapes it had named) and two minors are closed.
+
+Still open (recorded for the owner): `lib/kids.sh`'s `modal_*` helpers and the other kid overlays
+(`ask`, `exit-modal`, `plugins`, `wifi`) have no equivalent guard -- the exit modal legitimately runs
+the parent-authenticated finish, so its check would need a different shape.
