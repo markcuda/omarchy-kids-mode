@@ -914,3 +914,20 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: three broken doc references
+
+Dogfooded (session healthy; the live check is the box's usual 46 PASS plus its four known FAILs)
+and then tried an angle the loop had not: a mechanical link-check over the live docs (`docs/*.md`,
+excluding `docs/archive/`) for `docs/*.md` references that do not resolve. It found three:
+
+- `docs/style.md` still pointed at `docs/hyprland-levels.md`, a file that was never created; the
+  per-level rationale it describes (including why `default.hypr.envs` is not required) lives in
+  `docs/levels.md` today.
+- `docs/data.md` glued two paths into one twice (`docs/panel.md/docs/ask.md`,
+  `docs/time.md/docs/panel.md`), each reading as a path to a file that does not exist.
+- the GCompris proposal offered `docs/packs.md` (never created) or `docs/apps.md`; the pack format
+  lives in docs/apps.md.
+
+Fixed on `docs/fix-doc-references`; the live docs now have no unresolved `docs/*.md` reference.
+`test/all` green. The archive's own references are historical and were left alone.
