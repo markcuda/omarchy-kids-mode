@@ -116,19 +116,20 @@ shows the result as a keyboard-navigable list (Up/Down/Enter, Esc closes with no
 I-5), and Enter on an item runs `omarchy-kids-ask app <plugin-id>` (`Quickshell.execDetached`,
 the existing "Ask a grown-up" flow) then closes itself, handing off to that modal rather than
 layering two overlays. Verified live on the try-omarchy VM 2026-09-21, from the repo's own file: the
-overlay loads under a real Quickshell (`Configuration Loaded`, no error) and, with an empty catalog,
+overlay loads under a real Quickshell (`Configuration Loaded`, no error); with an empty catalog it
 renders the honest empty state ("Nothing here yet — check back later!") and closes on Esc with no
-side effect. That run also confirms the stdout capture: the empty state only renders once
-`handleShelf` has run, so `Quickshell.Io.Process`'s `stdout: StdioCollector { onStreamFinished }` /
-`.text` did deliver and parse the command's output (nothing else in this repo captures a Process's
-whole stdout). Still unconfirmed in the overlay: a **non-empty** shelf (rendering the list and
-Up/Down/Enter) and the Enter→`omarchy-kids-ask app` handoff. `omarchy-kids-plugins shelf`'s own
-non-empty output was
-exercised on the VM with a hand-written fixture index (the marketplace index was empty), and that
-exposed a field-shift bug when an entry had no `age` — `bin/omarchy-kids-plugins` parsed its rows
-with a tab `IFS`, which bash `read` collapses, so `age` picked up the status and `verified` went
-false; fixed there by using a non-whitespace field separator. The overlay was not then run against
-that non-empty shelf. The layer-shell/keyboard-focus shape it reuses line for line is
+side effect; and with a hand-written two-entry fixture index it rendered both rows (name, age hint,
+description), moved the selection with Up/Down, and on Enter closed itself and opened the "Ask a
+grown-up" modal for that plugin (`the app "noage"`). The fixture index was removed afterwards. That
+also confirms the stdout capture: the empty and non-empty states only render once `handleShelf` has
+run, so `Quickshell.Io.Process`'s `stdout: StdioCollector { onStreamFinished }` / `.text` did
+deliver and parse the command's output (nothing else in this repo captures a Process's whole
+stdout). Building the fixture exposed a field-shift bug when an entry had no `age`:
+`bin/omarchy-kids-plugins` parsed its rows with a tab `IFS`, which bash `read` collapses, so `age`
+picked up the status and `verified` went false; fixed there by using a non-whitespace field
+separator. Still unconfirmed: a band-3-5 kid's launcher having no "More apps" tile at all (the VM's
+kid is band 6-8), and the panel's own shelf screen. The layer-shell/keyboard-focus shape it reuses
+line for line is
 `share/exit-modal/shell.qml`'s live-verified one (`docs/exit.md`'s "Verified live" section,
 2026-09-02): `PanelWindow` + `WlrLayershell.layer: WlrLayer.Overlay` +
 `WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive`, every action via
@@ -195,9 +196,10 @@ uses.
 
 ## Verify in the VM
 
-The shelf overlay's load and its empty state have now run under a real Quickshell (2026-09-21, see
-above); everything else here is open until it has run against a real `jq`, `runuser`,
-`omarchy-plugin-add`/`-remove`, and Quickshell:
+The shelf overlay is now verified end to end under a real Quickshell (2026-09-21, see above: load,
+empty state, a non-empty fixture shelf, Up/Down, Enter→ask). A band-3-5 launcher, the panel's shelf
+screen, and everything that touches `runuser`/`omarchy-plugin-add`/`-remove` are still open until
+they have run against a real box:
 
 1. Hand-write a small index JSON at `/var/lib/omarchy-kids/plugin-marketplace/index.json` with one
    real, installable, verified Kids-category-shaped entry (once one exists on the real
@@ -210,10 +212,10 @@ above); everything else here is open until it has run against a real `jq`, `runu
    apps.extra` includes the id afterward.
 3. From the panel, Apps → Plugins shelf → Enter on an entry: confirm the same install happens
    through the warmed-sudo path, with the exact command shown first under `--dry-run`.
-4. As `kid-ada` at Level 1 (band 6-8+), Super+Home, navigate to "More apps": the overlay load, the
-   honest empty state and Esc are done (2026-09-21, see above); still confirm Up/Down/Enter work with
-   no pointer on a **non-empty** shelf, and that Enter on an item opens the "Ask a grown-up" modal
-   for that plugin (`share/ask/shell.qml`) rather than doing anything itself.
+4. ~~As `kid-ada` at Level 1 (band 6-8+), Super+Home, navigate to "More apps"~~ — done 2026-09-21
+   (see above): a fixture shelf rendered, Up/Down moved the selection with no pointer, Enter opened
+   the "Ask a grown-up" modal for that plugin rather than doing anything itself, and Esc closed the
+   overlay with no side effect.
 5. Confirm a band-3-5 kid's Level 1 launcher has no "More apps" tile at all.
 
 ## Source header (moved from `bin/omarchy-kids-plugins`, issue #49)
