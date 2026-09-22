@@ -34,7 +34,9 @@ They are the live-pass fixes (time-status freshness after a grant, the Level
 the panel's reset claims, the time read diagnostics, the WARNs for unreadable files, the doc
 references and stale live claims), plus `fix/portal-key-hints` (the greeter's footer no longer
 names a key that cannot act, with a qmllint check for the one surface no dogfood screenshot can
-reach), plus `fix/stale-threshold-name`, which now carries the
+reach), plus `feat/gcompris-preseed` (the seed of GCompris's own config that the owner approved on
+2026-09-21, whose live check ran 2026-09-22, together with the rule-9 refusal of a kid-planted
+symlink under a kept home), plus `fix/stale-threshold-name`, which now carries the
 trust-boundary work: the denylist named `time_toast_thresholds`, a function that does not exist (it
 is `time_warning_thresholds`), and has since been extended to every kid overlay enumerated from
 `share/`, the dispatcher exit spelling, and `lib/kids.sh`'s `modal_*` helpers.
