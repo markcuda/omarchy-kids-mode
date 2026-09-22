@@ -963,3 +963,24 @@ conventions mechanically: every bash command in `bin/` has `#!/bin/bash`, `set -
 Python verifier ("a tiny Python or Perl helper") for both. Every tracked file's mode matches its
 kind once the executable set is read correctly (`bin/`, the `initcpio/` hook scripts, `scripts/`,
 `test/live/`, `test/phase1/`, `test/all`). Nothing to fix.
+
+### 2026-09-22, loop iteration: two stale "never run live" claims, retracted
+
+Dogfooded (session healthy; 46 PASS plus the box's four known FAILs) and swept the live docs for the
+claim class that found real defects twice before -- assertions that something has never run against
+a real Hyprland/Quickshell. Two were stale:
+
+- `docs/data.md` called the `kids-data` tile's lack of verification "the same caveat every other
+  `share/launcher/shell.qml` feature carries", but the launcher runs live now (its grid, picker and
+  app tiles were exercised on the VM 2026-09-21/22). The tile is offered only to bands 9-12 and 13+,
+  and the loop's kid is 6-8, so it is that tile's *turn* that is missing, not the file's
+  verification.
+- `docs/levels.md`'s open-questions intro said "no live Hyprland, no Quickshell", contradicting the
+  same doc's live-status paragraph (Levels 1 and 2 verified live); it now reads as the historical
+  position it was, and says the Level 3 items are what still needs the VM or a real box.
+
+Fixed on `docs/stale-launcher-claims`, stacked on `docs/fix-doc-references` (the same two files);
+`test/all` green. Left alone as uncertain: `docs/time.md` says the repo "has never run against a
+real `systemd-logind`", yet the VM's ledger tick parses real `loginctl` output every 30s (one
+property per call, not the four-property form the doc names) -- whether that closes the item, or the
+lock transition is still the open part, needs a closer look before changing the text.
