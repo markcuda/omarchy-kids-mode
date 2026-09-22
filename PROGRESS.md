@@ -18,6 +18,11 @@ own hook or authd startup; Level 3's menu trim uses omarchy-menu's real extensio
 (`~/.config/omarchy/extensions/omarchy-menu.jsonc`, `when: "false"` per id) and no longer runs
 Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips).
 
+**Fixed on a topic branch awaiting merge:** `fix/check-unreadable-warns` -- the panel's Machine card
+showed false FAILs ("the parent-unlock line is missing", "does not set DnsOverHttpsMode") for files
+the unprivileged panel simply cannot read; those checks (and the polkit/AccountsService locks) now
+WARN "cannot verify" instead.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After
