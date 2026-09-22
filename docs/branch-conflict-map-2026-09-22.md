@@ -31,9 +31,19 @@ nearly any pair and want a union.
 | `fix/launcher-time-left-refresh` × `fix/toast-icon-match` | `docs/time.md` |
 | `fix/toast-clock-overlap` × `fix/toast-icon-match` | `docs/time.md` |
 
-Two chain-throughs: `fix/launcher-insets-simplify` should merge first (or last) among the launcher
-branches, and `fix/fresh-install-ordering`/`fix/install-packaging` touch the same assert/units
-region. The `docs/time.md` and `docs/packaging.md` pairs are prose.
+The two code areas and their resolutions are below; the `docs/time.md` and `docs/packaging.md`
+pairs are prose.
+
+### The launcher conflicts are one stale branch
+
+All three `share/launcher/shell.qml` conflicts pair `fix/launcher-insets-simplify` with one of the
+other launcher branches; those other three (`fix/launcher-time-left-refresh`,
+`fix/picker-slices-desktop-hint`, `fix/tile-labels-fit`) are all based on the union and auto-merge
+with each other. `fix/launcher-insets-simplify` branches from `07edb37` -- a merge commit one
+minute before its own -- and its single change, dropping the duplicate `shortScreen` inset variant
+for flat insets under the compact `root.margin`, is already in the union, which then added the
+`minFitCell` fit mechanism the branch lacks. Merging it conflicts with the union-based branches and
+adds nothing (a rebase would be an empty change): drop it.
 
 ### The packaging pair: one supersedes the other
 
