@@ -914,3 +914,16 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-21, loop iteration: the Apps screen named a tile the kid never sees (live)
+
+Dogfooded the parent panel live on the VM: main menu, kid screen, Web, and Apps all render with
+real data. The Apps screen listed "Tux Paint (shown)" though the launcher omits Tux Paint (not
+installed, and `apps.show_missing=no` is the default) -- the panel dropped the `state` field from
+`omarchy-kids-apps list --json`, so "(shown)" only meant "not hidden from the allowlist" while a
+parent reads it as a visible tile (I-6). Fixed on `fix/panel-apps-not-installed` (`3b66d3a`): a
+missing app's row now reads "(shown, not installed)" / "(hidden, not installed)"; the toggle and
+its write are unchanged, and docs/panel.md records the suffix. `panel-test.sh` stubs `pacman` (only
+gcompris-qt installed) so the state is deterministic and asserts both labels; the fable review
+MERGE'd with no findings. Full Mac suite 52 files green. Live-verified from the branch:
+"Tux Paint (shown, not installed)" and the installed pack apps plain "(shown)".
