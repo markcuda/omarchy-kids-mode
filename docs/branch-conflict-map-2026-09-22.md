@@ -10,13 +10,30 @@ merge-base are collected and counted per file. 58 branches, 252 file entries.
 
 ## What this means
 
-The collisions cluster by topic: **panel** (7 branches share `panel-test.sh`), **time/toast**
-(5 share `time-test.sh`), **launcher** (4 share `launcher/shell.qml`), **data** (3 share
-`lib/data.py`, `bin/omarchy-kids-data` and `data-test.sh` together), **packaging** (3 share
-`PKGBUILD`, and two share the systemd units and `assert-test.sh`), and **levels/Level 2** (4 share
-`share/hyprland/L2.lua`). Merges inside a cluster will conflict in that cluster's files; take those
-clusters one branch at a time and re-run the suite after each. Outside the clusters the branches are
-disjoint, so an arbitrary order is safe there.
+A shared file is not a conflict. Testing every overlapping pair with `git merge-tree` shows only
+**7 pairs conflict outside the shared docs**, in just two code areas: the packaging pair
+(`fix/fresh-install-ordering` × `fix/install-packaging`) and `fix/launcher-insets-simplify` against
+each of the other three `share/launcher/shell.qml` branches. Everything else that names the same
+file auto-merges -- including all seven panel branches on `panel-test.sh`, and the data, time and
+levels clusters. Those were file-name overlaps only, not line collisions. The one real constraint
+is the shared running docs: `docs/loop-report.md` (52 branches) and `PROGRESS.md` (31) conflict on
+nearly any pair and want a union.
+
+## Real conflicts (pairwise `git merge-tree`, shared docs excluded)
+
+| branches | conflicting files |
+| --- | --- |
+| `fix/fresh-install-ordering` × `fix/install-packaging` | `bin/omarchy-kids-assert`, `systemd/omarchy-kids-authd.service`, `systemd/omarchy-kids-time-ledger.service`, `test/shell.d/assert-test.sh` |
+| `fix/launcher-insets-simplify` × `fix/launcher-time-left-refresh` | `share/launcher/shell.qml` |
+| `fix/launcher-insets-simplify` × `fix/picker-slices-desktop-hint` | `share/launcher/shell.qml` |
+| `fix/launcher-insets-simplify` × `fix/tile-labels-fit` | `share/launcher/shell.qml` |
+| `fix/fresh-install-ordering` × `fix/python-shebang-absolute` | `docs/packaging.md` |
+| `fix/launcher-time-left-refresh` × `fix/toast-icon-match` | `docs/time.md` |
+| `fix/toast-clock-overlap` × `fix/toast-icon-match` | `docs/time.md` |
+
+Two chain-throughs: `fix/launcher-insets-simplify` should merge first (or last) among the launcher
+branches, and `fix/fresh-install-ordering`/`fix/install-packaging` touch the same assert/units
+region. The `docs/time.md` and `docs/packaging.md` pairs are prose.
 
 ## Shared running docs (nearly every loop branch edits these)
 
