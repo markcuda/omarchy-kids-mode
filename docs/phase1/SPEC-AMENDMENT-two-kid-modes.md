@@ -11,9 +11,10 @@ R-BAND table. Does not touch R-BAND-1/R-BAND-2 (the table stays data; profiles s
 
 - The spec has three levels but only two kid-facing choices. Level 1 (App grid) and Level 2
   (Simplified desktop) are both shipped bespoke surfaces; Level 3 is the stock Omarchy desktop,
-  hidden from every picker because its menu-trim extension format is an unverified guess
-  (`share/menu/omarchy-kids-trimmed.jsonc`) and its binds/sudo path are unverified on a real box
-  (`docs/phase1/DECISIONS-NEEDED.md` §6 item 4).
+  hidden from every picker while its menu-trim extension format was an unverified guess
+  (`share/menu/omarchy-kids-trimmed.jsonc`) and its binds/sudo path were unverified on a real box
+  (`docs/phase1/DECISIONS-NEEDED.md` §6 item 4). **Both were checked on 2026-09-22 — see "Level 3's
+  verification status" below**, so this bullet is now history, not a live reason to hide it.
 - Three names for two choices reads wrong on the parent screens and in the band table: "every
   older band defaults to Level 2" says a six-year-old gets a desktop, which the 6-8 starter pack
   (GCompris, KLettres, Kanagram, SuperTux, Blinky) does not look like.
@@ -113,14 +114,59 @@ The `Level` column becomes `Mode` with values: 3-5 **Grid**, 6-8 **Grid**, 9-12 
 - The binding sets do not change: `test/shell.d/levels-test.sh` keeps asserting them; it grows one
   assertion for the band→mode defaults (3-5 and 6-8 → `1`; 9-12 and 13+ → `2`).
 - The rename is only true once a **Grid** kid and a **Desktop** kid have each been logged into on
-  the VM. Level 2 has never run against a real Hyprland/Quickshell (`docs/levels.md`), so the
-  Desktop default for 9-12/13+ is not truthful until that pass. Stock desktop stays gated on the
-  real-box menu-extension check (R-DESK-4).
+  the VM. *(2026-09-22: both have been — Level 2's own live pass is in `docs/dogfood-2026-09-21.md`
+  and `docs/levels.md`, and the loop has dogfooded it since; the sentence below is what was true
+  when this was drafted.)* Level 2 has never run against a real Hyprland/Quickshell
+  (`docs/levels.md`), so the Desktop default for 9-12/13+ is not truthful until that pass. Stock
+  desktop's gate on the real-box menu-extension check (R-DESK-4) **is now met** — see below.
 - Docs and data to update when the amendment lands: `docs/levels.md`, `docs/wizard.md` (A11 copy),
   `docs/conf.md` (the `level` row, the `menu` row, and the band table around line 165),
   `share/config/schema.toml` (the `level` label, "Desktop level"), `share/bands/bands.toml`
   (6-8 `level` 2→1), and `test/shell.d/levels-test.sh` gains the band→mode default assertion it
   has none of today. The repo README changes only if it names levels.
+
+## Level 3's verification status (2026-09-22)
+
+Written by the unattended loop, which re-checked both halves of the 2026-09-19 gap on the
+try-omarchy aarch64 VM before any of this was proposed as a decision. (The image's own identity,
+for the record, is `/usr/share/omarchy/version` = `4.0.0.alpha` with the files owned by
+`try-omarchy-runtime 4.0.3-1`; the "Omarchy 4.0.2" other docs cite is the upstream release the
+research compares against, not this image's build string.) Nothing here
+changes code; it is what the owner's question 3 and question 5 now rest on.
+
+**The menu-trim extension's format is verified, not a guess.**
+
+- Source, read on the box: `shell/plugins/menu/MenuModel.js`'s `parseMenuJsonc` strips the JSONC
+  comments and turns a **map keyed by id** into items (`for (var id in source) out.push(
+  normalizeItem(id, entry))`); `mergeMenuSources` then merges the stock file and the user extension
+  **by id**, field by field, the user file winning; `Menu.qml`'s `evaluateGuards` hides any item
+  whose `when:` evaluates false ("Guarded items are hidden when their `when:` evaluates false").
+  `Menu.qml` reads the extension from `userMenuPath` =
+  `$HOME/.config/omarchy/extensions/omarchy-menu.jsonc`.
+- The ids our file trims exist in the stock menu as top-level keys:
+  `setup` (`/usr/share/omarchy/default/omarchy/omarchy-menu.jsonc:23`), `install` (24), `remove`
+  (25), `update` (26).
+- Live: the Level 3 pass (`docs/dogfood-2026-09-21.md`) opened the menu and saw only
+  Apps / Learn / Trigger / Style / About. The seeded extension is on the box
+  (`/home/kid-ada/.config/omarchy/extensions/omarchy-menu.jsonc`, kid-owned) and
+  `share/menu/omarchy-kids-trimmed.jsonc`'s header carries the same mechanism note.
+
+**The "sudo path" worry is answered, and it was never a keybind.**
+
+- `omarchy-sudo-passwordless` is a **menu row**, not a binding:
+  `/usr/share/omarchy/default/omarchy/omarchy-menu.jsonc:180` defines
+  `setup.security.passwordless-sudo` (a child of `setup`) whose action runs the command. It lives
+  under the `setup` id this extension hides, so a trimmed kid cannot reach it — and the command
+  would fail for them anyway: the live check refuses `sudo -n true` for a kid account.
+- The real sudo-path risk the open item named was the **umbrella autostart's**
+  `omarchy-provision-first-run` (`/usr/share/omarchy/default/hypr/autostart.lua:7`).
+  `fix/level3-no-parent-autostart` (verified live in that pass) requires the stock modules
+  individually instead, and the kid's journal shows no provision-first-run.
+
+**Still open, and honestly thin:** whether stock Omarchy ever bound `SUPER + RETURN` (the L3 check
+can't separate "stock never bound it" from "the unbind worked"), and `hl.unbind`'s exact signature
+(`docs/levels.md` items 1 and 4). Neither blocks offering Level 3: the first is a belt-and-braces
+unbind, the second is exercised by every L3 boot that parses the file.
 
 ## Open questions for the owner
 
@@ -132,7 +178,9 @@ The `Level` column becomes `Mode` with values: 3-5 **Grid**, 6-8 **Grid**, 9-12 
 4. Label in the parent UI: "Grid" and "Desktop" (recommended) or "App grid" and "Simplified
    desktop"?
 5. Should 13+ ever default to Stock desktop in v1, or does Stock stay parent-only until the
-   menu-extension check passes (recommended: parent-only)?
+   menu-extension check passes (recommended: parent-only)? *(2026-09-22: that check has passed —
+   see "Level 3's verification status" below — so this is now a preference question about the 13+
+   band, not a verification gate.)*
 
 ## Owner decisions (2026-09-21)
 

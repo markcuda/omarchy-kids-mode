@@ -914,3 +914,44 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the schema the Level 3 decision was waiting on
+
+Dogfooded first -- the parent-exit fence this time: `Super+Shift+K` opened the exit modal (Ada's
+avatar, the masked password field, "Finish for Ada" with "Closes Ada's apps. You return to the
+login screen.") and `Esc` put the desktop back untouched. No finding there, so the iteration went
+to the SPEC amendment's outstanding verification: it says Level 3 must stay hidden "until its
+menu-trim extension and binds are verified on a real box", and the owner's own question 3 asks for
+exactly that check.
+
+Two things had to be separated: what `docs/levels.md` still claims, and what the *amendment* rests
+on. The first is already handled -- `fix/levels-live-status` (a branch at the gate) rewrites the
+live-status paragraph, the file table's row and item 6, and several other branches correct the rest
+of that page, so this iteration did not touch it a second time.
+
+The amendment itself no branch updates, and its premise is stale in a way that matters: the
+menu-trim format is not a guess. Read on the box's Omarchy 4.0.2: `parseMenuJsonc` strips the JSONC
+comments and turns a map keyed by id into items, `mergeMenuSources` merges stock and user files by
+id with the user winning, `evaluateGuards` hides an item whose `when:` is false, and the four ids
+the extension trims (`setup`, `install`, `remove`, `update`) are top-level keys in the stock menu
+at lines 23-26. The live Level 3 pass already recorded the menu showing only Apps/Learn/Trigger/
+Style/About. The "sudo path" worry resolves the same way: `omarchy-sudo-passwordless` is not a
+keybind at all, it is the menu row `setup.security.passwordless-sudo` under the `setup` id this
+extension hides, and the command would fail for a kid anyway (the live check refuses `sudo -n true`
+for kid-ada); the real risk behind the item -- the umbrella autostart's
+`omarchy-provision-first-run` -- is gone, since `fix/level3-no-parent-autostart` requires the stock
+modules individually and the kid's journal shows no such line.
+
+So the amendment now carries a dated "Level 3's verification status (2026-09-22)" section, its
+`Why` bullet and verification bullet say what is now true instead of what was true when drafted,
+and question 5's "until the menu-extension check passes" is marked as passed -- leaving the owner a
+preference question about the 13+ band rather than a verification gate. Two thin items stay open and
+are named there: whether stock ever bound `SUPER + RETURN`, and `hl.unbind`'s exact signature.
+
+While citing the box, one thing did not check out: the image's own version file reads
+`4.0.0.alpha` and the menu plugin is owned by `try-omarchy-runtime 4.0.3-1`, where the repo's
+evidence lines say "try-omarchy VM, Omarchy 4.0.2". The 4.0.2 is the upstream release the research
+compares against, not this image's build string, so the two are being conflated in every
+"confirmed against Omarchy 4.0.2" line. The note and the jsonc header now name both; a sweep of the
+rest is left for the owner or a later iteration (it touches a dozen files and several branches
+already edit the same lines).
