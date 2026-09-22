@@ -275,8 +275,16 @@ script), so there is no bash unit test for it here -- item 4 above is the VM che
 `KidsModule.qml` without QML errors. It rendered nothing until the owner was a member of
 `omarchy-parents` (status.json is 0640 for that group): the new `parent-group` lock in
 `omarchy-kids-assert` adds the parent, and the membership takes effect at the next login. After
-an SDDM restart the module showed its kid indicator at the right end of the bar. The popup
-menu, grant and end actions are not yet exercised live.
+an SDDM restart the module showed its kid indicator at the right end of the bar.
+
+The two actions' underlying commands have since been verified live (2026-09-22), though not through
+the popup: `omarchy-kids-exit --finish --kid kid-ada` -- what `end` runs under sudo -- found the
+kid's Hyprland, exited it through `runuser`, and SDDM's greeter came back on the Kids theme with no
+"Process crashed" black screen (the entry is in `docs/loop-report.md`, branch
+`docs/loop-portal-after-exit`); and a time grant's effect is covered by the time-gate live pass
+(2026-09-21). Still not exercised live: the popup menu itself (opening it, arrow/Enter navigation)
+and the terminal the `grant`/`end` wrappers open for the parent's password -- both need the owner's
+own shell with the plugin enabled (I-1).
 
 ## Source header (moved from `bin/omarchy-kids-bar`, issue #49)
 
