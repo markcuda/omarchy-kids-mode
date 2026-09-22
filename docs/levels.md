@@ -32,9 +32,16 @@ Live status (2026-09-21, try-omarchy aarch64 VM, real SDDM logins; see
 `docs/dogfood-2026-09-21.md`): **Level 1 and Level 2 have both run against a real Hyprland and
 Quickshell.** Level 1 verified the fullscreen grid, keyboard navigation, launch, the exit modal,
 and the portal after logout; Level 2 verified the desktop hint layer and the windowed searchable
-picker. Still open from the checklist below: two apps open side by side, the `Super+K` cheat
-sheet, and every `share/wifi/shell.qml` claim (unchanged). The stock desktop (Level 3) remains
-unverified on a real box (`share/menu/omarchy-kids-trimmed.jsonc` is an admitted guess).
+picker. Still open from the checklist below: two apps open side by side, and every
+`share/wifi/shell.qml` claim (unchanged). The Level 2 `Super+K` cheat sheet was checked live on
+2026-09-22 and **does nothing there**: `omarchy-menu-keybindings` summons its menu with
+`omarchy-shell shell summon`, which needs a running Omarchy shell, and a Level 2 session runs the
+kids launcher instead (only Level 3's start hook runs `omarchy-launch-shell`); the command also
+fails first in that session on the unset `$OMARCHY_PATH` ("OMARCHY_PATH is not set", exit 1). The
+bind is Appendix E's, so it stays, but it is inert at Level 2, and its `--print` mode (which does
+print the live binds as text) has no kid surface to show it -- a kid-side cheat sheet is an open
+decision. Level 3's cheat sheet works, as the dogfood pass recorded. The stock desktop (Level 3)
+remains unverified on a real box (`share/menu/omarchy-kids-trimmed.jsonc` is an admitted guess).
 
 ## The files
 
@@ -75,7 +82,8 @@ set; nothing more, nothing less.
 
 **Level 2.** Everything Level 1 binds, plus `Super+arrows` to focus a window,
 `Super+Shift+arrows` to swap it, `Super+K` for Omarchy's own keybindings cheat sheet
-(`omarchy-menu-keybindings`), and `Super+Space` aliased onto the same launcher as
+(`omarchy-menu-keybindings` -- bound for Appendix E, but inert at Level 2; see the live-status
+note above), and `Super+Space` aliased onto the same launcher as
 `Super+Home`. The "50/50 dwindle split" Appendix E asks for isn't extra config here — it's
 `default.hypr.looknfeel`'s own `general.layout = "dwindle"` / `dwindle.preserve_split = true`,
 which Level 2 requires (see below) and which already gives that behavior for two tiled windows.
@@ -317,8 +325,10 @@ scripts copied to their spec-required paths and made root-owned):
 3. `Super+Home` and `Super+Space` (Level 2) bring the launcher back after opening an app;
    `Super+Enter` opens whatever tile is highlighted without needing the launcher already focused.
 4. `Super+Q` closes the focused app; `Super+Shift+K` opens the exit modal (`docs/exit.md`).
-5. Repeat for `L2.lua` (focus/swap/cheat sheet) and `L3.lua` (real Omarchy desktop minus the
-   terminal bind — try `Super+Return` and confirm nothing launches).
+5. Repeat for `L2.lua` (focus/swap; the `Super+K` cheat sheet is expected to do nothing here --
+   Level 2 runs the kids launcher, not the Omarchy shell) and `L3.lua` (real Omarchy desktop minus
+   the terminal bind — try `Super+Return` and confirm nothing launches; `Super+K` should open the
+   cheat sheet there, since Level 3 starts the Omarchy shell).
 6. Confirm the manifest-selected band overlay makes the cursor visibly larger and GTK/Qt apps
    render bigger.
 7. Issue #42: on a box where pack apps are missing, confirm the manifest marks them
