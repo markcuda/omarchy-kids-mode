@@ -914,3 +914,17 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the exit modal's wrong-password lockout and Esc (live)
+
+`docs/exit.md`'s "Not yet exercised live" named the exit modal's wrong-password shake/lockout and
+Esc to close. On the try-omarchy VM, `Super+Shift+K` opened the modal (the bind delivers, "Ada",
+"Finish for Ada", the key footer); a wrong password showed "That wasn't it."; the third miss turned
+the field red and showed "Too many tries. Try again in 30 seconds." with the key footer hidden
+while locked (the shared code's `visible: !root.locked`); and Esc closed the modal with the kid's
+Hyprland still running -- nothing written, no finish. Same limiter scoping as the Ask modal: the
+modal's own `wrongCount` plus authd's per-uid `RateLimiter`, the kid's uid only. Evidence
+`exit-wrong-hint-2026-09-22.png`, `exit-wrong-lockout-2026-09-22.png` in `.local/media/`.
+
+Still open in `docs/exit.md`: the parent password on a kid's tile at the portal (#15's PAM line),
+which starts a parent session and so is not a loop check.
