@@ -914,3 +914,29 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-21, loop iteration: a non-time request lost its asked_at (live)
+
+Live: `omarchy-kids-ask submit app tuxpaint` as kid-ada, `collect --apply`, then `list` showed the
+app request with a **blank ASKED_AT** column. Cause: `lib/ask.py` `list-open` emits tab-separated
+rows and leaves `minutes` empty for a non-time (app/plugin/site) request, and both readers
+(`omarchy-kids-ask list`, `lib/panel-requests.sh`) parse with `while IFS=$'\t' read` -- tab is IFS
+whitespace, so bash collapsed the empty field and shifted `asked_at` into `minutes`. The panel then
+coerced the blank to 0 and rendered "20700d ago". Fixed on `fix/ask-list-empty-minutes-shift`
+(`4ee6a53`): rows are US (0x1f) separated (a non-whitespace byte, so empty fields survive) with
+0x1f/CR/LF stripped from values so a kid-authored field cannot forge one; both readers use
+`IFS=$'\x1f'`. `ask-test.sh` lists a non-time request and asserts its timestamp, `panel-test.sh`
+asserts a `site` request's row shows a real ("just now") age, docs/ask.md documents the row format
+and docs/panel.md no longer calls it tab-separated. Full Mac suite 52 files green; fable review
+MERGE after the docs and panel-test fixes. Live re-verified from the branch: the queued app request
+listed `ASKED_AT 1790036919`; declined it afterwards.
+
+Same class, found the same pass, not yet fixed (next iteration): `bin/omarchy-kids-session-start:69`
+reads the manifest's 10 `@tsv` fields into 9 variables, so the 10th (`allowlist`) is absorbed into
+`OMARCHY_KIDS_LIGHTS_OUT_WEEKEND`; and a kid with no theme override (`theme=""`, valid per the
+manifest and docs/theming.md) shifts every field (THEME="garden", WEB="60", BUDGET_MIN_WEEKEND=19:30,
+...). The non-empty guard still passes, so the session starts with corrupted values -- silent only
+because nothing reads those six exported vars yet -- but it would fail closed if the last field were
+ever empty. `session-start-test.sh` asserts the env values but covers neither the missing variable
+nor an empty theme. `bin/omarchy-kids-data`'s browse rows (`read -r t host title visits`) can hit
+the same empty-field shift when a page has no title.
