@@ -119,9 +119,11 @@ USAGE_DIR="$ROOT/var/lib/omarchy-kids/kid-ada/usage"
 
 # make_history PYFILE — builds a fixture Chromium History db at PYFILE
 # (urls: url, title, visit_count, last_visit_time in WebKit epoch us
-# since 1601-01-01, per this issue's own "Chromium facts"). Three rows,
-# spread across "today", "an hour ago", and "long ago", so --since and
-# retention-adjacent filtering both have something to bite on.
+# since 1601-01-01, per this issue's own "Chromium facts"). Five rows,
+# spread across "today", hours ago, and "long ago", so --since and
+# retention-adjacent filtering both have something to bite on; one has an
+# empty title and one an ESC control character (both real Chromium row
+# states a page controls) to pin the row parse and the control stripping.
 make_history() {
   local db="$1"
   python3 - "$db" <<'PY'
@@ -139,6 +141,8 @@ rows = [
     ("https://wikipedia.org/wiki/Cat", "Cat - Wikipedia", 3, webkit(now)),
     ("https://wikipedia.org/wiki/Dog", "Dog - Wikipedia", 1, webkit(now - datetime.timedelta(hours=1))),
     ("https://example.com/old", "An old page", 2, webkit(datetime.datetime(2025, 1, 1))),
+    ("https://no-title.example/", "", 1, webkit(now - datetime.timedelta(hours=2))),
+    ("https://escape.example/", "evil\x1b[2Ktitle", 1, webkit(now - datetime.timedelta(hours=3))),
 ]
 conn.executemany(
     "INSERT INTO urls (url, title, visit_count, last_visit_time) VALUES (?, ?, ?, ?)", rows
@@ -270,6 +274,10 @@ check_contains "$out" "sites visited" "sites: header line (running as the kid ne
 check_contains "$out" "wikipedia.org" "sites: shows wikipedia.org"
 check_contains "$out" "3 visits" "sites: shows the visit count"
 check_contains "$out" "example.com" "sites: shows the old page too, with no --since"
+check_contains "$out" "(no title) (1 visit)" \
+  "sites: an empty page title shows the fallback with its own visit count (no field shift)"
+check_not_contains "$out" $'\x1b' \
+  "sites: a control character in a page title never reaches the parent's terminal"
 
 out="$(KIDS_TEST_ACCOUNT=kid-ada OMARCHY_KIDS_NOW="2026-09-02 10:00:00" "$DATA" sites kid-ada --since 30)"
 check_contains "$out" "wikipedia.org" "sites --since 30: recent visits still show"

@@ -45,17 +45,19 @@ Usage:
 
     data.py chromium-visits DB [--since CUTOFF] [--limit N]
         Reads DB's `urls` table (url, title, last_visit_time,
-        visit_count) and prints one TSV line per row, most recent
-        first: "LOCAL_TIME\thost\ttitle\tvisit_count". --since (a
-        "YYYY-MM-DDTHH:MM:SS" cutoff, same shape as since-cutoff's
-        output) drops rows visited before it. --limit caps the row
-        count (default: no cap).
+        visit_count) and prints one US-separated (ASCII 0x1f) line per
+        row, most recent first: LOCAL_TIME, host, title, visit_count.
+        Not tab-separated: a page title can be empty, and bash `read`
+        with a tab IFS collapses the empty field, shifting visit_count
+        into title. --since (a "YYYY-MM-DDTHH:MM:SS" cutoff, same shape
+        as since-cutoff's output) drops rows visited before it. --limit
+        caps the row count (default: no cap).
 
     data.py chromium-top-sites DB [--since CUTOFF] [--limit N]
-        Same source, grouped by host: "host\ttotal_visits\tLOCAL_TIME"
-        (LOCAL_TIME is that host's most recent visit), sorted by
-        total_visits desc then recency desc. --limit defaults to 5 (a
-        "top sites" list, not the full history).
+        Same source, grouped by host: host, total_visits, LOCAL_TIME
+        (that host's most recent visit), US-separated like the above and
+        sorted by total_visits desc then recency desc. --limit defaults
+        to 5 (a "top sites" list, not the full history).
 
 Exit 0 on success. Exit 2 with a one-line reason on stderr for a bad
 argument or an unreadable/malformed database -- never a Python
@@ -63,6 +65,7 @@ traceback (same contract as lib/time.py and lib/ask.py).
 """
 import datetime
 import os
+import re
 import sqlite3
 import stat
 import sys
@@ -208,6 +211,17 @@ def _parse_common_flags(argv, allow_limit=True):
     return db, since, limit
 
 
+ROW_SEP = "\u001f"  # US: not IFS whitespace, so bash `read` keeps empty fields
+_C0 = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def _row(*fields):
+    # A page title is free-form kid-browsing text: strip every C0 control
+    # (0x1f would forge a field boundary; ESC and friends would inject a
+    # terminal escape sequence into the parent's `omarchy-kids-data` output).
+    return ROW_SEP.join(_C0.sub(" ", str(f)) for f in fields)
+
+
 def cmd_chromium_visits(argv):
     db, since, limit = _parse_common_flags(argv)
     rows = _fetch_rows(db, since)
@@ -215,7 +229,7 @@ def cmd_chromium_visits(argv):
     if limit is not None:
         rows = rows[:limit]
     for local, host, title, visit_count in rows:
-        print(f"{local}\t{host}\t{title}\t{visit_count}")
+        print(_row(local, host, title, visit_count))
 
 
 def cmd_chromium_top_sites(argv):
@@ -233,7 +247,7 @@ def cmd_chromium_top_sites(argv):
         by_host.items(), key=lambda kv: (kv[1]["visits"], kv[1]["last"]), reverse=True
     )
     for host, entry in ordered[:limit]:
-        print(f"{host}\t{entry['visits']}\t{entry['last']}")
+        print(_row(host, entry["visits"], entry["last"]))
 
 
 def cmd_fold_launches(argv):
