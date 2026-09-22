@@ -951,3 +951,21 @@ Still pre-existing and recorded for the owner: the check is intra-file, so a `Pr
 to `share/time/timesup.qml` or a `loginctl` in a `lib/kids.sh` `modal_*` helper would be invisible
 (the reviewer read both and the boundary holds today), and the dispatch block and globals sit
 outside the window as before.
+
+### 2026-09-22, loop iteration: two identifier-reference scans, clean
+
+Dogfooded (session healthy; the box's four known FAILs). Continued last round's angle -- identifiers
+that docs and tests reference but the tree does not define -- across the whole live docs and the
+test greps. After fixing the scan's own bugs (it first skipped `bin/` and accepted any word found in
+code), the result is clean:
+
+- Every lowercase `name()` cited in a live doc exists in the tree once the QML/JS/Lua/library APIs
+  are counted; the only genuine miss was `time_toast_thresholds`, fixed last round. The names in
+  `docs/specs/04-one-kid-shell.md` (`ping()`, `showLauncher()`, `hideModal()`, ...) are design
+  proposals for a feature that is not built yet (a typed Quickshell IPC handler), not claims about
+  the code.
+- Every alternation name in a test's `grep` exists somewhere: the ones that are not repo
+  identifiers (`declare`, `warn`, `fixed`, `lsinitcpio`, `mkinitcpio`, `objcopy`, `limine`) are
+  commands or status words the tests look for.
+
+Nothing to fix this round.
