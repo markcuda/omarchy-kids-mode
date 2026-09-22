@@ -212,6 +212,20 @@ PanelWindow {
                             }
                         }
                     }
+
+                    // I-5: the last screen a kid sees has exactly one action, and
+                    // it says which key works -- like the portal, the picker, the
+                    // Wi-Fi picker, the plugins shelf and the two modals. It
+                    // matters here more than anywhere: the card is only up for the
+                    // countdown above (live 2026-09-22).
+                    Text {
+                        font.family: theme.fontFamily
+                        width: parent.width
+                        text: "Enter Ask a grown-up"
+                        color: theme.foreground
+                        font.pixelSize: 14
+                        horizontalAlignment: Text.AlignHCenter
+                    }
                 }
             }
         }
