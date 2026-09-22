@@ -1003,3 +1003,22 @@ a names-only set that missed the shapes it had named) and two minors are closed.
 Still open (recorded for the owner): `lib/kids.sh`'s `modal_*` helpers and the other kid overlays
 (`ask`, `exit-modal`, `plugins`, `wifi`) have no equivalent guard -- the exit modal legitimately runs
 the parent-authenticated finish, so its check would need a different shape.
+
+### 2026-09-22, loop iteration: the overlay guard enumerated, one table
+
+Dogfooded (session healthy; the box's four known FAILs). Extended last round's two-time-overlay
+guard to every kid surface and closed the review's two majors: the file list was hand-written (a
+new overlay would have been unchecked -- the "assertion must own its fixture" shape), and the "one
+table" comment was untrue because the daemon check repeated the names in its own grep. Now every
+`.qml` and `.js` under `share/` is checked, enumerated rather than listed, with the two surfaces
+this repository does not own for a kid session skipped (the parent's bar widget and the SDDM
+portal); the name table is defined once and spliced into the `bin/omarchy-kids-time` check too; it
+gains the two parent paths (`omarchy-kids-time grant`, `omarchy-kids-bar end`); and the ok label
+says "the named enforcement commands" rather than implying completeness. Verified: a brand-new
+`share/zz-new-overlay/shell.qml` containing `loginctl` fails, the bar module's comment is skipped,
+the exit modal's finish pair stays allowed, and the suite is green (the review's two minors -- the
+overclaiming label and the multi-line indent -- are closed too).
+
+Still open (recorded for the owner): `hyprctl dispatch exit` cannot be blanket-denied because the
+launcher legitimately uses `hyprctl` for focus, so it stays a hole outside the two time overlays,
+and `lib/kids.sh`'s `modal_*` helpers have no equivalent guard.
