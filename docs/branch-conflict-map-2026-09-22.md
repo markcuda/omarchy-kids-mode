@@ -31,8 +31,8 @@ nearly any pair and want a union.
 | `fix/launcher-time-left-refresh` × `fix/toast-icon-match` | `docs/time.md` |
 | `fix/toast-clock-overlap` × `fix/toast-icon-match` | `docs/time.md` |
 
-The two code areas and their resolutions are below; the `docs/time.md` and `docs/packaging.md`
-pairs are prose.
+Each pair below resolves to a superset or a stale branch; the sections give the call. What remains
+genuinely prose is `docs/time.md`, `docs/packaging.md`, and the shared running docs.
 
 ### The launcher conflicts are one stale branch
 
@@ -44,6 +44,14 @@ minute before its own -- and its single change, dropping the duplicate `shortScr
 for flat insets under the compact `root.margin`, is already in the union, which then added the
 `minFitCell` fit mechanism the branch lacks. Merging it conflicts with the union-based branches and
 adds nothing (a rebase would be an empty change): drop it.
+
+### The toast pair: one contains the other
+
+`fix/toast-clock-overlap` is an ancestor of `fix/launcher-time-left-refresh` -- that branch's log
+already carries `a58bbd2` and `ce59958`, the toast sizing and clock-clear fixes. Merging both is
+redundant: merge `fix/launcher-time-left-refresh`, drop `fix/toast-clock-overlap`. `fix/toast-icon-match`
+then merges on top: its `share/time/toast.qml` change (the `OMARCHY_KIDS_TOAST_ICON` glyph) is a
+different region and auto-merges, and only `docs/time.md` is a prose union.
 
 ### The packaging pair: one supersedes the other
 
