@@ -930,3 +930,13 @@ back to the band's defaults and names hand-added sites among them, the function 
 one and keeps the other; `test/all` green (52 files, five skips), `shellcheck -x` clean, fable
 review one major (the changelog claim, now fixed) and three minors closed. This supersedes the
 Reset-card wording quoted in the earlier 2026-09 entry below.
+
+Live on the VM: installed `bin/omarchy-kids-conf` and `lib/panel-kid.sh` from the branch and ran
+the panel's own file-mode harness (`OMARCHY_KIDS_TUI_ANSWERS` + `--dry-run`) as the parent; on real
+gum the reset card rendered "Every other screen for this kid goes back to the band's defaults ...
+Any sites you added by hand go back too. The account, name, face, band, password and theme stay.",
+and the false claim is gone. Substrate note: a bare `bin/omarchy-kids-conf` from a branch does not
+work installed as-is -- the PKGBUILD rewrites its `SCHEMA` seam (and `lib/kids.sh`'s `KIDS_PY`), so
+the same `sed` ran before `install` (an unrewritten copy looks for
+`/usr/share/config/schema.toml` and breaks every conf read). The kid session stayed up and
+`omarchy-kids-check --live` still shows only this box's four known FAILs.
