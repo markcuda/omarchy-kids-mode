@@ -18,6 +18,14 @@ own hook or authd startup; Level 3's menu trim uses omarchy-menu's real extensio
 (`~/.config/omarchy/extensions/omarchy-menu.jsonc`, `when: "false"` per id) and no longer runs
 Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips).
 
+**Fixed on a topic branch awaiting merge:** `fix/time-read-diagnostics` -- an unreadable budget or
+lights-out now fails the root ledger tick with a named message instead of bash's `10#` error (the
+tick still aborts, as before; no enforcement decision changes).
+
+**Waiting on the owner:** ticket W2 (`docs/research/2026-09-19-per-app-limits-and-weekly-caps-proposal.md`)
+-- a persistently broken conf leaves the time tick fail-open (last state stays in force; `time:timer`
+only proves the timer is active). `docs/time.md` now records it.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After
