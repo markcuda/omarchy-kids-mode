@@ -914,3 +914,22 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: a component-set skew, found live on the panel
+
+Dogfooded the parent panel's remaining Kid screens live (Home, the Kid row menu, Screen time,
+Wi-Fi, Apps, Data). The **Wi-Fi screen rendered "Mode: " blank**, with
+`/usr/lib/omarchy-kids/panel-kid.sh: line 92: friendly_wifi_mode: command not found` in its output.
+Not a repo defect: the repo's panel sources `lib/kids.sh`, which defines `friendly_wifi_mode`
+(line 523) -- but the VM had version skew, because an earlier iteration installed
+`lib/panel-kid.sh` from a branch without the matching `lib/kids.sh` (whose installed copy predates
+that function). Repaired the VM by backing up the old file and installing integration's
+`lib/kids.sh` with the PKGBUILD's `KIDS_PY` sed; the Wi-Fi screen now shows "Mode: Ask me first"
+and the Apps screen its Plugins shelf row. Added `test/shell.d/panel-test.sh`'s first assertion on
+that label (it fails when `friendly_wifi_mode` is stubbed to echo the raw value) and sharpened the
+untracked `.local/VM-DOGFOOD.md` with the `panel-*.sh` -> `kids.sh` pairing. `test/all` green.
+Branch `test/panel-wifi-mode-label` (a test-only pin; no product change).
+
+Found honest along the way: the Data screen's sudo prompt appears once and falls back cleanly when
+it cannot (the desktop entry is `Terminal=true`, so the real path has a tty), and the Kid, Screen
+time and Apps screens' facts and rows are accurate.

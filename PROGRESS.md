@@ -18,6 +18,11 @@ own hook or authd startup; Level 3's menu trim uses omarchy-menu's real extensio
 (`~/.config/omarchy/extensions/omarchy-menu.jsonc`, `when: "false"` per id) and no longer runs
 Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips).
 
+**Fixed on a topic branch awaiting merge:** `test/panel-wifi-mode-label` -- a live panel dogfood found
+the Wi-Fi screen's "Mode:" label blank when a `lib/panel-kid.sh` is installed without the
+`lib/kids.sh` that defines `friendly_wifi_mode` (a VM component-skew repair, not a repo defect);
+the test now pins the label.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After
