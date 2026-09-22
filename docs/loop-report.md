@@ -914,3 +914,24 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the picker sliced the desktop's hint line
+
+Dogfooded the VM first (kid-ada at Level 2, session healthy; `omarchy-kids-check --live` at its
+usual 46 PASS plus this box's four known FAILs). The I-6 pass over `lib/`, the wizard and the SDDM
+portal found nothing to fix -- and several claims that check out -- so the iteration took a live
+cosmetic defect instead: with the app picker open at 960x540 (and 875x492), the centred picker
+window's bottom edge sliced the desktop layer's own "Super + Q: Close app · Super + Shift + K:
+Grown-up exit" line into broken half-glyphs. Fixed on `fix/picker-slices-desktop-hint`: the desktop
+takes `pickerOpen` and hides that line while the picker covers it (the picker shows its own footer,
+and Super+Q folds the picker away rather than closing an app, so the hidden line was the less
+honest one to keep). `launcher-grid-test.sh` pins the flag, the pass-through, and the binding's own
+target -- a targeted grep that fails if the binding moves onto another `Text`; `test/all` green (52
+files, five skips), `shellcheck -x` clean, fable review nothing blocking (its two test minors
+closed).
+
+Checked-and-clean this iteration, no change needed: `bin/omarchy-kids-data`'s usage matches its
+dispatch; the wizard's `filtered` web label ("Adult content blocked, safe search on") matches the
+13+ policy (family DoH + forced SafeSearch + YouTube strict, no URL blocklist, as `docs/web.md`
+says); the SDDM portal's Ctrl+Shift+P power chord is really bound; the panel's reset, home,
+requests and machine cards are honest.
