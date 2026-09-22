@@ -914,3 +914,20 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the loop has nothing left it can reach (state)
+
+The three "next work" items the union's `PROGRESS.md` named are done: the I-6 sweep, the Ask modal's
+submit keys and the Time's Up screen, and the portal after a kid exits. The sweep re-found only
+defects already carried by in-flight branches, so the union is a stale base rather than a source of
+new work -- e.g. the portal footer advertises `← → Choose` and `Ctrl+Shift+P Power off`
+unconditionally, which `fix/portal-key-hints` gates (not in the union); the ask/exit modal key hints
+are `fix/modal-key-hints`; `dns`/`sites` are `fix/dns-control-honesty`/`fix/garden-sources-agree`.
+57 remote branches (154 commits) sit ahead of `integration/dogfood-2026-09-19`.
+
+What this loop added and cannot finish itself: the bar's open-request badge and its "Open requests"
+row run the root-only `list` from the parent's unprivileged session -- recorded on
+`docs/loop-bar-requests-finding`, since the union here does not carry that entry. The fix is a
+request-visibility decision, not a patch. Everything else waits on the owner's decisions
+(`docs/phase1/DECISIONS-NEEDED.md`, latest on `docs/decisions-loop-2026-09-22`), the merge gate, or
+an owner-run live session. Until one of those moves, a further pass should not open more branches.
