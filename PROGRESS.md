@@ -47,7 +47,9 @@ and not applied, with the wiring question on the owner's list as item 7), plus
 `fix/garden-sources-agree` (the band's starter garden is one list again, pinned by a test, and the
 `sites` key says it is stored too), plus `fix/polkit-check-as-root` (the session preflight's polkit
 probe no longer blames the deny rule for root's or a grown-up's own account, and still fails closed
-for a kid whose groups have drifted), plus `fix/stale-threshold-name`, which now carries the
+for a kid whose groups have drifted), plus `fix/tile-labels-fit` (Level 1's tile labels take the
+whole tile on a short screen, so SuperTux and SuperTuxKart are no longer both "Super…"), plus
+`fix/stale-threshold-name`, which now carries the
 trust-boundary work: the denylist named `time_toast_thresholds`, a function that does not exist (it
 is `time_warning_thresholds`), and has since been extended to every kid overlay enumerated from
 `share/`, the dispatcher exit spelling, and `lib/kids.sh`'s `modal_*` helpers.
