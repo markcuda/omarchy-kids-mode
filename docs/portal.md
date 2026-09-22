@@ -289,7 +289,9 @@ to Cy, Enter opened the password field under the tile, the kid password logged i
 started `omarchy-kids-session` for kid-cy, whose Hyprland and Level 1 launcher came up.
 The bottom of the screen names the keys — "← → Choose · Enter Sign in · Ctrl+Shift+P Power off",
 switching to "Enter Sign in · Esc Back" while typing — and a failed password is worded, not only
-shaken. Not yet exercised live: the wrong-password shake and wording, the power-off chord, the
+shaken. (2026-09-22: the footer now leaves out a hint whose key cannot act on this box — the
+arrows with a single tile, Enter with none, and the power-off chord where `sddm.canPowerOff` is
+false — so this live record's fixed string is the several-tiles, power-off-allowed case.) Not yet exercised live: the wrong-password shake and wording, the power-off chord, the
 parent password on a kid tile (needs #15), and the display-name and avatar polish in #39.
 `sddm-greeter-qt6 --test-mode` aborts inside a Hyprland session (stock theme too), so a real boot
 into the portal is the only way to see the theme.

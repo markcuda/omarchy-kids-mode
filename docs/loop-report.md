@@ -914,3 +914,31 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the portal's footer named keys that do not act
+
+Dogfooded first: the Level 2 session is healthy (133 min left, Blinken and KTuberling tiled), and a
+real Super+Space / Esc round trip brought the picker up and dismissed it, with the tile list
+scrolling to keep the selection visible and uninstalled tiles skipped in navigation -- so the live
+pass found nothing new and the iteration went to the I-6 pass over the kid surfaces. That pass had
+one real finding left: `share/sddm-theme/Main.qml`'s footer advertised three keys unconditionally,
+while the arrow handlers only move between tiles (with one tile nothing happens), Enter only signs
+in when a tile exists (with none the file shows a "no accounts" line), and SDDM may refuse
+power-off, which the chord's own handler already checks. The footer now comes from a `keyHelpText()`
+that offers each hint only behind the condition that makes it act; with nothing to name the line is
+empty. No new key is advertised, and the password-mode pair (`Enter Sign in · Esc Back`) is
+unchanged.
+
+Verified: `test/shell.d/portal-test.sh` extracts the function and asserts each hint sits behind its
+own guard, that the footer actually calls it, and that each hint phrase occurs nowhere outside it --
+mutation-checked three ways, including the partial regression a review pointed out (restore the
+hardcoded footer, leave the function as dead code), which the first version of the check missed; a
+failing stub `qmllint` fails the test and a passing one passes; the VM's Qt6 `qmllint` (6.11.2)
+parses the file with rc 0, one more "Unqualified access" warning than before (`sddm` is a context
+property, the same class as the 92 it already had); the suite is green (52 files, six skipped
+checks -- the new qmllint one is the sixth on a box without Qt). The portal itself still cannot be
+rendered on the dogfood VM (try-omarchy logs its owner in at the image level), which is why the
+syntax check exists.
+
+Recorded for the owner: the greeter's live pass (`docs/portal.md`, 2026-09-02) kept the old fixed
+footer string as its record; that paragraph now names 2026-09-22 and says which case it describes.
