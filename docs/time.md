@@ -5,8 +5,8 @@ owns elapsed-time calculation, the `allowed`/`warning`/`grace`/`finishing` decis
 locking, and session finish. This is issue #23 plus issue #68, ticket 1, issue #69, ticket 2,
 and issue #70, ticket 3.
 
-See "Verified live" below for what has run in the QEMU test VM, and "What's unverified" for the
-rest.
+See the two "Verified live" sections below -- the QEMU test VM for the 2026-09-02/03 runs, the
+try-omarchy VM for 2026-09-21 -- and "What's unverified" for the rest.
 
 ## The trust boundary — read this first
 
@@ -163,8 +163,8 @@ The button still says "ask", not "get" (I-6): asking is the kid's part, granting
 Until 2026-09-03 this ran `omarchy-kids-time ask-grownup`, a placeholder from before
 `omarchy-kids-ask` existed that showed the R-DESK-2 "this desktop can't start safely" screen with
 "time 15" as the failed check. That subcommand is gone. The ask modal opening *over* the Time's Up
-overlay (two keyboard-exclusive layer surfaces) has not been watched live yet; the modal alone,
-opened over the launcher, has (`docs/ask.md` "Verified live").
+overlay (two keyboard-exclusive layer surfaces) was watched live on 2026-09-21; the modal alone
+over the launcher was watched earlier (`docs/ask.md` "Verified live").
 
 ## Pause-awareness (R-TIME-2)
 
@@ -206,9 +206,6 @@ check.
 
 ## What's unverified (check in the VM before this ships)
 
-- Every Quickshell-specific name in `share/time/toast.qml` and `share/time/timesup.qml`, including
-  the `FileView` status reader and the fixed root-state path. The card's keyboard-only ask action
-  reuses the detached-command shape verified in `share/ask/shell.qml`.
 - `loginctl show-session <id> -p Active -p LockedHint -p Class -p Type`'s exact output shape on
   the real target (this repo has never run against a real `systemd-logind`) —
   `test/shell.d/time-test.sh` stubs it, so the *parsing* is tested, not the real command's actual
@@ -225,18 +222,32 @@ check.
 - The kid adapter reflecting a live root warning/grace document and hiding the card after a root
   grant; the shell test covers the fixed state fixtures, but a kid seeing those surfaces in a real
   session is still unconfirmed.
-- The Ask modal opening over the Time's Up overlay (two keyboard-exclusive layer surfaces); the
-  modal alone, opened over the launcher, has been watched (`docs/ask.md` "Verified live").
+
+## Verified live (2026-09-21, try-omarchy VM)
+
+- `share/time/timesup.qml` (installed from the branch) rendered with a synthetic `grace` status:
+  the fox avatar, "Time's up, Ada!", "Your screen time for today is done.", a "Closing in N s"
+  countdown that decremented, and the highlighted "Ask a grown-up" button. Pressing Enter put the
+  Ask modal on top of it (two keyboard-exclusive layer surfaces).
 - The launcher's own time-left line (`share/launcher/shell.qml` reading
-  `/run/omarchy-kids/time/<kid>.json` with a `FileView`, rendered through
-  `GridNav.remainingLabel`): the label logic is node-tested and the wiring is static-tested, but
-  the real file watch against root's live state has only been reasoned about, not watched.
+  `/run/omarchy-kids/time/<kid>.json`, rendered through `GridNav.remainingLabel`) was frozen at
+  the value it read at start: its `FileView` only had `watchChanges`, which does not re-read the
+  file on a watch signal (`share/bar/KidsModule.qml` adds `onFileChanged: reload()` for exactly
+  this), and the daemon's rename-replace (`lib/time.sh`'s `mktemp` + `mv`) can drop the watch too.
+  Live, the line stayed at "41 minutes left" for half an hour across many ticks and a grant. Fixed
+  by re-reading it on a timer and adding the `onFileChanged` handler
+  (`fix/launcher-time-left-refresh`); after the fix the line followed a `+10` grant from "79" to
+  "88 minutes left" at the next tick.
+- The timesup card itself was driven with a hand-written status file, so it does not prove the
+  daemon's own grace document (below).
 
 ## Verified live (2026-09-02, QEMU test VM; ticket 2)
 
-The evidence below predates ticket 3 and records the former kid-side display/finish behavior. The
-root enforcement proof remains valid; the new display-only adapter and root-state-reading card
-still need a fresh VM run.
+The evidence below predates ticket 3 and records the former kid-side display/finish behavior; the
+root enforcement proof remains valid. The display-only adapter has since been partly exercised:
+the daemon's own real grace document drove the card and ended the session (2026-09-21, the loop
+report's time-gate entry), and the launcher's time-left line was frozen and fixed (the try-omarchy
+section above). Still unverified: the adapter hiding the card after a root grant.
 
 The kid-side daemon starts with the session (`omarchy-kids-session-start` line in the session
 log). The lights-out rule fired the full-screen Time's Up overlay at login for a 6-8 kid at
