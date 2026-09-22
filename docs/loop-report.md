@@ -914,3 +914,22 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-21, loop iteration: the kid toast didn't fit its own message (live)
+
+Dogfooded the kid-facing Wi-Fi picker -- a surface docs/levels.md listed as entirely unverified. A
+`wifi=parent` kid (the 6-8 default) correctly gets a toast ("Wi-Fi needs a grown-up. Ask them to
+turn it on for you.") and no picker. But the toast rendered wrong: it overlapped the launcher's
+top-right clock, its message interleaving with the `N minutes left` line. `hyprctl layers` showed
+the toast window was **320x32**: `implicitHeight: card.implicitHeight + 32` where `card` is a
+Rectangle with `anchors.fill` and no implicit height of its own, so the wrapped message overflowed
+the window and drew over the clock. Fixed on `fix/toast-clock-overlap` (`a58bbd2`): the window
+sizes from the content Row (`cardContent`), and the top margin goes 96 -> 144 to clear the
+launcher's whole clock block (the time plus the `N minutes left` line) -- 96 had been chosen
+against a wrong clock inset (24, vs the launcher's 32 short / 56 tall). Live-verified at 875x492:
+the window is now 320x98 at y=144 and the clock is clear. The fable review needed two rounds (120
+was 2px short for Level 1 at >=640px tall; the docs claimed the block was "measured" when only the
+window geometry was observed), ending MERGE. docs/time.md updated. Open: on a short screen a 98px
+top-right toast still overlaps the launcher's title/card corner transiently (inherent -- there is
+no free top-right space at 875x492), and the 6 s auto-dismiss and `Qt.quit()` shutdown remain
+unverified (the toast's own timer/quit path).
