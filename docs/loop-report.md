@@ -929,3 +929,15 @@ call, one comment, one pair of assertions, plus a count guard over comment-strip
 fails (`got 2`) if the duplicate returns. `levels-test.sh` green (guard verified against a
 reintroduced duplicate), `test/all` green (52 files, five skips), `shellcheck -x` clean, fable
 review nothing blocking.
+
+Live on the VM: installed `/etc/omarchy-kids/hyprland/L2.lua` from the branch and restarted the
+kid session through SDDM; `omarchy-kids-session` reported `L2.lua present and verifies` and the
+Level 2 desktop came up with `omarchy-kids-check --live` green except the expected
+`firmware:password`. The kid's time had run out during the restart, so enforcement entered
+`finishing` and ended that session; `grant kid-ada 60` returned the state to `allowed` and the
+kid logged back in (58 minutes left). Two operator notes: a `sudo tee` with a heredoc swallowed
+the piped password and repeated attempts tripped the guest's `pam_faillock` (locked the parent
+account ~10 minutes, cleared on its own -- `.local/VM-DOGFOOD.md` now says never to combine
+`sudo -S` with a heredoc), and the per-boot autologin drop-in was removed by hand because the
+cleanup unit did not fire on a manual `systemctl restart sddm`. The VM was left with the kid
+session up, no drop-in, and only the VM-only `firmware:password` FAIL.
