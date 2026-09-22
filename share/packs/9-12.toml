@@ -108,9 +108,11 @@ label = "Kiwix"
 category = "reference"
 age = "9-12"
 
-# web = "garden" for this band (Appendix B): these hosts become the
-# URLAllowlist alongside the kid's own approved sites (R-WEB-3). Short
-# and obviously safe on purpose.
+# web = "garden" for this band (Appendix B): these hosts are the default
+# a parent sees for the `sites` key (docs/conf.md) -- the *rendered*
+# URLAllowlist comes from share/policy/lists/<band>.txt, which must list
+# exactly these hosts (test/shell.d/config-key-readers-test.sh pins it).
+# Short and obviously safe on purpose.
 [garden]
 sites = [
   "pbskids.org",
@@ -118,4 +120,6 @@ sites = [
   "scratch.mit.edu",
   "youtubekids.com",
   "wikipedia.org",
+  "khanacademy.org",
+  "code.org",
 ]

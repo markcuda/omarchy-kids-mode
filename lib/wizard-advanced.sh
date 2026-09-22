@@ -286,7 +286,7 @@ adv_edit_time() {
 adv_edit_sites() {
   local step="$1" total="$2"
   tui_screen_input "Which sites can $DISPLAY_NAME visit?" "$step" "$total" 0 "" \
-    text "Comma-separated hostnames, like pbskids.org,starfall.com." validate_sites_list
+    text "Comma-separated hostnames, like pbskids.org,starfall.com. Stored for now: the browser's allowlist is the band's policy list plus sites you approve." validate_sites_list
   local rc=$?
   ((rc == 0)) || return $rc
   adv_set sites "$TUI_REPLY"
