@@ -36,7 +36,12 @@ run_web_section() {
       add_result Web "web:owner:$bt" fail "$cf's group owner is '$owner_group', expected '$group' — run 'omarchy-kids-web install' (R-WEB-1)"
     fi
 
-    if grep -q '"DnsOverHttpsMode"[[:space:]]*:[[:space:]]*"secure"' "$cf" 2>/dev/null; then
+    # The policy is 0640 root:omarchy-kids-<band>; an unprivileged panel (the
+    # way a parent normally runs this) cannot read it, and a hidden grep
+    # failure used to read as "does not set DnsOverHttpsMode" (I-6).
+    if [[ ! -r "$cf" ]]; then
+      add_result Web "web:doh:$bt" warn "cannot verify: $cf is not readable here — run with sudo to check this"
+    elif grep -q '"DnsOverHttpsMode"[[:space:]]*:[[:space:]]*"secure"' "$cf"; then
       add_result Web "web:doh:$bt" pass "$cf sets DnsOverHttpsMode: secure (R-WEB-2)"
     else
       add_result Web "web:doh:$bt" fail "$cf does not set DnsOverHttpsMode: secure (R-WEB-2)"
