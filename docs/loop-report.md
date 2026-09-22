@@ -914,3 +914,17 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the Ask modal's wrong-password hint and lockout (live)
+
+`docs/ask.md` item 3 was the one live check left that did not need a kind to be installed. Typing a
+wrong password into the modal three times as kid-ada on the try-omarchy VM showed "That wasn't it."
+after the first two misses, then on the third turned the field red and showed "Too many tries. Try
+again in 30 seconds." -- the modal's own `wrongCount` lockout, and `omarchy-kids-authd`'s
+`RateLimiter` behind it (three misses -> 30 s, ten -> 5 min, per peer uid and decayed, so it locks
+the kid's own uid and never the parent's account). Evidence `ask-wrong-hint-2026-09-22.png` and
+`ask-wrong-lockout-2026-09-22.png` in `.local/media/`. The exit modal shares this code path
+(`docs/exit.md`); the shake is an animation a still cannot show.
+
+Still open in `docs/ask.md`: item 2's app/plugin/site grants end to end, which needs a real
+installed app/plugin/site and is not a read-only check.
