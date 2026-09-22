@@ -1036,3 +1036,20 @@ ran is not recorded). Left for the branches that own them: `docs/time.md:138-140
 `share/time/toast.qml:25-26` still say the 96px margin clears a roughly 40px clock, which
 `fix/toast-clock-overlap` changes and must correct with it, and `fix/launcher-time-left-refresh`
 owns the frozen-watch record.
+
+### 2026-09-22, loop iteration: the branch-owned doc corrections, checked
+
+Dogfooded (session healthy; the box's four known FAILs). Followed up last round's "left for the
+branch that owns them" note and confirmed `fix/toast-clock-overlap` does carry them: its
+`share/time/toast.qml` comment explains the 144px margin (the arithmetic and the 2026-09-21 finding
+that the 96px window sat over the clock), and its `docs/time.md` already has the corrected margin
+paragraph and unverified bullet. No action there.
+
+Spot-checked six code-fix branches for the same shape (a behaviour change without the doc that
+describes it): `fix/launcher-time-left-refresh` (docs/time.md), `fix/show-missing-regression`
+(docs/apps.md, docs/conf.md, docs/levels.md), `fix/panel-apps-not-installed` (docs/panel.md) and
+`fix/ask-list-empty-minutes-shift` (docs/ask.md, docs/panel.md) all carry their doc updates;
+`fix/session-start-manifest-fields` and `fix/data-browse-empty-title` are code/test-only, and their
+changes are internal enough that no doc describes the old behaviour they change. Nothing actionable
+this round: the docs' remaining stale claims are owned by the branches that fix the code they
+describe, and merge with them.
