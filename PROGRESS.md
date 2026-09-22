@@ -44,7 +44,8 @@ Level 3 pass), plus `fix/panel-machine-root-note` (the Machine card no longer cl
 `docs/web-doh-live` (the browser's DoH path verified live, closing the gap `docs/web.md` named in
 2026-09-03), plus `fix/dns-control-honesty` (the Safe-search DNS choices now say they are stored
 and not applied, with the wiring question on the owner's list as item 7), plus
-`fix/stale-threshold-name`, which now carries the
+`fix/garden-sources-agree` (the band's starter garden is one list again, pinned by a test, and the
+`sites` key says it is stored too), plus `fix/stale-threshold-name`, which now carries the
 trust-boundary work: the denylist named `time_toast_thresholds`, a function that does not exist (it
 is `time_warning_thresholds`), and has since been extended to every kid overlay enumerated from
 `share/`, the dispatcher exit spelling, and `lib/kids.sh`'s `modal_*` helpers.
