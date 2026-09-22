@@ -36,9 +36,10 @@ pre-seed, the add-on model's five questions, favorites/recents' three, W2's fail
 Level 3 keeps the file-manager bind (`Super+Shift+F`) under `menu=trimmed`.
 
 **Next work without owner input:** none the loop can still reach. The I-6 sweep over `share/` and
-`lib/` is done, every live surface it can drive on the VM has been exercised, and the last four
-rounds found nothing actionable (see `docs/loop-report.md`). It waits on the decisions above, the
-merge gate (33 branches), or an owner-run live session.
+`lib/` is done, every live surface it can drive on the VM has been exercised, and the last rounds
+found only one new item -- the bar request-visibility decision, item 8 above. It waits on the
+decisions, the merge gate (`docs/branch-conflict-map-2026-09-22.md` maps it: 60 branches, eight
+safe to skip, two stale), or an owner-run live session.
 
 ## Paused — September 11, 2026
 
