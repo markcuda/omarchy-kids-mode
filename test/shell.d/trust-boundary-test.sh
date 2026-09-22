@@ -363,5 +363,34 @@ else
   ok "trust boundary: the kid time overlays never enforce and keep only the ask call"
 fi
 
+# The pidfile helpers the kid overlays use (lib/kids.sh's modal_* functions) get
+# the same names check. They are extracted per function, not by a line range: the
+# units array just below them names the assert *service*, which is not kid-side
+# enforcement and would false-fail. A function that has gone missing is a failure,
+# not a silent pass.
+modal_bodies="$(awk '
+  /^modal_[a-z0-9_]*\(\)/ {
+    if ($0 ~ /\}[[:space:]]*$/) { print FNR": "$0; next }
+    inm = 1
+  }
+  inm { print FNR": "$0 }
+  inm && /^}/ { inm = 0 }
+' lib/kids.sh)"
+missing_modal=""
+for fn in modal_already_open modal_write_pid modal_close; do
+  grep -q ": $fn(" <<<"$modal_bodies" || missing_modal+=" $fn"
+done
+if [[ -n "$missing_modal" ]]; then
+  bad "trust boundary: lib/kids.sh's modal_* helpers moved (missing:$missing_modal); this guard cannot find them"
+else
+  hits="$(grep -E "$overlay_root_re|$overlay_finish_re" <<<"$modal_bodies" || true)"
+  if [[ -n "$hits" ]]; then
+    bad "trust boundary: a kid overlay pidfile helper names an enforcement command (lib/kids.sh line):"
+    printf '%s\n' "$hits" | sed 's/^/     /'
+  else
+    ok "trust boundary: the kid overlay pidfile helpers name no enforcement command"
+  fi
+fi
+
 echo "trust-boundary-test RESULT: $([[ $fail == 0 ]] && echo PASS || echo FAIL)"
 exit $fail
