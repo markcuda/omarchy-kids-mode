@@ -97,13 +97,17 @@ l1_after_band="$(tail -n +$((l1_band_end + 1)) "$HYPR/L1.lua")"
 check_contains "$l1_after_band" 'general = { gaps_in = 0, gaps_out = 0, border_size = 0 }' \
   "L1.lua restores zero-gap kiosk geometry after the band overlay"
 check_contains "$(cat "$HYPR/L1.lua")" 'cursor = { inactive_timeout = 1 }' \
-  "L1.lua hides the idle pointer (cursor:inactive_timeout, verified via hyprctl descriptions)"
-check_contains "$(cat "$HYPR/L2.lua")" 'cursor = { inactive_timeout = 1 }' \
-  "L2.lua hides the idle pointer too"
-check_contains "$(cat "$HYPR/L1.lua")" 'cursor = { inactive_timeout = 1 }' \
   "L1.lua hides the idle pointer (cursor:inactive_timeout, verified on the compositor)"
 check_contains "$(cat "$HYPR/L2.lua")" 'cursor = { inactive_timeout = 1 }' \
   "L2.lua hides the idle pointer too"
+# A stale merge once left L2.lua setting the same rule twice (and this test
+# asserting it twice); one call is the whole rule, so pin the count. Count
+# code lines only -- a comment quoting the rule must satisfy neither the
+# presence check nor the count (same idiom as the L3 scan below).
+check "$(grep -vE '^[[:space:]]*--' "$HYPR/L1.lua" | grep -c 'cursor = { inactive_timeout = 1 }')" "1" \
+  "L1.lua sets the idle-pointer rule exactly once"
+check "$(grep -vE '^[[:space:]]*--' "$HYPR/L2.lua" | grep -c 'cursor = { inactive_timeout = 1 }')" "1" \
+  "L2.lua sets the idle-pointer rule exactly once"
 
 # --- L2: the L1 set plus Appendix E's Level 2 additions ------------------
 
