@@ -927,3 +927,10 @@ tick still recomputes from the ledger and acts. `time-test.sh` covers the three 
 document, a grant newer than the tick, a tick since the grant) and fails without the guard;
 `test/all` green (52 files, five environment skips), `shellcheck -x` clean, and the fable reviewer
 found nothing blocking (six minors closed). Branch `fix/time-status-fresh-grant`.
+
+Live on the VM after installing `/usr/bin/omarchy-kids-time` and `/usr/lib/omarchy-kids/time.sh`
+from the branch (never the integration copies): status read the fresh published document ("7 min
+left", boundary 01:00); a root `grant kid-ada 10` made the grant file newer than the document
+(00:53:08 vs 00:53:02), and the very next status counted it at once ("18 min left", boundary
+01:11) instead of holding the pre-grant 7 until the next pass. The kid session stayed up and
+healthy.
