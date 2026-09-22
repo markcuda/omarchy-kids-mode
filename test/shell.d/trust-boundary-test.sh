@@ -72,6 +72,7 @@ ALLOWED=(
   OMARCHY_KIDS_BAND       # display filter for the plugins shelf
   OMARCHY_KIDS_LEVEL      # exported for a QML surface's own label
   OMARCHY_KIDS_TOAST_TEXT # the text of a toast, exported to its QML
+  OMARCHY_KIDS_TOAST_ICON # the glyph that fits a toast's own words, exported to its QML
   OMARCHY_KIDS_ASK_KIND   # the ask modal's own request fields, exported
   OMARCHY_KIDS_ASK_WHAT
   OMARCHY_KIDS_ASK_DESC

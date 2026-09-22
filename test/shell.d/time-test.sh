@@ -170,9 +170,9 @@ exit "\${FINISH_RC:-0}"
 EOF
 kids_stub "$TMP/tree" quickshell <<EOF
 #!/bin/bash
-printf 'argv=%s toast=%s account=%s name=%s avatar=%s\n' \\
-  "\$*" "\${OMARCHY_KIDS_TOAST_TEXT:-}" "\${OMARCHY_KIDS_ACCOUNT:-}" \\
-  "\${OMARCHY_KIDS_NAME:-}" "\${OMARCHY_KIDS_AVATAR:-}" >>"$TMP/quickshell.log"
+printf 'argv=%s toast=%s icon=%s account=%s name=%s avatar=%s\n' \\
+  "\$*" "\${OMARCHY_KIDS_TOAST_TEXT:-}" "\${OMARCHY_KIDS_TOAST_ICON:-}" \\
+  "\${OMARCHY_KIDS_ACCOUNT:-}" "\${OMARCHY_KIDS_NAME:-}" "\${OMARCHY_KIDS_AVATAR:-}" >>"$TMP/quickshell.log"
 EOF
 
 export PATH="$STUBS:$PATH"
@@ -633,6 +633,8 @@ write_warning_state() { write_state warning '[10,5]' 240 0 1000; }
 log_out="$(run_daemon_oneshot write_warning_state)"
 check_contains "$log_out" "argv=-p $SHARE/time/toast.qml toast=5 minutes left" \
   "daemon: root warning state drives the most urgent published warning"
+check_contains "$log_out" "toast=5 minutes left icon=⏰" \
+  "daemon: the time toast keeps the alarm-clock glyph"
 check_not_contains "$log_out" "timesup.qml" "daemon: warning state does not open Time's Up"
 
 write_grace_state() { write_state grace '[]' 0 1060 1000; }

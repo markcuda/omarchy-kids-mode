@@ -71,11 +71,13 @@ require_helper() {
 }
 
 # show_toast TEXT — same overlay bin/omarchy-kids-time uses; falls back
-# to stderr if Quickshell isn't on PATH.
+# to stderr if Quickshell isn't on PATH. The glyph is the Wi-Fi bars, not
+# the time toast's alarm clock, so the icon matches the words (I-6).
 show_toast() {
   local text="$1"
   if [[ -x "$QUICKSHELL_BIN" && -f "$TOAST_QML" ]]; then
-    OMARCHY_KIDS_TOAST_TEXT="$text" "$QUICKSHELL_BIN" -p "$TOAST_QML" >/dev/null 2>&1 &
+    OMARCHY_KIDS_TOAST_TEXT="$text" OMARCHY_KIDS_TOAST_ICON="📶" \
+      "$QUICKSHELL_BIN" -p "$TOAST_QML" >/dev/null 2>&1 &
     disown 2>/dev/null || true
   else
     echo "omarchy-kids-wifi: $text" >&2
