@@ -130,6 +130,11 @@ Resolve these by union, not by picking a side.
 
 ## Branches to skip at the gate
 
+Checked directly too: exactly **one** in-flight branch conflicts with `integration` itself --
+`fix/launcher-insets-simplify` on `share/launcher/shell.qml`, the same stale branch below. Every
+other branch merges into the union cleanly; the only conflict left after the skips below is the
+shared running docs.
+
 - **Contained** (their content is already in a later branch): `fix/data-browse-empty-title`,
   `fix/data-corrupt-history-traceback`, `fix/show-missing-regression`, `fix/toast-clock-overlap`,
   `docs/levels-l2-cheat-sheet-inert`, `docs/levels-two-apps-verified`, `docs/fix-doc-references`,
