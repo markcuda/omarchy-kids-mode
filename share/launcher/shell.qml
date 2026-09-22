@@ -710,6 +710,7 @@ ShellRoot {
         visible: root.desktopMode
         clock: clockText.text
         timeLeft: GridNav.remainingLabel(root.remainingSeconds)
+        pickerOpen: root.pickerOpen
         onAppsRequested: root.showPicker()
     }
 }

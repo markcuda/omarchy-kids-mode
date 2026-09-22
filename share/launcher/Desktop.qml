@@ -7,6 +7,11 @@ PanelWindow {
     id: desktop
     property string clock: ""
     property string timeLeft: ""
+    // True while the Level 2 app picker is open: that window is centred and
+    // reaches within a few pixels of this layer's own bottom hint line, whose
+    // top half it slices into broken glyphs (live, 875x492/960x540). The
+    // picker shows its own footer then, so this one steps aside.
+    property bool pickerOpen: false
     signal appsRequested()
     anchors { top: true; bottom: true; left: true; right: true }
     exclusionMode: ExclusionMode.Ignore
@@ -70,6 +75,7 @@ PanelWindow {
         font.pixelSize: 16
     }
     Text {
+        visible: !desktop.pickerOpen
         anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 32 }
         text: "Super + Q: Close app    ·    Super + Shift + K: Grown-up exit"
         color: theme.caption
