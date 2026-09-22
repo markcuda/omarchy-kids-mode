@@ -914,3 +914,19 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the Ask modal's app, plugin and site kinds render (live)
+
+`docs/ask.md` item 1 asked for the non-`time` kinds to be opened from a kid session; only `time`
+was recorded as opened live (2026-09-02). On the try-omarchy VM, `omarchy-kids-ask app gcompris`,
+`omarchy-kids-ask plugin kstars` and `omarchy-kids-ask site pbskids.org` each opened the modal over
+the Level 2 desktop with the right kid-words line -- `the app "gcompris"`, `the plugin "kstars"`,
+`the website "pbskids.org"` -- the focused password field, both choices and the key footer, at the
+same size as the `time` card. Evidence `ask-kind-app-2026-09-22.png`, `-plugin-`, `-site-` in
+`.local/media/`. The descriptions are built in `bin/omarchy-kids-ask`'s own
+`cmd_app`/`cmd_plugin`/`cmd_site`, so this closes the render question those had left.
+
+One wording note, not a defect: an app's description is its raw id (`the app "gcompris"`), and the
+plugins shelf asks with `item.id` (`share/plugins/shell.qml:85`), so a shelf id that is not already
+a readable app name would reach the kid verbatim. Whether that happens needs a real synced
+marketplace index; there is none to judge from here.
