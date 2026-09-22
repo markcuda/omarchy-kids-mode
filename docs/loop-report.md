@@ -930,6 +930,11 @@ target -- a targeted grep that fails if the binding moves onto another `Text`; `
 files, five skips), `shellcheck -x` clean, fable review nothing blocking (its two test minors
 closed).
 
+Live: installed `shell.qml` and `Desktop.qml` from the branch and restarted the kid session through
+SDDM; with the picker open the crop under its border is clean background where the sliced glyphs
+were, and closing it brings the hint line back intact. The session came back Level 2 with the
+autologin drop-in removed by hand (the cleanup unit does not fire on a manual restart).
+
 Checked-and-clean this iteration, no change needed: `bin/omarchy-kids-data`'s usage matches its
 dispatch; the wizard's `filtered` web label ("Adult content blocked, safe search on") matches the
 13+ policy (family DoH + forced SafeSearch + YouTube strict, no URL blocklist, as `docs/web.md`
