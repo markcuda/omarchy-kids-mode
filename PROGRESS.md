@@ -28,7 +28,10 @@ without shifting its visit count, treats a malformed History as exit 2, and no l
 truncate the kid's data screen; the panel's Apps screen says when an app isn't installed
 (`fix/panel-apps-not-installed`); `docs/levels.md` matches the live Level 3 pass
 (`fix/levels-live-status`); the kid toast is sized to its message and clears the launcher clock
-(`fix/toast-clock-overlap`). Packaging fixes: `fix/install-packaging`.
+(`fix/toast-clock-overlap`); the launcher's time-left line updates again, and `docs/time.md`
+records the Time's Up card as live-verified (`fix/launcher-time-left-refresh`, stacked on the
+toast branch; `fix/ask-docs-live-status` for `docs/ask.md`). Packaging fixes:
+`fix/install-packaging`.
 
 **Dogfood notes:** install the whole component set (a lone `lib/panel-kid.sh` left the panel
 erroring `panel_notice_lines: command not found`); on a 875x492 screen a 98px top-right toast still
@@ -52,10 +55,11 @@ check of `kiosk=true`); the add-on model's five questions
 (`docs/research/2026-09-21-discord-plugin-survey.md`); whether Level 3 keeps the file-manager
 bind (`Super+Shift+F`) under `menu=trimmed`.
 
-**Next work without owner input:** the I-6 sweep over `share/` and `lib/` (the toast's short-screen
-placement and the panel Web "only sites you choose" label are candidates; both touch user-facing
-copy/layout); the Time's Up screen and the portal after a kid exits on this build; keeping
-`docs/loop-report.md` current.
+**Next work without owner input:** the I-6 sweep over `share/` and `lib/`; the toast's short-screen
+placement; the remaining unverified surfaces (the portal after a kid exits, the `helper`-mode wifi
+picker QML, the panel shelf screen, a band-3-5 launcher); keeping `docs/loop-report.md` current.
+(The Time's Up card, the Ask modal's keyboard path, the launcher's time-left line, and the panel's
+read screens are live-verified now.)
 
 ## Paused — September 11, 2026
 

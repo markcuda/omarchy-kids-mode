@@ -933,3 +933,27 @@ window geometry was observed), ending MERGE. docs/time.md updated. Open: on a sh
 top-right toast still overlaps the launcher's title/card corner transiently (inherent -- there is
 no free top-right space at 875x492), and the 6 s auto-dismiss and `Qt.quit()` shutdown remain
 unverified (the toast's own timer/quit path).
+
+### 2026-09-21, loop iteration: the launcher's time-left line was frozen (live)
+
+Dogfooded the Time's Up screen on the try-omarchy VM, launching `share/time/timesup.qml` (installed
+from its branch) against a hand-written `grace` status: the card rendered with the fox avatar,
+"Time's up, Ada!", the reason line, a "Closing in N s" countdown that decremented, and the
+highlighted "Ask a grown-up" button, and Enter on it opened the Ask modal over the card. (An
+earlier attempt showed no avatar and the old "Finishing in" wording because the VM's installed
+`timesup.qml` was a stale package build; installing the branch's file fixed both.)
+
+That pass then found a real bug in the launcher: its "N minutes left" line was frozen at the value
+it read when the launcher started -- "41 minutes left" stayed put for half an hour across many
+daemon ticks and a `+10` grant, while the status file's `remaining_seconds` moved (the
+hide-on-grace branch never ran either). Cause: the `FileView` had `watchChanges` but no
+`onFileChanged` reload (FileView does not re-read on a watch signal by itself --
+`share/bar/KidsModule.qml` adds the handler for the same reason), and the daemon publishes the
+status by rename (`lib/time.sh`'s `mktemp` + `mv`), which can drop the watch. Fixed on
+`fix/launcher-time-left-refresh` (`1acc799`, stacked on `fix/toast-clock-overlap` for the shared
+`docs/time.md`): the FileView reloads on `fileChanged`, and a repeating 2s timer is the backstop
+(the ledger ticks every 30s). `launcher-grid-test.sh` pins the whole timer block and the
+`onFileChanged` handler; `docs/time.md` records the finding and drops the stale "the card still
+needs a fresh VM run" note. The fable review found the missing `fileChanged` hook and the unproven
+"the watcher stops" claim, ending MERGE. Live-verified with the final file: the line followed a
+`+10` grant from "73" to "82 minutes left" at the next tick (and "79" to "88" the run before).
