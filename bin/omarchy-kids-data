@@ -164,7 +164,12 @@ cmd_sites() {
     since_args=(--since "$(data_py since-cutoff "$since" "$(time_now)")")
   fi
   local rows
-  rows="$(data_py chromium-visits "$copy" "${since_args[@]+"${since_args[@]}"}")"
+  # A failed read (a corrupt History) exits 2 with data.py's own line; drop
+  # the copy first so no History data is left in the temp dir.
+  if ! rows="$(data_py chromium-visits "$copy" "${since_args[@]+"${since_args[@]}"}")"; then
+    rm_chromium_copy "$copy"
+    exit 2
+  fi
   rm_chromium_copy "$copy"
 
   if [[ -z "$rows" ]]; then
@@ -246,7 +251,10 @@ cmd_summary() {
     local copy
     if copy="$(copy_chromium_history "$kid")"; then
       local site_rows
-      site_rows="$(data_py chromium-top-sites "$copy" --since "$cutoff" --limit 5)"
+      if ! site_rows="$(data_py chromium-top-sites "$copy" --since "$cutoff" --limit 5)"; then
+        rm_chromium_copy "$copy"
+        exit 2
+      fi
       rm_chromium_copy "$copy"
       if [[ -n "$site_rows" ]]; then
         echo "top sites:"

@@ -177,15 +177,31 @@ def _fetch_rows(db_path, since_cutoff):
             "SELECT url, title, last_visit_time, visit_count FROM urls "
             "WHERE last_visit_time > 0"
         ).fetchall()
+    except sqlite3.Error as e:
+        # A row whose bytes are not valid UTF-8 (a corrupt History) is the
+        # same one-line exit 2 as an unreadable db, never a traceback.
+        die(f"could not read '{db_path}' as a Chromium History db: {e}")
     finally:
         conn.close()
     out = []
     for url, title, last_visit_time, visit_count in rows:
-        local = _webkit_to_local_str(last_visit_time)
+        # A malformed History can store any of these as the wrong type
+        # (SQLite's affinity does not stop it); use them only once checked,
+        # so a bad row is the same one-line exit 2 as an unreadable db.
+        if (
+            not isinstance(url, str)
+            or not isinstance(last_visit_time, int)
+            or not isinstance(visit_count, int)
+        ):
+            die(f"could not read a row of '{db_path}': unexpected column types")
+        try:
+            local = _webkit_to_local_str(last_visit_time)
+            host = urlsplit(url).netloc or url
+        except (OverflowError, OSError, ValueError) as e:
+            die(f"could not read a row of '{db_path}': {e}")
         if since_cutoff is not None and local < since_cutoff:
             continue
-        host = urlsplit(url).netloc or url
-        out.append((local, host, title or "", visit_count or 0))
+        out.append((local, host, title if isinstance(title, str) else "", visit_count))
     return out
 
 
