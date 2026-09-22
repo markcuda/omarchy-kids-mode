@@ -538,6 +538,38 @@ check_status "$PANEL_STATUS" 0 "the refresh loop exits 0"
 check "$(grep -c 'Safety: every check passed.' <<<"$out")" 2 \
   "Check again runs the report a second time"
 
+# --- a privileged run is not "loaded without root" ------------------------
+# The Machine card explains why root-needing checks reported as warnings; that
+# is only true when the panel really ran unprivileged (I-6). The check itself
+# is the fake the tests above installed beside $BIN.
+
+if [[ "$(id -u)" != 0 ]]; then
+  answers="$(answers_file machine back quit)"
+  run_panel "$answers"
+  check_contains "$out" "Loaded without root" \
+    "Machine explains root-needing warnings for an unprivileged run"
+else
+  echo "SKIP privileged-run note: the suite is running as root"
+fi
+
+ROOTSTUBS="$TMP/rootstubs"
+mkdir -p "$ROOTSTUBS"
+cat >"$ROOTSTUBS/id" <<'EOF'
+#!/bin/bash
+if [[ "${1:-}" == "-u" && $# -eq 1 ]]; then echo 0; exit 0; fi
+exec /usr/bin/id "$@"
+EOF
+chmod +x "$ROOTSTUBS/id"
+answers="$(answers_file machine back quit)"
+out_root="$(OMARCHY_KIDS_TUI_ANSWERS="$answers" PATH="$ROOTSTUBS:$PATH" "$BIN" 2>&1)"
+PANEL_STATUS=$?
+check_status "$PANEL_STATUS" 0 "a privileged Machine run still exits 0"
+if grep -qF "Loaded without root" <<<"$out_root"; then
+  fail "Machine claims 'loaded without root' for a privileged run"
+else
+  pass "Machine does not claim 'loaded without root' when the checks ran privileged"
+fi
+
 # --- --help works with no terminal and no answers file needed ----------
 
 help_out="$("$BIN" --help 2>&1)"
