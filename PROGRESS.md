@@ -23,6 +23,10 @@ the Wi-Fi screen's "Mode:" label blank when a `lib/panel-kid.sh` is installed wi
 `lib/kids.sh` that defines `friendly_wifi_mode` (a VM component-skew repair, not a repo defect);
 the test now pins the label.
 
+**Last loop round (2026-09-22):** the panel's Web/Desktop/theme screens and `omarchy-kids-check
+--live` found nothing to fix; `lib/theme.sh` and `lib/session-manifest.sh` were read and are as
+documented. 32 branches now await the owner's gate.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After

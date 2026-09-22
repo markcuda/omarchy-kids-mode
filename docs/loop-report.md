@@ -935,6 +935,11 @@ Nothing actionable this round. The loop's remaining work is the owner's gate: 32
 integration, the SPEC amendment, the GCompris proposal, packaging, Level 2 verification,
 favorites/recents and W2.
 
+Branch note: this record first landed on `test/panel-wifi-mode-label` by mistake (`git checkout -b`
+aborted because `docs/loop-report.md` differed, so the commit stayed on the current branch); it was
+moved to its own branch with `git branch` + `git update-ref` (no reset), which left it stacked on
+that branch rather than on integration. It is a docs-only record, so the stack is harmless.
+
 ### 2026-09-22, loop iteration: a component-set skew, found live on the panel
 
 Dogfooded the parent panel's remaining Kid screens live (Home, the Kid row menu, Screen time,
