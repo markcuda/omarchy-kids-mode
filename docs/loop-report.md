@@ -931,3 +931,25 @@ excluding `docs/archive/`) for `docs/*.md` references that do not resolve. It fo
 
 Fixed on `docs/fix-doc-references`; the live docs now have no unresolved `docs/*.md` reference.
 `test/all` green. The archive's own references are historical and were left alone.
+
+### 2026-09-22, loop iteration: two mechanical sweeps, both clean
+
+Dogfooded (session healthy; the live check is 46 PASS plus the box's four known FAILs), then tried
+two angles the loop had not:
+
+- **Command <-> doc <-> test inventory.** Every `bin/omarchy-kids-*` either has its own
+  `docs/<command>.md` or is documented inside its topic doc (`blocked`, `boot-login`, `parent-auth`,
+  `session-start`, `super-tap`, `time-ledger` and `wifid` are each mentioned in 3-11 live docs), and
+  the extra `test/shell.d/*` files are topic tests (trust-boundary, qml-*, theme-*, wizard-*, ...),
+  not gaps. No tracked build artifacts (`bin/__pycache__` is gitignored).
+- **SPEC requirement-id traceability.** `SPEC.md` has 90 ids. The 8 cited in neither a test nor a
+  doc are all explained: R-EXIT-2 is a pointer line ("verified through R-SEC-2"), R-EXIT-4/5 are
+  Pause, deliberately unshipped (DECISIONS-NEEDED §6 item 2), and the rest (R-BOOT-4, R-BUILD-1,
+  R-LOGIN-2, R-SEC-5, R-SEC-6) have their substance documented or their id cited in code -- e.g.
+  R-LOGIN-2 is implemented and cited at `share/sddm-theme/Main.qml:211`, and R-BOOT-4's
+  "supersedes, sorts later" is `docs/boot.md:28,90,128`.
+
+Also confirmed the band data is consistent: four bands, each with a pack, a policy JSON and a list
+file, and `render_policy_json` merges the list only for garden bands (the 13+ list is a parked proxy
+blocklist, never merged), so R-WEB-3 holds. Nothing actionable this round; the remaining work is the
+owner's (DECISIONS-NEEDED §7).
