@@ -914,3 +914,19 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: a reset the panel promised would keep your sites
+
+Dogfooded the VM first (kid-ada at Level 2, session healthy; `omarchy-kids-check --live` at its
+usual 46 PASS plus the four known drift FAILs this box always shows). The I-6 pass then moved into
+`lib/`, which earlier iterations had swept less: the parent panel's "Reset to band defaults" card
+told the parent their "password, theme and any sites you added by hand stay" -- but `sites` is
+`reset = "clear"` in `share/config/schema.toml` and `cmd_reset` deletes every clear key, so a reset
+really does delete hand-added sites (along with `dns`, `history_visible`, `menu` and the apps
+keys). Fixed on `fix/panel-reset-claims`: the facts block now says every other screen's settings go
+back to the band's defaults and names hand-added sites among them, the function comment and
+`CHANGELOG.md` are corrected, and `conf`'s `reset` usage line gains the missing `theme`.
+`panel-test.sh`'s real reset fixture now carries `sites=` and `theme=` and proves the code deletes
+one and keeps the other; `test/all` green (52 files, five skips), `shellcheck -x` clean, fable
+review one major (the changelog claim, now fixed) and three minors closed. This supersedes the
+Reset-card wording quoted in the earlier 2026-09 entry below.
