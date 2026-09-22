@@ -85,10 +85,10 @@ plus every id in their `apps.extra`, minus every id in their `apps.hidden` (docs
 extension keys). Order: pack/override ids first in their own order, then any `apps.extra` ids not
 already present, in their own order; anything in `apps.hidden` is dropped from either list.
 
-This is what `bin/omarchy-kids-session-start` calls (instead of reading `allowlist` directly) for
-the Level 2/3 `$RUN/allowlist.json` (below). The root-owned Level 1 execution map is rebuilt by
-provisioning and `omarchy-kids-assert`, so a `hide`/`show` takes effect in the launcher after the
-next assert and session restart.
+`lib/session-manifest.sh` calls this (through `omarchy-kids-apps allowlist`) to build the manifest's
+`.allowlist` array, and `lib/launcher-map.sh` calls it too, to derive the root-owned map. A
+`hide`/`show` therefore takes effect in the launcher after the next `omarchy-kids-assert` (which
+rebuilds the map and manifest) and a session restart.
 
 ### `hide <kid> <app>` / `show <kid> <app>`
 
@@ -165,31 +165,25 @@ and extra entries are applied. Each tile has display metadata plus an `argv` arr
 `Exec=` lines are parsed during this root-side write, field codes are removed, and the executable
 is resolved to an absolute path. Pack fallbacks are also resolved to absolute paths at that time.
 
-The kid's runtime launcher JSON contains display metadata only; it never contains `exec` or `argv`.
-The Level 1 launcher receives an id from that JSON, looks up the same id in the root-owned map, and
-passes the validated argv list directly to Quickshell. If the two files disagree, the root map wins.
-The Web and More apps tiles are fixed absolute argv entries in the map, so neither tile invokes a
-shell string. Re-run `omarchy-kids-assert` after changing installed apps or the effective allowlist.
+The launcher does not read a runtime launcher JSON: the manifest refactor (`38f878e`) made the
+validated session manifest the single session input. `share/launcher/shell.qml` runs
+`omarchy-kids-session --manifest` and executes each tile's fixed `argv`; `lib/session-manifest.sh`
+renders that manifest from the same launcher-map rendering (it re-runs `launcher_map_render`, not
+reading the on-disk map file). The Web and More apps tiles are fixed absolute argv entries, so no
+tile invokes a shell string. Re-run `omarchy-kids-assert` after changing installed apps or the
+effective allowlist.
 
-## `$RUN/allowlist.json` (R-DESK-4, issue #24)
+## No runtime `$RUN/allowlist.json` any more (R-DESK-4, issue #24)
 
-At Levels 2 and 3, `bin/omarchy-kids-session-start` writes the kid's effective allowlist (the same
-value `omarchy-kids-apps allowlist <kid>` prints) to
-`$XDG_RUNTIME_DIR/omarchy-kids/allowlist.json`, alongside the Level 1/2 display-only tile file
-(`launcher-<uid>.json`, with execution authority kept in the root-owned map above). Shape:
-
-```json
-{ "account": "kid-ada", "band": "6-8", "allowlist": ["gcompris", "tuxpaint", "..."] }
-```text
-
-This exists for a future trimmed-menu extension at Levels 2/3 to read (Omarchy's own shell runs
-there, not the Level 1 big-tile launcher, so there is no tile grid to read the list from instead).
-**Nothing reads this file yet** — `share/menu/omarchy-kids-trimmed.jsonc` is a different mechanism
-(it hides the Install/Update/Setup rows, R-DESK-4's other half) and, like that file's own header
-comment says about `omarchy-menu`'s real extension schema, this repo has no confirmed way to feed
-an app allowlist into Omarchy's own app grid/menu yet. Written unconditionally regardless (I-6:
-this is inert data, not a claimed-but-unenforced control) so that wiring, whenever it lands, has
-something correct to read from day one.
+`bin/omarchy-kids-session-start` writes neither a runtime
+`$XDG_RUNTIME_DIR/omarchy-kids/allowlist.json` nor a `launcher-<uid>.json`: the manifest refactor
+made the validated session manifest the single session input, and `session-start-test.sh` and
+`levels-test.sh` assert that neither file is created. The kid's effective allowlist lives in the
+manifest's `.allowlist` array — the same value `omarchy-kids-apps allowlist <kid>` prints. Feeding
+that list into Omarchy's own app grid/menu, as a future trimmed-menu extension at Levels 2/3, is
+still unbuilt: `share/menu/omarchy-kids-trimmed.jsonc` is a different mechanism (it hides the
+Install/Update/Setup rows, R-DESK-4's other half), and this repo has no confirmed way to feed an app
+allowlist into Omarchy's menu yet.
 
 ## Env (every path overridable — nothing here ever runs as root in dev, per AGENTS.md rule 8)
 

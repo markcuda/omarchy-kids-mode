@@ -1,6 +1,7 @@
 # shellcheck shell=bash
-# lib/launcher-map.sh — root-written launcher maps for the Level 1/2 tile grid.
-# The map is the execution authority; the kid's runtime JSON is display-only.
+# lib/launcher-map.sh — the root-written launcher map: the fixed argv the
+# session manifest is rendered from. The launcher reads the manifest, not a
+# runtime launcher JSON (the manifest refactor removed that file).
 
 launcher_map_path() { printf '%s/launchers/%s.json' "$ETC" "$1"; }
 
