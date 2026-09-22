@@ -969,3 +969,19 @@ code), the result is clean:
   commands or status words the tests look for.
 
 Nothing to fix this round.
+
+### 2026-09-22, loop iteration: the docs' code-path references, checked
+
+Dogfooded (session healthy; the box's four known FAILs) and ran the last angle in this family: every
+`lib/...`, `bin/...` or `share/...` path a live doc cites. Nothing genuine is missing -- the flagged
+paths are Omarchy's own tools the docs name as external commands (`bin/omarchy`, `bin/omarchy-menu`,
+`bin/omarchy-theme-color`, `bin/omarchy-plugin-add`, ...), files that exist only in future specs
+(`docs/specs/04-one-kid-shell.md`'s `share/shell/*.qml` and `lib/shell-ipc.sh`,
+`docs/specs/07-boot-mode.md`'s `lib/boot-mode-transition.sh`, `docs/specs/05`'s `lib/locks.sh`, ...),
+or a *past* consolidation the doc itself describes as past (`docs/style.md`'s "`lib/units.sh` ...
+folded into `lib/kids.sh`"). The live docs cite the TUI demo at its real
+`scripts/omarchy-kids-tui-demo`; only the dated review records still say `bin/`. Nothing to fix.
+
+With this, the mechanical-reference family is exhausted: docs links, docs-cited functions, docs-cited
+code paths, test-grep alternations, command/doc/test inventory, SPEC id traceability, conventions and
+file modes have all been swept, and each found only what earlier rounds fixed.
