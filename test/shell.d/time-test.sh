@@ -658,6 +658,53 @@ set_sessions
 echo
 
 # =========================================================================
+# status vs a grant made after the last tick (docs/time.md): the published
+# document is older than the grant, so status counts the grant now instead
+# of showing the pre-grant remaining for up to a tick (live finding).
+# =========================================================================
+
+GRANT_DAY="2026-09-22" # a weekday outside the days the tests above touch
+set_now "$GRANT_DAY 10:00:00"
+STATUS_STATE="$ROOT/run/omarchy-kids/time/kid-ada.json"
+install -d -m 0750 "$(dirname "$STATUS_STATE")"
+write_status_state() {
+  local remaining="$1"
+  jq -n --argjson remaining "$remaining" \
+    '{kid: "kid-ada", logical_day: "2026-09-22",
+      last_wall: "2026-09-22 10:00:00", state: "allowed", reason: "none",
+      remaining_seconds: $remaining, grace_deadline: 0, last_tick: 1000,
+      active_seconds_remainder: 0, warnings_fired: [],
+      enforcement: {action: "none", reason: "none", result: "none", at: ""}}' \
+    >"$STATUS_STATE"
+  chmod 0640 "$STATUS_STATE"
+}
+
+write_status_state 300 # the root tick last published 5 minutes
+out="$("$TIME" status kid-ada)"
+check_contains "$out" "kid-ada: 0 min used, 5 min left today (budget 60)" \
+  "status: uses the published document while it is newer than any grant"
+
+# A grant made since that tick is newer than the document, so its 20 minutes
+# must count at once (ledger 60 + 20 - 0), not the stale published 5.
+touch -t 202001010000 "$STATUS_STATE"
+"$TIME" grant kid-ada 20 >/dev/null 2>&1
+check "$?" 0 "status: the grant under test succeeds"
+out="$("$TIME" status kid-ada)"
+check_contains "$out" "kid-ada: 0 min used, 80 min left today (budget 60 + 20 granted)" \
+  "status: a grant newer than the last tick is counted before the next tick"
+
+# Once the root tick publishes again (document newer than the grant file), the
+# published value is authoritative again. Age the grant so the rewrite is
+# provably the newer file, not an equal-mtime tie.
+touch -t 202001010000 "$ROOT/var/lib/omarchy-kids/kid-ada/usage/2026-09-22.grant"
+write_status_state 240
+out="$("$TIME" status kid-ada)"
+check_contains "$out" "kid-ada: 0 min used, 4 min left today (budget 60 + 20 granted)" \
+  "status: a tick since the grant returns to the published document"
+
+echo
+
+# =========================================================================
 # static: systemd/omarchy-kids-time-ledger.{service} and omarchy-kids-time.timer
 #
 # tick reads every known kid's own $XDG_RUNTIME_DIR (lib/data.sh's

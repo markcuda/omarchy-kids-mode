@@ -117,9 +117,12 @@ budget runs out at 10:37
 
 The used, budget, and grant numbers still come from the read-only ledger and profile resolution.
 When a current, validated root runtime document exists, its published remaining seconds and
-deadline supply the left and boundary values. Before the first root tick, or when the document is
-absent/stale, status falls back to the old read-only ledger calculation so the panel still shows
-facts. Its output remains `lights-out at HH:MM` or `budget runs out at HH:MM` on the second line.
+deadline supply the left and boundary values. Status falls back to the read-only ledger
+calculation when that document is absent or invalid (wrong mode, a symlink, a failed schema
+check), is not today's, or is older than today's grant file: a grant made since the last tick is
+not yet in the published seconds, so without the fallback the panel would show a pre-grant
+`0 min left` (or an old boundary) for up to a tick. Its output remains
+`lights-out at HH:MM` or `budget runs out at HH:MM` on the second line.
 
 `grant` adds to a *separate* `usage/<day>.grant` file and remains root-only. The root tick is the
 only code that recomputes budget, lights-out, and enforcement state.
