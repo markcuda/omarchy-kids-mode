@@ -14,11 +14,14 @@ makepkg -sf
 ```
 
 `-s` asks pacman to install missing declared dependencies. `-f` rebuilds an existing package with
-the same version. The current package is `0.1.0-1`, so the result is
-`omarchy-kids-0.1.0-1-any.pkg.tar.zst` (nothing is compiled, so the
-architecture in the name is the PKGBUILD's `arch=('any')`).
+the same version. The current package is `0.1.0-1` and nothing is compiled, so the architecture in
+the artifact's name is the PKGBUILD's `arch=('any')`: on a stock Arch box you get
+`omarchy-kids-0.1.0-1-any.pkg.tar.zst`. The extension is the build machine's `PKGEXT`
+(`/etc/makepkg.conf`), not a property of this package -- the aarch64 dogfood guest sets
+`.pkg.tar.xz`, so its 2026-09-22 build there produced `omarchy-kids-0.1.0-1-any.pkg.tar.xz`. Use
+whatever `makepkg` prints.
 
-Install that package on the test system:
+Install that package on the test system (same name `makepkg` printed):
 
 ```sh
 sudo pacman -U omarchy-kids-0.1.0-1-any.pkg.tar.zst
@@ -50,8 +53,14 @@ but these items still need to happen:
   the generated result. Compare `PKGBUILD:15-35` with `.SRCINFO:1-27`.
 - **Build and inspect a clean package on Arch.** Run `makepkg -sf` from a clean clone that contains
   the whole checkout, inspect the package contents, and install it in the test VM before
-  publishing. The file list comes from `PKGBUILD:37-109`; this checkout has no recorded clean
-  Arch build here.
+  publishing. The file list comes from `PKGBUILD:37-109`. Half of this was done on 2026-09-22: a
+  clean checkout of the branch that carries the `arch=('any')` fix was built with `makepkg -d -f`
+  on the aarch64 try-omarchy guest (no install), and the package it produced was checked -- arch
+  `any` in `.PKGINFO`, the two build-time substitutions baked in (`SCHEMA` in
+  `usr/bin/omarchy-kids-conf`, `KIDS_PY` in `usr/lib/omarchy-kids/kids.sh`), 27 commands, 38 lib
+  files, 77 data files, 13 units, both initcpio files, the 0644 pacman hook and the `.INSTALL`
+  scriptlet, the twelve avatars, and a `KidsTheme.qml` beside each of the six standalone surfaces.
+  **Still open: installing that package on the test VM** (`pacman -U`) before publishing.
 - **Run the package lint checks.** `namcap`, Arch's package linter, should check `PKGBUILD` and
   the built package. Resolve or consciously accept its findings. This is maintainer validation,
   not something the install scriptlet provides (`PKGBUILD:15-35,37-109`).

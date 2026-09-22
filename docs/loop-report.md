@@ -949,3 +949,41 @@ did before. `PROGRESS.md` on this branch no longer claims the packaging work is 
 Recorded for the owner: `fix/install-packaging` is superseded by this branch and should not be
 merged as-is; the same "merged" correction was also made on `fix/stale-threshold-name`, where the
 sentence and the branch count were wrong too.
+
+### 2026-09-22, loop iteration: Level 1 re-verified, and the package actually built
+
+Dogfooded first, and this time on Level 1, which the loop had not exercised since the short-screen
+fixes: set `kid-ada` to level 1, restarted the session through the documented autologin drop-in, and
+the grid came up at 960x540 (`L1.lua present and verifies`, five columns, both rows inside the
+frame, focus ring on the first tile, footer reading only the keys Level 1 has). The live check is
+now 49 PASS / 1 FAIL / 3 WARN -- the three install-history FAILs cleared when the re-landed assert
+repaired the locks, leaving only `firmware:password`, a step no software can do.
+
+Two things came out of that screen. First, a cursor was parked on it, which looked like the merged
+"hide the idle pointer" fix failing; it was the guest's own stale config: `/etc/omarchy-kids/
+hyprland/L1.lua` was the old package copy with no `cursor = { inactive_timeout = 1 }`, and after
+installing the union's L1/L2 and reloading, `hyprctl getoption cursor:inactive_timeout` reports
+`1.000000, set: true` and the pointer is gone -- the fix is real on the compositor, and the lesson
+is that Level 1 evidence needs the config installed from the branch exactly as Level 2 and 3 do.
+Second, a finding for the owner: at 960x540 the tile labels elide to one line with a 18px font, so
+"SuperTux" and "SuperTuxKart" both render as "Super...", and `GCompris`, `KTuberling`, `KLettres`,
+`Kanagram` truncate the same way. The tiles are still distinguishable by icon on a box with an icon
+theme -- this guest has none, so every tile shows a letter initial -- but the label is the fallback
+identifier and it is ambiguous in exactly the case a kid cannot read the icon. Making it fit means
+a layout or typography trade-off (wider cells, a smaller label, or two lines for names that cannot
+word-wrap), which is the owner's call, not the loop's; recorded here rather than changed.
+
+Then the backlog's packaging item got the verification it had never had. The aarch64 dogfood VM
+cannot install from the union (that is why the fix exists), but it can build: a clean checkout of
+this branch, `makepkg -d -f` as the parent user, no install. It built, and the PKGBUILD's own
+post-substitution greps passed -- arch `any` in `.PKGINFO`, `SCHEMA="/usr/share/omarchy-kids/
+config/schema.toml"` inside `usr/bin/omarchy-kids-conf`, `KIDS_PY=/usr/bin/python3` inside
+`usr/lib/omarchy-kids/kids.sh`, 27 commands, 38 lib files, 77 data files, 13 units, both initcpio
+files, the 0644 pacman hook, the `.INSTALL` scriptlet, twelve avatars and a `KidsTheme.qml` beside
+each of the six standalone surfaces. That build also falsified something this branch's own docs
+said: the artifact is not `...pkg.tar.zst` as a property of our package, it is whatever the build
+box's `PKGEXT` says -- this guest is `.pkg.tar.xz`. `docs/packaging.md` now names the stock-Arch
+example and says the extension is the machine's.
+
+Still open (recorded for the owner): installing a built package on the test VM (`pacman -U`), which
+needs a real box and is the remaining half of that doc's own item.
