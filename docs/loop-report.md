@@ -934,5 +934,7 @@ one outbox record, `{"kind":"time","minutes":15,"state":"open"}`; Escape closes 
 outbox and the root queue unchanged -- nothing written. Evidence `ask-later-sent-2026-09-22.png` and
 `ask-modal-2026-09-22.png` in `.local/media/`. The installed modal carried `fix/modal-key-hints`'
 footer, so the footer and the Left/Right handlers were exercised too; the `submit` and `closeModal`
-functions are identical in the union. Still open in `docs/ask.md`: the app/plugin/site kinds, the
-wrong-password lockout, and the password -> authd -> `apply-grant` path end to end.
+functions are identical in the union. (`docs/ask.md`'s own text is reconciled on the unmerged
+`14f47a3`, which still lists these two as open; this entry is the record until that branch merges.)
+Still open: the app/plugin/site kinds, the wrong-password lockout, and the password -> authd ->
+`apply-grant` path end to end.
