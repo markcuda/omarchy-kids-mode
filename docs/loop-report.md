@@ -915,6 +915,25 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
 
+### 2026-09-22, loop iteration: a component-set skew, found live on the panel
+
+Dogfooded the parent panel's remaining Kid screens live (Home, the Kid row menu, Screen time,
+Wi-Fi, Apps, Data). The **Wi-Fi screen rendered "Mode: " blank**, with
+`/usr/lib/omarchy-kids/panel-kid.sh: line 92: friendly_wifi_mode: command not found` in its output.
+Not a repo defect: the repo's panel sources `lib/kids.sh`, which defines `friendly_wifi_mode`
+(line 523) -- but the VM had version skew, because an earlier iteration installed
+`lib/panel-kid.sh` from a branch without the matching `lib/kids.sh` (whose installed copy predates
+that function). Repaired the VM by backing up the old file and installing integration's
+`lib/kids.sh` with the PKGBUILD's `KIDS_PY` sed; the Wi-Fi screen now shows "Mode: Ask me first"
+and the Apps screen its Plugins shelf row. Added `test/shell.d/panel-test.sh`'s first assertion on
+that label (it fails when `friendly_wifi_mode` is stubbed to echo the raw value) and sharpened the
+untracked `.local/VM-DOGFOOD.md` with the `panel-*.sh` -> `kids.sh` pairing. `test/all` green.
+Branch `test/panel-wifi-mode-label` (a test-only pin; no product change).
+
+Found honest along the way: the Data screen's sudo prompt appears once and falls back cleanly when
+it cannot (the desktop entry is `Terminal=true`, so the real path has a tty), and the Kid, Screen
+time and Apps screens' facts and rows are accurate.
+
 ### 2026-09-22, loop iteration: dogfood round, nothing to fix
 
 Dogfooded the parent panel's remaining screens live (Web, Desktop, and the theme picker it opens)
@@ -940,21 +959,25 @@ aborted because `docs/loop-report.md` differed, so the commit stayed on the curr
 moved to its own branch with `git branch` + `git update-ref` (no reset), which left it stacked on
 that branch rather than on integration. It is a docs-only record, so the stack is harmless.
 
-### 2026-09-22, loop iteration: a component-set skew, found live on the panel
+### 2026-09-22, loop iteration: the backlog is fully drafted; a gate picture
 
-Dogfooded the parent panel's remaining Kid screens live (Home, the Kid row menu, Screen time,
-Wi-Fi, Apps, Data). The **Wi-Fi screen rendered "Mode: " blank**, with
-`/usr/lib/omarchy-kids/panel-kid.sh: line 92: friendly_wifi_mode: command not found` in its output.
-Not a repo defect: the repo's panel sources `lib/kids.sh`, which defines `friendly_wifi_mode`
-(line 523) -- but the VM had version skew, because an earlier iteration installed
-`lib/panel-kid.sh` from a branch without the matching `lib/kids.sh` (whose installed copy predates
-that function). Repaired the VM by backing up the old file and installing integration's
-`lib/kids.sh` with the PKGBUILD's `KIDS_PY` sed; the Wi-Fi screen now shows "Mode: Ask me first"
-and the Apps screen its Plugins shelf row. Added `test/shell.d/panel-test.sh`'s first assertion on
-that label (it fails when `friendly_wifi_mode` is stubbed to echo the raw value) and sharpened the
-untracked `.local/VM-DOGFOOD.md` with the `panel-*.sh` -> `kids.sh` pairing. `test/all` green.
-Branch `test/panel-wifi-mode-label` (a test-only pin; no product change).
+Dogfooded: the Level 2 focus bind works (`Super+Right` moved focus from Blinken to KTuberling; the
+swap bind was checked earlier), and `omarchy-kids-check --live` is the box's usual 46 PASS plus its
+four known FAILs. Read `bin/omarchy-kids-bar`: `grant`/`end` build the terminal command with
+`printf '%q '`, so a kid name cannot inject a shell command, and both go through the stock
+`omarchy-launch-floating-terminal-with-presentation` with the parent's own sudo prompt.
 
-Found honest along the way: the Data screen's sudo prompt appears once and falls back cleanly when
-it cannot (the desktop entry is `Terminal=true`, so the real path has a tty), and the Kid, Screen
-time and Apps screens' facts and rows are accurate.
+The backlog's remaining items are now all drafted rather than buildable without an owner decision,
+so this round records the state for the gate (it supersedes the 20-branch picture in
+`docs/loop-merge-readiness`):
+
+- 33 branches ahead of `integration/dogfood-2026-09-19`, each test-green on its own.
+- 420 of their pairs conflict on nothing but the append-only `PROGRESS.md`/`docs/loop-report.md` --
+  a keep-both resolution every time.
+- 12 pairs have a real-file conflict: `docs/levels.md` (7), `docs/time.md` (2), `docs/wifi.md` (1),
+  `share/launcher/shell.qml` (2).
+- Awaiting an owner decision: the two-kid-modes SPEC amendment (five questions), the GCompris
+  pre-seed, the add-on survey (five questions), favorites/recents (three decisions), W2's fail-open,
+  Level 3's `Super+Shift+F` under `menu=trimmed`. Live-only work: the real-box menu trim, the
+  laptop's Wi-Fi join/captive portal, a band-3-5 kid, the portal's wrong-password path.
+
