@@ -267,11 +267,19 @@ fi
 
 # Root enforcement is named once here (AGENTS.md: one table, never a second list
 # that can drift): the lock, the ledger, the assert, the two parent paths that
-# write the ledger or finish a session, and the finish pair. The exit modal is
-# the one kid surface allowed the finish pair (it runs it after the parent
-# authenticates).
-overlay_root_re='loginctl|omarchy-kids-time-ledger|omarchy-kids-assert|omarchy-kids-time grant|omarchy-kids-bar end'
+# write the ledger or finish a session, and the ways to end one without naming
+# those (systemctl, pkill/killall, and logind over D-Bus rather than loginctl).
+# The finish pair is added for every surface except the exit modal, which runs it
+# after the parent authenticates. The dispatcher spelling (`hyprctl dispatch ...`)
+# is checked separately below, because it is the one shape that can wrap a line.
+overlay_root_re='loginctl|omarchy-kids-time-ledger|omarchy-kids-assert|omarchy-kids-time grant|omarchy-kids-bar end|systemctl|pkill|killall|busctl|gdbus|qdbus|dbus-send|login1'
 overlay_finish_re='omarchy-kids-exit|--finish'
+
+# The dispatcher spelling can span lines (a wrapped QML array) and carries the
+# `hl.dsp.` prefix the exit command actually uses, so it is matched against the
+# file with newlines removed and a prefix-tolerant pattern: `hl.dsp.exit` trips
+# it, the launcher's `hl.dsp.focus` does not.
+overlay_dispatch_re='dispatch[^[:alpha:]]*([[:alpha:]_]+\.)*exit'
 
 # The kid time display path -- the daemon and every overlay helper it runs --
 # may show root's decision, but it must not make one. cmd_status and cmd_grant
@@ -314,6 +322,9 @@ while IFS= read -r q; do
   [[ "$q" == share/exit-modal/* ]] || re="$re|$overlay_finish_re"
   hits="$(grep -nE "$re" "$q" || true)"
   [[ -n "$hits" ]] && overlay_hits+="$q: $hits"$'\n'
+  if grep -qE "$overlay_dispatch_re" <(tr -d '\n' <"$q"); then
+    overlay_hits+="$q: dispatch ... exit"$'\n'
+  fi
 done < <(find share -name '*.qml' -o -name '*.js' | sort)
 if [[ -n "$overlay_hits" ]]; then
   bad "trust boundary: a kid overlay names a root enforcement command:"
@@ -322,11 +333,11 @@ else
   ok "trust boundary: no kid overlay names the named enforcement commands (the exit modal may finish)"
 fi
 
-# The two display-only time overlays are stricter still: no process of their
-# own. Nothing in the suite executes QML, so the structure is asserted textually
-# -- no Process block in either file; no execDetached in toast.qml, and exactly
-# the one kid-side ask call in timesup.qml -- because a name denylist alone would
-# miss `execDetached(["hyprctl", "dispatch", "exit"])`. time-test.sh carries a
+# The two display-only time overlays are stricter still: their only legitimate
+# process use is the one ask call in timesup.qml, so any Process block or extra
+# execDetached in either file is a change worth failing on -- a count, not a
+# name, which is what the table above cannot express. Nothing in the suite
+# executes QML, so the structure is asserted textually. time-test.sh carries a
 # narrower duplicate for the finish command alone.
 overlay_hits=""
 for q in share/time/toast.qml share/time/timesup.qml; do
