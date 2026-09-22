@@ -94,7 +94,12 @@ to merge; the eight contained branches can be skipped. None of these enter the c
 | `PROGRESS.md` | 31 |
 | `CHANGELOG.md` | 1 |
 
-Resolve these by union, not by picking a side.
+Resolve these by union, not by picking a side. `docs/loop-report.md` is handled for you: the
+`.gitattributes` on branch `chore/gitattributes-loop-report-union` sets `merge=union` for it (every
+branch's change there is append-only -- checked across all 52 -- so git keeps both sides without a
+conflict; verified with `git merge-file --union` on two branch versions: 0 conflict markers, both
+entries kept). `PROGRESS.md` and `CHANGELOG.md` are edited, not just appended, so they still need a
+manual union.
 
 ## Code, config and test files touched by more than one branch
 
