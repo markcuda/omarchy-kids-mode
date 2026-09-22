@@ -59,6 +59,13 @@ else
   fail_check "modal must keep Escape and both Enter handlers"
 fi
 
+if grep -qF 'text: "Enter Finish    ·    Esc Back"' "$MODAL" &&
+  grep -qF 'visible: !root.locked' "$MODAL"; then
+  pass "modal says which keys work, like the other kid surfaces"
+else
+  fail_check "modal must say which keys work (I-5)"
+fi
+
 if grep -qF 'Quickshell.execDetached(["/usr/bin/omarchy-kids-exit", "--finish"])' "$MODAL"; then
   pass "modal submits the implemented Finish action"
 else

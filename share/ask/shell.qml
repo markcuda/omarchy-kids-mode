@@ -192,6 +192,10 @@ PanelWindow {
                 Keys.onEscapePressed: (event) => { root.closeModal(); event.accepted = true }
                 Keys.onTabPressed: (event) => { root.toggleSelection(); event.accepted = true }
                 Keys.onBacktabPressed: (event) => { root.toggleSelection(); event.accepted = true }
+                // The two choices sit side by side, so left/right select between
+                // them the way every other kid surface's arrows do; Tab stays.
+                Keys.onLeftPressed: (event) => { root.toggleSelection(); event.accepted = true }
+                Keys.onRightPressed: (event) => { root.toggleSelection(); event.accepted = true }
                 Keys.onReturnPressed: (event) => { root.submit(); event.accepted = true }
                 Keys.onEnterPressed: (event) => { root.submit(); event.accepted = true }
 
@@ -376,6 +380,19 @@ PanelWindow {
                                 }
                             }
                         }
+                    }
+
+                    // I-5: the keys are discoverable, not memorized -- the portal,
+                    // the picker, the Wi-Fi picker and the plugins shelf all say
+                    // which keys work; these two modals did not (live 2026-09-22).
+                    Text {
+                        font.family: theme.fontFamily
+                        width: parent.width
+                        visible: !root.done && !root.locked
+                        text: "← → Choose    ·    Enter Ask    ·    Esc Never mind"
+                        color: theme.foreground
+                        font.pixelSize: 14
+                        horizontalAlignment: Text.AlignHCenter
                     }
                 }
             }

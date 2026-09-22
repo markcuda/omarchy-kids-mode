@@ -280,6 +280,18 @@ PanelWindow {
                             }
                         }
                     }
+                    // I-5: the keys are discoverable, not memorized -- the portal,
+                    // the picker, the Wi-Fi picker and the plugins shelf all say
+                    // which keys work; these two modals did not (live 2026-09-22).
+                    Text {
+                        font.family: theme.fontFamily
+                        width: parent.width
+                        visible: !root.locked
+                        text: "Enter Finish    ·    Esc Back"
+                        color: theme.foreground
+                        font.pixelSize: 14
+                        horizontalAlignment: Text.AlignHCenter
+                    }
                 }
             }
         }

@@ -6,10 +6,12 @@
 # not be installed here, so those checks are text/parse-only, same as
 # test/shell.d/pkgbuild-test.sh's approach to the pacman hook).
 #
-# share/ask/shell.qml itself is UNTESTED here, same as share/exit-modal/
-# shell.qml in test/shell.d/exit-test.sh's own header -- no Quickshell in
-# this environment. This file only checks the bash side: what env vars
-# it's launched with, and what it's expected to call back into.
+# share/ask/shell.qml is checked statically here (no Quickshell in this
+# environment): that it never passes --state or writes "approved", that it
+# goes through the root grant path, and that its keys and hint line are the
+# ones a kid needs (Enter confirms, Tab or the arrows switch between the two
+# choices, Escape leaves without asking). The bash side is the rest of the
+# file: what env vars it is launched with and what it calls back into.
 #
 # Fully self-contained: quickshell and pgrep are fakes on a stub PATH;
 # omarchy-kids-conf, -web and -time are fakes placed in the scratch tree
@@ -460,6 +462,17 @@ check_not_contains "$(cat "$ASK_QML")" '"approved"' \
   "share/ask/shell.qml never writes the word approved"
 check_contains "$(cat "$ASK_QML")" '"grant"' \
   "share/ask/shell.qml goes through the root grant path instead"
+
+# I-5: a kid has to be able to see which keys work, not remember them. Every
+# other kid surface carries its own hint line; these modals did not.
+for handler in Keys.onEscapePressed Keys.onTabPressed Keys.onBacktabPressed \
+  Keys.onReturnPressed Keys.onEnterPressed Keys.onLeftPressed Keys.onRightPressed; do
+  check_contains "$(cat "$ASK_QML")" "$handler" "share/ask/shell.qml handles $handler"
+done
+check_contains "$(cat "$ASK_QML")" '"← → Choose    ·    Enter Ask    ·    Esc Never mind"' \
+  "share/ask/shell.qml says which keys work, like the other kid surfaces"
+check_contains "$(cat "$ASK_QML")" 'visible: !root.done && !root.locked' \
+  "the ask hint hides once the request is sent, or while the field is locked out"
 
 # An honest open request, for the `list`/approve sections below.
 time_stub
