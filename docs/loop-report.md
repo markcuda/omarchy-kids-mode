@@ -914,3 +914,26 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the bar's "End session" path and the portal after a kid exits (live)
+
+Two items the docs list as unverified are now proven live on the try-omarchy VM, with no defect.
+
+- `omarchy-kids-exit --finish --kid kid-ada` -- the root path `omarchy-kids-bar end` runs under sudo
+  (`docs/bar.md:237-243`, item 5, and `docs/exit.md`'s own open items). It exited 0, found the kid's
+  Hyprland instance under `/run/user/1001/hypr/<signature>/`, dispatched `hl.dsp.exit()` through
+  `runuser`, and the kid's Hyprland and quickshell were gone. The clean path worked, so the
+  `loginctl terminate-user` fallback was not exercised.
+- The portal after a kid exits (union `PROGRESS.md`'s "next work"). The kid autologin drop-in was
+  removed first, so SDDM would not re-autologin the kid on the restart. After the finish, SDDM was
+  alive and had started `sddm-greeter-qt6 --theme /usr/share/sddm/themes/omarchy-kids`; the journal
+  is clean (no "Process crashed"), and the greeter shows both tiles -- the kid's fox "Ada" and the
+  parent's "Omini-test" (`portal-after-exit-2026-09-22.png` in `.local/media/`). This is the
+  "Process crashed" black screen `docs/exit.md`'s Verified-live section was written to prevent, not
+  reproduced.
+
+A capture note for the next pass: QEMU's QMP `screendump` comes back all black for the X11 greeter
+(the greeter's plane is not in the virtual framebuffer that QEMU reads), so the portal shot was
+taken inside the guest with `import -window root` on the greeter's own X display (as the `sddm`
+user, with the greeter's `/tmp/xauth_*`). The kid's Wayland sessions capture fine with `grim`
+(that is the recipe's method) and are unaffected.
