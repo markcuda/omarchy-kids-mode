@@ -64,6 +64,28 @@ the first GRANT on a fresh box still hits EROFS under `ProtectSystem=strict`). M
 `fix/fresh-install-ordering` and drop `fix/install-packaging`; resolve the conflict by taking its
 side wholesale, not by hand-unioning the two assert bodies.
 
+## Contained branches: merge the tip, skip the ancestors
+
+Several branches ahead of the union are ancestors of another ahead-of-union branch -- the tip's own
+history already contains them -- so merging the tip covers them. `git merge-base --is-ancestor`
+over the 61 in-flight branches finds:
+
+| contained | contained in |
+| --- | --- |
+| `fix/data-browse-empty-title` | `fix/data-corrupt-history-traceback` |
+| `fix/data-corrupt-history-traceback` | `fix/data-grants-in-summary` |
+| `fix/show-missing-regression` | `fix/apps-docs-manifest` |
+| `fix/toast-clock-overlap` | `fix/launcher-time-left-refresh` |
+| `docs/levels-l2-cheat-sheet-inert` | `docs/levels-two-apps-verified` |
+| `docs/levels-two-apps-verified` | `docs/wifi-picker-verified` |
+| `docs/fix-doc-references` | `docs/stale-launcher-claims` |
+| `test/panel-wifi-mode-label` | `docs/loop-dogfood-clean` |
+
+So `fix/data-grants-in-summary`, `fix/apps-docs-manifest`, `fix/launcher-time-left-refresh`,
+`docs/wifi-picker-verified`, `docs/stale-launcher-claims` and `docs/loop-dogfood-clean` are the tips
+to merge; the eight contained branches can be skipped. None of these enter the conflict table above
+(the ancestry is already linear).
+
 ## Shared running docs (nearly every loop branch edits these)
 
 | file | branches |
@@ -105,3 +127,13 @@ Resolve these by union, not by picking a side.
 | `bin/omarchy-kids-time` | 2 | `origin/fix/time-status-fresh-grant` `origin/fix/toast-icon-match` |
 | `bin/omarchy-kids-plugins` | 2 | `origin/fix/plugins-shelf-field-shift` `origin/style/shfmt` |
 | `bin/omarchy-kids-assert` | 2 | `origin/fix/fresh-install-ordering` `origin/fix/install-packaging` |
+
+## Branches to skip at the gate
+
+- **Contained** (their content is already in a later branch): `fix/data-browse-empty-title`,
+  `fix/data-corrupt-history-traceback`, `fix/show-missing-regression`, `fix/toast-clock-overlap`,
+  `docs/levels-l2-cheat-sheet-inert`, `docs/levels-two-apps-verified`, `docs/fix-doc-references`,
+  `test/panel-wifi-mode-label`.
+- **Stale or superseded**: `fix/install-packaging` (`fix/fresh-install-ordering` supersedes it) and
+  `fix/launcher-insets-simplify` (its one change is already in the union; it now only conflicts).
+- **Obsolete, not part of this round**: `hub-archive-2026-09-19` (contained in `two-paths`).
