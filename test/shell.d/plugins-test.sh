@@ -119,6 +119,19 @@ cat >"$IDX" <<'EOF'
       "repo": "https://github.com/example/noage"
     },
     {
+      "id": "numage",
+      "name": "Numeric Age",
+      "description": "Age recorded as a bare number, not a band string.",
+      "author": "example",
+      "category": "Kids",
+      "tags": [],
+      "verificationStatus": "verified",
+      "installAvailable": true,
+      "installCommand": "omarchy plugin add https://github.com/example/numage.git --enable",
+      "repo": "https://github.com/example/numage",
+      "age": 5
+    },
+    {
       "id": "notkids",
       "name": "Not A Kids Plugin",
       "description": "Wrong category entirely.",
@@ -219,15 +232,25 @@ check_status "$?" 2 "shelf --band: an unknown band is refused"
 
 json_out="$("$PLUGINS" shelf --json)"
 check "$(jq -e 'type' <<<"$json_out" 2>/dev/null)" '"array"' "shelf --json: prints a JSON array"
-check "$(jq -r '. | length' <<<"$json_out")" "3" "shelf --json: three verified Kids entries by default"
+check "$(jq -r '. | length' <<<"$json_out")" "4" "shelf --json: four verified Kids entries by default"
 check "$(jq -r '.[] | select(.id=="kidmath") | .verified' <<<"$json_out")" "true" \
   "shelf --json: kidmath's verified field is true"
 check "$(jq -r '.[] | select(.id=="kidmath") | .age' <<<"$json_out")" "3-5" \
   "shelf --json: kidmath carries its age hint"
+check "$(jq -r '.[] | select(.id=="noage") | .age' <<<"$json_out")" "" \
+  "shelf --json: a no-age entry's empty age does not shift the next field into it"
+check "$(jq -r '.[] | select(.id=="noage") | .verified' <<<"$json_out")" "true" \
+  "shelf --json: a no-age entry is still verified (fields did not shift)"
+check "$(jq -r '.[] | select(.id=="numage") | .age' <<<"$json_out")" "5" \
+  "shelf --json: a numeric age is kept, not dropped (gsub coerces to string)"
+check "$(jq -r '.[] | select(.id=="numage") | .verified' <<<"$json_out")" "true" \
+  "shelf --json: a numeric-age entry is still verified"
+check_not_contains "$out" "https://github.com/example/noage" \
+  "shelf table: the repo URL never leaks into the VERIFIED column"
 check_not_contains "$json_out" "--all:" "shelf --json: never prints the --all warning line, even with --all"
 
 json_35="$("$PLUGINS" shelf --json --band 3-5)"
-check "$(jq -r '. | length' <<<"$json_35")" "2" "shelf --json --band 3-5: kidmath + noage only"
+check "$(jq -r '. | length' <<<"$json_35")" "3" "shelf --json --band 3-5: kidmath + noage + numage"
 
 # --- shelf: a missing index is not an error --------------------------------
 

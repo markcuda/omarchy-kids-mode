@@ -72,11 +72,15 @@ require_jq() { command -v jq >/dev/null 2>&1 || die "needs jq (not found on PATH
 # --- the index -------------------------------------------------------------
 
 # index_rows FILTER_EXTRA — jq rows (id, name, description, age,
-# verificationStatus, repo), tab-separated, for every .plugins[] entry
-# matching category=="Kids", installAvailable==true, and FILTER_EXTRA
-# (a jq boolean expression string, evaluated against each entry as `.`).
-# Missing or unreadable index -> no rows, never an error (R-APPS-8's own
-# "offline" framing: not-synced-yet is not a failure).
+# verificationStatus, repo), US-separated (ASCII 0x1f), for every
+# .plugins[] entry matching category=="Kids", installAvailable==true,
+# and FILTER_EXTRA (a jq boolean expression string, evaluated against
+# each entry as `.`). Not tab-separated: bash's `read` collapses runs of
+# an IFS-whitespace delimiter, so an entry with no `age` (an empty
+# field) would shift every field after it. 0x1f is not IFS whitespace,
+# so empty fields survive; it is stripped from values so it cannot
+# forge one. Missing or unreadable index -> no rows, never an error
+# (R-APPS-8's own "offline" framing: not-synced-yet is not a failure).
 index_rows() {
   local filter_extra="$1"
   [[ -r "$INDEX" ]] || return 0
@@ -89,7 +93,8 @@ index_rows() {
         | .[]
         | [ (.id // ""), (.name // .id // ""), (.description // ""),
             (.age // ""), (.verificationStatus // "unverified"), (.repo // "") ]
-        | @tsv
+        | map(tostring | gsub("\u001f"; " ") | gsub("\n"; " ") | gsub("\r"; " "))
+        | join("\u001f")
     ' "$INDEX" 2>/dev/null || true
 }
 
@@ -169,13 +174,13 @@ cmd_shelf() {
   # floor is not the same claim as "too old for this band").
   local id name desc age status repo row_rank
   local -a kept=()
-  while IFS=$'\t' read -r id name desc age status repo; do
+  while IFS=$'\x1f' read -r id name desc age status repo; do
     [[ -n "$id" ]] || continue
     if [[ -n "$want_rank" && -n "$age" ]]; then
       row_rank="$(band_rank "$age" || true)"
       if [[ -n "$row_rank" ]] && ((row_rank > want_rank)); then continue; fi
     fi
-    kept+=("$id"$'\t'"$name"$'\t'"$desc"$'\t'"$age"$'\t'"$status")
+    kept+=("$id"$'\x1f'"$name"$'\x1f'"$desc"$'\x1f'"$age"$'\x1f'"$status")
   done <<<"$rows"
 
   if ((json)); then
@@ -184,7 +189,7 @@ cmd_shelf() {
       return 0
     fi
     printf '%s\n' "${kept[@]}" | jq -R -s '
-            split("\n") | map(select(length > 0) | split("\t")) |
+            split("\n") | map(select(length > 0) | split("\u001f")) |
             map({id: .[0], name: .[1], description: .[2], age: .[3], verified: (.[4] == "verified")})
         '
     return 0
@@ -203,7 +208,7 @@ cmd_shelf() {
   printf '%-24s %-24s %-6s %-10s %s\n' ID NAME AGE VERIFIED DESCRIPTION
   local line
   for line in "${kept[@]}"; do
-    IFS=$'\t' read -r id name desc age status <<<"$line"
+    IFS=$'\x1f' read -r id name desc age status <<<"$line"
     printf '%-24s %-24s %-6s %-10s %s\n' "$id" "$name" "$age" "$status" "$desc"
   done
 }
