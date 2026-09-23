@@ -357,6 +357,24 @@ check_contains "$(cat "$SYSTEMCTL_LOG")" "start --no-block omarchy-kids-relayd.s
   "tick: an open request starts the relay on demand"
 rm -f "$ROOT/var/lib/omarchy-kids/queue/1000000002-kid-ada-time.json"
 
+# Notifications on, no kid live, but a pairing window is open: it starts.
+: >"$SYSTEMCTL_LOG"
+mkdir -p "$ROOT/run/omarchy-kids/pairing"
+printf '{"expires_at": %s}\n' "$(($(date +%s) + 300))" >"$ROOT/run/omarchy-kids/pairing/d-1"
+set_clock 1520
+"$LEDGER" tick >/dev/null
+check_contains "$(cat "$SYSTEMCTL_LOG")" "start --no-block omarchy-kids-relayd.service" \
+  "tick: an open pairing window starts the relay on demand"
+
+# Notifications on, no kid live, an expired pairing record: it starts nothing.
+: >"$SYSTEMCTL_LOG"
+printf '{"expires_at": 0}\n' >"$ROOT/run/omarchy-kids/pairing/d-1"
+set_clock 1550
+"$LEDGER" tick >/dev/null
+check_not_contains "$(cat "$SYSTEMCTL_LOG")" "omarchy-kids-relayd" \
+  "tick: an expired pairing record starts no relay"
+rm -rf "$ROOT/run/omarchy-kids/pairing"
+
 # --- two sessions for the same kid: only one minute, not two -------------
 
 set_sessions "1 1000 kid-ada yes no" "2 1000 kid-ada yes no"

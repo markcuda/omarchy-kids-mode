@@ -54,6 +54,7 @@ class Relay:
         self.ledger = devices_mod.NonceLedger(args.nonce_ledger)
         self.last_activity = time.monotonic()
         self.connected = 0
+        self.tasks = set()
         self.server = None
 
     # --- HTTP -----------------------------------------------------------
@@ -115,6 +116,7 @@ class Relay:
                 pass
             return
         self.connected += 1
+        self.tasks.add(asyncio.current_task())
         try:
             method, path, headers, body = await asyncio.wait_for(
                 self.read_request(reader), timeout=CLIENT_TIMEOUT
@@ -126,6 +128,7 @@ class Relay:
             pass
         finally:
             self.connected -= 1
+            self.tasks.discard(asyncio.current_task())
             self.last_activity = time.monotonic()
             try:
                 writer.close()
@@ -239,22 +242,19 @@ class Relay:
         needless_since = None
         while True:
             await asyncio.sleep(5)
-            needed = self.relay.is_needed(self.args.status, self.args.queue)
-            if needed or self.connected > 0:
-                needless_since = None
-                continue
+            needed = self.relay.is_needed(self.args.status, self.args.queue, self.args.pairing_dir)
             now = time.monotonic()
-            if needless_since is None:
+            if needed:
+                needless_since = None
+            elif needless_since is None:
                 needless_since = now
-            if self.relay.idle_expired(self.last_activity, now, self.args.idle_seconds, self.connected, needed):
-                print("omarchy-kids-relayd: idle; stopping", file=sys.stderr)
-                self.server.close()
-                return
-            # Not idle (a device is polling) but Kids Mode is not in use: stop
-            # anyway after the grace. The tick starts it again within 30s of a
-            # kid logging in or a request arriving (R-NOTIFY-1).
-            if now - needless_since >= self.args.needless_seconds:
+            # Not needed (no live kid, no open request, no pairing window) for
+            # the grace: stop, even if a device holds a stream open. A subscriber
+            # must not keep the always-on listener R-NOTIFY-1 forbids.
+            if self.relay.needs_stopping(needed, needless_since, now, self.args.needless_seconds):
                 print("omarchy-kids-relayd: Kids Mode is not in use; stopping", file=sys.stderr)
+                for task in list(self.tasks):
+                    task.cancel()
                 self.server.close()
                 return
 
@@ -272,8 +272,8 @@ def parse_args(argv):
     parser.add_argument("--nonce-ledger", default="/run/omarchy-kids/relay/nonces.json")
     parser.add_argument("--share", default="/usr/share/omarchy-kids")
     parser.add_argument("--lib", default="/usr/lib/omarchy-kids")
-    parser.add_argument("--idle-seconds", type=int, default=600)
     parser.add_argument("--needless-seconds", type=int, default=60)
+    parser.add_argument("--pairing-dir", default="/run/omarchy-kids/pairing")
     return parser.parse_args(argv)
 
 
@@ -298,12 +298,19 @@ async def main_async(argv) -> int:
     print(f"omarchy-kids-relayd: listening on {args.bind}:{args.port}", file=sys.stderr)
     idler = asyncio.ensure_future(relay.expire_when_idle())
     try:
-        async with relay.server:
-            await relay.server.serve_forever()
+        await relay.server.serve_forever()
     except (asyncio.CancelledError, KeyboardInterrupt):
         pass
     finally:
         idler.cancel()
+        for task in list(relay.tasks):
+            task.cancel()
+        relay.server.close()
+        # Never wait indefinitely for a client that holds a stream open.
+        try:
+            await asyncio.wait_for(relay.server.wait_closed(), timeout=2)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            pass
     return 0
 
 

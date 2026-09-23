@@ -94,11 +94,11 @@ check(reply == "no replayed-nonce", "forward_decide passes a refusal back verbat
 check(relay.forward_decide(os.path.join(tmp, "none.sock"), "{}") is None,
       "forward_decide is None when authd is unreachable")
 
-# --- idle_expired ----------------------------------------------------------
-check(relay.idle_expired(100, 100 + 601, 600), "the relay expires after its idle window")
-check(not relay.idle_expired(100, 100 + 599, 600), "it stays up inside the window")
-check(not relay.idle_expired(0, 10_000, 600, connected_clients=1),
-      "a connected device keeps the relay up")
+# --- needs_stopping (R-NOTIFY-1) -------------------------------------------
+check(not relay.needs_stopping(True, None, 10_000, 60), "a needed relay never stops")
+check(not relay.needs_stopping(False, 100, 130, 60), "it stays up inside the not-needed grace")
+check(relay.needs_stopping(False, 100, 160, 60), "it stops once Kids Mode has not been in use for the grace")
+check(not relay.needs_stopping(False, None, 10_000, 60), "no grace has started yet")
 
 # --- is_needed / the not-needed exit rule (R-NOTIFY-1) --------------------
 check(relay.is_needed(status, queue), "needed: a live kid and an open request")
@@ -116,7 +116,20 @@ q3 = os.path.join(tmp, "queue-none")
 os.makedirs(q3, exist_ok=True)
 check(not relay.is_needed(os.path.join(tmp, "missing.json"), q3),
       "not needed when the status is unreadable (fail-closed: stops sooner, the tick restarts it)")
-check(not relay.idle_expired(0, 100_000, 600, 0, True),
+
+# A pairing window is Kids Mode in use too (R-NOTIFY-5).
+pair_dir = os.path.join(tmp, "pairing")
+os.makedirs(pair_dir, exist_ok=True)
+with open(os.path.join(pair_dir, ".lock"), "w") as f:
+    f.write("")
+check(not relay.is_needed(s2, q3, pair_dir), "not needed: a pairing dir holding only its lock file")
+with open(os.path.join(pair_dir, "d-1"), "w") as f:
+    json.dump({"expires_at": 1 << 40}, f)
+check(relay.is_needed(s2, q3, pair_dir), "needed: an open pairing window")
+with open(os.path.join(pair_dir, "d-1"), "w") as f:
+    json.dump({"expires_at": 0}, f)
+check(not relay.is_needed(s2, q3, pair_dir), "not needed: an expired pairing record")
+check(not relay.needs_stopping(True, 0, 100_000, 60),
       "a live kid or open request keeps it up however idle the clock says")
 
 sys.exit(1 if fails else 0)

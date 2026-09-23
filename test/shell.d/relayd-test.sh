@@ -221,14 +221,29 @@ proc2 = subprocess.Popen([sys.executable, os.path.join(root, "bin", "omarchy-kid
                           "--devices-json", devices_json, "--status", idle_status, "--queue", idle_queue,
                           "--auth-sock", auth_sock, "--nonce-ledger", os.path.join(tmp, "nonces2.json"),
                           "--share", os.path.join(root, "share"), "--lib", os.path.join(root, "lib"),
-                          "--needless-seconds", "1"],
+                          "--pairing-dir", os.path.join(tmp, "pairing-idle"), "--needless-seconds", "1"],
                          stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+# Hold a device event-stream open: the relay must still stop -- an SSE
+# subscriber is not an always-on listener (R-NOTIFY-1).
+ctx2 = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT); ctx2.check_hostname = False; ctx2.verify_mode = ssl.CERT_NONE
+ss2 = None
+for _ in range(50):
+    try:
+        ss2 = ctx2.wrap_socket(socket.create_connection(("127.0.0.1", port2), timeout=5), server_hostname="127.0.0.1")
+        h2 = signed_headers("/v1/events")
+        ss2.sendall(("GET /v1/events HTTP/1.1\r\nHost: x\r\n" + "".join(f"{k}: {v}\r\n" for k, v in h2.items()) + "\r\n").encode())
+        break
+    except OSError:
+        ss2 = None
+        time.sleep(0.2)
 try:
-    stderr = proc2.communicate(timeout=25)[1].decode()
-    check("not in use" in stderr, "the relay stops itself once Kids Mode is no longer in use (R-NOTIFY-1)")
+    stderr = proc2.communicate(timeout=30)[1].decode()
+    check("not in use" in stderr, "the relay stops itself once Kids Mode is no longer in use, even with a device streaming (R-NOTIFY-1)")
 except subprocess.TimeoutExpired:
     proc2.kill()
-    check(False, "the relay stops itself once Kids Mode is no longer in use (R-NOTIFY-1)")
+    check(False, "the relay stops itself once Kids Mode is no longer in use, even with a device streaming (R-NOTIFY-1)")
+if ss2 is not None:
+    ss2.close()
 
 sys.exit(1 if fails else 0)
 PY

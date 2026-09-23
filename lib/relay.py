@@ -2,9 +2,10 @@
 
 `build_state` makes the /v1/state document from the root-written status.json and
 the queue; `forward_decide` hands a signed decision frame to authd's DECIDE
-socket and returns its one-line reply; `idle_expired` decides when the relay may
-stop. The relay never decides (R-NOTIFY-2): it reads the parent-readable sources
-and forwards to root, nothing more.
+socket and returns its one-line reply; `is_needed` and `needs_stopping` decide
+what counts as Kids Mode being in use and when the relay may stop. The relay
+never decides (R-NOTIFY-2): it reads the parent-readable sources and forwards to
+root, nothing more.
 
 Stdlib only -- verification and the decision are root's, in lib/devices.py and
 lib/ask.py. The relay is not a lock; it may stop at any time without weakening a
@@ -95,14 +96,38 @@ def forward_decide(auth_sock, frame_json, timeout=30.0):
     return reply.decode("utf-8", "replace").strip()
 
 
-def is_needed(status_path, queue_dir):
-    """True while Kids Mode is in use: a kid is live or a request is open.
+def pairing_pending(pairing_dir, now=None):
+    """True while a paired-device pairing window is open (R-NOTIFY-5).
+
+    A pairing window is Kids Mode in use: the relay must stay up while the phone
+    is pairing even though no kid is live and no request is open yet.
+    """
+    if not pairing_dir or not os.path.isdir(pairing_dir):
+        return False
+    now = time.time() if now is None else now
+    for name in os.listdir(pairing_dir):
+        if name.startswith("."):  # .lock and the atomic-write temp files
+            continue
+        record = _read_json(os.path.join(pairing_dir, name))
+        if record is None:
+            continue
+        expires = record.get("expires_at")
+        if isinstance(expires, int) and not isinstance(expires, bool) and expires > now:
+            return True
+    return False
+
+
+def is_needed(status_path, queue_dir, pairing_dir=None):
+    """True while Kids Mode is in use: a kid is live, a request is open, or a
+    device is pairing.
 
     R-NOTIFY-1: the relay runs only while Kids Mode is in use and notifications
     are enabled, so this gates its exit as well as its start. Best-effort -- an
     unreadable source reads as not needed, which only lets the relay stop sooner
     (the ledger tick starts it again within 30 seconds if it is wanted).
     """
+    if pairing_pending(pairing_dir):
+        return True
     status = _read_json(status_path) or {}
     kids = status.get("kids")
     if isinstance(kids, list):
@@ -117,12 +142,14 @@ def is_needed(status_path, queue_dir):
     return False
 
 
-def idle_expired(last_activity, now, idle_seconds, connected_clients=0, needed=False):
-    """True once the relay has been quiet long enough to stop.
+def needs_stopping(needed, not_needed_since, now, needless_seconds):
+    """True once Kids Mode has not been in use for the grace window.
 
-    A connected device keeps it up whatever the clock says, and so does a live
-    kid or an open request (R-NOTIFY-1: it runs only while Kids Mode is in use).
+    R-NOTIFY-1: the relay exits on its own when idle. `needed` (a live kid, an
+    open request, or a pairing window) holds it up; otherwise it stops after
+    `needless_seconds`, even if a device is holding a stream open -- a subscriber
+    must not become the always-on listener the requirement forbids.
     """
-    if connected_clients > 0 or needed:
+    if needed or not_needed_since is None:
         return False
-    return now - last_activity >= idle_seconds
+    return now - not_needed_since >= needless_seconds

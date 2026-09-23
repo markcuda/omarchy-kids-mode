@@ -68,14 +68,16 @@ printing.
 ## Lifecycle: the relay exists only while it is needed (N-7)
 
 There is no always-on listener. `omarchy-kids-time-ledger tick` (every 30 seconds, root) asks
-`omarchy-kids-relayd.service` to start when a kid is live or a request is open, and does nothing
-while notifications are off. The relay stops on its own in two cases (`lib/relay.py`'s `is_needed`
-and `idle_expired`): after ten quiet minutes with no client, and after a 60-second grace once Kids
-Mode is no longer in use — no kid live and no request open — even if a paired device is still
-polling. So the port is closed again within a minute of the last kid leaving and the last request
-being decided, and the tick brings it back within 30 seconds of the next login or request. Starting
-it is best effort and never fails a tick; a start that races the relay's own exit is harmless,
-since the next tick starts it again if it is still needed.
+`omarchy-kids-relayd.service` to start when Kids Mode is in use — a kid live, a request open, or a
+pairing window open — and does nothing while notifications are off. The relay stops itself on the
+same condition (`lib/relay.py`'s `is_needed` and `needs_stopping`): after a 60-second grace with
+Kids Mode not in use, it closes — dropping any device that was holding a stream open, because a
+subscriber must not become the always-on listener R-NOTIFY-1 forbids. So the port is closed soon
+after the last kid leaves and the last request is decided (the bound is the tick's 30-second status
+refresh plus the grace plus the 5-second poll, about 95 seconds), and the tick brings it back within
+30 seconds of the next login, request, or pairing. Starting it is best effort and never fails a
+tick; a start that races the relay's own exit is harmless, since the next tick starts it again if it
+is still needed.
 
 ## The fence, stated plainly (R-NOTIFY-10, I-6)
 
