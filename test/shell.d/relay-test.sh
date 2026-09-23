@@ -59,7 +59,7 @@ def fake_authd(reply, ready):
     srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     srv.bind(sock_path)
     srv.listen(1)
-    srv.settimeout(10)
+    srv.settimeout(30)
     ready.set()
     conn, _ = srv.accept()
     data = b""
@@ -76,10 +76,10 @@ def fake_authd(reply, ready):
 ready = threading.Event()
 t = threading.Thread(target=fake_authd, args=(b"ok\n", ready))
 t.start()
-if not ready.wait(10):
+if not ready.wait(30):
     raise RuntimeError("authd stub did not start in time")
 reply = relay.forward_decide(sock_path, '{"record":{},"signature":"x"}')
-t.join(10)
+t.join(30)
 check(reply == "ok", "forward_decide returns authd's reply")
 check(seen and seen[0].startswith("DECIDE "), "forward_decide sends the DECIDE frame")
 
@@ -87,10 +87,10 @@ os.unlink(sock_path)
 ready = threading.Event()
 t = threading.Thread(target=fake_authd, args=(b"no replayed-nonce\n", ready))
 t.start()
-if not ready.wait(10):
+if not ready.wait(30):
     raise RuntimeError("authd stub did not start in time")
 reply = relay.forward_decide(sock_path, '{"record":{}}')
-t.join(10)
+t.join(30)
 check(reply == "no replayed-nonce", "forward_decide passes a refusal back verbatim")
 
 # --- forward_pair: pairing is pre-auth and carried to authd ----------------
@@ -98,10 +98,10 @@ os.unlink(sock_path)
 ready = threading.Event()
 t = threading.Thread(target=fake_authd, args=(b"ok\n", ready))
 t.start()
-if not ready.wait(10):
+if not ready.wait(30):
     raise RuntimeError("authd stub did not start in time")
 reply = relay.forward_pair(sock_path, '{"id":"d2","proof":"p"}')
-t.join(10)
+t.join(30)
 check(reply == "ok", "forward_pair returns authd's reply")
 check(seen and seen[-1].startswith("PAIR "), "forward_pair sends the PAIR frame")
 

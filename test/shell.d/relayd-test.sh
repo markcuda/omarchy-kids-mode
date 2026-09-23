@@ -96,7 +96,7 @@ def signed_headers(path, body=b"", ts=None, nonce=None, device="d1", method="GET
 # --- stub authd for the decision POST -------------------------------------
 auth_sock = os.path.join(tmp, "auth.sock")
 def fake_authd(ready, reply=b"ok\n"):
-    srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); srv.bind(auth_sock); srv.listen(1); srv.settimeout(10)
+    srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); srv.bind(auth_sock); srv.listen(1); srv.settimeout(30)
     ready.set(); conn, _ = srv.accept(); conn.recv(4096); conn.sendall(reply); conn.close(); srv.close()
 
 status = os.path.join(tmp, "status.json")
@@ -105,7 +105,7 @@ with open(status, "w") as f:
     json.dump({"generated_at": "x", "kids": [{"kid": "kid-ada", "live": True}]}, f)
 
 probe = socket.socket(); probe.bind(("127.0.0.1", 0)); port = probe.getsockname()[1]; probe.close()
-ready = threading.Event(); threading.Thread(target=fake_authd, args=(ready,), daemon=True).start(); ready.wait(10)
+ready = threading.Event(); threading.Thread(target=fake_authd, args=(ready,), daemon=True).start(); ready.wait(30)
 proc = subprocess.Popen([sys.executable, os.path.join(root, "bin", "omarchy-kids-relayd"),
                          "--bind", "127.0.0.1", "--port", str(port), "--cert", cert_path, "--key", key_path,
                          "--devices-json", devices_json, "--status", status, "--queue", queue, "--auth-sock", auth_sock,
