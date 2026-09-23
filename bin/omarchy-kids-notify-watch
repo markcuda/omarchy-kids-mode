@@ -2,10 +2,10 @@
 # omarchy:summary=Desktop notification for each new "Ask a parent" request (N-9)
 # omarchy:hidden=true
 # The parent's side, run by systemd --user (systemd/omarchy-kids-notify-watch.user.service):
-# it reads the queue the parent's omarchy-parents group can read and posts one
-# libnotify notification per open request, with Approve/Decline actions that run
-# omarchy-kids-bar. It never decides anything and holds no privilege. The logic
-# is lib/notify_watch.py; see docs/notify.md.
+# it reads the ask queue and posts one libnotify notification per open request,
+# with Approve/Decline actions that run omarchy-kids-bar. It never decides
+# anything and holds no privilege. The logic is lib/notify_watch.py; see
+# docs/notify.md.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
@@ -20,7 +20,13 @@ STATE_FILE=""
 BAR_BIN="$(kids_bin bar "$DIR")"
 
 if [[ -z "$STATE_FILE" ]]; then
-  STATE_FILE="${XDG_RUNTIME_DIR:-/tmp}/omarchy-kids-notify-watch.state"
+  # No /tmp fallback: a kid-writable directory would let a pre-created name make
+  # the watcher's state write fail (or suppress a notification) for good.
+  if [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
+    echo "omarchy-kids-notify-watch: XDG_RUNTIME_DIR is unset; run it from a session, not by hand" >&2
+    exit 2
+  fi
+  STATE_FILE="$XDG_RUNTIME_DIR/omarchy-kids-notify-watch.state"
 fi
 
 exec "$KIDS_PY" "$LIB/notify_watch.py" \

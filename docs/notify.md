@@ -85,7 +85,8 @@ is still needed.
 ## The desktop notifier (N-9)
 
 On the Omarchy box the parent is told through their own desktop, not a device: `bin/omarchy-kids-notify-watch`
-is a user-side process that polls the request queue through the `omarchy-parents` group and posts one
+is a user-side process that polls the request queue (world-readable today; R-NOTIFY-7 tightens it to
+`0750 root:omarchy-parents`, which the parent's group also reads) and posts one
 libnotify notification per open request, with **Approve** and **Decline** actions. An action runs
 `omarchy-kids-bar approve|decline <id>` (`docs/bar.md`), so it ends at the parent's own floating
 terminal and sudo prompt. Nothing here is privileged and nothing here decides: with the watcher

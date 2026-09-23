@@ -1,18 +1,20 @@
 """lib/notify_watch.py -- the parent's desktop notifier (N-9, R-NOTIFY).
 
-The user-side half of the on-box path: it polls the ask queue -- which the
-parent's `omarchy-parents` group can read -- and posts one libnotify
-notification per open request it has not already shown, with Approve and
-Decline actions. Choosing an action runs `omarchy-kids-bar approve|decline
+The user-side half of the on-box path: it polls the ask queue and posts one
+libnotify notification per open request it has not already shown, with Approve
+and Decline actions. Choosing an action runs `omarchy-kids-bar approve|decline
 <id>`, which opens the parent's own floating terminal and sudo prompt (N-9 part
 1); this watcher never decides anything itself and holds no privilege.
 
-`gdbus` (org.freedesktop.Notifications) carries the action buttons; where that
-is unavailable the fallback is a plain `notify-send` with no buttons, and the
-body says to use the panel. It is not an enforcement path: stopped or
-notifications off, a kid is affected in no way.
+Action buttons come from `org.freedesktop.Notifications` over the session bus
+(`gdbus`): a single background monitor watches for `ActionInvoked`, and the
+notification id we sent tells us which request the parent answered -- never a
+blocking wait, and never another app's notification. Where the session bus is
+unavailable the fallback is a plain `notify-send` with no buttons and a body
+that points at the panel.
 
-Stdlib only. CLI and `--once` (used by the tests) live at the bottom.
+Not an enforcement path: stopped, or notifications off, a kid is affected in no
+way. Stdlib only. CLI and `--once` (used by the tests) live at the bottom.
 """
 
 from __future__ import annotations
@@ -24,13 +26,15 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 
 APP_NAME = "omarchy-kids"
 RE_ID = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._+@-]{0,127}\Z")
 KINDS = ("time", "app", "plugin", "site")
-# A notification the parent never answers must not stall the poll loop.
-ACTION_WINDOW = 30
+ACTION_INVOKED = re.compile(r"ActionInvoked \(uint32 (\d+), '([^']*)'\)")
+# --once is a test/debug mode: give the action signal a moment to arrive.
+ONCE_GRACE = 1.0
 
 
 def _clean(value, limit=120):
@@ -84,13 +88,14 @@ def summary_body(row):
     if row["kind"] == "time" and row["minutes"]:
         return f"{kid} wants more time", f"{kid} asked for {row['minutes']} more minutes."
     what = row["what"] or row["kind"]
-    return f"{kid} asked to use {what}", f"{kid} asked for {what}. Approve or decline."
+    return f"{kid} asked to use {what}", f"{kid} asked for {what}."
 
 
 # --- state: which ids have already been shown, so a poll does not spam -------
 
 
 def load_state(path):
+    """The ids already shown; any read failure is treated as an empty state."""
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -102,17 +107,24 @@ def load_state(path):
 
 
 def save_state(path, ids):
+    """Best-effort: a failed write must never kill the watcher."""
     directory = os.path.dirname(path)
-    if directory:
-        os.makedirs(directory, mode=0o700, exist_ok=True)
-    tmp = f"{path}.{os.getpid()}.tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(sorted(ids), f)
-    os.chmod(tmp, 0o600)
-    os.replace(tmp, path)
+    try:
+        if directory:
+            os.makedirs(directory, mode=0o700, exist_ok=True)
+        tmp = f"{path}.{os.getpid()}.tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(sorted(ids), f)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+    except OSError:
+        try:
+            os.unlink(tmp)
+        except (OSError, UnboundLocalError):
+            pass
 
 
-# --- the two notifiers ------------------------------------------------------
+# --- gdbus: notify with actions, and one background monitor for the answers --
 
 
 def _actions_variant(actions):
@@ -140,49 +152,16 @@ def gdbus_notify(title, body, actions):
     return int(match.group(1)) if match else None
 
 
-def gdbus_wait_action(notification_id, seconds=ACTION_WINDOW):
-    """The action the parent chose, or None. Bounded by `seconds`."""
-    try:
-        out = subprocess.run(
-            ["gdbus", "monitor", "--session", "--dest", "org.freedesktop.Notifications"],
-            capture_output=True, text=True, timeout=seconds,
-        )
-        text = out.stdout
-    except subprocess.TimeoutExpired as exc:
-        text = exc.stdout or ""
-        if isinstance(text, bytes):
-            text = text.decode("utf-8", "replace")
-    except (OSError, subprocess.SubprocessError):
-        return None
-    match = re.search(r"ActionInvoked \(uint32 (\d+), '([^']*)'\)", text)
-    if match and int(match.group(1)) == notification_id:
-        return match.group(2)
-    return None
-
-
 def notify_send(title, body):
-    """The fallback: no buttons. Returns no id (never blocks for an action)."""
+    """The fallback: no buttons. libnotify's notify-send takes SUMMARY [BODY]."""
     if shutil.which("notify-send") is None:
-        return None
+        return False
+    text = f"{body} Open the Kids Mode panel to answer."
     try:
-        subprocess.run(["notify-send", APP_NAME, body, title], capture_output=True, timeout=10)
+        out = subprocess.run(["notify-send", title, text], capture_output=True, text=True, timeout=10)
     except (OSError, subprocess.SubprocessError):
-        pass
-    return None
-
-
-def notify(row, bar_bin, use_gdbus=True):
-    """Show one request and, where supported, wait for and run the chosen action."""
-    title, body = summary_body(row)
-    if use_gdbus:
-        notification_id = gdbus_notify(title, body, [("approve", "Approve"), ("decline", "Decline")])
-        if notification_id is not None:
-            action = gdbus_wait_action(notification_id)
-            if action in ("approve", "decline"):
-                run_action(bar_bin, action, row["id"])
-            return action
-    notify_send(title, body)
-    return None
+        return False
+    return out.returncode == 0
 
 
 def run_action(bar_bin, action, request_id):
@@ -193,11 +172,71 @@ def run_action(bar_bin, action, request_id):
         pass
 
 
+class GdbusNotifier:
+    """Sends notifications with buttons and answers them from one monitor.
+
+    The monitor runs for the watcher's lifetime in a background thread, so a
+    notification never blocks the poll loop and a click is honoured as soon as
+    the daemon reports it. Only ids this watcher sent are acted on.
+    """
+
+    ACTIONS = [("approve", "Approve"), ("decline", "Decline")]
+
+    def __init__(self, bar_bin):
+        self.bar_bin = bar_bin
+        self.ids = {}  # notification id -> request id
+        self.lock = threading.Lock()
+
+    def start(self):
+        threading.Thread(target=self._monitor_loop, daemon=True).start()
+
+    def _monitor_loop(self):
+        while True:
+            try:
+                proc = subprocess.Popen(
+                    ["gdbus", "monitor", "--session", "--dest", "org.freedesktop.Notifications"],
+                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                )
+            except OSError:
+                return
+            if proc.stdout is not None:
+                for line in proc.stdout:
+                    match = ACTION_INVOKED.search(line)
+                    if not match:
+                        continue
+                    notification_id = int(match.group(1))
+                    action = match.group(2)
+                    with self.lock:
+                        request_id = self.ids.pop(notification_id, None)
+                    if request_id and action in ("approve", "decline"):
+                        run_action(self.bar_bin, action, request_id)
+            proc.wait()
+            time.sleep(1)  # a monitor that exits at once must not spin us
+
+    def send(self, row):
+        """Show one request; True when the session bus took it.
+
+        The lock is held across the notify call and the id record, so the
+        monitor can never see the action before we know which request it is.
+        """
+        title, body = summary_body(row)
+        with self.lock:
+            notification_id = gdbus_notify(title, body, self.ACTIONS)
+            if notification_id is None:
+                return False
+            self.ids[notification_id] = row["id"]
+        return True
+
+
 # --- the loop ---------------------------------------------------------------
 
 
 def watch(queue_dir, state_path, bar_bin, interval, once, use_gdbus=True):
     notified = load_state(state_path)
+    notifier = None
+    if use_gdbus and shutil.which("gdbus") is not None:
+        notifier = GdbusNotifier(bar_bin)
+        notifier.start()
     while True:
         rows = read_open(queue_dir)
         current = {row["id"] for row in rows}
@@ -205,10 +244,14 @@ def watch(queue_dir, state_path, bar_bin, interval, once, use_gdbus=True):
         for row in rows:
             if row["id"] in notified:
                 continue
-            notify(row, bar_bin, use_gdbus)
+            shown = notifier is not None and notifier.send(row)
+            if not shown:
+                title, body = summary_body(row)
+                notify_send(title, body)
             notified.add(row["id"])
         save_state(state_path, notified)
         if once:
+            time.sleep(ONCE_GRACE)  # let a stubbed or real action signal arrive
             return 0
         time.sleep(interval)
 

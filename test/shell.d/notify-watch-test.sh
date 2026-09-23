@@ -106,7 +106,9 @@ reset
 write_record open
 "$BIN" --once --no-actions >/dev/null 2>&1
 check_status "$?" 0 "the no-actions fallback exits 0"
-check_contains "$(cat "$NOTIFY_LOG")" "kid-ada" "the fallback notifies through notify-send"
+check_contains "$(cat "$NOTIFY_LOG")" "kid-ada wants more time" \
+  "the fallback's summary is the request (notify-send SUMMARY [BODY])"
+check_contains "$(cat "$NOTIFY_LOG")" "panel to answer" "the fallback body points at the panel"
 check "$(grep -c . "$BAR_LOG")" "0" "the no-actions fallback runs no bar action"
 
 # --- a decided request is forgotten ----------------------------------------
@@ -123,6 +125,14 @@ printf 'not json\n' >"$QUEUE_DIR/$ID.json"
 "$BIN" --once >/dev/null 2>&1
 check_status "$?" 0 "a malformed record does not crash the watcher"
 check "$(grep -c Notify "$GDBUS_LOG")" "0" "a malformed record is not notified"
+
+# --- no /tmp fallback: an unset XDG_RUNTIME_DIR is refused (rule 9/privacy) --
+kids_tree "$TMP/tree-plain" "$DIR"
+BIN_PLAIN="$TMP/tree-plain/bin/omarchy-kids-notify-watch"
+kids_set_const "$BIN_PLAIN" SYSROOT "$ROOT"
+out="$(env -u XDG_RUNTIME_DIR "$BIN_PLAIN" --once 2>&1)"
+check_status "$?" 2 "an unset XDG_RUNTIME_DIR is refused (no predictable /tmp state)"
+check_contains "$out" "XDG_RUNTIME_DIR" "the refusal names what is missing"
 
 echo "notify-watch-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc
