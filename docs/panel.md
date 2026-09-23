@@ -127,7 +127,10 @@ panel runs unprivileged, every call goes through `run_priv`/`read_priv`, and the
 is the parent's own authentication (R-NOTIFY-5) — `pair` therefore adds no second password prompt.
 `notify_pair_show` captures the command's output rather than letting `run_priv` keep only its first
 line, so the pairing code and the relay's SPKI fingerprint both survive onto the next card: a card
-that let them scroll away would be a pairing window the parent could not read.
+that let them scroll away would be a pairing window the parent could not read. That code is a
+single-use credential, and `lib/tui.sh` now feeds every card body to `gum style` on **stdin**, not
+argv, for exactly this reason — on argv another local session could read it from
+`/proc/<pid>/cmdline`.
 
 ## Root and the one sudo prompt
 

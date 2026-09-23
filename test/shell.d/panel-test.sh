@@ -549,10 +549,17 @@ cat >"$TMP/tree/bin/omarchy-kids-notify" <<EOF
 { printf '%s' "omarchy-kids-notify"; printf ' %s' "\$@"; printf '\n'; } >> "$ARGV_LOG"
 case "\${1:-}" in
   status)
+    [[ -f "$TMP/notify.fail" ]] && exit 1
     if [[ -f "$TMP/notify.on" ]]; then echo "notifications: on"; else echo "notifications: off"; fi
     echo "no devices paired"
     ;;
-  devices) echo "[]" ;;
+  devices)
+    if [[ -f "$TMP/notify.device" ]]; then
+      echo '[{"id":"d-1","name":"Phone","platform":"android","scopes":["decide","act"]}]'
+    else
+      echo "[]"
+    fi
+    ;;
   enable) echo "omarchy-kids-notify: notifications on (relay port 8447)" ;;
   disable) echo "omarchy-kids-notify: notifications off; certificate removed" ;;
   pair)
@@ -566,7 +573,7 @@ exit 0
 EOF
 chmod +x "$TMP/tree/bin/omarchy-kids-notify"
 
-rm -f "$TMP/notify.on"
+rm -f "$TMP/notify.on" "$TMP/notify.fail" "$TMP/notify.device"
 : >"$ARGV_LOG"
 answers="$(answers_file notifications enable back quit)"
 run_panel "$answers" --dry-run
@@ -576,6 +583,35 @@ check_contains "$out" "[dry-run] sudo $TREE_BIN/omarchy-kids-notify enable --app
   "dry-run: enable prints the exact command"
 check_contains "$(cat "$ARGV_LOG")" "omarchy-kids-notify status" \
   "the screen reads the status through sudo (root owns the certificate)"
+
+# A failed read is a notice, never a fake "off" (I-6): the relay may be listening.
+touch "$TMP/notify.fail"
+answers="$(answers_file notifications back quit)"
+run_panel "$answers" --dry-run
+check_contains "$out" "Couldn't read the notification status" \
+  "a failed status read says so instead of claiming notifications are off"
+
+# --apply: pair captures the code and fingerprint onto the next card (R-NOTIFY-5).
+rm -f "$TMP/notify.fail"
+touch "$TMP/notify.on"
+: >"$ARGV_LOG"
+answers="$(answers_file notifications pair back quit)"
+run_panel "$answers" --apply
+check_contains "$(cat "$ARGV_LOG")" "omarchy-kids-notify pair --apply" \
+  "apply: pair really runs the command"
+check_contains "$out" "Pairing window open" "apply: the pairing window is announced"
+check_contains "$out" "omarchy-kids://pair" "apply: the pairing code survives onto the card"
+check_contains "$out" "fingerprint: deadbeef" "apply: the fingerprint survives onto the card"
+
+# --apply: a paired device is listed and revoked through sudo.
+touch "$TMP/notify.device"
+: >"$ARGV_LOG"
+answers="$(answers_file notifications devices d-1 yes back back quit)"
+run_panel "$answers" --apply
+check_contains "$out" "Phone · android" "devices: the paired device is listed"
+check_contains "$(cat "$ARGV_LOG")" "omarchy-kids-notify revoke d-1 --apply" \
+  "devices: revoke really runs for the chosen device"
+rm -f "$TMP/notify.device"
 
 touch "$TMP/notify.on"
 answers="$(answers_file notifications pair back quit)"
