@@ -309,6 +309,23 @@ check_status "$?" 2 "approve with no id is refused"
 out="$("$BAR" decline 2>&1)"
 check_status "$?" 2 "decline with no id is refused"
 
+# --dry-run forces the preview for an action and opens no terminal (rule 8).
+LOGFILE6="$TMP/approve-preview.log"
+: >"$LOGFILE6"
+out="$(PATH="$STUBS4:$BASE_PATH" LOGFILE="$LOGFILE6" \
+  "$BAR" approve 1000000001-kid-ada-time --dry-run </dev/null 2>&1)"
+check_status "$?" 0 "approve --dry-run exits 0"
+check_contains "$out" "[dry-run]" "approve --dry-run prints the plan"
+check "$(grep -c 'ASK ' "$LOGFILE6")" "0" "approve --dry-run calls no ask command"
+check "$(grep -c 'TERM ' "$LOGFILE6")" "0" "approve --dry-run opens no terminal"
+
+# The id is validated here: this is the entry point a notification callback
+# feeds, and ask's approve/decline only checks that the file exists.
+out="$("$BAR" approve ../../etc/sudoers.d 2>&1)"
+check_status "$?" 2 "an id with a path traversal is refused"
+out="$("$BAR" decline 'bad id' 2>&1)"
+check_status "$?" 2 "an id with a space is refused"
+
 # ===========================================================================
 # 5. /run/omarchy-kids/status.json (R-BAR-3): mode 0640, group
 #    omarchy-parents -- NOT world-readable 0644. SPEC.md R-BAR-3 says

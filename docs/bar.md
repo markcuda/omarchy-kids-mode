@@ -105,8 +105,9 @@ desktop notification's Approve/Decline actions (N-9, R-NOTIFY): a floating termi
 `sudo omarchy-kids-<time|exit|ask>` with the parent's own password.
 
 DRY_RUN=1 is the default for `enable`/`disable` (AGENTS.md rule 8); `--apply` (or `DRY_RUN=0`)
-makes them real. `grant` always runs for real -- it's a parent clicking a button in their own
-session, opening a terminal, nothing to preview.
+makes them real. `grant`/`end`/`approve`/`decline` run for real by default -- a parent clicked a
+button or a notification action, opening a terminal -- and `--dry-run` prints the plan instead and
+opens no terminal.
 
 ## `share/bar/KidsModule.qml`
 

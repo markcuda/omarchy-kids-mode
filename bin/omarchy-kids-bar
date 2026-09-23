@@ -57,6 +57,10 @@ Usage: omarchy-kids-bar enable [--apply]
   decline <id>    The same for a notification's Decline action.
   --apply         Make enable/disable real (default is DRY_RUN=1, prints
                   the plan -- AGENTS.md rule 8).
+  --dry-run       Print the plan instead of running it, for every
+                  subcommand. grant/end/approve/decline run for real by
+                  default (a parent clicked a button or a notification
+                  action); --dry-run previews them and opens no terminal.
   -h, --help      Show this help and exit.
 EOF
 }
@@ -200,6 +204,10 @@ cmd_grant() {
   local kid="${1:-}" minutes="${2:-}"
   [[ -n "$kid" && -n "$minutes" ]] || die "grant: needs <kid> <minutes> (see --help)"
   [[ "$minutes" =~ ^[0-9]+$ && "$minutes" -gt 0 ]] || die "grant: <minutes> must be a positive integer, got '$minutes'"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $TIME_BIN grant $kid $minutes"
+    return 0
+  fi
   open_terminal_running "Granted." "omarchy-kids-time grant failed" \
     sudo "$TIME_BIN" grant "$kid" "$minutes"
 }
@@ -212,6 +220,10 @@ cmd_grant() {
 cmd_end() {
   local kid="${1:-}"
   [[ -n "$kid" ]] || die "end: needs <kid> (see --help)"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $EXIT_BIN --finish --kid $kid"
+    return 0
+  fi
   open_terminal_running "Session ended." "ending the session failed" \
     sudo "$EXIT_BIN" --finish --kid "$kid"
 }
@@ -219,11 +231,23 @@ cmd_end() {
 # cmd_approve / cmd_decline — the desktop notification's Approve/Decline
 # actions (N-9, R-NOTIFY). Same path as grant/end: a floating terminal
 # and the parent's own sudo prompt, because this is the parent's session
-# and needs no paired device. `--apply` writes; the ask command's own
-# validation guards the id.
+# and needs no paired device.
+#
+# The id is validated here, not left to the ask command: this is the one
+# entry point that receives an id from another process (a notification
+# daemon's action callback) and hands it to root, and ask's approve/decline
+# only checks that the record file exists (lib/ask.py's RE_ID is applied to
+# list output, not to this input).
+valid_request_id() { [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._+@-]{0,127}$ ]]; }
+
 cmd_approve() {
   local id="${1:-}"
   [[ -n "$id" ]] || die "approve: needs <request-id> (see --help)"
+  valid_request_id "$id" || die "approve: bad request id '$id'"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $ASK_BIN approve $id --apply"
+    return 0
+  fi
   open_terminal_running "Approved." "approving the request failed" \
     sudo "$ASK_BIN" approve "$id" --apply
 }
@@ -231,6 +255,11 @@ cmd_approve() {
 cmd_decline() {
   local id="${1:-}"
   [[ -n "$id" ]] || die "decline: needs <request-id> (see --help)"
+  valid_request_id "$id" || die "decline: bad request id '$id'"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $ASK_BIN decline $id --apply"
+    return 0
+  fi
   open_terminal_running "Declined." "declining the request failed" \
     sudo "$ASK_BIN" decline "$id" --apply
 }
@@ -249,12 +278,14 @@ case "$cmd" in
 esac
 
 apply_flag=0
+dry_run_flag=0
 args=()
 for arg in "$@"; do
   case "$arg" in
     --apply) apply_flag=1 ;;
     --dry-run)
       apply_flag=0
+      dry_run_flag=1
       DRY_RUN=1
       ;;
     -h | --help)
