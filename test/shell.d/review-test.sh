@@ -98,7 +98,7 @@ check_contains "$out" "[dry-run] would stamp kid-ada/minecraft" "scan previews t
 out="$("$BIN" scan --apply 2>&1)"
 check_contains "$out" "nothing needs reviewing" "scan --apply stamps without opening a review"
 check "$(jq -r 'has("minecraft")' "$BASELINE" 2>/dev/null)" "true" "the first sighting is stamped"
-check_contains "$(cat "$CHGRP_LOG")" "omarchy-parents" "the stamp is grouped for the parent's tools"
+check_contains "$(cat "$CHGRP_LOG")" "reviews/baseline/" "the stamp is grouped for the parent's tools"
 
 # --- a changed Exec opens a review ----------------------------------------
 desktop "minecraft second"
@@ -133,7 +133,9 @@ check_contains "$out" "denied kid-ada/minecraft" "deny reports it"
 check_contains "$(cat "$APPS_LOG")" "apps hide kid-ada minecraft --apply" "deny asks apps to hide the app"
 [[ -f "$OPEN_REVIEW" ]] && fail "deny left the review open" || pass "deny clears the review"
 check "$(jq -r 'has("minecraft")' "$BASELINE" 2>/dev/null)" "false" "deny drops the stamp"
-check_contains "$(cat "$CHGRP_LOG")" "omarchy-parents" "the re-written baseline is grouped too"
+: >"$CHGRP_LOG"
+"$BIN" deny kid-ada minecraft --apply >/dev/null 2>&1
+check_contains "$(cat "$CHGRP_LOG")" "reviews/baseline/" "the re-written baseline is grouped too"
 
 # --- deny fails closed: the review survives a failed hide -----------------
 desktop "minecraft redo base"

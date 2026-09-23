@@ -24,7 +24,8 @@ omarchy-kids-review deny <kid> <id> [--apply]
 
 - `scan` stamps any id it has not seen before (so the first run records the approvals that predate
   this command rather than flagging all of them), opens a review for one whose fingerprint changed,
-  and clears a review for one that changed back. Best-effort per id.
+  and clears a review for one that changed back. Best-effort per id: an unreadable baseline
+  file is replaced and its apps re-stamped without a review (it warns on stderr).
 - `approve` re-stamps the current surface and clears its review — the parent accepts the update.
 - `deny` asks `omarchy-kids-apps hide <kid> <id>` to hide it again, and only once that succeeds
 drops the stamp and clears the review (a failed hide leaves the review open to retry). The hide

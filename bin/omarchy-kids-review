@@ -27,6 +27,7 @@ APPLICATIONS_DIRS="/usr/share/applications:/usr/local/share/applications"
 CONF_BIN="$(kids_bin conf "$DIR")"
 APPS_BIN="$(kids_bin apps "$DIR")"
 DRY_RUN=1
+BASELINE_WARNED=0
 
 die() {
   echo "omarchy-kids-review: $1" >&2
@@ -106,8 +107,13 @@ baseline_set() {
   _chgrp_parents "$BASELINE_DIR"
   tmp="$(mktemp "$BASELINE_DIR/.$kid.XXXXXX")"
   if [[ -s "$file" ]]; then
-    # A corrupt baseline is not worth failing the scan over: start it fresh.
+    # A corrupt baseline is not worth failing the scan over: start it fresh, but
+    # say so -- its apps are being re-stamped without a review.
     if ! jq --arg id "$id" --arg fp "$fp" '.[$id] = $fp' "$file" >"$tmp" 2>/dev/null; then
+      if ((! BASELINE_WARNED)); then
+        echo "omarchy-kids-review: $file is unreadable; restamping its apps" >&2
+        BASELINE_WARNED=1
+      fi
       jq -n --arg id "$id" --arg fp "$fp" '{($id): $fp}' >"$tmp"
     fi
   else
