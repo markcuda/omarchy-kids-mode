@@ -31,6 +31,7 @@ optdepends=(
 	'socat: faster transport between omarchy-kids-parent-auth and omarchy-kids-authd'
 	'snapper: pre-apply "before Kids Mode" snapshot and Remove Kids Mode snapshot (R-TRUST-1)'
 	'limine-snapper-sync: refresh the boot menu right after hiding/showing snapshot entries (issue #38)'
+	'qrencode: render the pairing URI as a QR in omarchy-kids-notify pair (R-NOTIFY-5)'
 )
 install=omarchy-kids.install
 source=()

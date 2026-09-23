@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Turn the parent's device notifications on or off, and manage the paired devices
-# omarchy:args=<enable|disable|status|devices|revoke|rename|scopes> ...
+# omarchy:args=<enable|disable|status|pair|devices|rename|scopes|revoke> ...
 # omarchy:hidden=true
 # The parent's side of the notification system (R-NOTIFY-1/3/5): the relay's
 # certificate, and the paired devices. Root only; DRY_RUN=1 prints the plan.
@@ -46,8 +46,9 @@ window and prints the URI (as a QR where qrencode is installed) plus the
 fingerprint to check on the device. The device commands delegate to
 omarchy-kids-devices. Root only; DRY_RUN=1 prints the plan.
 
-Pair a device from the panel, where the warmed sudo prompt is the parent's own
-authentication; there is no second password prompt here.
+Run it as root -- from a terminal, or through a tool that elevates like sudo;
+that elevation is the parent's own authentication, so `pair` adds no second
+password prompt of its own.
 EOF
 }
 
@@ -186,8 +187,11 @@ cmd_pair() {
   fp="$("$KIDS_PY" "$LIB/cert.py" spki "$CERT" 2>/dev/null || true)"
   [[ -n "$fp" ]] && echo "  fingerprint: $fp"
   if [[ -n "$uri" ]] && ((apply)); then
+    # The URI carries the single-use token, so it goes to qrencode on stdin, not
+    # argv (AGENTS.md: secrets never on argv -- a kid session could read it out
+    # of /proc/<pid>/cmdline).
     if command -v qrencode >/dev/null 2>&1; then
-      qrencode -t ANSIUTF8 "$uri" || true
+      printf '%s' "$uri" | qrencode -t ANSIUTF8 || true
     else
       echo "  (install qrencode to show a QR; the device can open the URI above)"
     fi

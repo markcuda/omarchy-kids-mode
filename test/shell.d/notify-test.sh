@@ -51,7 +51,7 @@ export SYSTEMCTL_LOG
 QR_LOG="$TMP/qrencode.log"
 cat >"$STUBS/qrencode" <<'EOF'
 #!/bin/bash
-printf '%s\n' "$*" >>"$QR_LOG"
+cat >>"$QR_LOG"
 EOF
 chmod +x "$STUBS/qrencode"
 export QR_LOG
@@ -89,6 +89,8 @@ check_eq "$?" "0" "devices delegates to omarchy-kids-devices"
 PAIR_DIR="$SYSROOT/run/omarchy-kids/pairing"
 "$BIN" pair --apply >/dev/null 2>&1
 check_eq "$?" "2" "pair refuses while notifications are off"
+[[ -z "$(ls -A "$PAIR_DIR" 2>/dev/null)" ]] && pass "pair writes no record while off" ||
+  fail "pair wrote a record while notifications are off"
 
 # --- enable / status / rekey / disable (needs cryptography) -----------------
 if python3 -c "import cryptography" >/dev/null 2>&1; then
@@ -122,12 +124,14 @@ PY
 
   # pair: previews, then writes a single-use record, shows the URI+QR and the fingerprint.
   check_contains "$("$BIN" pair 2>&1)" "would write a pairing record" "pair previews without --apply"
+  [[ -z "$(ls -A "$PAIR_DIR" 2>/dev/null)" ]] && pass "pair preview writes no record" ||
+    fail "pair preview wrote a record"
   : >"$QR_LOG"
   out3="$("$BIN" pair --apply 2>&1)"
   check_eq "$?" "0" "pair --apply starts a pairing window"
   check_contains "$out3" "omarchy-kids://pair" "pair prints the URI the device scans"
   check_contains "$out3" "fingerprint: $recomputed" "pair prints the SPKI fingerprint to check on the device"
-  check_contains "$(cat "$QR_LOG")" "omarchy-kids://pair" "pair renders the URI as a QR (qrencode)"
+  check_contains "$(cat "$QR_LOG")" "omarchy-kids://pair" "pair renders the URI as a QR (qrencode, on stdin)"
   ls "$PAIR_DIR"/* >/dev/null 2>&1 && pass "pair wrote a single-use pairing record" ||
     fail "pair wrote no pairing record"
 
