@@ -1,0 +1,20 @@
+name: omarchy_kids_app
+description: The parent app's Flutter UI over the omarchy_kids_parent logic package.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  omarchy_kids_parent:
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

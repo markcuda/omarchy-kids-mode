@@ -3,7 +3,7 @@
 A phone or desktop app that pairs with the box, shows a kid's requests with **Approve** and
 **Decline**, and signs the decision back.
 
-**The UI is not built.** This directory holds the half that can be pinned down before it: a pure-Dart
+**The app is a first slice.** `clients/parent` is the logic (a pure-Dart
 package — `lib/notify_crypto.dart` (the box's signing, pairing and envelope code, byte for byte) and
 `lib/relay_client.dart` (the frames and headers the relay expects: the pairing body, the
 `X-Kids-Device`/`X-Kids-Sig` headers, the decision body, the reply chips and the pairing URI) and
@@ -22,16 +22,22 @@ the pairing-URI parser and the SPKI pin are pinned by the package's own tests (t
 and the client is proven end to end against the box's own relay
 (`test/relay_integration_test.dart` starts `bin/omarchy-kids-relayd`, pins it, makes a signed read,
 streams a state event, and shows a decision POST and a pairing POST reach the relay's
-authd-forwarding step; the SSE parser's edge cases are unit-tested). There is no Flutter project and nothing to install
-on a phone yet, so there is nothing to scan a pairing QR with — `AGENTS.md` rule 6 is why this file
-says so plainly. The box side is complete (`docs/notify.md`, `docs/relayd.md`, `docs/devices.md`).
+authd-forwarding step; the SSE parser's edge cases are unit-tested). and `clients/parent/app` is the Flutter UI over it: the request list and a request screen with
+**Approve**, **Decline** and the reply chips, widget-tested against a fake relay. Pairing from the
+UI, the device list, the platform notification plumbing, the keystore and the store builds are still
+to come — there is nothing to install on a phone yet. `AGENTS.md` rule 6 is why this file says so
+plainly. The box side is complete (`docs/notify.md`, `docs/relayd.md`, `docs/devices.md`).
 
 ```
 cd clients/parent && dart pub get && dart test      # the crypto tests, against the vectors
 ```
 
 `test/shell.d/parent-app-test.sh` runs those in the suite where a Dart SDK is present, and skips
-without one.
+without one; `test/shell.d/parent-ui-test.sh` runs the widget tests where Flutter is present:
+
+```
+cd clients/parent/app && flutter pub get && flutter test
+```
 
 ## What the app must implement
 
