@@ -13,7 +13,7 @@ Panel {
     moduleName: "omarchy-kids.bar"
     ipcTarget: "omarchy-kids.bar"
 
-    // --- external commands, every path overridable for tests/dev ----------
+    // --- external commands; the paths are absolute and not overridable -----
     readonly property string statusPath: Quickshell.env("OMARCHY_KIDS_STATUS_JSON") || "/run/omarchy-kids/status.json"
     // Absolute, and not from the environment (AGENTS.md rule 9, review S12).
     readonly property string askBin: "/usr/bin/omarchy-kids-ask"
