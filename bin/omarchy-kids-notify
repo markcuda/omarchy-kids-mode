@@ -61,8 +61,9 @@ fingerprint to check on the device. The device commands delegate to
 omarchy-kids-devices. Root only; DRY_RUN=1 prints the plan.
 
 `mailbox` configures the away courier (N-11, R-NOTIFY-8): the one ntfy or Gotify
-topic of the parent's own that the box may post to, or `off`. Nothing is sent
-while notifications are off, and the config is root-only.
+topic of the parent's own that the box may post to, or `off`. Gotify's token is
+typed on stdin (it is not echoed), never as an argument. Nothing is sent while
+notifications are off, and the config is root-only.
 
 `away tailnet` is the opt-in "Away from home: my own VPN" fence (N-10): it writes
 a systemd drop-in adding the CGNAT range Tailscale uses to the relay's allow
@@ -367,8 +368,9 @@ cmd_mailbox() {
       [[ "$url" == https://* ]] || die "mailbox: --url must be https"
       [[ "$topic" =~ ^[A-Za-z0-9._-]+$ ]] || die "mailbox: --topic must be letters, digits, dot, dash or underscore"
       if [[ "$mode" == gotify ]] && ((! DRY_RUN)); then
-        # Like a password: the token comes on stdin (silently), never argv.
-        IFS= read -rs token || true
+        # Like a password: the token comes on stdin (silently, with a prompt),
+        # never argv.
+        IFS= read -rs -p 'Gotify token: ' token || true
         echo >&2
         [[ -n "$token" ]] || die "mailbox gotify: type the token on stdin"
       fi
