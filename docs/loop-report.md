@@ -914,3 +914,35 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-22, loop iteration: the notification workstream begins (N-0 .. N-3a)
+
+The owner reviewed every open decision and directed the parental-notification build. Source design:
+`docs/research/2026-09-22-parental-notifications.md` (a headless `claude-fable-5-1` run). Repo
+default workflow is now in `AGENTS.md`: fable 5.1 (high) writes specs and reviews, DS4.1 flash
+implements. The Matt Pocock engineering skills are installed (`~/.agents/skills` for opencode,
+`~/.claude/skills` for claude-code) and `/setup-matt-pocock-skills` was run for this repo
+(`docs/agents/`). Landed so far, each implemented then reviewed by fable 5.1:
+
+- **N-0** the R-NOTIFY spec amendment: `SPEC.md` I-2 amended (paired device / parent-named server,
+  only when notifications are on), the R-NOTIFY-1..12 section, R-BAR-3's count, Appendix D's
+  `device`/`reply`, a new Appendix H, and `docs/phase1/SPEC-AMENDMENT-notifications.md`.
+- **N-1** the request queue is the parent's: `0750 root:omarchy-parents`, records `0640`,
+  `omarchy-kids-ask list` reads by permission, the ledger publishes `open_requests`/`requests` into
+  `status.json`, the bar badge reads it, and `assert` re-asserts the queue lock. The review caught a
+  blocking regression (records written `root:root`, so the parent's panel read nothing).
+- **N-2** the kid sees the answer: root writes `<kid>/decisions/<id>.json` (`0640 root:<kid>`),
+  `omarchy-kids-ask watch` shows `share/ask/decided.qml` for an unseen decision, `lib/ask.py decide
+  --reply` is validated, and retention prunes the store. The review caught a card that could wedge
+  `watch` and a logout-replays-history bug.
+- **N-3a** the root-owned device registry `bin/omarchy-kids-devices` (add/list/rename/scopes/revoke/
+  publish, validated, atomic, root-only) with `devices-test.sh`.
+
+Also landed: the merge-gate conflict map (`docs/branch-conflict-map-2026-09-22.md`) and the
+`merge=union` gitattribute for `docs/loop-report.md`.
+
+**Next: N-3b** — authd's `PAIR`/`DECIDE`/`ACT` frames, Ed25519 verification through
+`python-cryptography`, the nonce ledger, `approve --by device:<id>`, and the assert/check rows.
+Planning fact: `python-cryptography` is present on neither the Mac nor the dogfood VM, so its crypto
+tests will skip locally the way authd's `libcrypt` checks already do; the dependency ships in N-4's
+PKGBUILD and a real run follows on a box that has it.
