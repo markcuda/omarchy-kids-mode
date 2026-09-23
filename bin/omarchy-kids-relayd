@@ -242,7 +242,13 @@ class Relay:
         needless_since = None
         while True:
             await asyncio.sleep(5)
-            needed = self.relay.is_needed(self.args.status, self.args.queue, self.args.pairing_dir)
+            # The idler must never die: a dead idler is the always-on listener
+            # R-NOTIFY-1 forbids. Any read failure counts as "in use" for this
+            # pass, which only delays the stop.
+            try:
+                needed = self.relay.is_needed(self.args.status, self.args.queue, self.args.pairing_dir)
+            except Exception:  # noqa: BLE001
+                needed = True
             now = time.monotonic()
             if needed:
                 needless_since = None

@@ -119,7 +119,7 @@ check_contains "$out" "[dry-run]" "pair-start prints the plan"
 out="$("$BIN" pair-start --id d9 --apply 2>&1)"
 check_eq "$?" "0" "pair-start --apply succeeds"
 [[ -f "$PAIR_DIR/d9" ]] && pass "pair-start writes the pairing record" || fail "pair-start: no record"
-check_eq "$(kids_file_mode "$PAIR_DIR/d9")" "600" "pairing record is 0600 (R-NOTIFY-5)"
+check_eq "$(kids_file_mode "$PAIR_DIR/d9")" "640" "pairing record is 0640 root:omarchy-parents (the relay reads it, R-NOTIFY-5)"
 check_contains "$out" "pair:  omarchy-kids://pair" "pair-start prints the pair URI"
 [[ "$out" != *"code:"* ]] && pass "pair-start prints no code nothing accepts (I-6)" ||
   fail "pair-start still prints a code with no code path"

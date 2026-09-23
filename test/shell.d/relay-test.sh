@@ -129,6 +129,16 @@ check(relay.is_needed(s2, q3, pair_dir), "needed: an open pairing window")
 with open(os.path.join(pair_dir, "d-1"), "w") as f:
     json.dump({"expires_at": 0}, f)
 check(not relay.is_needed(s2, q3, pair_dir), "not needed: an expired pairing record")
+
+# The pairing dir is root-owned; the relay may not be able to read it. It must
+# read as "no window" and never raise -- an exception here kills the exit loop
+# and leaves the always-on listener R-NOTIFY-1 forbids.
+denied = os.path.join(tmp, "pairing-denied")
+os.makedirs(denied, exist_ok=True)
+os.chmod(denied, 0)
+check(not relay.pairing_pending(denied), "an unreadable pairing dir is not a window and never raises")
+os.chmod(denied, 0o755)
+
 check(not relay.needs_stopping(True, 0, 100_000, 60),
       "a live kid or open request keeps it up however idle the clock says")
 

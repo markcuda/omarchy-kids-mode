@@ -318,6 +318,18 @@ def pairing_proof(token_hex, name, sign_pub, box_pub):
     return hmac.new(bytes.fromhex(token_hex), message, hashlib.sha256).hexdigest()
 
 
+def _chgrp_parents(path):
+    """Best-effort group omarchy-parents, so the relay (Group=omarchy-parents)
+    can read the pairing record -- it must know a pairing window is open, and it
+    is the process that serves pairing (R-NOTIFY-1/5)."""
+    try:
+        import grp
+
+        os.chown(path, -1, grp.getgrnam("omarchy-parents").gr_gid)
+    except (ImportError, KeyError, OSError):
+        pass
+
+
 def write_pairing(pairing_dir, pair_id, scopes, now, ttl=PAIRING_TTL_SECONDS):
     """Root writes one single-use pairing record and returns it.
 
@@ -332,11 +344,14 @@ def write_pairing(pairing_dir, pair_id, scopes, now, ttl=PAIRING_TTL_SECONDS):
         "created_at": now,
         "expires_at": now + ttl,
     }
-    os.makedirs(pairing_dir, mode=0o700, exist_ok=True)
+    os.makedirs(pairing_dir, mode=0o750, exist_ok=True)
+    os.chmod(pairing_dir, 0o750)
+    _chgrp_parents(pairing_dir)
     tmp = os.path.join(pairing_dir, f".{pair_id}.{os.getpid()}.tmp")
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(record, f, sort_keys=True)
-    os.chmod(tmp, 0o600)
+    os.chmod(tmp, 0o640)
+    _chgrp_parents(tmp)
     os.replace(tmp, os.path.join(pairing_dir, pair_id))
     return record
 
@@ -345,7 +360,7 @@ def write_pairing(pairing_dir, pair_id, scopes, now, ttl=PAIRING_TTL_SECONDS):
 def pairing_lock(pairing_dir):
     """One directory-wide lock: pairing is rare, and a per-id lock file would
     be created for any id a frame names (unbounded tmpfs growth)."""
-    os.makedirs(pairing_dir, mode=0o700, exist_ok=True)
+    os.makedirs(pairing_dir, mode=0o750, exist_ok=True)
     with open(os.path.join(pairing_dir, ".lock"), "w", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         try:

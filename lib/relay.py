@@ -105,7 +105,14 @@ def pairing_pending(pairing_dir, now=None):
     if not pairing_dir or not os.path.isdir(pairing_dir):
         return False
     now = time.time() if now is None else now
-    for name in os.listdir(pairing_dir):
+    try:
+        names = os.listdir(pairing_dir)
+    except OSError:
+        # Not readable: treat as no window. Never raise -- this runs in the
+        # relay's exit loop, and an exception there would leave it running
+        # forever (the always-on listener R-NOTIFY-1 forbids).
+        return False
+    for name in names:
         if name.startswith("."):  # .lock and the atomic-write temp files
             continue
         record = _read_json(os.path.join(pairing_dir, name))
