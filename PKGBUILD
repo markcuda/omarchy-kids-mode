@@ -75,6 +75,9 @@ package() {
 	# issue #25).
 	install -dm755 "$pkgdir/usr/lib/systemd/system"
 	install -m644 systemd/*.service systemd/*.socket systemd/*.timer "$pkgdir/usr/lib/systemd/system/"
+	# The relay's system account (R-NOTIFY-1): authd accepts a DECIDE only from it.
+	install -dm755 "$pkgdir/usr/lib/sysusers.d"
+	install -m644 systemd/omarchy-kids-relay.sysusers "$pkgdir/usr/lib/sysusers.d/omarchy-kids-relay.conf"
 
 	# Data: bands, packs, hyprland, tui, policy, avatars, menu, sddm-theme,
 	# wifi (share/wifi/shell.qml, the kid-facing picker, R-WIFI-1..2).
