@@ -1,0 +1,74 @@
+# `bin/omarchy-kids-relayd`: the LAN relay (SPEC.md R-NOTIFY-1/2, `docs/phase1/SPEC-AMENDMENT-notifications.md`)
+
+The relay is the **only network listener** Kids Mode ships. It is a root-owned system unit
+(`systemd/omarchy-kids-relayd.service`) that runs as `omarchy-kids-relay:omarchy-parents`, fenced to
+loopback and the private LAN ranges, and it **never decides anything** (R-NOTIFY-2): it serves the
+root-written state to the parent's paired devices and forwards a signed decision to
+`omarchy-kids-authd`, which verifies and applies it.
+
+## Lifecycle: it runs only while it is needed (N-7)
+
+There is no always-on listener. `omarchy-kids-time-ledger tick` (root, every 30 seconds) asks the
+unit to start when Kids Mode is in use — a kid live, a request open, or a pairing window open — and
+does nothing while notifications are off. The relay stops itself once none of those has held for the
+grace (`--needless-seconds`, default 60), even if a device is holding a stream open; `main_async`
+cancels the client tasks and closes the server. So the port is closed soon after the last kid leaves
+and the last request is decided, and the tick starts it again within 30 seconds of the next login,
+request or pairing. `lib/relay.py`'s `is_needed` and `needs_stopping` are that rule; the field root
+publishes for it is `pairing_open_until` in `status.json` (never the token, `docs/time.md`).
+
+## TLS and what a device pins
+
+The relay speaks TLS only, with the self-signed certificate `omarchy-kids-notify enable` mints
+(`lib/cert.py`). There is no CA and no name: a device pins the certificate's **SPKI** SHA-256
+fingerprint, which the parent compares at pairing (`docs/notify.md`). A plaintext client gets no
+HTTP response.
+
+## The API (Appendix H)
+
+Every request except the TLS handshake must be signed by a paired, unrevoked device: the headers
+`X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<base64 Ed25519 signature>` cover the method,
+path, timestamp, nonce and body. The relay refuses an unsigned request, a bad signature, an unknown
+device, a stale timestamp (over five minutes) and a replayed nonce (a nonce seen in the last ten
+minutes is in `--nonce-ledger`).
+
+| Method and path | What it does |
+| --- | --- |
+| `GET /v1/state` | The state document (`lib/relay.py`'s `build_state`: kids, open requests, recent decisions) from the root-written `status.json` and the queue. |
+| `GET /v1/events` | The same document as a Server-Sent Events stream, a `state` event per change and a heartbeat when nothing changes. |
+| `GET /v1/avatars/<name>` | One kid avatar from `--share`; a traversal is a 404. |
+| `POST /v1/requests/<id>/decision` | Forwards the signed decision frame to `authd`'s DECIDE socket and returns its one-line reply. The relay does not apply it (R-NOTIFY-2). |
+
+A decision is applied only after root verifies a signature from a paired, unrevoked device and the
+per-device scope (`decide`/`act`, R-NOTIFY-9), through the same path the panel uses (R-NOTIFY-4);
+`docs/devices.md` and `docs/authd.md` have the details.
+
+## The fence
+
+`systemd/omarchy-kids-relayd.service` allows only `localhost link-local multicast` and the private
+v4/v6 ranges, with `IPAddressDeny=any` after them, and sets `ProtectSystem=strict`, `ProtectHome=yes`,
+`NoNewPrivileges=yes`, `PrivateTmp=yes`, `ReadOnlyPaths=/var/lib/omarchy-kids` and the other
+hardening `systemd/omarchy-kids-wifid.service` uses. Because the relay can never approve anything,
+its whole attack surface is "notifications stop" (`docs/phase1/SPEC-AMENDMENT-notifications.md`).
+
+## Files and flags
+
+| Path | Mode / owner |
+| --- | --- |
+| `/etc/omarchy-kids/relay/{cert,key}.pem` | `0644` and `0640 root:omarchy-parents` (`docs/notify.md`) |
+| `/run/omarchy-kids/devices.json` | the public device copy the relay reads, `0644` (`docs/devices.md`) |
+| `/run/omarchy-kids/status.json` | `0640 root:omarchy-parents` |
+| `/var/lib/omarchy-kids/queue/` | the ask queue |
+| `<nonce ledger>` | `--nonce-ledger`, default `/run/omarchy-kids/relay/nonces.json` |
+
+The unit passes `--cert`, `--key`, `--devices-json`, `--status`, `--queue`, `--auth-sock`,
+`--nonce-ledger`, `--share` and `--lib`; the defaults match the unit. `--bind`/`--port` default to
+`0.0.0.0` and `8447`. Nothing here is settable by a kid (`AGENTS.md`, "The trust boundary").
+
+## Tests
+
+`test/shell.d/relay-test.sh` covers `lib/relay.py` (state, decision forwarding, `is_needed`,
+`needs_stopping`) with no listener; `test/shell.d/relayd-test.sh` starts the relay on a scratch tree
+with a test certificate and drives it from a Python client over TLS (signed and unsigned reads, a
+replay, a stale timestamp, an unknown device, a decision POST to a stub authd, an SSE stream, a
+plaintext client, and the not-in-use stop with a stream held open).

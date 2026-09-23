@@ -48,6 +48,26 @@ own "clear browsing data" is locked out of the kid's policy (`AllowDeletingBrows
 `docs/web.md`) either way, so a kid can't erase what's there before it's looked at, and a parent
 can't be shown a history that's been quietly wiped.
 
+## Parental notifications
+
+If a parent turns notifications on (`docs/notify.md`), Kids Mode may tell **the parent's own paired
+devices** about a kid's requests and decisions (I-2 as amended). That is the only thing that leaves
+the machine, and only then.
+
+- The listener, `omarchy-kids-relayd`, is local and fenced to the home network
+  (`docs/relayd.md`); it holds no decision power. A device may answer a request only if the parent
+  paired it and root verifies its signature (`docs/devices.md`).
+- What is sent is a kid's request ("Ada asked for 15 more minutes"), the minutes left, and the
+  outcome — nothing else, and never a transcript, a keystroke or a screenshot.
+- Nothing reaches the project, any vendor, or any third party. There is no telemetry and no account.
+- Away-from-home delivery to a server the parent names (a "courier") is **not built on this branch**;
+  when it is, it will talk only to that server and only while the parent has turned it on.
+- On iOS the first version cannot receive a push while the app is closed (no first-party background
+  push there); the app shows a request when it is open.
+
+Turning notifications off revokes every paired device and removes the certificate
+(`omarchy-kids-notify disable`).
+
 ## In kid words
 
 This is the actual text of the screen a kid sees, every time they log in (K5, SPEC.md Appendix
@@ -61,8 +81,9 @@ A) — not a paraphrase of it:
 > - The websites you visited — *only if that's turned on for you. If it's off, this says so and
 >   nobody sees it.*
 >
-> Nobody outside this computer ever sees any of this. Nobody reads what you type or takes
-> pictures of your screen.
+> Nobody outside this computer sees any of this — unless your grown-up turns on notifications, and
+> then only their own phone or computer, and only what you asked for ("Ada asked for 15 more
+> minutes"). Nobody reads what you type or takes pictures of your screen.
 
 ## If you think this is wrong
 

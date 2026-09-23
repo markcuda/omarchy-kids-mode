@@ -58,6 +58,12 @@ computer, if you've set that up — `systemctl restart sddm` there is the gentle
 4. **Add another kid.** Home screen → "Add a kid" — the same wizard as the first one, one kid at
    a time.
 
+**And if you'd rather answer from your phone:** Home screen → **Notifications** → **Turn on
+notifications**, then **Pair a device** — it shows a code and a fingerprint to check on the phone
+(`docs/notify.md`). Your phone then gets each request with Approve and Decline, over your home
+network only. **Paired devices** in that screen lists them and revokes any you no longer want;
+turning notifications off revokes them all.
+
 ## What's not built yet
 
 See `docs/install.md`'s "What isn't ready yet" for the full, current list — the short version:
