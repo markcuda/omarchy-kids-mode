@@ -164,8 +164,10 @@ out="$("$BIN" --once 2>&1)"
 check_contains "$(cat "$GDBUS_LOG")" "Check" "the review notification offers Check"
 reset
 write_review
+: >"$GDBUS_LOG"
 GDBUS_ACTION=check "$BIN" --once >/dev/null 2>&1
 check_contains "$(cat "$BAR_LOG")" "bar review-check kid-ada minecraft" "Check runs the review-check action"
+check "$(grep -c Notify "$GDBUS_LOG")" "2" "a checked review is posted again, so it stays answerable"
 
 # A removed package reads as removed, not "changed".
 reset

@@ -18,6 +18,7 @@ resolves any more → the fingerprint is `missing` (the package was removed).
 ```
 omarchy-kids-review scan [--kid KID] [--apply]
 omarchy-kids-review list [--kid KID] [--json]
+omarchy-kids-review show <kid> <id>
 omarchy-kids-review approve <kid> <id> [--apply]
 omarchy-kids-review deny <kid> <id> [--apply]
 ```
@@ -26,6 +27,8 @@ omarchy-kids-review deny <kid> <id> [--apply]
   this command rather than flagging all of them), opens a review for one whose fingerprint changed,
   and clears a review for one that changed back. Best-effort per id: an unreadable baseline
   file is replaced and its apps re-stamped without a review (it warns on stderr).
+- `show` prints one review in full — the approved fingerprint against now, and the desktop file's
+  `Exec` today — and decides nothing (what a notification's **Check** opens).
 - `approve` re-stamps the current surface and clears its review — the parent accepts the update.
 - `deny` asks `omarchy-kids-apps hide <kid> <id>` to hide it again, and only once that succeeds
 drops the stamp and clears the review (a failed hide leaves the review open to retry). The hide
@@ -54,8 +57,8 @@ record, not enforcement): hiding the app again is the only action, and a kid can
   change; the parent, or their own assistant reading that output, does.
 - **Surfacing: the desktop notifier shows a review, the panel does not yet.** With notifications on,
   `omarchy-kids-notify-watch` posts one notification per open review (a changed surface, or one that
-  was removed), with **Approve** and **Deny**; those run `omarchy-kids-bar review-approve|review-deny`
-  (`docs/notify.md`). The count rides `status.json` as `reviews`. The panel's Requests screen does
+  was removed), with **Approve**, **Deny** and **Check**; those run `omarchy-kids-bar
+  review-approve|review-deny|review-check` (`docs/notify.md`). The count rides `status.json` as `reviews`. The panel's Requests screen does
   not list reviews yet — the next slice adds that — and `omarchy-kids-review list` is the command
   line view.
 - The scan is not on a timer yet; run `omarchy-kids-review scan --apply` after updates (or by hand),

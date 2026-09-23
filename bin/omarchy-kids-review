@@ -127,7 +127,7 @@ baseline_set() {
   mv -f "$tmp" "$file"
 }
 
-# baseline_drop KID ID -- forget a stamp, so a later `show` re-baselines.
+# baseline_drop KID ID -- forget a stamp, so a later `scan` re-baselines it.
 baseline_drop() {
   local kid="$1" id="$2"
   local file="$BASELINE_DIR/$kid.json" tmp

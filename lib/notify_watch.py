@@ -128,7 +128,10 @@ def request_item(row):
         "title": title,
         "body": body,
         "actions": REQUEST_ACTIONS,
-        "callbacks": {"approve": ["approve", row["id"]], "decline": ["decline", row["id"]]},
+        "callbacks": {
+            "approve": ["approve", row["id"]],
+            "decline": ["decline", row["id"]],
+        },
     }
 
 
@@ -239,7 +242,7 @@ class GdbusNotifier:
 
     def __init__(self, bar_bin):
         self.bar_bin = bar_bin
-        self.pending = {}  # notification id -> {action: bar argv}
+        self.pending = {}  # notification id -> the item shown
         self.lock = threading.Lock()
 
     def start(self):
@@ -268,28 +271,29 @@ class GdbusNotifier:
                     notification_id = int(match.group(1))
                     action = match.group(2)
                     with self.lock:
-                        callbacks = self.pending.pop(notification_id, None)
-                        # "Check" decides nothing, so its notification stays
-                        # answerable: put the id back for a later Approve/Deny.
-                        if callbacks and action == "check":
-                            self.pending[notification_id] = callbacks
-                    argv = callbacks.get(action) if callbacks else None
+                        item = self.pending.pop(notification_id, None)
+                    argv = item["callbacks"].get(action) if item else None
                     if argv:
                         run_callback(self.bar_bin, argv)
+                    # A Check decides nothing, so post it again: the parent can
+                    # still approve or deny after looking, whatever the daemon
+                    # did with the notification.
+                    if item and action == "check":
+                        self.send(item)
             proc.wait()
             time.sleep(1)  # a monitor that exits at once must not spin us
 
-    def send(self, title, body, actions, callbacks):
+    def send(self, item):
         """Show one item; True when the session bus took it.
 
         The lock is held across the notify call and the id record, so the
         monitor can never see the action before we know which item it is.
         """
         with self.lock:
-            notification_id = gdbus_notify(title, body, actions)
+            notification_id = gdbus_notify(item["title"], item["body"], item["actions"])
             if notification_id is None:
                 return False
-            self.pending[notification_id] = callbacks
+            self.pending[notification_id] = item
         return True
 
 
@@ -317,9 +321,7 @@ def watch(queue_dir, reviews_dir, state_path, bar_bin, interval, once, use_gdbus
         for item in current:
             if item["key"] in notified:
                 continue
-            shown = notifier is not None and notifier.send(
-                item["title"], item["body"], item["actions"], item["callbacks"]
-            )
+            shown = notifier is not None and notifier.send(item)
             if not shown:
                 shown = notify_send(item["title"], item["body"])
             # Remember it only once something showed it: at login the daemon may
