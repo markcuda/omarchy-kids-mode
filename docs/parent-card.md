@@ -58,11 +58,12 @@ computer, if you've set that up — `systemctl restart sddm` there is the gentle
 4. **Add another kid.** Home screen → "Add a kid" — the same wizard as the first one, one kid at
    a time.
 
-**And if you'd rather answer from your phone:** Home screen → **Notifications** → **Turn on
-notifications**, then **Pair a device** — it shows a code and a fingerprint to check on the phone
-(`docs/notify.md`). Your phone then gets each request with Approve and Decline, over your home
-network only. **Paired devices** in that screen lists them and revokes any you no longer want;
-turning notifications off revokes them all.
+**And to have requests come to you.** Home screen → **Notifications** → **Turn on
+notifications** → **Pair a device**. The desktop notifier (on this computer) then shows each request
+with **Approve** and **Decline** (`docs/notify.md`). **Paired devices** lists them and revokes any
+you no longer want; turning notifications off revokes them all. The phone app that would scan the
+pairing QR is **not built yet** — until it ships, pairing is ready for it but there is nothing on the
+phone side to scan.
 
 ## What's not built yet
 

@@ -40,8 +40,9 @@ minutes is in `--nonce-ledger`).
 | `POST /v1/requests/<id>/decision` | Forwards the signed decision frame to `authd`'s DECIDE socket and returns its one-line reply. The relay does not apply it (R-NOTIFY-2). |
 
 A decision is applied only after root verifies a signature from a paired, unrevoked device and the
-per-device scope (`decide`/`act`, R-NOTIFY-9), through the same path the panel uses (R-NOTIFY-4);
-`docs/devices.md` and `docs/authd.md` have the details.
+`decide` scope (R-NOTIFY-9), through the same path the panel uses (R-NOTIFY-4); `docs/devices.md` and
+`docs/authd.md` have the details. There is no action route yet (`act`/the ACT frame), so the relay
+carries decisions only.
 
 ## The fence
 
@@ -61,9 +62,10 @@ its whole attack surface is "notifications stop" (`docs/phase1/SPEC-AMENDMENT-no
 | `/var/lib/omarchy-kids/queue/` | the ask queue |
 | `<nonce ledger>` | `--nonce-ledger`, default `/run/omarchy-kids/relay/nonces.json` |
 
-The unit passes `--cert`, `--key`, `--devices-json`, `--status`, `--queue`, `--auth-sock`,
-`--nonce-ledger`, `--share` and `--lib`; the defaults match the unit. `--bind`/`--port` default to
-`0.0.0.0` and `8447`. Nothing here is settable by a kid (`AGENTS.md`, "The trust boundary").
+The unit passes `--cert` and `--key`; every other flag is an argparse default that matches the paths
+in the table above (`--devices-json`, `--status`, `--queue`, `--auth-sock`, `--nonce-ledger`,
+`--share`, `--lib`, `--needless-seconds`). `--bind`/`--port` default to `0.0.0.0` and `8447`. Nothing
+here is settable by a kid (`AGENTS.md`, "The trust boundary").
 
 ## Tests
 

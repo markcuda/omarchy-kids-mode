@@ -29,5 +29,25 @@ if [[ -z "$STATE_FILE" ]]; then
   STATE_FILE="$XDG_RUNTIME_DIR/omarchy-kids-notify-watch.state"
 fi
 
+for arg in "$@"; do
+  case "$arg" in
+    -h | --help)
+      cat <<'EOF'
+Usage: omarchy-kids-notify-watch [--once] [--no-actions] [--interval SECONDS]
+
+Show a desktop notification for each open "Ask a parent" request. Meant to run as
+the parent's user unit (systemd/omarchy-kids-notify-watch.user.service), started
+by "omarchy-kids-bar notify-enable"; it holds no privilege and decides nothing.
+
+  --once            Do one poll and exit (a test or a one-shot).
+  --no-actions      Force the plain notify-send fallback (no buttons).
+  --interval N      Seconds between polls (default 15).
+  -h, --help        Show this help and exit.
+EOF
+      exit 0
+      ;;
+  esac
+done
+
 exec "$KIDS_PY" "$LIB/notify_watch.py" \
   --queue "$QUEUE_DIR" --state "$STATE_FILE" --bar "$BAR_BIN" "$@"

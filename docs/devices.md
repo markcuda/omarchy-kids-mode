@@ -31,7 +31,9 @@ omarchy-kids-devices pair-start [--id ID] [--scopes decide,act] [--apply]
 
 - `add` is normally the PAIR frame's job (below); a parent rarely runs it by hand.
 - `revoke` renames the record to `<id>.conf.revoked`, so the relay's public copy stops offering it
-  and a revoked device's signature is refused. Pairing the same id again is allowed.
+  and a revoked device's signature is refused. A revoked id stays revoked: `pair-start` refuses it
+  and `load_device` returns nothing while the `.revoked` file exists, so revoking is final for that
+  id -- pair the device again under a new id.
 - `publish` must be re-run after a change for the relay to see it; `add`/`rename`/`scopes`/`revoke`
   do it for you.
 - `pair-start` writes one single-use pairing record (R-NOTIFY-5) and prints the `omarchy-kids://pair`
@@ -41,15 +43,19 @@ omarchy-kids-devices pair-start [--id ID] [--scopes decide,act] [--apply]
 ## Scopes (R-NOTIFY-9)
 
 A device carries `decide` (approve or decline a request) and/or `act` (grant time or end a session
-with no open request). A decision or action whose scope the device does not have is refused.
+with no open request). **`decide` is enforced today**: `authd`'s DECIDE frame refuses a decision
+from a device whose scopes lack it. `act` is defined by the spec but its ACT frame is not built on
+this branch, so a device may carry the `act` scope and still cannot act with it yet -- the scope is
+stored and re-checked, not yet a control.
 
 ## How a decision is verified (R-NOTIFY-4)
 
 A device signs a canonical record with its Ed25519 key; `omarchy-kids-authd` verifies it with
 `python-cryptography` against the root-owned public key and refuses on any of: unknown or revoked
-device, missing scope, clock skew over five minutes, a nonce seen in the last ten minutes, or an
-already-decided record. On success the decision is applied through the same path the panel uses,
-recorded with `by: device` and the device id. The relay only forwards the frame (`docs/relayd.md`);
+device, missing `decide` scope, clock skew over five minutes, a nonce seen in the last ten minutes,
+or an already-decided record. On success the decision is applied through the same path the panel
+uses, recorded with `by: device` and the device id. The relay only forwards the frame
+(`docs/relayd.md`);
 `docs/authd.md` has the frames (VERIFY, BOOTSTRAP, PAIR, DECIDE). Everything fails closed: a missing
 library, an unreadable record or a bad signature refuses, never applies.
 

@@ -57,13 +57,14 @@ the machine, and only then.
 - The listener, `omarchy-kids-relayd`, is local and fenced to the home network
   (`docs/relayd.md`); it holds no decision power. A device may answer a request only if the parent
   paired it and root verifies its signature (`docs/devices.md`).
-- What is sent is a kid's request ("Ada asked for 15 more minutes"), the minutes left, and the
-  outcome — nothing else, and never a transcript, a keystroke or a screenshot.
+- What is sent is a kid's live state (whether they are logged in and paused, minutes left), their
+  requests ("Ada asked for 15 more minutes"), and the outcomes — nothing else, and never a
+  transcript, a keystroke or a screenshot.
 - Nothing reaches the project, any vendor, or any third party. There is no telemetry and no account.
-- Away-from-home delivery to a server the parent names (a "courier") is **not built on this branch**;
-  when it is, it will talk only to that server and only while the parent has turned it on.
-- On iOS the first version cannot receive a push while the app is closed (no first-party background
-  push there); the app shows a request when it is open.
+- **Not built on this branch:** the parent app (a phone or another computer) and the away-from-home
+  courier. When they ship, the app will show a request when open (no background push on iOS in the
+  first version), and the courier will talk only to a server the parent typed and only while they
+  have turned it on. The desktop notifier on the parent's own computer **is** built and works today.
 
 Turning notifications off revokes every paired device and removes the certificate
 (`omarchy-kids-notify disable`).
@@ -82,8 +83,9 @@ A) — not a paraphrase of it:
 >   nobody sees it.*
 >
 > Nobody outside this computer sees any of this — unless your grown-up turns on notifications, and
-> then only their own phone or computer, and only what you asked for ("Ada asked for 15 more
-> minutes"). Nobody reads what you type or takes pictures of your screen.
+> then only their own phone or computer, and only things like how many minutes you have, whether
+> you're on a break, and what you asked for ("Ada asked for 15 more minutes") and what happened.
+> Nobody reads what you type or takes pictures of your screen.
 
 ## If you think this is wrong
 
