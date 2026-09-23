@@ -272,11 +272,16 @@ def poll(config, auth_sock, cursor_path, apply, timeout=15):
         if _retryable(answer):
             retry = True
     if not retry:
-        handled = frames or replies
+        handled = frames + replies
         times = [r["time"] for r in handled if isinstance(r.get("time"), int)]
         if times:
             newest = max(times)
-            write_cursor(cursor_path, newest, [r["id"] for r in handled if r.get("time") == newest])
+            ids_at_newest = {r["id"] for r in handled if r.get("time") == newest}
+            # A second message in the boundary second: keep the ids we already
+            # carried at that time, or the oldest is forgotten and re-carried.
+            if since is not None and newest == since:
+                ids_at_newest |= seen
+            write_cursor(cursor_path, newest, ids_at_newest)
     return forwarded
 
 

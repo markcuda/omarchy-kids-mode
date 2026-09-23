@@ -260,8 +260,9 @@ done
 printf 'transport=ntfy\nurl=http://127.0.0.1:%s\ntopic=test\nreply_topic=replies\n' "$PORT" >"$ETC/courier.conf"
 frame='{"record":{"request_id":"r1"},"signature":"sig"}'
 # A decision frame, and one non-frame the courier must skip.
-# A decision frame (time 1000) and a non-frame (time 1001) the courier must skip.
-python3 -c 'import json,sys; print(json.dumps({"id":"m1","time":1000,"message":sys.argv[1]})); print(json.dumps({"id":"m2","time":1001,"message":"not a frame"}))' "$frame" >"$GETBODY"
+# A decision frame and a non-frame in the SAME second, so the inclusive boundary
+# is exercised (a frame forgotten at the boundary would be carried again).
+python3 -c 'import json,sys; print(json.dumps({"id":"m1","time":1000,"message":sys.argv[1]})); print(json.dumps({"id":"m2","time":1000,"message":"not a frame"}))' "$frame" >"$GETBODY"
 : >"$GETLOG"
 out="$("$BIN" poll --apply 2>&1)"
 check_contains "$(cat "$AUTH_LOG")" "DECIDE " "a reply is carried to authd as a DECIDE"

@@ -38,7 +38,7 @@ Usage: omarchy-kids-relay-courier [--apply] [--dry-run]
 
 Sends: seals the current state for every paired device and posts it to the ntfy
 or Gotify topic the parent configured (omarchy-kids-notify mailbox). poll: fetches
-the replies and carries each signed decision to authd, which verifies and applies
+the ntfy replies and carries each signed decision to authd, which verifies and applies
 it. Either way it is the only Kids Mode process that may reach beyond the LAN
 (R-NOTIFY-8).
 
