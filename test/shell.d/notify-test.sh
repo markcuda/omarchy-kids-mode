@@ -230,10 +230,11 @@ check_contains "$out" "[dry-run]" "mailbox prints the plan"
 [[ -e "$COURIER_CONF" ]] && fail "mailbox preview must not write the config" ||
   pass "mailbox preview writes nothing"
 
-out="$("$BIN" mailbox ntfy --url https://ntfy.example --topic kid --apply 2>&1)"
+out="$("$BIN" mailbox ntfy --url https://ntfy.example --topic kid --reply-topic kid-replies --apply 2>&1)"
 check_eq "$?" 0 "mailbox ntfy --apply succeeds"
 check_contains "$(cat "$COURIER_CONF")" "transport=ntfy" "the config names the transport"
 check_contains "$(cat "$COURIER_CONF")" "url=https://ntfy.example" "the config names the server"
+check_contains "$(cat "$COURIER_CONF")" "reply_topic=kid-replies" "the config names the reply topic"
 check_eq "$("$BIN" mailbox-status)" "ntfy" "mailbox-status: ntfy after apply"
 
 "$BIN" mailbox ntfy --url http://insecure.example --topic kid --apply >/dev/null 2>&1

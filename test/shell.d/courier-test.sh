@@ -41,6 +41,7 @@ BIN="$TMP/tree/bin/omarchy-kids-relay-courier"
 kids_id_stub "$STUBS" root 0
 export PATH="$STUBS:$PATH"
 kids_set_const "$BIN" ETC "$ETC"
+kids_set_const "$BIN" AUTH_SOCK "$TMP/auth.sock"
 kids_set_const "$BIN" SYSROOT "$ROOT"
 export KIDS_TEST_UID=0
 
@@ -48,12 +49,17 @@ export KIDS_TEST_UID=0
 POSTS="$TMP/posts"
 PORTFILE="$TMP/port"
 : >"$POSTS"
-python3 - "$PORTFILE" "$POSTS" <<'PY' &
+GETBODY="$TMP/getbody"
+GETLOG="$TMP/getlog"
+: >"$GETLOG"
+python3 - "$PORTFILE" "$POSTS" "$GETBODY" "$GETLOG" <<'PY' &
 import http.server
+import json
 import socketserver
 import sys
+import urllib.parse
 
-portfile, posts = sys.argv[1], sys.argv[2]
+portfile, posts, getbody, getlog = sys.argv[1:5]
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -66,6 +72,31 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"ok")
+
+    def do_GET(self):
+        with open(getlog, "a") as f:
+            f.write(self.path + "\n")
+        try:
+            with open(getbody, "r") as f:
+                lines = [line for line in f.read().splitlines() if line.strip()]
+        except OSError:
+            lines = []
+        # Honour ntfy's `since`: return only the lines after that id.
+        query = urllib.parse.urlsplit(self.path).query
+        since = urllib.parse.parse_qs(query).get("since", [None])[0]
+        if since:
+            for index, line in enumerate(lines):
+                try:
+                    if json.loads(line).get("id") == since:
+                        lines = lines[index + 1 :]
+                        break
+                except ValueError:
+                    continue
+        body = ("\n".join(lines) + "\n").encode() if lines else b""
+        self.send_response(200)
+        self.send_header("Content-Type", "application/x-ndjson")
+        self.end_headers()
+        self.wfile.write(body)
 
     def log_message(self, *args):
         pass
@@ -189,6 +220,62 @@ rm -f "$ETC/courier.conf"
 out="$("$BIN" --apply 2>&1)"
 check_contains "$out" "no parent server is configured" "no config sends nothing"
 check_status "$(wc -c <"$POSTS" | tr -d ' ')" "0" "nothing is posted with no server configured"
+
+# --- poll: carry the app's signed decisions to authd (N-11) ----------------
+AUTH_LOG="$TMP/auth.log"
+: >"$AUTH_LOG"
+python3 - "$TMP/auth.sock" "$AUTH_LOG" <<'PY' &
+import os, socket, sys
+path, log = sys.argv[1], sys.argv[2]
+try:
+    os.unlink(path)
+except OSError:
+    pass
+srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+srv.bind(path); srv.listen(4); srv.settimeout(20)
+while True:
+    try:
+        conn, _ = srv.accept()
+    except socket.timeout:
+        break
+    data = b""
+    while b"\n" not in data:
+        chunk = conn.recv(4096)
+        if not chunk:
+            break
+        data += chunk
+    with open(log, "ab") as f:
+        f.write(data)
+    conn.sendall(b"ok\n")
+    conn.close()
+PY
+AUTH_PID=$!
+for _ in $(seq 1 50); do
+  [[ -S "$TMP/auth.sock" ]] && break
+  sleep 0.1
+done
+
+printf 'transport=ntfy\nurl=http://127.0.0.1:%s\ntopic=test\nreply_topic=replies\n' "$PORT" >"$ETC/courier.conf"
+frame='{"record":{"request_id":"r1"},"signature":"sig"}'
+# A decision frame, and one non-frame the courier must skip.
+python3 -c 'import json,sys; print(json.dumps({"id":"m1","message":sys.argv[1]})); print(json.dumps({"id":"m2","message":"not a frame"}))' "$frame" >"$GETBODY"
+: >"$GETLOG"
+out="$("$BIN" poll --apply 2>&1)"
+check_contains "$(cat "$AUTH_LOG")" "DECIDE " "a reply is carried to authd as a DECIDE"
+check_contains "$(cat "$AUTH_LOG")" '"request_id":"r1"' "authd receives the signed frame"
+check_contains "$out" "reply m1: ok" "the courier reports authd's reply"
+check_status "$(grep -c 'DECIDE ' "$AUTH_LOG")" "1" "the non-frame message is skipped"
+
+# The cursor advances, so a second poll forwards nothing.
+: >"$AUTH_LOG"
+"$BIN" poll --apply >/dev/null 2>&1
+check_status "$(grep -c 'DECIDE ' "$AUTH_LOG")" "0" "an already-seen reply is not forwarded again"
+
+# A dry run forwards nothing.
+printf 'transport=ntfy\nurl=http://127.0.0.1:%s\ntopic=test\nreply_topic=replies\n' "$PORT" >"$ETC/courier.conf"
+rm -f "$ROOT/run/omarchy-kids/courier-cursor"
+:"$BIN" poll >/dev/null 2>&1
+check_contains "$("$BIN" poll 2>&1)" "[dry-run]" "poll previews by default"
 
 # --- the unit and timer ---------------------------------------------------
 SERVICE="$DIR/systemd/omarchy-kids-relay-courier.service"

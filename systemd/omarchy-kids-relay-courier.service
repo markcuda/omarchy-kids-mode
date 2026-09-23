@@ -5,6 +5,7 @@ Documentation=https://github.com/markcuda/omarchy-kids-mode/blob/main/docs/couri
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/omarchy-kids-relay-courier --apply
+ExecStart=/usr/bin/omarchy-kids-relay-courier poll --apply
 # The one Kids Mode process allowed to open a connection beyond the LAN
 # (R-NOTIFY-8). Like the relay it needs AF_INET/AF_INET6, but unlike the relay it
 # carries no IPAddressAllow/IPAddressDeny fence: it may reach the one server the

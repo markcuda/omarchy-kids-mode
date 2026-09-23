@@ -22,6 +22,8 @@ DEVICES_JSON="$SYSROOT/run/omarchy-kids/devices.json"
 STATUS_JSON="$SYSROOT/run/omarchy-kids/status.json"
 QUEUE_DIR="$SYSROOT/var/lib/omarchy-kids/queue"
 SENT="$SYSROOT/run/omarchy-kids/courier-sent"
+CURSOR="$SYSROOT/run/omarchy-kids/courier-cursor"
+AUTH_SOCK="/run/omarchy-kids/auth.sock"
 DRY_RUN=1
 
 die() {
@@ -32,10 +34,13 @@ die() {
 usage() {
   cat <<'EOF'
 Usage: omarchy-kids-relay-courier [--apply] [--dry-run]
+       omarchy-kids-relay-courier poll [--apply]
 
-Seals the current state for every paired device and posts it to the ntfy or
-Gotify topic the parent configured (omarchy-kids-notify mailbox). It is the only
-Kids Mode process that may reach beyond the LAN (R-NOTIFY-8).
+Sends: seals the current state for every paired device and posts it to the ntfy
+or Gotify topic the parent configured (omarchy-kids-notify mailbox). poll: fetches
+the replies and carries each signed decision to authd, which verifies and applies
+it. Either way it is the only Kids Mode process that may reach beyond the LAN
+(R-NOTIFY-8).
 
 Nothing is sent while notifications are off or no server is configured, and a run
 whose state, server and devices are unchanged since the last successful send does
@@ -51,8 +56,10 @@ without --apply it prints the plan.
 EOF
 }
 
+POLL=0
 while (($#)); do
   case "$1" in
+    poll) POLL=1 ;;
     --apply) DRY_RUN=0 ;;
     --dry-run) DRY_RUN=1 ;;
     -h | --help)
@@ -71,7 +78,12 @@ if [[ ! -f "$RELAY_CERT" ]]; then
   exit 0
 fi
 
-args=(--config "$CONFIG" --devices "$DEVICES_JSON" --status "$STATUS_JSON" --queue "$QUEUE_DIR" --sent "$SENT")
+args=(--config "$CONFIG")
+if ((POLL)); then
+  args+=(--poll --auth-sock "$AUTH_SOCK" --cursor "$CURSOR")
+else
+  args+=(--devices "$DEVICES_JSON" --status "$STATUS_JSON" --queue "$QUEUE_DIR" --sent "$SENT")
+fi
 ((DRY_RUN)) || args+=(--apply)
 
 exec "$KIDS_PY" "$LIB/courier.py" "${args[@]}"

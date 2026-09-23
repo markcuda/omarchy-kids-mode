@@ -7,9 +7,10 @@ holds no decision power, and is off by default.
 
 ## Turning it on
 
-`omarchy-kids-notify mailbox <off|ntfy|gotify> --url <https://…> --topic <name>` writes
-`/etc/omarchy-kids/courier.conf` (root `0600`); `mailbox off` removes it and `mailbox-status` prints
-`off`, `ntfy` or `gotify`. The URL must be `https`, and for Gotify the token is typed on **stdin**
+`omarchy-kids-notify mailbox <off|ntfy|gotify> --url <https://…> --topic <name> [--reply-topic
+<name>]` writes `/etc/omarchy-kids/courier.conf` (root `0600`); `mailbox off` removes it and
+`mailbox-status` prints `off`, `ntfy` or `gotify`. `--reply-topic` (ntfy) names the topic the app
+posts its signed decisions to. The URL must be `https`, and for Gotify the token is typed on **stdin**
 (never argv, like a password). With no config, or while notifications are off, the courier sends
 nothing.
 
@@ -26,12 +27,16 @@ if any device's send failed, so a timer can notice.
 The envelope is **confidential but not authenticated**: any holder of a device's public key can seal
 one, so the app must treat a sealed document as untrusted display data and never act on it — the
 decisions the app sends are signed separately and verified by root (Appendix H;
-`clients/parent/README.md`). An app's decision coming back through the topic is a later step.
+`clients/parent/README.md`). `omarchy-kids-relay-courier poll --apply` is the way back: it fetches the replies (an ntfy topic's
+JSON stream, or a Gotify app's messages) and carries each signed decision frame to `authd`'s DECIDE
+socket, which verifies the device's signature and applies it — the courier never decides (R-NOTIFY-4).
+A message that is not a decision frame is skipped, and a cursor under `/run/omarchy-kids` keeps a
+seen reply from being carried twice.
 
 ## Running it
 
 `systemd/omarchy-kids-relay-courier.timer` runs the service every five minutes (and three minutes
-after boot); with no config the run exits at once, and a run whose state has not changed since the
+after boot); its two `ExecStart` lines send, then poll. with no config the run exits at once, and a run whose state has not changed since the
 last successful send **does not post**, so an idle box does not deliver a message every five minutes.
 Like the relay the service uses `AF_INET`/`AF_INET6`; unlike the relay it carries no `IPAddressAllow`/
 `IPAddressDeny` fence at all — it may reach the one server the parent named, and only that (the code

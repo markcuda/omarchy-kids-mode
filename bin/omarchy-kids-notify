@@ -44,7 +44,7 @@ Usage: omarchy-kids-notify enable [--host NAME] [--rekey] [--apply]
        omarchy-kids-notify pair [--scopes decide,act] [--apply]
        omarchy-kids-notify away <off|tailnet> [--apply]
        omarchy-kids-notify away-status
-       omarchy-kids-notify mailbox <off|ntfy|gotify> [--url U --topic T] [--apply]
+       omarchy-kids-notify mailbox <off|ntfy|gotify> [--url U --topic T [--reply-topic R]] [--apply]
        omarchy-kids-notify mailbox-status
        omarchy-kids-notify devices [--json]
        omarchy-kids-notify rename <id> <name> [--apply]
@@ -61,9 +61,11 @@ fingerprint to check on the device. The device commands delegate to
 omarchy-kids-devices. Root only; DRY_RUN=1 prints the plan.
 
 `mailbox` configures the away courier (N-11, R-NOTIFY-8): the one ntfy or Gotify
-topic of the parent's own that the box may post to, or `off`. Gotify's token is
-typed on stdin (it is not echoed), never as an argument. Nothing is sent while
-notifications are off, and the config is root-only.
+topic of the parent's own that the box may post to, or `off`. For ntfy,
+`--reply-topic` names the topic the app posts its signed decisions back to (the
+courier polls it and carries them to authd). Gotify's token is typed on stdin (it
+is not echoed), never as an argument. Nothing is sent while notifications are off,
+and the config is root-only.
 
 `away tailnet` is the opt-in "Away from home: my own VPN" fence (N-10): it writes
 a systemd drop-in adding the CGNAT range Tailscale uses to the relay's allow
@@ -332,7 +334,7 @@ cmd_mailbox() {
   local mode="${1:-}"
   [[ -n "$mode" ]] || die "mailbox: needs <off|ntfy|gotify> (see --help)"
   shift
-  local url="" topic="" token=""
+  local url="" topic="" token="" reply_topic=""
   while (($#)); do
     case "$1" in
       --url)
@@ -341,6 +343,10 @@ cmd_mailbox() {
         ;;
       --topic)
         topic="${2:?}"
+        shift 2
+        ;;
+      --reply-topic)
+        reply_topic="${2:?}"
         shift 2
         ;;
       --apply)
@@ -367,6 +373,9 @@ cmd_mailbox() {
       [[ -n "$url" && -n "$topic" ]] || die "mailbox $mode: needs --url and --topic"
       [[ "$url" == https://* ]] || die "mailbox: --url must be https"
       [[ "$topic" =~ ^[A-Za-z0-9._-]+$ ]] || die "mailbox: --topic must be letters, digits, dot, dash or underscore"
+      if [[ -n "$reply_topic" ]]; then
+        [[ "$reply_topic" =~ ^[A-Za-z0-9._-]+$ ]] || die "mailbox: --reply-topic must be letters, digits, dot, dash or underscore"
+      fi
       if [[ "$mode" == gotify ]] && ((! DRY_RUN)); then
         # Like a password: the token comes on stdin (silently, with a prompt),
         # never argv.
@@ -384,6 +393,7 @@ cmd_mailbox() {
         echo "transport=$mode"
         echo "url=$url"
         echo "topic=$topic"
+        [[ -n "$reply_topic" ]] && echo "reply_topic=$reply_topic"
         [[ -n "$token" ]] && echo "token=$token"
       } >"$tmp"
       chmod 0600 "$tmp"

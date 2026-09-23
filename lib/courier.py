@@ -146,6 +146,12 @@ def write_sent(path, digest):
         print(f"courier: could not record the last-sent state: {exc}", file=sys.stderr)
 
 
+def _get(url, timeout):
+    request = urllib.request.Request(url, method="GET")
+    with _opener().open(request, timeout=timeout) as response:  # noqa: S310 -- one configured server
+        return response.read().decode("utf-8", "replace")
+
+
 def _post(url, body, headers, timeout):
     request = urllib.request.Request(url, data=body, method="POST", headers=headers)
     try:
@@ -166,6 +172,99 @@ def post_gotify(base_url, token, title, body, timeout=15):
     target = base_url.rstrip("/") + "/message"
     payload = json.dumps({"title": title, "message": body.decode("utf-8")}).encode("utf-8")
     return _post(target, payload, {"Content-Type": "application/json", "X-Gotify-Key": token}, timeout)
+
+
+def fetch_ntfy_replies(base_url, topic, since, timeout=15):
+    """New messages on an ntfy topic: [{id, message}]. `since` is the last id seen."""
+    target = base_url.rstrip("/") + "/" + urllib.parse.quote(topic, safe="") + "/json?poll=1"
+    if since:
+        target += "&since=" + urllib.parse.quote(str(since), safe="")
+    out = []
+    for line in _get(target, timeout).splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            message = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(message, dict) and isinstance(message.get("message"), str):
+            out.append({"id": message.get("id"), "message": message["message"]})
+    return out
+
+
+def fetch_gotify_replies(base_url, token, since, timeout=15):
+    """Messages on a Gotify app: [{id, message}] with id greater than `since`."""
+    target = (
+        base_url.rstrip("/") + "/message?token=" + urllib.parse.quote(token, safe="") + "&limit=50"
+    )
+    try:
+        data = json.loads(_get(target, timeout))
+    except ValueError:
+        return []
+    out = []
+    for message in data.get("messages", []) if isinstance(data, dict) else []:
+        if not isinstance(message, dict) or not isinstance(message.get("message"), str):
+            continue
+        message_id = message.get("id")
+        if not isinstance(message_id, int) or (since is not None and message_id <= since):
+            continue
+        out.append({"id": message_id, "message": message["message"]})
+    return out
+
+
+def read_cursor(path):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read().strip() or None
+    except OSError:
+        return None
+
+
+def write_cursor(path, value):
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, mode=0o755, exist_ok=True)
+    tmp = f"{path}.{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(str(value) + "\n")
+    os.replace(tmp, path)
+
+
+def poll(config, auth_sock, cursor_path, apply, timeout=15):
+    """Fetch new replies and carry each signed decision to authd (R-NOTIFY-4/8).
+
+    The app posts a signed decision frame; the courier only carries it -- authd
+    verifies and applies. A message that is not a JSON object is skipped. Returns
+    [(id, authd_reply_or_None), ...] for the frames it tried to forward.
+    """
+    transport = config.get("transport")
+    url = config.get("url", "")
+    if not url_allowed(url):
+        raise ValueError("the configured server must be https (or loopback for tests)")
+    cursor = read_cursor(cursor_path)
+    if transport == "ntfy":
+        replies = fetch_ntfy_replies(url, config.get("reply_topic", ""), cursor, timeout)
+    else:
+        replies = fetch_gotify_replies(
+            url, config.get("token", ""), int(cursor) if cursor and cursor.isdigit() else None, timeout
+        )
+    forwarded = []
+    for reply in replies:
+        try:
+            frame = json.loads(reply["message"])
+        except ValueError:
+            continue  # not a decision frame
+        if not isinstance(frame, dict) or "record" not in frame:
+            continue
+        if not apply:
+            print("  [dry-run] would carry one signed decision to authd")
+            forwarded.append((reply.get("id"), None))
+            continue
+        forwarded.append((reply.get("id"), relay.forward_decide(auth_sock, reply["message"])))
+    if apply and replies:
+        write_cursor(cursor_path, replies[-1]["id"])
+    return forwarded
 
 
 def send(config, state, devices, timeout=15):
@@ -203,10 +302,13 @@ def _failed(result):
 def main(argv):
     parser = argparse.ArgumentParser(prog="courier.py")
     parser.add_argument("--config", required=True)
-    parser.add_argument("--devices", required=True)
-    parser.add_argument("--status", required=True)
-    parser.add_argument("--queue", required=True)
+    parser.add_argument("--devices", default="")
+    parser.add_argument("--status", default="")
+    parser.add_argument("--queue", default="")
     parser.add_argument("--sent", default="")
+    parser.add_argument("--poll", action="store_true", help="carry replies to authd instead of sending")
+    parser.add_argument("--auth-sock", default="/run/omarchy-kids/auth.sock")
+    parser.add_argument("--cursor", default="")
     parser.add_argument("--timeout", type=int, default=15)
     parser.add_argument("--apply", action="store_true", help="really post (default: print the plan)")
     args = parser.parse_args(argv)
@@ -215,6 +317,23 @@ def main(argv):
     if config is None:
         print("courier: no parent server is configured (off)")
         return 0
+    if args.poll:
+        if not url_allowed(config.get("url", "")):
+            print("courier: the configured server must be https; refusing", file=sys.stderr)
+            return 2
+        if config.get("transport") == "ntfy" and not config.get("reply_topic"):
+            print("courier: no reply topic is configured; nothing to poll")
+            return 0
+        if not args.apply:
+            print("  [dry-run] would fetch replies and carry any signed decision to authd")
+            return 0
+        forwarded = poll(config, args.auth_sock, args.cursor, True, args.timeout)
+        for reply_id, reply in forwarded:
+            print(f"courier: reply {reply_id}: {reply}")
+        return 0
+    if not (args.devices and args.status and args.queue):
+        print("courier: --devices, --status and --queue are required to send", file=sys.stderr)
+        return 2
     devices = load_devices(args.devices)
     if not devices:
         print("courier: no device is paired; nothing to send")
