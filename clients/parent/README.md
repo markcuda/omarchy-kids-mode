@@ -20,9 +20,10 @@ piece.
    **SPKI** SHA-256, which the parent reads off the pairing screen.
 2. **Read.** Sign every request and `GET /v1/state`, or hold `GET /v1/events` for the SSE stream. The
    `addr=` list on the pairing URI is the box's own addresses to try. The signature travels in the
-   headers, not the body: `X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<sig>` (a dot-separated
-   triple, so the nonce must contain no `.`; it is otherwise a fresh string up to 128 bytes). An
-   unsigned or malformed-header request is refused.
+   headers, not the body:    `X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<sig>` (a dot-separated
+   triple, so the nonce must contain no `.`; it is otherwise a fresh **ASCII** string up to 128
+   bytes — the relay reads headers as latin-1, so keep it ASCII). An unsigned or malformed-header
+   request is refused.
 3. **Decide.** Sign a decision record and `POST /v1/requests/<id>/decision` with a JSON body
    `{record, signature}` **and** the same signed headers; the reply line rides `record.reply` (at most
    80 printable characters — `lib/devices.py`'s `MAX_REPLY`).
