@@ -26,8 +26,14 @@ if any device's send failed, so a timer can notice.
 The envelope is **confidential but not authenticated**: any holder of a device's public key can seal
 one, so the app must treat a sealed document as untrusted display data and never act on it — the
 decisions the app sends are signed separately and verified by root (Appendix H;
-`clients/parent/README.md`). An app's decision coming back through the topic is a later step, as is
-the systemd unit that runs the courier on a timer.
+`clients/parent/README.md`). An app's decision coming back through the topic is a later step.
+
+## Running it
+
+`systemd/omarchy-kids-relay-courier.timer` runs the service every five minutes (and three minutes
+after boot); with no config the run exits at once. The service is the one unit here allowed
+`AF_INET`/`AF_INET6`, and it carries no capabilities and a strict filesystem view, because it is the
+one process that talks to the outside.
 
 ## The one fence that matters
 

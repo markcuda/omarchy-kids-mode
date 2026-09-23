@@ -181,5 +181,15 @@ out="$("$BIN" --apply 2>&1)"
 check_contains "$out" "no parent server is configured" "no config sends nothing"
 check_status "$(wc -c <"$POSTS" | tr -d ' ')" "0" "nothing is posted with no server configured"
 
+# --- the unit and timer ---------------------------------------------------
+SERVICE="$DIR/systemd/omarchy-kids-relay-courier.service"
+TIMER="$DIR/systemd/omarchy-kids-relay-courier.timer"
+[[ -f "$SERVICE" ]] && pass "the courier service unit exists" || fail "no courier service unit"
+[[ -f "$TIMER" ]] && pass "the courier timer unit exists" || fail "no courier timer unit"
+check_contains "$(cat "$TIMER")" "Unit=omarchy-kids-relay-courier.service" "the timer drives the courier service"
+check_contains "$(cat "$SERVICE")" "ExecStart=/usr/bin/omarchy-kids-relay-courier --apply" "the service posts on the timer"
+check_contains "$(cat "$SERVICE")" "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6" "the courier may open the network"
+check_contains "$(cat "$SERVICE")" "CapabilityBoundingSet=" "the courier holds no capabilities"
+
 echo "courier-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc
