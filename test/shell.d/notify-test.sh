@@ -65,6 +65,14 @@ printf '3: tailscale0    inet 100.64.0.7/32 scope global tailscale0\n'
 EOF
 chmod +x "$STUBS/ip"
 
+# A tailscale stub so the away-on branch is owned by the test too.
+cat >"$STUBS/tailscale" <<'EOF'
+#!/bin/bash
+[[ "${1:-}" == "ip" ]] && printf '100.64.0.7\n'
+exit 0
+EOF
+chmod +x "$STUBS/tailscale"
+
 export PATH="$STUBS:$PATH"
 kids_set_const "$BIN" ETC "$ETC"
 kids_set_const "$BIN" SYSROOT "$SYSROOT"

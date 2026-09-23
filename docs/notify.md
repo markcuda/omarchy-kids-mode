@@ -13,6 +13,8 @@ omarchy-kids-notify devices [--json]
 omarchy-kids-notify rename <id> <name> [--apply]
 omarchy-kids-notify scopes <id> decide[,act] [--apply]
 omarchy-kids-notify revoke <id> [--apply]
+omarchy-kids-notify away <off|tailnet> [--apply]
+omarchy-kids-notify away-status
 ```
 
 Root only. `DRY_RUN=1` is the default for every writing subcommand (AGENTS.md rule 8), so a run
