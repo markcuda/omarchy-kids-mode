@@ -11,6 +11,7 @@ import '../lib/state_model.dart';
 
 class FakeRelay implements RelayTransport {
   final List<Map<String, Object?>> decided = [];
+  final List<(int, String)> requestHeaders = [];
   BoxState state = BoxState(kids: [], requests: [], recent: []);
   final List<BoxState> events = [];
 
@@ -27,6 +28,7 @@ class FakeRelay implements RelayTransport {
     required String nonce,
   }) async {
     decided.add(record);
+    requestHeaders.add((ts, nonce));
     return {'reply': 'ok'};
   }
 }
@@ -35,14 +37,17 @@ void main() {
   late FakeRelay relay;
   late Session session;
 
+  var counter = 0;
+
   setUp(() async {
     relay = FakeRelay();
+    counter = 0;
     session = await Session.load(
       deviceId: 'd-1',
       relay: relay,
       keystore: InMemoryKeystore(),
       now: () => 1758530400,
-      newNonce: () => 'n-fixed',
+      newNonce: () => 'n-${counter++}',
     );
   });
 
@@ -53,8 +58,18 @@ void main() {
       'request_id': 'req-1',
       'decision': 'approve',
       'ts': 1758530400,
-      'nonce': 'n-fixed',
+      'nonce': 'n-0',
     });
+    // The header's nonce is a different one: separate replay domains.
+    expect(relay.requestHeaders.single.$2, 'n-1');
+    expect(relay.requestHeaders.single.$2, isNot(relay.decided.single['nonce']));
+  });
+
+  test('a request id the box would refuse is rejected locally', () async {
+    for (final bad in ['', '../etc', 'a/b', 'has space']) {
+      await expectLater(session.approve(bad), throwsArgumentError, reason: bad);
+    }
+    expect(relay.decided, isEmpty);
   });
 
   test('decline carries the reply, and a long one is refused before sending', () async {

@@ -11,7 +11,7 @@ import 'relay_client.dart';
 import 'relay_transport.dart';
 import 'state_model.dart';
 
-/// Where the device's signing seed lives. The Flutter build stores it in the
+/// Where the device's signing seed lives. A Flutter build would store it in the
 /// platform keystore; a test uses [InMemoryKeystore]. Only the seed is secret;
 /// the device id and the pinned fingerprint are not.
 abstract class Keystore {
@@ -72,8 +72,11 @@ class Session {
 
   Future<BoxState> refresh() => relay.boxState(ts: now(), nonce: newNonce());
 
-  /// Watch the box for changes.
-  Stream<BoxState> watch() => relay.boxEvents(ts: now(), nonce: newNonce());
+  /// Watch the box for changes. Signed when the stream is listened to, not when
+  /// it is created, so a stream held before use is not already stale.
+  Stream<BoxState> watch() async* {
+    yield* relay.boxEvents(ts: now(), nonce: newNonce());
+  }
 
   /// Approve a request, optionally with the parent's own reply line.
   Future<void> approve(String requestId, {String? reply}) => _decide(requestId, 'approve', reply);
@@ -82,6 +85,11 @@ class Session {
   Future<void> decline(String requestId, {String? reply}) => _decide(requestId, 'decline', reply);
 
   Future<void> _decide(String requestId, String decision, String? reply) async {
+    // Fail fast on an id the box would refuse anyway: it is not a request the app
+    // could decide, and it must not reach a URL path (state_model drops such rows).
+    if (!OpenRequest.idPattern.hasMatch(requestId)) {
+      throw ArgumentError('not a request id: $requestId');
+    }
     // The record's nonce and the request header's nonce are separate replay
     // domains (authd's ledger and the relay's); both are fresh.
     final ts = now();
