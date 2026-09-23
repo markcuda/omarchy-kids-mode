@@ -73,6 +73,15 @@ void main() {
       expect(state.containsKey('kids'), isTrue);
       expect(state['kids'], isEmpty);
 
+      // The SSE stream sends the state as soon as it connects; the heartbeat
+      // comments are dropped by the parser.
+      final first = await client
+          .events(ts: _now(), nonce: 'it-events')
+          .first
+          .timeout(const Duration(seconds: 10));
+      expect(first.containsKey('kids'), isTrue);
+      expect(first['kids'], isEmpty);
+
       // A POST reaches the relay's forwarding step: the signature verifies (a
       // framing or signature error would be 400/403), and only authd is missing,
       // so the relay answers 502. This is what would have caught a chunked body.

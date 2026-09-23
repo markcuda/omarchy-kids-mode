@@ -9,14 +9,16 @@ package — `lib/notify_crypto.dart` (the box's signing, pairing and envelope co
 `X-Kids-Device`/`X-Kids-Sig` headers, the decision body, the reply chips and the pairing URI) and
 `lib/transport.dart` (the trust anchor and the client: the certificate's SPKI SHA-256 — the value
 the parent reads off the pairing screen and the app pins — and a `KidsRelayClient` that speaks TLS
-to the relay with the signed headers). The
+to the relay with the signed headers, streams the `/v1/events` SSE feed, and posts decisions and
+pairings). The
 crypto and the wire frames are proven against the shared vectors, byte for byte; the reply chips and
 the pairing-URI parser and the SPKI pin are pinned by the package's own tests (the pin fixture,
 `test/fixtures/relay-cert.pem`, is a throwaway public certificate minted by `lib/cert.py`;
 `test/shell.d/parent-app-test.sh` also checks the Dart constant equals what `lib/cert.py` prints),
 and the client is proven end to end against the box's own relay
 (`test/relay_integration_test.dart` starts `bin/omarchy-kids-relayd`, pins it, makes a signed read,
-and shows a decision POST and a pairing POST reach the relay's authd-forwarding step). There is no Flutter project and nothing to install
+streams a state event, and shows a decision POST and a pairing POST reach the relay's
+authd-forwarding step; the SSE parser's edge cases are unit-tested). There is no Flutter project and nothing to install
 on a phone yet, so there is nothing to scan a pairing QR with — `AGENTS.md` rule 6 is why this file
 says so plainly. The box side is complete (`docs/notify.md`, `docs/relayd.md`, `docs/devices.md`).
 

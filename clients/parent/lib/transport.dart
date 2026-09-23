@@ -84,6 +84,33 @@ bool spkiMatches(List<int> der, String pinnedHex) {
   return diff == 0;
 }
 
+/// The Server-Sent Events the relay sends (bin/omarchy-kids-relayd): `state`
+/// events with a JSON data line, and heartbeat comments. Anything else is
+/// ignored, and an event without its terminating blank line is not emitted.
+Stream<Map<String, dynamic>> parseSse(Stream<String> lines) async* {
+  var event = '';
+  final data = StringBuffer();
+  await for (final line in lines) {
+    if (line.isEmpty) {
+      if (event == 'state' && data.isNotEmpty) {
+        yield jsonDecode(data.toString()) as Map<String, dynamic>;
+      }
+      event = '';
+      data.clear();
+      continue;
+    }
+    if (line.startsWith(':')) {
+      continue; // a heartbeat comment
+    }
+    if (line.startsWith('event:')) {
+      event = line.substring('event:'.length).trim();
+    } else if (line.startsWith('data:')) {
+      if (data.isNotEmpty) data.write('\n');
+      data.write(line.substring('data:'.length).trimLeft());
+    }
+  }
+}
+
 // --- the client ------------------------------------------------------------
 
 /// The relay client: a TLS connection whose certificate must match the pinned
@@ -178,6 +205,37 @@ class KidsRelayClient {
       throw HttpException('decide: ${reply.status} ${reply.body}');
     }
     return jsonDecode(reply.body) as Map<String, dynamic>;
+  }
+
+  /// Subscribe to /v1/events (SSE): a stream of the decoded `state` events, one
+  /// per change, with the heartbeat comments dropped. Authenticated once at
+  /// connect, like the relay expects. The stream ends when the connection does;
+  /// a caller that wants to keep listening reconnects (and re-signs) on done.
+  Stream<Map<String, dynamic>> events({required int ts, required String nonce}) async* {
+    final client = await _client();
+    try {
+      final uri = Uri(scheme: 'https', host: host, port: port, path: '/v1/events');
+      final request = await client.getUrl(uri).timeout(timeout);
+      request.followRedirects = false;
+      final headers = await signedHeaders(
+        keyPair: keyPair,
+        deviceId: deviceId,
+        ts: ts,
+        nonce: nonce,
+        method: 'GET',
+        path: '/v1/events',
+        body: const [],
+      );
+      headers.forEach(request.headers.set);
+      final response = await request.close().timeout(timeout);
+      if (response.statusCode != 200) {
+        final text = await utf8.decoder.bind(response).join();
+        throw HttpException('events: ${response.statusCode} $text');
+      }
+      yield* parseSse(utf8.decoder.bind(response).transform(const LineSplitter()));
+    } finally {
+      client.close(force: true);
+    }
   }
 
   /// POST /v1/pair (pre-auth: the proof is the credential).
