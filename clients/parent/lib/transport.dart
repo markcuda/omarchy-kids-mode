@@ -84,16 +84,23 @@ bool spkiMatches(List<int> der, String pinnedHex) {
   return diff == 0;
 }
 
+/// An SSE field value: everything after the colon, minus exactly one leading
+/// space (the spec strips one, not all -- a value may begin with a space).
+String _sseValue(String rest) => rest.startsWith(' ') ? rest.substring(1) : rest;
+
 /// The Server-Sent Events the relay sends (bin/omarchy-kids-relayd): `state`
 /// events with a JSON data line, and heartbeat comments. Anything else is
 /// ignored, and an event without its terminating blank line is not emitted.
-Stream<Map<String, dynamic>> parseSse(Stream<String> lines) async* {
+///
+/// `sseData` yields the raw data strings (joined, SSE-style, with a single LF);
+/// `parseSse` decodes them. Split so the join can be asserted without JSON.
+Stream<String> sseData(Stream<String> lines) async* {
   var event = '';
   final data = StringBuffer();
   await for (final line in lines) {
     if (line.isEmpty) {
       if (event == 'state' && data.isNotEmpty) {
-        yield jsonDecode(data.toString()) as Map<String, dynamic>;
+        yield data.toString();
       }
       event = '';
       data.clear();
@@ -103,13 +110,32 @@ Stream<Map<String, dynamic>> parseSse(Stream<String> lines) async* {
       continue; // a heartbeat comment
     }
     if (line.startsWith('event:')) {
-      event = line.substring('event:'.length).trim();
+      event = _sseValue(line.substring('event:'.length));
     } else if (line.startsWith('data:')) {
       if (data.isNotEmpty) data.write('\n');
-      data.write(line.substring('data:'.length).trimLeft());
+      data.write(_sseValue(line.substring('data:'.length)));
     }
   }
 }
+
+Stream<Map<String, dynamic>> parseSse(Stream<String> lines) async* {
+  await for (final data in sseData(lines)) {
+    yield jsonDecode(data) as Map<String, dynamic>;
+  }
+}
+
+/// The relay beats every 25 seconds (bin/omarchy-kids-relayd's HEARTBEAT); a
+/// stream that goes three beats without a line ends, so a half-open connection
+/// cannot hang forever.
+const Duration relayHeartbeat = Duration(seconds: 25);
+const Duration relayQuiet = Duration(seconds: 75);
+
+/// End `lines` with an error after `quiet` of silence. The heartbeat's absence
+/// is the only liveness signal on a connection that may be half-open.
+Stream<String> withLiveness(Stream<String> lines, Duration quiet) => lines.timeout(
+      quiet,
+      onTimeout: (sink) => sink.addError(const SocketException('the relay went quiet')),
+    );
 
 // --- the client ------------------------------------------------------------
 
@@ -209,8 +235,9 @@ class KidsRelayClient {
 
   /// Subscribe to /v1/events (SSE): a stream of the decoded `state` events, one
   /// per change, with the heartbeat comments dropped. Authenticated once at
-  /// connect, like the relay expects. The stream ends when the connection does;
-  /// a caller that wants to keep listening reconnects (and re-signs) on done.
+  /// connect, like the relay expects. The relay beats every 25 seconds, so
+  /// silence for three beats ends the stream with an error (a half-open
+  /// connection would otherwise hang forever); the caller reconnects and re-signs.
   Stream<Map<String, dynamic>> events({required int ts, required String nonce}) async* {
     final client = await _client();
     try {
@@ -232,7 +259,10 @@ class KidsRelayClient {
         final text = await utf8.decoder.bind(response).join();
         throw HttpException('events: ${response.statusCode} $text');
       }
-      yield* parseSse(utf8.decoder.bind(response).transform(const LineSplitter()));
+      yield* parseSse(withLiveness(
+        utf8.decoder.bind(response).transform(const LineSplitter()),
+        relayQuiet,
+      ));
     } finally {
       client.close(force: true);
     }
