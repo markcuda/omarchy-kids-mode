@@ -21,6 +21,7 @@ import 'package:cryptography/cryptography.dart';
 
 import 'notify_crypto.dart';
 import 'relay_client.dart';
+import 'relay_transport.dart';
 import 'state_model.dart';
 
 /// The SubjectPublicKeyInfo of a certificate's tbsCertificate.
@@ -143,7 +144,7 @@ Stream<String> withLiveness(Stream<String> lines, Duration quiet) => lines.timeo
 /// The relay client: a TLS connection whose certificate must match the pinned
 /// SPKI, and requests signed with the device's Ed25519 key. No retries, no
 /// redirects: one box, one pinned certificate.
-class KidsRelayClient {
+class KidsRelayClient implements RelayTransport {
   final String host;
   final int port;
   final String pinnedSpki;
@@ -219,10 +220,17 @@ class KidsRelayClient {
   }
 
   /// GET /v1/state, parsed into the app's model.
+  @override
   Future<BoxState> boxState({required int ts, required String nonce}) async =>
       BoxState.fromJson(await state(ts: ts, nonce: nonce));
 
+  /// The SSE feed as the app's model.
+  @override
+  Stream<BoxState> boxEvents({required int ts, required String nonce}) =>
+      events(ts: ts, nonce: nonce).map(BoxState.fromJson);
+
   /// POST /v1/requests/<id>/decision with the signed record.
+  @override
   Future<Map<String, dynamic>> decide({
     required Map<String, Object?> record,
     required int ts,
