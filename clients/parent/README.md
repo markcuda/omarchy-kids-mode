@@ -6,8 +6,9 @@ A phone or desktop app that pairs with the box, shows a kid's requests with **Ap
 **The UI is not built.** This directory holds the half that can be pinned down before it: a pure-Dart
 package — `lib/notify_crypto.dart` (the box's signing, pairing and envelope code, byte for byte) and
 `lib/relay_client.dart` (the frames and headers the relay expects: the pairing body, the
-`X-Kids-Device`/`X-Kids-Sig` headers, the decision body, the reply chips and the pairing URI) — proven
-against the shared vectors. There is no Flutter project and nothing to install
+`X-Kids-Device`/`X-Kids-Sig` headers, the decision body, the reply chips and the pairing URI). The
+crypto and the wire frames are proven against the shared vectors, byte for byte; the reply chips and
+the pairing-URI parser are pinned by the package's own tests. There is no Flutter project and nothing to install
 on a phone yet, so there is nothing to scan a pairing QR with — `AGENTS.md` rule 6 is why this file
 says so plainly. The box side is complete (`docs/notify.md`, `docs/relayd.md`, `docs/devices.md`).
 
@@ -85,6 +86,5 @@ app reproduces every signature. Run the generator after changing the scheme and 
 
 ## What this does not decide
 
-The keystore, the platform notification plumbing, the reply chips, and the store builds are the app's
-own work (N-8/N-12); nothing here can be tested without a Flutter toolchain, so none of it is
-claimed.
+The UI, the keystore, the platform notification plumbing, and the store builds are the app's own
+work (N-8/N-12); none of it can be built without a Flutter toolchain, so none of it is claimed.

@@ -59,7 +59,7 @@ void main() {
     expect(body['record'], equals(record));
   });
 
-  test('a decision record rejects a bad decision or a long/non-ASCII reply', () {
+  test('a decision record rejects a bad decision or a long/unprintable reply', () {
     expect(
       () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'maybe', ts: 1, nonce: 'n'),
       throwsArgumentError,
@@ -68,8 +68,13 @@ void main() {
       () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'x' * 81),
       throwsArgumentError,
     );
+    // An accented reply is accepted (the box's isprintable), a control one is not.
     expect(
-      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'café'),
+      decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'café')['reply'],
+      equals('café'),
+    );
+    expect(
+      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u0007b'),
       throwsArgumentError,
     );
     final record = decisionRecord(
@@ -91,14 +96,18 @@ void main() {
   });
 
   test('a pairing URI yields the id, token and addresses', () {
+    final token = 'a' * 40;
     final uri = PairingUri.parse(
-      'omarchy-kids://pair?v=1&id=d-1&token=abc123&addr=192.168.1.5,100.64.0.7',
+      'omarchy-kids://pair?v=1&id=d-1&token=$token&addr=192.168.1.5,100.64.0.7',
     );
     expect(uri.id, equals('d-1'));
-    expect(uri.token, equals('abc123'));
+    expect(uri.token, equals(token));
     expect(uri.addresses, equals(['192.168.1.5', '100.64.0.7']));
     expect(() => PairingUri.parse('https://example.com'), throwsFormatException);
     expect(() => PairingUri.parse('omarchy-kids://pair?v=1&id=d-1'), throwsFormatException);
+    expect(() => PairingUri.parse('omarchy-kids://pair?v=2&id=d-1&token=${'a' * 40}'), throwsFormatException);
+    expect(() => PairingUri.parse('omarchy-kids://pair?v=1&id=d-1&token=short'), throwsFormatException);
+    expect(() => PairingUri.parse('omarchy-kids://pair?v=1&id=../etc&token=${'a' * 40}'), throwsFormatException);
   });
 
   test('the courier envelope opens through the wire helper', () async {

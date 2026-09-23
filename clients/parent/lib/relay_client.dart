@@ -87,8 +87,21 @@ Future<String> buildDecisionBody({
   return jsonEncode({'record': record, 'signature': signature});
 }
 
+// Python's str.isprintable(), which the box uses (lib/devices.py's MAX_REPLY
+// check): everything but the control and separator categories. Approximated here
+// to the ranges that matter for a typed reply.
+bool _printable(int rune) {
+  if (rune == 0x20) return true;
+  if (rune < 0x21) return false; // C0 controls
+  if (rune == 0x7f || (rune >= 0x80 && rune <= 0x9f)) return false; // DEL and C1
+  if (rune == 0x2028 || rune == 0x2029) return false; // line/paragraph separators
+  return true;
+}
+
 /// A decision record with a fresh ts and nonce. `reply` is optional and, when
-/// given, must be printable and at most 80 characters (the box refuses more).
+/// given, must be printable Unicode of at most 80 code points, the same rule the
+/// box applies (`lib/devices.py`'s MAX_REPLY and isprintable); an accented reply
+/// is accepted, as the shared vector's own reply shows.
 Map<String, Object?> decisionRecord({
   required String deviceId,
   required String requestId,
@@ -100,8 +113,8 @@ Map<String, Object?> decisionRecord({
   if (decision != 'approve' && decision != 'decline') {
     throw ArgumentError("decision must be 'approve' or 'decline'");
   }
-  if (reply != null && (reply.length > 80 || reply.runes.any((r) => r < 0x20 || r > 0x7e))) {
-    throw ArgumentError('reply must be at most 80 printable ASCII characters');
+  if (reply != null && (reply.runes.length > 80 || reply.runes.any((r) => !_printable(r)))) {
+    throw ArgumentError('reply must be at most 80 printable characters');
   }
   final record = <String, Object?>{
     'device_id': deviceId,
@@ -129,10 +142,17 @@ class PairingUri {
     if (parsed.scheme != 'omarchy-kids' || parsed.host != 'pair') {
       throw FormatException('not a pairing URI: $uri');
     }
+    final version = parsed.queryParameters['v'] ?? '';
     final id = parsed.queryParameters['id'] ?? '';
     final token = parsed.queryParameters['token'] ?? '';
-    if (id.isEmpty || token.isEmpty) {
-      throw const FormatException('the pairing URI needs an id and a token');
+    if (version != '1') {
+      throw FormatException('unsupported pairing URI version: $version');
+    }
+    if (id.isEmpty || !RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$').hasMatch(id)) {
+      throw const FormatException('the pairing URI needs a valid device id');
+    }
+    if (!RegExp(r'^[0-9a-f]{40}$').hasMatch(token)) {
+      throw const FormatException('the pairing URI needs a token');
     }
     final addrs = (parsed.queryParameters['addr'] ?? '')
         .split(',')
