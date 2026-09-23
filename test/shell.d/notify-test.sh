@@ -80,6 +80,8 @@ check_eq "$?" "0" "devices delegates to omarchy-kids-devices"
 # --- enable / status / rekey / disable (needs cryptography) -----------------
 if python3 -c "import cryptography" >/dev/null 2>&1; then
   "$DEV" add --id d1 --name Phone --platform android --sign-pub "$KEY" --box-pub "$KEY" --apply >/dev/null
+  check_eq "$?" "0" "the fixture device pairs"
+  [[ -f "$CONF" ]] && pass "the fixture device file exists" || fail "the fixture device file is missing"
 
   out="$("$BIN" enable --apply 2>&1)"
   check_eq "$?" "0" "enable --apply mints the certificate"
@@ -112,13 +114,21 @@ PY
   check_eq "$(cksum <"$RKEY")" "$before" "enable again does not re-key"
   check_contains "$out2" "$recomputed" "enable again prints the existing fingerprint"
 
-  # re-key mints a new key and unpairs every device.
+  # re-key mints a new key, unpairs every device and stops the old listener.
+  check_contains "$("$BIN" enable --rekey 2>&1)" "would unpair every device" \
+    "enable --rekey previews the unpair (label claims)"
+  : >"$SYSTEMCTL_LOG"
   "$BIN" enable --rekey --apply >/dev/null 2>&1
   check_eq "$?" "0" "enable --rekey succeeds"
-  [[ ! -f "$CONF" ]] && pass "re-key unpairs every device" || fail "re-key left a paired device"
+  [[ -f "$CONF" ]] && fail "re-key left a paired device" || pass "re-key unpairs every device"
+  check_contains "$(cat "$SYSTEMCTL_LOG")" "stop omarchy-kids-relayd.service" \
+    "re-key stops the relay so no old-cert listener is left"
 
   # pair again, then disable revokes it, removes the cert and stops the relay.
+  : >"$SYSTEMCTL_LOG"
   "$DEV" add --id d1 --name Phone --platform android --sign-pub "$KEY" --box-pub "$KEY" --apply >/dev/null
+  check_eq "$?" "0" "the fixture device pairs again"
+  [[ -f "$CONF" ]] && pass "the fixture device file exists again" || fail "the second fixture device is missing"
   check_contains "$("$BIN" status)" "notifications: on" "status reports on after enable"
   "$BIN" disable --apply >/dev/null 2>&1
   check_eq "$?" "0" "disable --apply succeeds"

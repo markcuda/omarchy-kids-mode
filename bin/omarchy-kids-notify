@@ -47,6 +47,10 @@ EOF
 
 enabled() { [[ -f "$CERT" && -f "$KEY" ]]; }
 
+# A running relay loaded the old certificate at start; stop it so the next
+# on-demand start reads the new state (R-NOTIFY-1).
+stop_relay() { systemctl stop omarchy-kids-relayd.service >/dev/null 2>&1 || true; }
+
 revoke_all() { # apply -- revoke every paired device, or print what would be revoked
   local apply="$1"
   "$DEVICES_BIN" list --json 2>/dev/null | jq -r '.[].id' 2>/dev/null | while read -r id; do
@@ -101,6 +105,10 @@ cmd_enable() {
   if ((DRY_RUN)); then
     echo "  [dry-run] would mint $CERT and $KEY for '$host' (port $PORT)"
     echo "  [dry-run] cert 0644, key 0640 root:omarchy-parents, dir 0750 root:omarchy-parents"
+    if ((rekey)) && enabled; then
+      echo "  [dry-run] would unpair every device (re-keying)"
+      revoke_all 0
+    fi
     return 0
   fi
   if ! getent group omarchy-parents >/dev/null 2>&1; then
@@ -119,6 +127,7 @@ cmd_enable() {
   chmod 0644 "$CERT"
   chmod 0640 "$KEY"
   chgrp omarchy-parents "$CERT" "$KEY" 2>/dev/null || true
+  if ((rekey)); then stop_relay; fi
   echo "omarchy-kids-notify: notifications on (relay port $PORT)"
   echo "  host:        $host"
   echo "  fingerprint: $fingerprint"
@@ -134,7 +143,7 @@ cmd_disable() {
     rmdir "$RELAY_DIR" 2>/dev/null || true
     # A running relay holds the certificate in memory; stop it so no listener
     # exists while notifications are off (R-NOTIFY-1).
-    systemctl stop omarchy-kids-relayd.service >/dev/null 2>&1 || true
+    stop_relay
     echo "omarchy-kids-notify: notifications off; certificate removed"
   else
     echo "  [dry-run] would remove $CERT and $KEY"
