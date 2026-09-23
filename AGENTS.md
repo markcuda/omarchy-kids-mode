@@ -11,6 +11,41 @@ per kid, the parent never restricted, one parent password. This is the one repos
 project; the design records are `CORE.md`, `SPOKES.md` and `research/` here, plus
 `PATH-SANDBOX.md`/`PATH-INSTALLER.md` on the `two-paths` branch.
 
+## Default workflow (owner, 2026-09-22)
+
+Every piece of work runs this loop, in this repo:
+
+1. **Spec and tickets — fable 5.1 at high effort.** Use the Matt Pocock engineering skills
+   (`/to-spec`, then `/to-tickets`); the spec is the source of truth and each ticket is
+   tracer-bullet sized with its blockers declared. See "Agent skills" below.
+2. **Implement — DS4.1 flash (deepseek).** `/implement` drives `/tdd` at the pre-agreed seams:
+   small, deliberate steps, red-green-refactor, one vertical slice at a time.
+3. **Review — fable 5.1.** `/code-review` on both axes (Standards and Spec). Root,
+   trust-boundary and security changes also get the independent adversarial review this file
+   already requires. Nothing commits unreviewed, and the implementer never reviews its own work.
+
+Then `test/all`, then the VM live checks the spec names (rule 11). This is the default; say so in a
+ticket if you deviate.
+
+## Agent skills
+
+The Matt Pocock engineering skills are installed globally (`npx skills@latest add mattpocock/skills
+-a opencode -a claude-code -g`, 38 skills; `/setup-matt-pocock-skills` was run once for this repo).
+
+### Issue tracker
+
+Issues and specs are GitHub issues in `markcuda/omarchy-kids-mode`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`.
+See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context; `SPEC.md`, `AGENTS.md` and `docs/*.md` are the domain model today. See
+`docs/agents/domain.md`.
+
 ## Rules that override everything
 
 1. **The parent's account is never restricted** (spec I-1). If your change touches the parent's
