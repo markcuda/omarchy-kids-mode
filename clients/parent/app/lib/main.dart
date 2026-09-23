@@ -1,40 +1,50 @@
 // The parent app's Flutter UI over the omarchy_kids_parent logic (N-8). This is
-// the thin layer: the requests from the box, and Approve / Decline (with the
-// parent's reply chips) that sign and post through the Session. The logic, the
-// crypto and the transport live in the package beside it and are tested there.
+// the thin layer: pairing, the requests from the box, and Approve / Decline (with
+// the parent's reply chips) that sign and post through the Session. The logic,
+// the crypto and the transport live in the package beside it and are tested there.
 
+import 'dart:io' show Platform;
+
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:omarchy_kids_parent/relay_client.dart';
 import 'package:omarchy_kids_parent/session.dart';
 import 'package:omarchy_kids_parent/state_model.dart';
+import 'package:omarchy_kids_parent/transport.dart';
 
-void main() => runApp(KidsApp(session: null));
+import 'app_root.dart';
 
-/// `session` is injected: the app builds one after pairing, a test passes a fake.
-class KidsApp extends StatelessWidget {
-  final Session? session;
-  const KidsApp({super.key, required this.session});
-
-  @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'Kids Mode',
-        theme: ThemeData(colorSchemeSeed: const Color(0xff8fb8ff), useMaterial3: true),
-        home: session == null ? const _NeedsPairing() : HomeScreen(session: session!),
-      );
-}
-
-class _NeedsPairing extends StatelessWidget {
-  const _NeedsPairing();
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Kids Mode')),
-        body: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Text('Pair with the computer first (show its pairing code).', textAlign: TextAlign.center),
-          ),
+void main() {
+  // In-memory for now: the platform keystore is the remaining work, and until it
+  // exists the pairing does not survive a restart. The screen says so (I-6).
+  final keystore = InMemoryKeystore();
+  runApp(
+    MaterialApp(
+      title: 'Kids Mode',
+      theme: ThemeData(colorSchemeSeed: const Color(0xff8fb8ff), useMaterial3: true),
+      home: AppRoot(
+        keystore: keystore,
+        connect: ({
+          required String host,
+          required int port,
+          required String pin,
+          required String deviceId,
+          required SimpleKeyPair keyPair,
+        }) =>
+            KidsRelayClient(
+          host: host,
+          port: port,
+          pinnedSpki: pin,
+          deviceId: deviceId,
+          keyPair: keyPair,
         ),
-      );
+        name: const String.fromEnvironment('KIDS_DEVICE_NAME', defaultValue: 'parent-phone'),
+        platform: Platform.operatingSystem,
+        storageNote:
+            'This build remembers the pairing only while it runs; the platform keystore is still to come.',
+      ),
+    ),
+  );
 }
 
 /// The parent's requests, newest first.

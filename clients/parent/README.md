@@ -18,12 +18,16 @@ A phone or desktop app that pairs with the box, shows a kid's requests with **Ap
   approve/decline with a reply) over an injectable transport.
 - `lib/pairing.dart`: the pairing flow (generate the device's sign and box keys once, send the proof
   and never the token, remember the paired box).
+- `lib/app_link.dart`: what the pairing screen needs from the box's output — the URI inside a
+  terminal paste, a fingerprint typed with spaces or colons, and bare addresses turned into
+  host + port (the relay's port is fixed at 8447).
 
-`clients/parent/app` is the Flutter UI over it: the request list and a request screen with Approve,
-Decline and the reply chips, widget-tested against a fake relay. Pairing from the UI, the device
-list, the platform keystore (the package ships the interface and an in-memory one; the platform
-implementation does not exist yet), the platform notification plumbing and the store builds remain —
-there is nothing to install on a phone yet.
+`clients/parent/app` is the Flutter UI over it: pairing (paste the code the computer printed, type
+the fingerprint it showed, compare, pair), the request list, and a request screen with Approve,
+Decline and the reply chips — all widget-tested against a fake relay and a fake connection. The
+device list, the platform keystore (the package ships the interface and an in-memory one; the
+platform implementation does not exist yet, so a pairing does not survive a restart), the platform
+notification plumbing and the store builds remain — there is nothing to install on a phone yet.
 
 The crypto and the wire frames are proven against the shared vectors byte for byte; the reply chips,
 the pairing-URI parser and the SPKI pin are pinned by the package's own tests (the pin fixture,
@@ -113,5 +117,5 @@ app reproduces every signature. Run the generator after changing the scheme and 
 
 ## What this does not decide
 
-The UI beyond the request list, the platform keystore, the platform notification plumbing, and the
-store builds are the app's own work (N-8/N-12) and are not claimed.
+The device list, the platform keystore, the platform notification plumbing, and the store builds are
+the app's own work (N-8/N-12) and are not claimed.

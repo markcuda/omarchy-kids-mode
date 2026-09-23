@@ -74,14 +74,10 @@ class Session {
     int Function()? now,
     String Function()? newNonce,
   }) async {
-    var seed = await keystore.loadSignSeed();
-    if (seed == null) {
-      seed = _randomSeed();
-      await keystore.saveSignSeed(seed);
-    }
+    final keyPair = await loadSignKeyPair(keystore);
     return Session(
       deviceId: deviceId,
-      keyPair: await Ed25519().newKeyPairFromSeed(seed),
+      keyPair: keyPair,
       relay: relay,
       now: now,
       newNonce: newNonce,
@@ -128,6 +124,18 @@ class Session {
 }
 
 final Random _random = Random.secure();
+
+/// The device's signing key pair: from the keystore, or generated once and
+/// saved. The pairing screen and the session both use this, so the key the box
+/// is told about and the key the session signs with are always the same one.
+Future<SimpleKeyPair> loadSignKeyPair(Keystore keystore) async {
+  var seed = await keystore.loadSignSeed();
+  if (seed == null) {
+    seed = _randomSeed();
+    await keystore.saveSignSeed(seed);
+  }
+  return Ed25519().newKeyPairFromSeed(seed);
+}
 
 List<int> _randomSeed() => List<int>.generate(32, (_) => _random.nextInt(256));
 
