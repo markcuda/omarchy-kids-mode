@@ -70,7 +70,11 @@ void main() {
     expect(frame.values.contains(uri.token), isFalse, reason: 'the token never travels');
     expect(result.deviceId, 'd-9');
     expect(result.addresses, ['192.168.1.5', '100.64.0.7']);
-    expect(PairingResult.decode(await keystore.loadPaired())?.deviceId, 'd-9');
+    // The stored pin is the one the transport pins, not a caller's string.
+    expect(result.pin, relay.pinnedFingerprint);
+    final stored = PairingResult.decode(await keystore.loadPaired());
+    expect(stored?.deviceId, 'd-9');
+    expect(stored?.pin, relay.pinnedFingerprint);
   });
 
   test('the device keys are generated once and reused', () async {
