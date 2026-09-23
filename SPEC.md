@@ -394,7 +394,7 @@ States: `idle` (no active session) → `counting` (Active=yes, unlocked) → `wa
 ## Appendix H. Notification wire and file formats
 
 ```text
-POST /v1/pair                       {code, name, platform, sign_pub, box_pub, proof} -> {device_id, relay_sign_pub, scopes, kids}
+POST /v1/pair                       {id, name, platform, sign_pub, box_pub, proof} -> {reply}
 GET  /v1/state                      -> {kids:[...], requests:[open...], recent:[decided<24h]}
 GET  /v1/events                     SSE: state, request.opened, request.decided, kid.live, kid.paused, kid.timeup
 POST /v1/requests/<id>/decision     {decision: approve|decline, reply?, signed:{...}}
@@ -403,6 +403,6 @@ POST /v1/kids/<account>/end         {signed:{...}}               scope act
 GET  /v1/avatars/<id>.svg
 ```
 
-Authenticated requests carry `X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<sig>`; state changes carry an inner `signed` object that root re-verifies (R-NOTIFY-4).
+Authenticated requests carry `X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<sig>`; state changes carry an inner `signed` object that root re-verifies (R-NOTIFY-4). `proof` on `/v1/pair` is `HMAC-SHA256(token, sign_pub|box_pub|name)`, so the pairing token never travels; the `grant`/`end` routes are the ACT frame's and are not built yet.
 
 Files: `/etc/omarchy-kids/devices/<id>.conf` (root `0600`: name, platform, both public keys, `paired_at`, `paired_by`, scopes, `label_for_kids`); `/run/omarchy-kids/pairing/<id>` (root `0600`, single-use, expiring); `/var/lib/omarchy-kids/<kid>/decisions/<id>.json` (`0640 root:kid`, the result the kid's session reads).

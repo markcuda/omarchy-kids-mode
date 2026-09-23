@@ -30,8 +30,10 @@ Every request except the TLS handshake and `/v1/pair` must be signed by a paired
 the headers `X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<base64 Ed25519 signature>` cover the
 method, path, timestamp, nonce and body. The relay refuses an unsigned request, a bad signature, an
 unknown device, a stale timestamp (over five minutes) and a replayed nonce (a nonce seen in the last
-ten minutes is in `--nonce-ledger`). `/v1/pair` is pre-auth: there is no device yet, and the
-single-use token in its frame is the credential, verified by root (`docs/notify.md`).
+ten minutes is in `--nonce-ledger`). `/v1/pair` is pre-auth: there is no device yet, and the frame
+carries a proof (`HMAC-SHA256(token, sign_pub|box_pub|name)` — the pairing token itself never
+travels), verified by root; a refusal is returned generically, so an unauthenticated caller learns
+nothing from it (`docs/notify.md`).
 
 | Method and path | What it does |
 | --- | --- |
@@ -78,5 +80,5 @@ here is settable by a kid (`AGENTS.md`, "The trust boundary").
 `test/shell.d/relay-test.sh` covers `lib/relay.py` (state, decision forwarding, `is_needed`,
 `needs_stopping`) with no listener; `test/shell.d/relayd-test.sh` starts the relay on a scratch tree
 with a test certificate and drives it from a Python client over TLS (signed and unsigned reads, a
-replay, a stale timestamp, an unknown device, a decision POST to a stub authd, an SSE stream, a
-plaintext client, and the not-in-use stop with a stream held open).
+replay, a stale timestamp, an unknown device, a decision POST to a stub authd, a pair POST and a
+malformed one, an SSE stream, a plaintext client, and the not-in-use stop with a stream held open).

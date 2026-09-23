@@ -95,9 +95,9 @@ def signed_headers(path, body=b"", ts=None, nonce=None, device="d1", method="GET
 
 # --- stub authd for the decision POST -------------------------------------
 auth_sock = os.path.join(tmp, "auth.sock")
-def fake_authd(ready):
+def fake_authd(ready, reply=b"ok\n"):
     srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); srv.bind(auth_sock); srv.listen(1); srv.settimeout(10)
-    ready.set(); conn, _ = srv.accept(); conn.recv(4096); conn.sendall(b"ok\n"); conn.close(); srv.close()
+    ready.set(); conn, _ = srv.accept(); conn.recv(4096); conn.sendall(reply); conn.close(); srv.close()
 
 status = os.path.join(tmp, "status.json")
 queue = os.path.join(tmp, "queue"); os.makedirs(queue, exist_ok=True)
@@ -187,6 +187,18 @@ try:
     check(code == 200 and json.loads(body)["reply"] == "ok", "a pair POST is forwarded to authd")
     code, _ = request("POST", "/v1/pair", {}, b'{"id":"d2"}')
     check(code == 400, "a malformed pair POST is refused before authd")
+
+    # A refusal is generic: an unauthenticated caller gets no authd reason.
+    try:
+        os.unlink(auth_sock)
+    except OSError:
+        pass
+    ready3 = threading.Event()
+    threading.Thread(target=fake_authd, args=(ready3, b"no bad-proof\n"), daemon=True).start()
+    if not ready3.wait(10):
+        raise RuntimeError("the third authd stub did not start")
+    code, body = request("POST", "/v1/pair", {}, pair_frame.encode())
+    check(code == 403 and b"bad-proof" not in body, "a pair refusal is generic to the caller")
 
     # SSE: a signed /v1/events streams a state event
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
