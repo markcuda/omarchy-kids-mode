@@ -22,9 +22,7 @@ nonce so the vectors are reproducible; the real path uses fresh random ones.
 from __future__ import annotations
 
 import base64
-import json
 import os
-import sys
 
 try:
     from cryptography.hazmat.primitives import hashes, serialization
