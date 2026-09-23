@@ -1,0 +1,13 @@
+name: omarchy_kids_parent
+description: The parent app's signing, pairing and envelope code (N-8), proven against the box's shared vectors.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  cryptography: ^2.7.0
+
+dev_dependencies:
+  test: ^1.25.0

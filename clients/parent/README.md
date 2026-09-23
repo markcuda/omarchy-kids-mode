@@ -1,14 +1,20 @@
-# The parent app (not built yet)
+# The parent app
 
 A phone or desktop app that pairs with the box, shows a kid's requests with **Approve** and
-**Decline**, and signs the decision back. This directory holds the part that can be pinned down
-before the app exists: the **signing and wire contract**, as language-neutral vectors a Flutter (or
-any) implementation can be tested against.
+**Decline**, and signs the decision back.
 
-**Nothing here is built.** There is no Flutter project in this repository yet, so there is no app to
-install and nothing to scan the pairing QR. `AGENTS.md` rule 6 is why this file says so plainly. The
-box side is complete (`docs/notify.md`, `docs/relayd.md`, `docs/devices.md`); the app is the last
-piece.
+**The UI is not built.** This directory holds the half that can be pinned down before it: a pure-Dart
+package (`lib/notify_crypto.dart`) that reproduces the box's **signing, pairing and envelope** code
+byte for byte, proven against the shared vectors. There is no Flutter project and nothing to install
+on a phone yet, so there is nothing to scan a pairing QR with — `AGENTS.md` rule 6 is why this file
+says so plainly. The box side is complete (`docs/notify.md`, `docs/relayd.md`, `docs/devices.md`).
+
+```
+cd clients/parent && dart pub get && dart test      # the crypto tests, against the vectors
+```
+
+`test/shell.d/parent-app-test.sh` runs those in the suite where a Dart SDK is present, and skips
+without one.
 
 ## What the app must implement
 
