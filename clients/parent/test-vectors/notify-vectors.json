@@ -9,12 +9,12 @@
     "decision": "approve",
     "device_id": "d-vector",
     "nonce": "nonce-decision-1",
-    "reply": "Apr\u00e8s d\u00eener",
+    "reply": "Apr\u00e8s \"d\u00eener\" \\ ok",
     "request_id": "1000000001-kid-ada-time",
     "ts": 1758530400
   },
-  "decision_message_b64": "b21hcmNoeS1raWRzLWRlY2lzaW9uLXYxCnsiZGVjaXNpb24iOiJhcHByb3ZlIiwiZGV2aWNlX2lkIjoiZC12ZWN0b3IiLCJub25jZSI6Im5vbmNlLWRlY2lzaW9uLTEiLCJyZXBseSI6IkFwclx1MDBlOHMgZFx1MDBlZW5lciIsInJlcXVlc3RfaWQiOiIxMDAwMDAwMDAxLWtpZC1hZGEtdGltZSIsInRzIjoxNzU4NTMwNDAwfQ==",
-  "decision_signature_b64": "+9tEJ5mwUaDZNAz6EaKmNaxHe5hVGYSrb+mlY0X2e3lVWFMIRwWhut50+jAVI5mjEOvPwBwZmWGZ2k1Ig0CHAg==",
+  "decision_message_b64": "b21hcmNoeS1raWRzLWRlY2lzaW9uLXYxCnsiZGVjaXNpb24iOiJhcHByb3ZlIiwiZGV2aWNlX2lkIjoiZC12ZWN0b3IiLCJub25jZSI6Im5vbmNlLWRlY2lzaW9uLTEiLCJyZXBseSI6IkFwclx1MDBlOHMgXCJkXHUwMGVlbmVyXCIgXFwgb2siLCJyZXF1ZXN0X2lkIjoiMTAwMDAwMDAwMS1raWQtYWRhLXRpbWUiLCJ0cyI6MTc1ODUzMDQwMH0=",
+  "decision_signature_b64": "MUjqvHwUzD9kyDlzgBr7L1jV+qQzJP54gfIPHGq76be5Aj3iCCQUJP6KlL6EE2085v9C8YtWE5h3gAtcI56UCA==",
   "envelope": {
     "box_priv_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
     "box_pub_b64": "NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ=",

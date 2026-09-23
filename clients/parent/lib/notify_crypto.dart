@@ -62,7 +62,7 @@ void _writeString(StringBuffer out, String value) {
   for (final rune in value.runes) {
     switch (rune) {
       case 0x22:
-        out.write(r'\u0022');
+        out.write(r'\"');
       case 0x5c:
         out.write(r'\\');
       case 0x08:

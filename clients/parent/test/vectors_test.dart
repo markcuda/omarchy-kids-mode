@@ -21,7 +21,31 @@ void main() {
     final want = base64.decode(doc['decision_message_b64'] as String);
     // the recorded message is the context plus the canonical record
     expect(message, equals(want.sublist(signContext.length)));
-    expect(utf8.decode(message), contains(r'Apr\u00e8s d\u00eener'));
+    expect(utf8.decode(message), contains(r'Apr\u00e8s \"d\u00eener\" \\ ok'));
+  });
+
+  test('signing with the seed reproduces the recorded signatures', () async {
+    final decision = (doc['decision'] as Map).cast<String, Object?>();
+    final request = (doc['request'] as Map).cast<String, dynamic>();
+    final keyPair = await signKeyFromSeed(_hexToBytes(doc['sign_seed_hex'] as String));
+    expect(
+      await signBase64(keyPair, decisionMessage(decision)),
+      equals(doc['decision_signature_b64'] as String),
+    );
+    expect(
+      await signBase64(
+        keyPair,
+        requestMessage(
+          deviceId: request['device_id'] as String,
+          ts: request['ts'] as int,
+          nonce: request['nonce'] as String,
+          method: request['method'] as String,
+          path: request['path'] as String,
+          body: base64.decode(request['body_b64'] as String),
+        ),
+      ),
+      equals(doc['request_signature_b64'] as String),
+    );
   });
 
   test('the decision signature verifies over the canonical record', () async {

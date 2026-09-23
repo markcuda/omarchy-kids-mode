@@ -49,9 +49,10 @@ def build():
         "device_id": "d-vector",
         "request_id": "1000000001-kid-ada-time",
         "decision": "approve",
-        # Non-ASCII on purpose: the canonical form escapes it (\uXXXX), which is
-        # the trap a raw-UTF-8 encoder falls into.
-        "reply": "Après dîner",
+        # Non-ASCII, a quote and a backslash on purpose: the canonical form
+        # escapes them (\uXXXX, \", \\), the traps a raw encoder and a naive
+        # quote handler fall into.
+        "reply": 'Après "dîner" \\ ok',
         "ts": 1758530400,
         "nonce": "nonce-decision-1",
     }
