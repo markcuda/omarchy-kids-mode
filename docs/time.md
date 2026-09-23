@@ -188,9 +188,8 @@ alone.
   and their minutes-left and paused state (`share/bar/KidsModule.qml`), and the notification relay
   (`lib/relay.py`) reads the live and pairing state from it — the open-request half it takes from
   the queue directory. It is written best-effort; a missing document reads as nothing, and nothing
-  inspects `generated_at`, so a stale one is shown as current. What the bar does **not** read from
-  it is the open-request count — it runs `omarchy-kids-ask list` for that (`docs/bar.md`); moving the
-  count into status.json is R-BAR-3's amended shape and is not built on this branch.
+  inspects `generated_at`, so a stale one is shown as current. The bar widget reads the live kids and
+  their minutes from it, and its badge reads the open-request count (`open_requests`) — no subprocess.
 
 Each of these is a real gap, not an oversight — I-6 says don't claim a control that isn't there,
 so this list is exactly the set of R-TIME/R-ASK behaviors this issue's "Done when" doesn't cover.

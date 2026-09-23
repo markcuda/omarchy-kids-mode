@@ -28,6 +28,11 @@ function extractFunction(source, name) {
   throw new Error(`unterminated ${name}`);
 }
 
+// R-BAR-3 as amended: the badge count comes from status.json, not a subprocess.
+assert.ok(qml.includes('data.open_requests'), 'the widget must read open_requests from status.json');
+assert.ok(!qml.includes('askBin'), 'the widget must not keep the now-unused ask command path');
+assert.ok(!/omarchy-kids-ask[\"\']?\s*,\s*[\"\']list/.test(qml), 'the widget must not run ask list for the count');
+
 const makeMenuRows = extractFunction(qml, 'makeMenuRows');
 const model = vm.runInNewContext(`(${makeMenuRows})`);
 const rows = model([

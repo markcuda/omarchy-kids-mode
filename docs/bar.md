@@ -133,10 +133,9 @@ consent, both ways).
   data that isn't there).
 - One dot per kid whose row has `"live": true`: the initial letter of the kid's slug (`kid-ada` →
   `A`), colored differently while `"paused": true`.
-- A badge with the count of open requests, refreshed every 30s by running `omarchy-kids-ask list`
-  in a `Process` and counting its output lines (that command prints a plain aligned table or the
-  literal line `omarchy-kids-ask: no open requests` -- there is no `--json`/`--count` mode, so this
-  counts lines rather than adding a new output mode to a command another issue owns).
+- A badge with the count of open requests, read from `status.json`'s `open_requests` (R-BAR-3 as
+  amended): the ledger publishes it, so the widget runs no subprocess and needs no 30-second
+  polling (it follows the file). The requests row opens the panel, which lists them.)
 - Click or Enter opens a menu: two-line "Give 15 more" and "End session" rows for each live kid,
   with the affected kid's status and minutes on the detail line (R-BAR-1's
   "Ada · paused · 32 min"), then "Open requests" and "Open Kids Mode".
