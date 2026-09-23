@@ -275,6 +275,16 @@ check_status "$(grep -c 'DECIDE ' "$AUTH_LOG")" "1" "the non-frame message is sk
 "$BIN" poll --apply >/dev/null 2>&1
 check_status "$(grep -c 'DECIDE ' "$AUTH_LOG")" "0" "an already-seen reply is not forwarded again"
 
+# A new message in the SAME second as the cursor: the cursor must keep the ids it
+# already carried there, or the first frame is carried again on the next poll.
+python3 -c 'import json,sys; print(json.dumps({"id":"m1","time":1000,"message":sys.argv[1]})); print(json.dumps({"id":"m2","time":1000,"message":"not a frame"})); print(json.dumps({"id":"m3","time":1000,"message":sys.argv[2]}))' "$frame" '{"record":{"request_id":"r2"},"signature":"sig2"}' >"$GETBODY"
+: >"$AUTH_LOG"
+"$BIN" poll --apply >/dev/null 2>&1
+check_status "$(grep -c 'DECIDE ' "$AUTH_LOG")" "1" "a new same-second frame is carried once"
+: >"$AUTH_LOG"
+"$BIN" poll --apply >/dev/null 2>&1
+check_status "$(grep -c 'DECIDE ' "$AUTH_LOG")" "0" "the earlier same-second frame is not carried again"
+
 # A non-frame or a boundary frame is never carried twice (since=<time> is
 # inclusive), and a non-ntfy config is a no-op, not a crash.
 printf 'transport=gotify\nurl=http://127.0.0.1:%s\ntopic=test\ntoken=tok\n' "$PORT" >"$ETC/courier.conf"
