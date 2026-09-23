@@ -17,7 +17,9 @@ The signed bytes are fixed here and documented so the client (N-8) can match:
                                                 separators=(",", ":")).encode()
 
 `record` is exactly: {device_id, request_id, decision, ts, nonce} plus an
-optional {reply}; the signature is base64 of the Ed25519 signature.
+optional {reply}; the signature is base64 of the Ed25519 signature. json.dumps
+keeps its ensure_ascii default, so a non-ASCII reply is escaped as \\uXXXX -- the
+client (N-8) must canonicalize the same way.
 """
 
 import base64
@@ -55,12 +57,18 @@ class LedgerError(Exception):
     """The nonce ledger exists but cannot be trusted; fail closed."""
 
 
+class UnsafePath(Exception):
+    """A path exists but is a symlink, not a regular file, or foreign-owned."""
+
+
 def _open_regular(path):
-    """Path's text if it is a root-owned regular file, else None.
+    """Path's text if it is a root-owned regular file.
 
     os.open with O_NOFOLLOW (never a planted symlink) then fstat on the fd
     (never a check-then-open race), the shape lib/data.py already uses.
-    FileNotFoundError -> None; any other OSError propagates for the caller.
+    FileNotFoundError -> None (the only "absent" answer); a symlink, a
+    non-regular file or a foreign owner raises UnsafePath; other OSError
+    propagates.
     """
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
@@ -68,10 +76,8 @@ def _open_regular(path):
         return None
     try:
         st = os.fstat(fd)
-        if not stat.S_ISREG(st.st_mode):
-            return None
-        if os.geteuid() == 0 and st.st_uid != 0:
-            return None
+        if not stat.S_ISREG(st.st_mode) or (os.geteuid() == 0 and st.st_uid != 0):
+            raise UnsafePath(path)
         with os.fdopen(fd, "r", encoding="utf-8", errors="replace") as f:
             fd = -1
             return f.read()
@@ -89,15 +95,18 @@ def load_device(etc_dir, device_id):
         return None
     try:
         text = _open_regular(base + ".conf")
-    except OSError:
+    except (UnsafePath, OSError):
         return None
     if text is None:
         return None
-    record = {"id": device_id}
+    record = {}
     for line in text.splitlines():
         key, sep, value = line.partition("=")
         if sep:
             record[key.strip()] = value.strip()
+    # The validated id wins: a conf's own `id=` line must never change the
+    # record id the nonce is keyed on.
+    record["id"] = device_id
     for field in DEVICE_FIELDS:
         if not record.get(field):
             return None
@@ -153,9 +162,11 @@ class NonceLedger:
     def _read_file(self):
         try:
             text = _open_regular(self.path)
+        except UnsafePath as exc:
+            raise LedgerError(f"unsafe ledger {self.path}") from exc
         except OSError as exc:
             raise LedgerError(f"cannot read {self.path}: {exc}") from exc
-        if not text:
+        if text is None:  # absent: nothing seen yet
             return {}
         try:
             loaded = json.loads(text)

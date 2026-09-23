@@ -130,6 +130,16 @@ rec11, sig11 = signed(nonce="n11")
 ok, reason = verify(rec11, sig11, ledger="broken.json")
 check(not ok and reason == "ledger-unreadable", "a damaged ledger fails closed")
 
+# a symlinked or zero-byte ledger also fails closed (not "nothing seen yet")
+os.symlink(os.path.join(tmp, "l.json"), os.path.join(tmp, "link.json"))
+rec_s, sig_s = signed(nonce="n-sym")
+ok, reason = verify(rec_s, sig_s, ledger="link.json")
+check(not ok and reason == "ledger-unreadable", "a symlinked ledger fails closed")
+open(os.path.join(tmp, "empty.json"), "w").close()
+rec_e, sig_e = signed(nonce="n-empty")
+ok, reason = verify(rec_e, sig_e, ledger="empty.json")
+check(not ok and reason == "ledger-unreadable", "a zero-byte ledger fails closed")
+
 # crypto absent fails closed
 devices.HAVE_CRYPTO = False
 ok, reason = verify(rec11, sig11)
