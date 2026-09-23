@@ -102,8 +102,8 @@ state="$(vmroot "jq -r '.state' /var/lib/omarchy-kids/queue/$REQ_ID.json 2>/dev/
 
 shot 70-notify-approve || fail "screenshot failed"
 
-# Leave the box as it was: revoke the device and remove the certificate. What stays: the request
-# record (decided, harmless) and its .lock, /root/live-device.key, /tmp/notify-client.py, and
+# Leave the box as it was: drop the request record and its lock, then revoke the device and
+# remove the certificate. What stays: /root/live-device.key, /tmp/notify-client.py, and
 # <id>.conf.revoked (by design -- a revoked id stays revoked).
 vmroot "rm -f /var/lib/omarchy-kids/queue/$REQ_ID.json /var/lib/omarchy-kids/queue/$REQ_ID.json.lock" >/dev/null 2>&1
 vmroot "omarchy-kids-notify disable --apply" >/dev/null 2>&1 &&
