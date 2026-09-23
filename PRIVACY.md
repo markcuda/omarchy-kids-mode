@@ -65,10 +65,10 @@ the machine, and only then.
   requests ("Ada asked for 15 more minutes"), and the outcomes — nothing else, and never a
   transcript, a keystroke or a screenshot.
 - Nothing reaches the project, any vendor, or any third party. There is no telemetry and no account.
-- **Not built on this branch:** the parent app (a phone or another computer) and the away-from-home
-  courier. When they ship, the app will show a request when open (no background push on iOS in the
-  first version), and the courier will talk only to a server the parent typed and only while they
-  have turned it on. The desktop notifier on the parent's own computer **is** built and works today.
+- **Not built on this branch:** the parent app (a phone or another computer). When it ships it will
+  show a request when open (no background push on iOS in the first version). The desktop notifier on
+  the parent's own computer **is** built and works today, and so is the box-side away courier
+  (`docs/courier.md`): it talks only to the server the parent typed, and only while they turned it on.
 
 Turning notifications off revokes every paired device and removes the certificate
 (`omarchy-kids-notify disable`).

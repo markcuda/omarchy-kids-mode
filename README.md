@@ -79,7 +79,7 @@ verified live, what is open, and which decisions are still waiting.
 
 ## What is here now
 
-Thirty-one `bin/omarchy-kids*` commands, each with a `--help`; most have their own
+Thirty-three `bin/omarchy-kids*` commands, each with a `--help`; most have their own
 `docs/<command>.md`, the rest documented alongside a related command's page instead. The shared
 shell under `lib/`; the data, policies, Hyprland levels, and Quickshell surfaces under `share/`;
 and `test/all`. [`AGENTS.md`](AGENTS.md)'s Layout table is the map.

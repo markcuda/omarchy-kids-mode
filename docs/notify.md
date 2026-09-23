@@ -102,6 +102,13 @@ refresh plus the grace plus the 5-second poll, about 95 seconds), and the tick b
 tick; a start that races the relay's own exit is harmless, since the next tick starts it again if it
 is still needed.
 
+## Away, over the internet (N-11)
+
+Beyond the LAN, `bin/omarchy-kids-relay-courier` is the only process that may reach out (R-NOTIFY-8):
+it seals the state for each paired device and posts it to the one ntfy or Gotify topic the parent
+named, and carries the app's signed decisions back to `authd`. It is off until the parent configures
+it (`omarchy-kids-notify mailbox`) and sends nothing while notifications are off. See `docs/courier.md`.
+
 ## The desktop notifier (N-9)
 
 On the Omarchy box the parent is told through their own desktop, not a device: `bin/omarchy-kids-notify-watch`

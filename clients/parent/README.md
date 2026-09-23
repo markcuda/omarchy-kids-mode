@@ -52,7 +52,8 @@ minutes (`docs/devices.md`).
 
 ## Away envelopes (N-11)
 
-Away-from-home delivery is not built, but its format is pinned so the app can implement it: a state
+The box-side away delivery **is** built (`docs/courier.md`); the app that opens the envelope is not,
+so the format is pinned for it: a state
 document is sealed for one device with a fresh ephemeral X25519 key, ECDH against the device's
 `box_pub`, HKDF-SHA256 (salt `omarchy-kids-envelope-v1`, info `x25519-chacha20poly1305`), then
 ChaCha20-Poly1305 with a random 12-byte nonce and the device id as associated data. The envelope is
