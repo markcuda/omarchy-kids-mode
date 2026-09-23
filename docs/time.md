@@ -184,10 +184,11 @@ alone.
 - **The pre-reader full-screen countdown** (R-TIME-3's second half: "plus a full-screen countdown
   for pre-readers with icon and sound"). `share/time/toast.qml` is the same for every band today.
 - **Pushing lights-out for tonight only** (R-TIME-4). `grant` only ever extends the *budget*.
-- **`/run/omarchy-kids/status.json` readers** (R-BAR-3): the bar widget reads the open-request count
-  for its badge, and the notification relay (`lib/relay.py`) reads live/request/pairing state in
-  `is_needed`. It is written best-effort, so a reader treats a missing or stale document as "nothing
-  to show", never as an error.
+- **`/run/omarchy-kids/status.json` reader** (R-BAR-3): the notification relay (`lib/relay.py`)
+  reads live/request/pairing state in `is_needed`. It is written best-effort, so the relay treats a
+  missing or stale document as "nothing to show". The bar widget does not read it yet — it gets the
+  open-request count by running `omarchy-kids-ask list` (`docs/bar.md`); moving that to status.json
+  is R-BAR-3's amended shape and is not built on this branch.
 
 Each of these is a real gap, not an oversight — I-6 says don't claim a control that isn't there,
 so this list is exactly the set of R-TIME/R-ASK behaviors this issue's "Done when" doesn't cover.
