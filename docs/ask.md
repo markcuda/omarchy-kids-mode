@@ -75,11 +75,14 @@ previews what it would collect; `--apply` (or `DRY_RUN=0`) does it for real. Run
 whenever a parent is looking, and by `systemd/omarchy-kids-ask-collect.timer` every minute
 otherwise (see below).
 
-### `list [<kid>]` — root
+### `list [<kid>]` — root or `omarchy-parents`
 
 Every **open** (undecided) request, all kids or one, one line each: id, kid, kind, what (minutes
 for `time`), and when it was asked. Nothing decided ever shows here — that's the whole point of a
-one-keystroke panel. The command requires `is_root` before reading the queue.
+one-keystroke panel. The command reads the queue through the queue's own permissions, not a check:
+`/var/lib/omarchy-kids/queue/` is `0750 root:omarchy-parents` and records are `0640` (R-NOTIFY-7), so
+root and the parent may read it and a kid's `list` is refused with a clear message. `approve` and
+`decline` remain root-only entry points.
 
 ### `approve <id>` / `decline <id>` — root
 

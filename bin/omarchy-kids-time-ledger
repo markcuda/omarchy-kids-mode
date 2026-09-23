@@ -167,6 +167,7 @@ lock_kid_sessions() {
 # write_status_json — R-BAR-3, best-effort: never fails the tick.
 write_status_json() {
   local now day weekend hm kid remaining paused live rows tmp active
+  local queue_dir requests_json="[]"
   tmp=
   now="$(time_root_now)"
   hm="$(time_hm "$now")"
@@ -195,11 +196,23 @@ write_status_json() {
       return 0
     fi
   done < <(kids_list "$KIDS_DIR")
+  # R-NOTIFY-7 (R-BAR-3): the open-request count and list travel with the same
+  # root-written document the parent already reads, so the bar badge never runs
+  # a command. A missing or garbled record must not fail the tick -- fall back
+  # to none rather than write a partial document.
+  queue_dir="$TIME_VARLIB/queue"
+  if [[ -d "$queue_dir" ]]; then
+    requests_json="$(jq -s '[.[] | select(.state == "open")]' "$queue_dir"/*.json 2>/dev/null)" ||
+      requests_json="[]"
+    [[ -n "$requests_json" ]] || requests_json="[]"
+  fi
   tmp="$(mktemp "$RUN_DIR/status.json.XXXXXX")" || {
     rm -f "$rows"
     return 0
   }
-  if ! jq -s '{generated_at: (now | todate), kids: .}' "$rows" >"$tmp" 2>/dev/null ||
+  if ! jq -s --argjson requests "$requests_json" \
+    '{generated_at: (now | todate), open_requests: ($requests | length), requests: $requests, kids: .}' \
+    "$rows" >"$tmp" 2>/dev/null ||
     ! getent group omarchy-parents >/dev/null 2>&1 ||
     ! chown root "$tmp" 2>/dev/null ||
     ! chgrp omarchy-parents "$tmp" 2>/dev/null ||

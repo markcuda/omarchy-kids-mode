@@ -577,6 +577,19 @@ check_eq "$(kids_file_mtime "$TIME_STATE")" "$state_inode" "time infrastructure:
 check_eq "$(cat "$TIME_LEDGER_DIR/2026-09-04")" "$usage_before" "time infrastructure: usage ledger is unchanged"
 check_eq "$(cat "$TIME_LEDGER_DIR/2026-09-04.grant")" "$grant_before" "time infrastructure: grant ledger is unchanged"
 
+# --- request queue (R-NOTIFY-7) -------------------------------------------
+
+QUEUE_DIR="$SCRATCH_ROOT/var/lib/omarchy-kids/queue"
+mkdir -p "$QUEUE_DIR"
+printf '%s\n' '{"kid":"kid-ada","kind":"time","what":"15","minutes":15,"asked_at":1,"state":"open"}' \
+  >"$QUEUE_DIR/1-kid-ada-time.json"
+chmod 0777 "$QUEUE_DIR"
+chmod 0666 "$QUEUE_DIR/1-kid-ada-time.json"
+out="$($BIN)"
+check_status "$out" "queue" "fixed" "queue: broken modes report fixed (R-NOTIFY-7)"
+check_eq "$(kids_file_mode "$QUEUE_DIR")" "750" "queue: directory is mode 0750 (R-NOTIFY-7)"
+check_eq "$(kids_file_mode "$QUEUE_DIR/1-kid-ada-time.json")" "640" "queue: record is mode 0640 (R-NOTIFY-7)"
+
 # --- --quiet on an all-ok tree prints nothing ---------------------------
 
 out="$("$BIN" --quiet)"

@@ -35,9 +35,24 @@ enforces or could tamper with (I-3). The only people who can read it:
   screens) — the same numbers the ledger recorded, nothing added.
 - **The kid themselves**, on their own "What my grown-ups can see" screen at every login
   (R-DATA-3) — see "In kid words" below.
-- **Nobody else.** Nothing here is uploaded, synced, or reachable over the network. I-2: nothing
-  about a child leaves the machine, ever — no telemetry, no cloud account, no listener that a
-  request from outside could reach.
+- **Nobody else**, with one optional exception the parent controls: parental notifications (below).
+  Nothing here is uploaded, synced, or reachable over the network unless the parent turns that on.
+  I-2 as amended: nothing about a child leaves the machine except to a device the parent paired or a
+  server the parent named, and only when notifications are on.
+
+## Parental notifications (optional, off by default)
+
+When a parent turns notifications on, one local process (`omarchy-kids-relayd`) may listen on the
+home network so the parent's own paired devices can receive a kid's "Ask a parent" requests and
+answer them. It runs only while Kids Mode is in use, is fenced to the home network by its
+root-owned unit, and decides nothing itself — root verifies every answer. If the parent also names
+their own server (their own VPN, or a push server they run), one outbound process
+(`omarchy-kids-relay-courier`) may send end-to-end encrypted messages there, readable only by a
+device the parent paired. Nothing is ever sent to this project, its authors, or any push vendor; no
+usage data, browsing history, or app launches ever leave the machine — only the request fields the
+spec names. A platform push service may carry at most an empty wake-up signal, and only once the
+parent enables it. With notifications off, no Kids Mode process opens a network connection
+(`SPEC.md` I-2, R-NOTIFY; `docs/phase1/SPEC-AMENDMENT-notifications.md`).
 
 ## History, specifically
 
@@ -61,8 +76,8 @@ A) — not a paraphrase of it:
 > - The websites you visited — *only if that's turned on for you. If it's off, this says so and
 >   nobody sees it.*
 >
-> Nobody outside this computer ever sees any of this. Nobody reads what you type or takes
-> pictures of your screen.
+> Nobody outside this computer ever sees any of this, except your grown-up on their own phone or
+> computer if they've turned that on. Nobody reads what you type or takes pictures of your screen.
 
 ## If you think this is wrong
 

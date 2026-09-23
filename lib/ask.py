@@ -127,12 +127,14 @@ def load_record(path):
 
 def write_atomic(path, record):
     directory = os.path.dirname(path) or "."
-    os.makedirs(directory, mode=0o755, exist_ok=True)
+    os.makedirs(directory, mode=0o750, exist_ok=True)
     tmp = f"{path}.{os.getpid()}.tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(record, f, sort_keys=True)
         f.write("\n")
-    os.chmod(tmp, 0o644)
+    # 0640, not 0644: the queue is the parent's (R-NOTIFY-7); the kid's own
+    # outbox directory is 0700 and the kid never reads records back.
+    os.chmod(tmp, 0o640)
     os.replace(tmp, path)
 
 

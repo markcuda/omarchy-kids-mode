@@ -358,6 +358,13 @@ check_contains "$(cat "$QUEUE_DIR/1000000001-kid-ada-time.json")" '"state": "ope
 check_contains "$(cat "$QUEUE_DIR/1000000003-kid-bo-site.json")" '"kid": "kid-bo"' \
   "S2: the kid field is re-derived from the outbox owner, not read from the file"
 
+# R-NOTIFY-7: the queue and its records are the parent's, not the world's.
+check_eq "$(kids_file_mode "$QUEUE_DIR")" "750" "queue directory is 0750 (R-NOTIFY-7)"
+for f in "$QUEUE_DIR"/*.json; do
+  [[ -e "$f" ]] || continue
+  check_eq "$(kids_file_mode "$f")" "640" "queue record $(basename "$f") is 0640 (R-NOTIFY-7)"
+done
+
 # S3: the path-like kid never reached the queue, and root created nothing.
 [[ -e "$QUEUE_DIR/1000000006-evil-site.json" ]] &&
   fail "S3: a record with a path-like kid must never be queued" ||
@@ -469,11 +476,20 @@ EOF
 "$BIN" collect --apply >/dev/null
 time_stub_gone
 
-# Root-only review commands reject a kid before touching sibling requests.
-for subcommand in list approve decline; do
+# approve/decline are root-only entry points; `list` reads through the queue's
+# own permissions (R-NOTIFY-7): it works for whoever can read the queue and
+# refuses when they cannot. The test user owns the scratch queue, so it works;
+# an unreadable queue (a kid's case) is refused.
+for subcommand in approve decline; do
   "$BIN" "$subcommand" no-such-id >/dev/null 2>&1
   check_eq "$?" 1 "$subcommand: refuses a non-root caller at entry"
 done
+"$BIN" list >/dev/null 2>&1
+check_eq "$?" 0 "list: works when the queue is readable (the test user owns it)"
+chmod 0000 "$QUEUE_DIR"
+"$BIN" list >/dev/null 2>&1
+check_eq "$?" 1 "list: refuses when the queue is not readable (a kid's case, R-NOTIFY-7)"
+chmod 0750 "$QUEUE_DIR"
 export KIDS_TEST_UID=0
 
 # =====================================================================
