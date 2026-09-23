@@ -86,6 +86,8 @@ check_contains "$("$BIN" list --json)" '"platform": "android"' "list --json is m
 check_contains "$(cat "$DEV")" "scopes=decide" "scopes --apply rewrites the scopes"
 "$BIN" rename d1 "Ada's phone" --apply >/dev/null
 check_contains "$(cat "$DEV")" "name=Ada's phone" "rename --apply rewrites the name"
+"$BIN" rename d1 'A|B&C\D' --apply >/dev/null
+check_contains "$(cat "$DEV")" 'name=A|B&C\D' "rename stores a name with |, & and \ verbatim (no sed injection)"
 "$BIN" revoke d1 --apply >/dev/null
 [[ -f "$DEV.revoked" ]] && pass "revoke renames the conf to .revoked" || fail "revoke did not rename"
 [[ -f "$DEV" ]] && fail "revoke must remove the live conf" || pass "revoke removes the live conf"

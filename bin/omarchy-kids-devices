@@ -90,16 +90,22 @@ write_device() {
   mv -f "$tmp" "$path"
 }
 
-# rewrite_field ID SEDEXPR -- atomic in-place field rewrite for a device conf.
+# rewrite_field ID KEY VALUE -- atomic field rewrite for a device conf. Rebuilt
+# line by line, never through sed: a parent's chosen name may contain `|`, `&` or
+# `\`, which a sed replacement would mangle (and `&` would inject the match).
 rewrite_field() {
-  local id="$1" expr="$2" path tmp
+  local id="$1" key="$2" value="$3" path tmp line
   path="$(device_path "$id")"
   if ((DRY_RUN)); then
-    echo "  [dry-run] would rewrite $path ($expr)"
+    echo "  [dry-run] would set $key on $path"
     return 0
   fi
   tmp="$(mktemp "$DEVICES_DIR/.$id.XXXXXX")"
-  sed "$expr" "$path" >"$tmp"
+  while IFS= read -r line; do
+    [[ "$line" == "$key="* ]] && continue
+    printf '%s\n' "$line" >>"$tmp"
+  done <"$path"
+  printf '%s=%s\n' "$key" "$value" >>"$tmp"
   chmod 0600 "$tmp"
   mv -f "$tmp" "$path"
 }
@@ -213,7 +219,7 @@ cmd_rename() {
   valid_id "$id" || die "rename: bad id"
   valid_text "$name" || die "rename: name must be printable, at most 64 characters"
   [[ -f "$(device_path "$id")" ]] || die "rename: no such device '$id'"
-  rewrite_field "$id" "s|^name=.*|name=$name|"
+  rewrite_field "$id" name "$name"
   publish
   echo "omarchy-kids-devices: renamed $id to '$name'"
 }
@@ -225,7 +231,7 @@ cmd_scopes() {
   valid_id "$id" || die "scopes: bad id"
   valid_scopes "$scopes" || die "scopes: must be a comma list of ${VALID_SCOPES[*]}"
   [[ -f "$(device_path "$id")" ]] || die "scopes: no such device '$id'"
-  rewrite_field "$id" "s|^scopes=.*|scopes=$scopes|"
+  rewrite_field "$id" scopes "$scopes"
   publish
   echo "omarchy-kids-devices: $id scopes=$scopes"
 }
