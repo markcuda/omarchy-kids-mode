@@ -87,3 +87,36 @@ portal's wrong-password path.
 file overlaps, the real pairwise conflicts and how each resolves (all supersets or stale branches),
 the eight branches that are safe to skip, and the two stale ones. Read it before opening the gate.
 
+## 9. Owner decisions (2026-09-22, second round)
+
+The owner answered items 1-8, and directed the notification workstream. Recorded here so the loop
+can build without asking again.
+
+- **Item 1 — approved.** Collapse to two kid modes. Mode labels in the parent UI are **"Simple
+  Computer"** (grid) and **"Full Desktop"** (desktop). Take the amendment's recommended defaults
+  (numeric `level` key kept; a 6-8 Grid kid's browser stays a grid tile).
+- **Item 3 — direction set.** Add-ons: a feed (RSS-like) parents subscribe to, simple install
+  commands, distribution and re-approval as the survey's recorded decisions say, and **all
+  surfaces** (tiles, sites, themes, kid screen, panel). Parents get **one native Quickshell
+  management UI and full terminal parity** for everything. A spec is drafted before code.
+- **Item 4 — approved, revised.** Parent-pinned **Favorites** row at the top, automatic **Recents**
+  row at the bottom of the launcher (presentation only; the root-owned manifest stays authoritative).
+  This reverses the earlier "not adopted" note.
+- **Item 5 — approved.** The time tick must **fail closed** on an unreadable policy value (`grace`,
+  reason `policy-invalid`), never fail open.
+- **Item 6 — revised.** At Level 3, **do not unbind the terminal**. Keep the terminal and the file
+  manager, scoped to the kid's own files, and instead **block the commands** a parent does not want
+  a kid running (`bash`, `sudo`, …) as a per-kid **setup** choice, enforced by root.
+- **Item 7 — approved.** Wire `dns` and `sites`, band-level only, with the docs saying so.
+- **Item 8 — resolved by the owner as "have fable 5.1 determine the best implementation".** The
+  fable-5.1 design (`docs/research/2026-09-22-parental-notifications.md`) resolves it as **option 3**
+  (queue `0750 root:omarchy-parents`, records `0640`, `list` reads for the group, the ledger
+  publishes the count into `status.json`, the badge reads that), and grows it into the full parental
+  notification system (N-0..N-13) — local `relayd`, a Flutter parent app for mobile/macOS/Windows, an
+  on-box Omarchy notifier, LAN-first with opt-in tailnet and mailbox transports, root verifying
+  device signatures. The spec amendment (N-0) is written in that document; it amends I-2.
+
+**Standing build philosophy (owner, 2026-09-22), now in `AGENTS.md`:** user experience reigns
+supreme and it must "just work" always; lean into the most robust, full-featured build, no holds
+barred — both under I-1..I-11, never over them.
+
