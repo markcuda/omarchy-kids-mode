@@ -164,7 +164,11 @@ screen_notify() {
         run_priv "$NOTIFY_BIN" disable --apply
         ;;
       pair) notify_pair_show ;;
-      devices) screen_notify_devices ;;
+      devices)
+        screen_notify_devices
+        rc=$?
+        ((rc == 130)) && return 130
+        ;;
       back) return 0 ;;
     esac
   done

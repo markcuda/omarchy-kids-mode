@@ -674,6 +674,17 @@ check_contains "$(cat "$ARGV_LOG")" "review show kid-ada minecraft" \
   "Check reads the review through sudo"
 check_contains "$out" "Exec=minecraft" "Check shows the desktop Exec"
 
+# Ctrl+C on the Check card leaves the whole panel (130), like every nested card.
+answers="$(answers_file reviews "kid-ada:minecraft" check @ctrlc yes)"
+run_panel "$answers" --apply
+check_status "$PANEL_STATUS" 130 "Ctrl+C on the Check card leaves the panel"
+
+# A removed app says so.
+printf '{"kid":"kid-ada","id":"minecraft","was":"aaa","now":"missing","state":"open"}\n' >"$REVIEW_CONF"
+answers="$(answers_file reviews back quit)"
+run_panel "$answers" --dry-run
+check_contains "$out" "was removed" "a removed app is phrased as removed"
+
 rm -f "$REVIEW_CONF"
 answers="$(answers_file reviews back quit)"
 run_panel "$answers" --dry-run

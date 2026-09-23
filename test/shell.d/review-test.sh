@@ -201,6 +201,10 @@ check_contains "$out" "no open review" "show says when there is no review"
 # --- neither approve nor deny with a bad call -----------------------------
 "$BIN" approve kid-ada >/dev/null 2>&1
 check_status "$?" 2 "approve with no id is refused"
+"$BIN" approve 'bad kid' minecraft >/dev/null 2>&1
+check_status "$?" 2 "approve with a bad kid is refused"
+"$BIN" show kid-ada '../../etc' >/dev/null 2>&1
+check_status "$?" 2 "show with a bad app id is refused"
 "$BIN" bogus >/dev/null 2>&1
 check_status "$?" 2 "an unknown command is refused"
 

@@ -64,7 +64,8 @@ Usage: omarchy-kids-panel [--dry-run] [--apply] [--help]
 Everything after the first kid: Home lists every kid with today's minutes and open requests; per
 kid, screen time, web, apps, desktop level, password, and remove; a Requests screen to approve or
 decline what a kid has asked for; a Notifications screen to turn device notifications on or off and
-pair a device; and a read-only Machine safety report.
+pair a device; a Reviews screen for an approved app whose surface changed; and a read-only Machine
+safety report.
 
 Keyboard only: Esc (or "Quit"/"Back") leaves a screen, Ctrl+C leaves the
 whole panel with nothing further changed.

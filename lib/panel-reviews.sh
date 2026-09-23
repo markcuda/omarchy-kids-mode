@@ -78,10 +78,16 @@ screen_review_detail() { # KID ID PATH
   local rc=$?
   ((rc == 130)) && return 130
   ((rc == 0)) || return 0
+  local crc
   case "$TUI_REPLY" in
     approve) run_priv "$REVIEW_BIN" approve "$kid" "$id" --apply ;;
     deny) run_priv "$REVIEW_BIN" deny "$kid" "$id" --apply ;;
-    check) screen_review_check "$kid" "$id" ;;
+    check)
+      # Return Ctrl+C from the Check card up, or the panel would stay.
+      screen_review_check "$kid" "$id"
+      crc=$?
+      ((crc == 130)) && return 130
+      ;;
   esac
   return 0
 }

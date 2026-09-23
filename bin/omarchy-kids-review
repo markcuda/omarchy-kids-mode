@@ -89,6 +89,11 @@ print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$path"
 
 require_jq() { command -v jq >/dev/null 2>&1 || die "jq is required"; }
 
+# The account and launcher id shapes (docs/apps.md); checked here too, so every
+# caller -- the panel, the bar, a notification callback -- gets one refusal.
+valid_kid() { [[ "$1" =~ ^[a-z_][a-z0-9_-]*$ ]]; }
+valid_app() { [[ "$1" =~ ^[a-z0-9_-]+$ ]]; }
+
 # _chgrp_parents PATH -- best-effort group omarchy-parents, so the parent's tools
 # (the panel, a future review screen) read what root writes, like every other
 # omarchy-kids store.
@@ -256,6 +261,8 @@ cmd_show() {
   require_jq
   local kid="${1:-}" id="${2:-}"
   [[ -n "$kid" && -n "$id" ]] || die "show: needs <kid> <id>"
+  valid_kid "$kid" || die "show: bad kid '$kid'"
+  valid_app "$id" || die "show: bad app id '$id'"
   local file
   file="$(open_review_path "$kid" "$id")"
   if [[ ! -f "$file" ]]; then
@@ -282,6 +289,8 @@ cmd_approve() {
   require_jq
   local kid="${1:-}" id="${2:-}"
   [[ -n "$kid" && -n "$id" ]] || die "approve: needs <kid> <id>"
+  valid_kid "$kid" || die "approve: bad kid '$kid'"
+  valid_app "$id" || die "approve: bad app id '$id'"
   local fp
   fp="$(fingerprint "$id")"
   if ((DRY_RUN)); then
@@ -297,6 +306,8 @@ cmd_deny() {
   require_jq
   local kid="${1:-}" id="${2:-}"
   [[ -n "$kid" && -n "$id" ]] || die "deny: needs <kid> <id>"
+  valid_kid "$kid" || die "deny: bad kid '$kid'"
+  valid_app "$id" || die "deny: bad app id '$id'"
   if ((DRY_RUN)); then
     echo "  [dry-run] would hide $id for $kid and clear its review"
     return 0
