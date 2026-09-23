@@ -71,6 +71,9 @@ omarchy-kids-bar enable [--apply]
 omarchy-kids-bar disable [--apply]
 omarchy-kids-bar status
 omarchy-kids-bar grant <kid> <minutes>
+omarchy-kids-bar end <kid>
+omarchy-kids-bar approve <id>
+omarchy-kids-bar decline <id>
 ```
 
 `enable`:
@@ -96,7 +99,10 @@ as `omarchy plugin disable` on a first-party widget (`shell/README.md`: "leaving
 available to add again"). Idempotent: disabling an already-disabled bar is a no-op.
 
 `grant <kid> <minutes>` is what the widget's own "give N more minutes" menu row runs (see
-"Actions" below) -- it is not something a parent normally types by hand.
+"Actions" below) -- it is not something a parent normally types by hand. `end <kid>`, `approve
+<id>` and `decline <id>` are the same shape for the widget's "end session" row and for the
+desktop notification's Approve/Decline actions (N-9, R-NOTIFY): a floating terminal running
+`sudo omarchy-kids-<time|exit|ask>` with the parent's own password.
 
 DRY_RUN=1 is the default for `enable`/`disable` (AGENTS.md rule 8); `--apply` (or `DRY_RUN=0`)
 makes them real. `grant` always runs for real -- it's a parent clicking a button in their own

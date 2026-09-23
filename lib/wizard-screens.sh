@@ -336,6 +336,7 @@ screen_summary() {
       "Wi-Fi|$(mark_if_changed wifi "$(friendly_wifi_mode "$WIFI_MODE")")"
       "Starter apps|$(mark_if_changed allowlist "$apps_desc")"
       "Password|$password_line"
+      "Notifications|Your phone can get $DISPLAY_NAME's requests — pair it from the panel, after this."
     )
     adv_summary_extra_rows rows # Advanced-only cells, shown once actually changed
     # One card: build the rows, then let the chooser draw them once. A separate

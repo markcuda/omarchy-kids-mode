@@ -279,6 +279,36 @@ check "$(grep -c loginctl "$LOGFILE3")" "0" "end never calls loginctl directly"
 out="$("$BAR" end 2>&1)"
 check_status "$?" 2 "end with no kid is refused"
 
+# --- approve / decline: N-9's desktop-notification actions, the same
+#     terminal/sudo shape, through omarchy-kids-ask (R-NOTIFY) ------------
+kids_stub "$TMP/tree" omarchy-kids-ask <<'EOF'
+#!/bin/bash
+echo "ASK $*" >>"$LOGFILE"
+exit 0
+EOF
+
+LOGFILE4="$TMP/approve.log"
+: >"$LOGFILE4"
+out="$(PATH="$STUBS4:$BASE_PATH" LOGFILE="$LOGFILE4" \
+  "$BAR" approve 1000000001-kid-ada-time </dev/null 2>&1)"
+check_status "$?" 0 "approve exits 0 when the terminal/sudo/ask chain succeeds"
+check_contains "$(cat "$LOGFILE4")" "SUDO " "approve ran the command through sudo"
+check_contains "$(cat "$LOGFILE4")" "ASK approve 1000000001-kid-ada-time --apply" \
+  "sudo ran omarchy-kids-ask approve <id> --apply"
+
+LOGFILE5="$TMP/decline.log"
+: >"$LOGFILE5"
+out="$(PATH="$STUBS4:$BASE_PATH" LOGFILE="$LOGFILE5" \
+  "$BAR" decline 1000000002-kid-ada-app </dev/null 2>&1)"
+check_status "$?" 0 "decline exits 0 when the terminal/sudo/ask chain succeeds"
+check_contains "$(cat "$LOGFILE5")" "ASK decline 1000000002-kid-ada-app --apply" \
+  "sudo ran omarchy-kids-ask decline <id> --apply"
+
+out="$("$BAR" approve 2>&1)"
+check_status "$?" 2 "approve with no id is refused"
+out="$("$BAR" decline 2>&1)"
+check_status "$?" 2 "decline with no id is refused"
+
 # ===========================================================================
 # 5. /run/omarchy-kids/status.json (R-BAR-3): mode 0640, group
 #    omarchy-parents -- NOT world-readable 0644. SPEC.md R-BAR-3 says

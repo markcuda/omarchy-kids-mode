@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Add or remove the parent's Kids Mode bar widget
-# omarchy:args=<enable|disable|status|grant <kid> <minutes>|end <kid>> [--apply]
+# omarchy:args=<enable|disable|status|grant <kid> <minutes>|end <kid>|approve <id>|decline <id>> [--apply]
 # The parent's bar widget: per-kid minutes and requests from /run/omarchy-kids/status.json (SPEC.md R-BAR).
 # See docs/bar.md for the full design, every env var, and the terminal-fallback rationale.
 set -euo pipefail
@@ -17,6 +17,7 @@ OMARCHY_PATH="${OMARCHY_PATH:-/usr/share/omarchy}"
 DEFAULTS_SHELL_JSON="$OMARCHY_PATH/config/omarchy/shell.json"
 TIME_BIN="$(kids_bin time "$DIR")"
 EXIT_BIN="$(kids_bin exit "$DIR")"
+ASK_BIN="$(kids_bin ask "$DIR")"
 
 PLUGIN_ID="omarchy-kids.bar"
 CONFIG_DIR="$HOME_DIR/.config/omarchy"
@@ -50,6 +51,10 @@ Usage: omarchy-kids-bar enable [--apply]
   end <kid>       Open a terminal to end <kid>'s session right now (root,
                   your own login password) -- what the widget's "end
                   session" menu row runs (R-BAR-2).
+  approve <id>    Open a terminal to approve request <id> (root, your own
+                  login password) -- what a desktop notification's Approve
+                  action runs (N-9, R-NOTIFY).
+  decline <id>    The same for a notification's Decline action.
   --apply         Make enable/disable real (default is DRY_RUN=1, prints
                   the plan -- AGENTS.md rule 8).
   -h, --help      Show this help and exit.
@@ -211,6 +216,25 @@ cmd_end() {
     sudo "$EXIT_BIN" --finish --kid "$kid"
 }
 
+# cmd_approve / cmd_decline — the desktop notification's Approve/Decline
+# actions (N-9, R-NOTIFY). Same path as grant/end: a floating terminal
+# and the parent's own sudo prompt, because this is the parent's session
+# and needs no paired device. `--apply` writes; the ask command's own
+# validation guards the id.
+cmd_approve() {
+  local id="${1:-}"
+  [[ -n "$id" ]] || die "approve: needs <request-id> (see --help)"
+  open_terminal_running "Approved." "approving the request failed" \
+    sudo "$ASK_BIN" approve "$id" --apply
+}
+
+cmd_decline() {
+  local id="${1:-}"
+  [[ -n "$id" ]] || die "decline: needs <request-id> (see --help)"
+  open_terminal_running "Declined." "declining the request failed" \
+    sudo "$ASK_BIN" decline "$id" --apply
+}
+
 [[ $# -ge 1 ]] || {
   usage >&2
   exit 2
@@ -248,5 +272,7 @@ case "$cmd" in
   status) cmd_status ;;
   grant) cmd_grant "${args[@]+"${args[@]}"}" ;;
   end) cmd_end "${args[@]+"${args[@]}"}" ;;
+  approve) cmd_approve "${args[@]+"${args[@]}"}" ;;
+  decline) cmd_decline "${args[@]+"${args[@]}"}" ;;
   *) die "unknown command: '$cmd' (see --help)" ;;
 esac
