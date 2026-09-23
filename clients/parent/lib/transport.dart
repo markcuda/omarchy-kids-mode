@@ -6,6 +6,11 @@
 //
 // Pure functions over the certificate's DER: no sockets here, so they are
 // testable against a fixture whose fingerprint the box's own generator printed.
+//
+// Wiring note: a badCertificateCallback only fires for a certificate the
+// platform store would reject, so the client must use a SecurityContext with no
+// trusted roots (or check the peer certificate on every connection) for the pin
+// to actually decide.
 
 import 'dart:convert';
 import 'dart:typed_data';

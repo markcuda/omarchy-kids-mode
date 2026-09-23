@@ -23,9 +23,16 @@ void main() {
   test('a matching pin verifies, a wrong one does not', () {
     expect(spkiMatches(der, fixtureSpki), isTrue);
     expect(spkiMatches(der, fixtureSpki.toUpperCase()), isTrue, reason: 'hex case is irrelevant');
-    expect(spkiMatches(der, '${fixtureSpki.substring(0, 63)}0'), isFalse);
+    final flipped = fixtureSpki.endsWith('0') ? '${fixtureSpki.substring(0, 63)}1' : '${fixtureSpki.substring(0, 63)}0';
+    expect(spkiMatches(der, flipped), isFalse, reason: 'one nibble wrong must not match');
     expect(spkiMatches(der, 'nope'), isFalse, reason: 'a short pin must not match');
-    expect(spkiMatches(der, 'aa:${fixtureSpki.substring(3)}'), isFalse, reason: 'colons are stripped, the bytes still differ');
+    // Colon-separated (the form a parent may copy) still matches; a same-length
+    // wrong value does not.
+    final colons = [
+      for (var i = 0; i < fixtureSpki.length; i += 2) fixtureSpki.substring(i, i + 2),
+    ].join(':');
+    expect(spkiMatches(der, colons), isTrue, reason: 'colons are separators, not bytes');
+    expect(spkiMatches(der, colons.replaceRange(0, 2, 'aa')), isFalse, reason: 'a same-length wrong pin must not match');
   });
 
   test('a non-certificate is refused', () {

@@ -25,7 +25,9 @@ fi
 # Tie the Dart pin fixture to the box: lib/cert.py's own SPKI of the committed
 # certificate must equal the constant the Dart pinning test uses, so a change to
 # either side fails here. Skips where python-cryptography is absent.
-if python3 -c "import cryptography" >/dev/null 2>&1; then
+if ! python3 -c "import cryptography" >/dev/null 2>&1; then
+  echo "SKIP parent-app-test.sh: python-cryptography not installed — the pin tie to lib/cert.py did not run"
+else
   want="$(python3 -c "import sys; sys.path.insert(0, '$DIR/lib'); import cert; print(cert.spki_fingerprint('$APP/test/fixtures/relay-cert.pem'))" 2>/dev/null)"
   got="$(sed -n "s/^const String fixtureSpki = '\(.*\)';$/\1/p" "$APP/test/pinning_test.dart")"
   if [[ -n "$want" && "$want" == "$got" ]]; then
