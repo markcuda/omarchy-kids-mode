@@ -20,10 +20,10 @@ The signed bytes are fixed here and documented so the client (N-8) can match:
 
 import base64
 import binascii
+import fcntl
 import json
 import os
 import re
-import threading
 
 try:
     from cryptography.exceptions import InvalidSignature
@@ -93,33 +93,40 @@ class NonceLedger:
     """A seen-nonce set with a TTL, persisted to one root-owned file.
 
     A replay is refused because a nonce is written once and remembered for
-    NONCE_TTL_SECONDS, and a decision record is write-once besides.
+    NONCE_TTL_SECONDS, and a decision record is write-once besides. The
+    read-modify-write holds an flock on a sibling lock file, so it is safe even
+    across separate processes (the CLI runs one per invocation).
     """
 
     def __init__(self, path, ttl=NONCE_TTL_SECONDS):
         self.path = path
+        self.lockpath = path + ".lock"
         self.ttl = ttl
-        self._lock = threading.Lock()
-        self._seen = {}
-        text = _safe_read(path)
-        if text:
+
+    def _read_file(self):
+        text = _safe_read(self.path)
+        if not text:
+            return {}
+        try:
+            loaded = json.loads(text)
+        except ValueError:
+            return {}
+        if not isinstance(loaded, dict):
+            return {}
+        out = {}
+        for key, value in loaded.items():
             try:
-                loaded = json.loads(text)
-                if isinstance(loaded, dict):
-                    self._seen = {k: int(v) for k, v in loaded.items()}
-            except (ValueError, TypeError):
-                self._seen = {}
+                out[str(key)] = int(value)
+            except (TypeError, ValueError):
+                continue
+        return out
 
-    def _prune(self, now):
-        for nonce in [n for n, t in self._seen.items() if now - t > self.ttl]:
-            del self._seen[nonce]
-
-    def _save(self):
+    def _write_file(self, seen):
         directory = os.path.dirname(self.path) or "."
         os.makedirs(directory, mode=0o750, exist_ok=True)
         tmp = f"{self.path}.{os.getpid()}.tmp"
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(self._seen, f, sort_keys=True)
+            json.dump(seen, f, sort_keys=True)
         os.chmod(tmp, 0o600)
         os.replace(tmp, self.path)
 
@@ -127,13 +134,21 @@ class NonceLedger:
         """True and records the nonce, or False if it was already seen."""
         if not isinstance(nonce, str) or not nonce or len(nonce) > 128:
             return False
-        with self._lock:
-            self._prune(now)
-            if nonce in self._seen:
-                return False
-            self._seen[nonce] = now
-            self._save()
-            return True
+        directory = os.path.dirname(self.path) or "."
+        os.makedirs(directory, mode=0o750, exist_ok=True)
+        with open(self.lockpath, "w", encoding="utf-8") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                seen = self._read_file()
+                for key in [n for n, t in seen.items() if now - t > self.ttl]:
+                    del seen[key]
+                if nonce in seen:
+                    return False
+                seen[nonce] = now
+                self._write_file(seen)
+                return True
+            finally:
+                fcntl.flock(lock, fcntl.LOCK_UN)
 
 
 def verify_decision(etc_dir, ledger, record, signature_b64, now, scope="decide"):
