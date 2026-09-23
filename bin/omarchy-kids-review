@@ -89,8 +89,9 @@ print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$path"
 
 require_jq() { command -v jq >/dev/null 2>&1 || die "jq is required"; }
 
-# The account and launcher id shapes (docs/apps.md); checked here too, so every
-# caller -- the panel, the bar, a notification callback -- gets one refusal.
+# The account shape and the launcher-id shape omarchy-kids-conf enforces on
+# apps.extra; checked here too, so every caller -- the panel, the bar, a
+# notification callback -- gets one refusal.
 valid_kid() { [[ "$1" =~ ^[a-z_][a-z0-9_-]*$ ]]; }
 valid_app() { [[ "$1" =~ ^[a-z0-9_-]+$ ]]; }
 
@@ -147,8 +148,8 @@ baseline_drop() {
   mv -f "$tmp" "$file"
 }
 
-# A kid and an app id may both contain '-' and '.', so the review file name is
-# the account plus a hash of the id: distinct reviews cannot collide.
+# A kid and an app id may both contain '-', so the review file name is the
+# account plus a hash of the id: distinct reviews cannot collide.
 open_review_path() {
   printf '%s/%s.%s.json' "$OPEN_DIR" "$1" \
     "$("$KIDS_PY" -c 'import hashlib, sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])' "$2")"
