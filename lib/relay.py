@@ -15,8 +15,10 @@ import glob
 import json
 import os
 import socket
+import time
 
 QUEUE_SUFFIX = ".json"
+RECENT_SECONDS = 24 * 3600
 
 
 def _read_json(path):
@@ -28,32 +30,47 @@ def _read_json(path):
     return data if isinstance(data, dict) else None
 
 
-def build_state(status_path, queue_dir):
-    """The /v1/state document. Best-effort: a missing source is an empty list."""
+def _request_row(path, record):
+    return {
+        "id": os.path.basename(path)[: -len(QUEUE_SUFFIX)],
+        "kid": record.get("kid", ""),
+        "kind": record.get("kind", ""),
+        "what": record.get("what", ""),
+        "minutes": record.get("minutes"),
+        "asked_at": record.get("asked_at"),
+    }
+
+
+def build_state(status_path, queue_dir, now=None):
+    """The /v1/state document (Appendix H): kids, open requests, recent decisions.
+
+    Best-effort: a missing source is an empty list.
+    """
+    now = time.time() if now is None else now
     status = _read_json(status_path) or {}
     kids = status.get("kids")
     if not isinstance(kids, list):
         kids = []
     requests = []
+    recent = []
     if queue_dir:
         for path in sorted(glob.glob(os.path.join(queue_dir, "*" + QUEUE_SUFFIX))):
             record = _read_json(path)
-            if record is None or record.get("state") != "open":
+            if record is None:
                 continue
-            requests.append(
-                {
-                    "id": os.path.basename(path)[: -len(QUEUE_SUFFIX)],
-                    "kid": record.get("kid", ""),
-                    "kind": record.get("kind", ""),
-                    "what": record.get("what", ""),
-                    "minutes": record.get("minutes"),
-                    "asked_at": record.get("asked_at"),
-                }
-            )
+            if record.get("state") == "open":
+                requests.append(_request_row(path, record))
+                continue
+            decided = record.get("decided_at")
+            if isinstance(decided, int) and not isinstance(decided, bool) and now - decided <= RECENT_SECONDS:
+                row = _request_row(path, record)
+                row["state"] = record.get("state", "")
+                recent.append(row)
     return {
         "generated_at": status.get("generated_at"),
         "kids": kids,
         "requests": requests,
+        "recent": recent,
     }
 
 

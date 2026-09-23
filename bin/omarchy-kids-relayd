@@ -29,7 +29,8 @@ import time
 
 MAX_REQUEST = 64 * 1024
 MAX_HEADERS = 64
-HEARTBEAT = 25
+MAX_CONNECTIONS = 32
+CLIENT_TIMEOUT = 30
 
 RE_AVATAR = re.compile(r"\A[A-Za-z0-9_-]{1,32}\Z")
 
@@ -81,23 +82,40 @@ class Relay:
         return method, path, headers, body[:length]
 
     def authorized(self, method, path, headers, body):
+        # Appendix H's shape: X-Kids-Device plus X-Kids-Sig: <ts>.<nonce>.<sig>.
         device = headers.get("x-kids-device", "")
-        ts_raw = headers.get("x-kids-ts", "")
-        nonce = headers.get("x-kids-nonce", "")
-        signature = headers.get("x-kids-sig", "")
+        parts = headers.get("x-kids-sig", "").split(".")
+        if len(parts) != 3:
+            return False, "malformed"
+        ts_raw, nonce, signature = parts
         try:
             ts = int(ts_raw)
         except ValueError:
             return False, "stale-timestamp"
         return self.devices.verify_request(
-            self.args.etc, self.ledger, device, ts, nonce, method, path, body, signature, int(time.time())
+            self.args.devices_json,
+            self.ledger,
+            device,
+            ts,
+            nonce,
+            method,
+            path,
+            body,
+            signature,
+            int(time.time()),
         )
 
     async def handle(self, reader, writer):
+        if self.connected >= MAX_CONNECTIONS:
+            try:
+                writer.close()
+            except OSError:
+                pass
+            return
         self.connected += 1
         try:
-            await self.serve(reader, writer)
-        except (asyncio.IncompleteReadError, ConnectionError, ValueError):
+            await asyncio.wait_for(self.serve(reader, writer), timeout=CLIENT_TIMEOUT)
+        except (TimeoutError, asyncio.IncompleteReadError, ConnectionError, ValueError):
             pass
         except Exception:  # noqa: BLE001 -- never let a client kill the relay
             pass
@@ -132,7 +150,12 @@ class Relay:
             return await self.serve_avatar(writer, name)
 
         if path.startswith("/v1/requests/") and path.endswith("/decision") and method == "POST":
-            # The body is the DECIDE frame; authd verifies it and applies it.
+            # The relay authenticates the caller too (an unsigned POST is
+            # refused here, not only at authd); the body is the DECIDE frame,
+            # which authd re-verifies and applies.
+            ok, reason = self.authorized(method, path, headers, body)
+            if not ok:
+                return await self.reply(writer, 403, {"error": reason})
             try:
                 frame = json.loads(body)
             except ValueError:
@@ -145,7 +168,8 @@ class Relay:
                 or "signature" not in frame
             ):
                 return await self.reply(writer, 400, {"error": "malformed"})
-            reply = self.relay.forward_decide(self.args.auth_sock, body)
+            loop = asyncio.get_running_loop()
+            reply = await loop.run_in_executor(None, self.relay.forward_decide, self.args.auth_sock, body)
             if reply is None:
                 return await self.reply(writer, 502, {"error": "authd unreachable"})
             return await self.reply(writer, 200 if reply == "ok" else 403, {"reply": reply})
@@ -190,7 +214,7 @@ def parse_args(argv):
     parser.add_argument("--port", type=int, default=8447)
     parser.add_argument("--cert", required=True, help="TLS certificate (PEM)")
     parser.add_argument("--key", required=True, help="TLS private key (PEM)")
-    parser.add_argument("--etc", default="/etc/omarchy-kids")
+    parser.add_argument("--devices-json", default="/run/omarchy-kids/devices.json")
     parser.add_argument("--status", default="/run/omarchy-kids/status.json")
     parser.add_argument("--queue", default="/var/lib/omarchy-kids/queue")
     parser.add_argument("--auth-sock", default="/run/omarchy-kids/auth.sock")
@@ -216,7 +240,9 @@ async def main_async(argv) -> int:
         print(f"omarchy-kids-relayd: no usable certificate: {exc}", file=sys.stderr)
         return 1
     relay = Relay(args, relay_mod, devices_mod)
-    relay.server = await asyncio.start_server(relay.handle, args.bind, args.port, ssl=context)
+    relay.server = await asyncio.start_server(
+        relay.handle, args.bind, args.port, ssl=context, ssl_handshake_timeout=10
+    )
     print(f"omarchy-kids-relayd: listening on {args.bind}:{args.port}", file=sys.stderr)
     idler = asyncio.ensure_future(relay.expire_when_idle())
     try:

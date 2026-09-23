@@ -12,14 +12,17 @@ User=omarchy-kids-relay
 Group=omarchy-parents
 RuntimeDirectory=omarchy-kids/relay
 RuntimeDirectoryMode=0750
+# The read-nonce ledger lives here; preserve it across restarts so a captured
+# signed read cannot replay inside the skew window (R-NOTIFY-4).
+RuntimeDirectoryPreserve=yes
 ExecStart=/usr/bin/omarchy-kids-relayd --cert /etc/omarchy-kids/relay/cert.pem --key /etc/omarchy-kids/relay/key.pem
 # The one network listener this project ships. It is fenced to the home network
 # here, in the kernel, not in a label: every address outside loopback, link-local
 # and multicast, and the private ranges, is dropped (R-NOTIFY-1). Read-only
-# access is exactly the root-written sources and the device registry.
+# access is exactly the queue and the public device copy it verifies against.
 IPAddressAllow=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 fc00::/7 fe80::/10
 IPAddressDeny=any
-ReadOnlyPaths=/etc/omarchy-kids /var/lib/omarchy-kids
+ReadOnlyPaths=/var/lib/omarchy-kids
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 NoNewPrivileges=yes
 ProtectSystem=strict

@@ -239,6 +239,30 @@ def verify_decision(etc_dir, ledger, record, signature_b64, now, scope="decide")
     return True, "ok"
 
 
+def load_published_device(devices_json, device_id):
+    """A device from the public /run copy (root 0644), for a non-root reader.
+
+    The relay is not root: it cannot open the 0600 registry confs, so it reads
+    the published array -- public keys only, which is all a verifier needs.
+    """
+    text = _open_regular(devices_json)
+    if text is None:
+        return None
+    try:
+        published = json.loads(text)
+    except ValueError:
+        return None
+    if not isinstance(published, list):
+        return None
+    for record in published:
+        if not isinstance(record, dict) or record.get("id") != device_id:
+            continue
+        if not all(record.get(f) for f in ("id", "sign_pub", "box_pub", "scopes")):
+            return None
+        return record
+    return None
+
+
 def request_message(device_id, ts, nonce, method, path, body):
     """The exact bytes a paired device signs for a relay read (R-NOTIFY-4's
     shared secret, used for GETs as well as decisions)."""
@@ -254,12 +278,15 @@ def request_message(device_id, ts, nonce, method, path, body):
     return REQUEST_CONTEXT + json.dumps(obj, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
-def verify_request(etc_dir, ledger, device_id, ts, nonce, method, path, body, signature_b64, now):
-    """(ok, reason) for a signed relay request. Any paired device may read; the
-    signature and a fresh, single-use nonce are required, and it fails closed."""
+def verify_request(devices_json, ledger, device_id, ts, nonce, method, path, body, signature_b64, now):
+    """(ok, reason) for a signed relay request, read against the public copy.
+
+    Any paired device may read; the signature and a fresh, single-use nonce are
+    required, and it fails closed.
+    """
     if not HAVE_CRYPTO:
         return False, "crypto-unavailable"
-    device = load_device(etc_dir, device_id)
+    device = load_published_device(devices_json, device_id)
     if device is None:
         return False, "unknown-device"
     if not isinstance(ts, int) or isinstance(ts, bool) or abs(now - ts) > SKEW_SECONDS:
