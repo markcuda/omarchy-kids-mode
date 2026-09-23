@@ -67,8 +67,9 @@ After:
   its scope is refused.
 - R-NOTIFY-10 Every parent-facing label states what is enforced and what is not: the fence ("home
   network only"), the relay's inability to decide, and the platform limit on background delivery.
-- R-NOTIFY-11 `omarchy-kids-assert` re-asserts the relay unit, its fence and the devices directory
-  ownership on every update; `omarchy-kids-check` reports them.
+- R-NOTIFY-11 `omarchy-kids-assert` re-asserts the devices directory and conf modes and the units
+  list on every update; `omarchy-kids-check` reports them. Re-asserting the relay's address fence and
+  a check row for the relay and devices are not built on this branch.
 - R-NOTIFY-12 Update re-approval rides the same system: when an approved add-on's surface set or
   exec changes, the parent is notified and may approve, deny, or **check** it (Check shows what
   changed and decides nothing; it is not an onboard agent that assesses the change, `docs/review.md`).

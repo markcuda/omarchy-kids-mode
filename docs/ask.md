@@ -31,8 +31,8 @@ omarchy-kids-ask submit <kind> <what> [--minutes N]
 omarchy-kids-ask grant <kind> <what> [--minutes N]
 omarchy-kids-ask collect [--apply]
 omarchy-kids-ask list [<kid>]
-omarchy-kids-ask approve <id> [--apply]
-omarchy-kids-ask decline <id> [--apply]
+omarchy-kids-ask approve <id> [--reply TEXT] [--apply]
+omarchy-kids-ask decline <id> [--reply TEXT] [--apply]
 ```text
 
 ### Kid-side: `time` / `app` / `plugin` / `site`
@@ -84,7 +84,9 @@ one-keystroke panel. The command requires `is_root` before reading the queue.
 ### `approve <id>` / `decline <id>` — root
 
 `approve` performs the action (dispatch below), then marks the record `approved`, `by: "panel"`.
-`decline` marks it `declined`, `by: "panel"`, and never performs the action. Both refuse (exit 2)
+`decline` marks it `declined`, `by: "panel"`, and never performs the action. Both take an optional
+`--reply TEXT` (at most 80 printable characters), the line the app signed and the record then
+carries. Both refuse (exit 2)
 on an id that's already decided or doesn't exist — Appendix D's "approvers append, never rewrite
 history" is read here as *a record is decided exactly once*; nothing ever flips a decision back or
 edits `kid`/`kind`/`what`/`minutes`/`asked_at` after they're first written (`lib/ask.py decide`

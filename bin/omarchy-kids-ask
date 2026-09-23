@@ -56,8 +56,8 @@ Usage: omarchy-kids-ask time <minutes>
        omarchy-kids-ask apply-grant --kid K --kind KIND --what W [--minutes N] --apply
        omarchy-kids-ask collect [--apply]
        omarchy-kids-ask list [<kid>]
-       omarchy-kids-ask approve <id> [--by panel|keyboard|widget|device:<id>] [--apply]
-       omarchy-kids-ask decline <id> [--by panel|keyboard|widget|device:<id>] [--apply]
+       omarchy-kids-ask approve <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
+       omarchy-kids-ask decline <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
        omarchy-kids-ask --help
 
 time/app/plugin/site   Kid-side: opens share/ask/shell.qml, the "Ask a
@@ -546,7 +546,7 @@ cmd_approve() {
     apply_record "$path" || echo "omarchy-kids-ask: could not apply $id (see above) -- approving it anyway" >&2
     echo "omarchy-kids-ask: approved $id"
   else
-    echo "  [dry-run] would mark $id approved (by ${byargs[*]})"
+    echo "  [dry-run] would mark $id approved (by ${byargs[*]}${replyargs:+ reply \"${replyargs[1]}\"})"
   fi
 }
 
@@ -600,7 +600,7 @@ cmd_decline() {
     "$KIDS_PY" "$ASKPY" decide "$path" --state declined "${byargs[@]}" ${replyargs[@]+"${replyargs[@]}"}
     echo "omarchy-kids-ask: declined $id"
   else
-    echo "  [dry-run] would mark $id declined (by ${byargs[*]}), no action performed"
+    echo "  [dry-run] would mark $id declined (by ${byargs[*]}${replyargs:+ reply \"${replyargs[1]}\"}), no action performed"
   fi
 }
 
