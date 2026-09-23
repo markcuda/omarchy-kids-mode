@@ -81,14 +81,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 lines = [line for line in f.read().splitlines() if line.strip()]
         except OSError:
             lines = []
-        # Honour ntfy's `since`: a unix time; return only newer lines.
+        # Honour ntfy's `since=<time>`: inclusive, so the boundary line comes back
+        # (the courier must skip the ids it already carried).
         query = urllib.parse.urlsplit(self.path).query
         since = urllib.parse.parse_qs(query).get("since", [None])[0]
         if since and since.isdigit():
             kept = []
             for line in lines:
                 try:
-                    if (json.loads(line).get("time") or 0) > int(since):
+                    if (json.loads(line).get("time") or 0) >= int(since):
                         kept.append(line)
                 except ValueError:
                     continue
@@ -272,6 +273,19 @@ check_status "$(grep -c 'DECIDE ' "$AUTH_LOG")" "1" "the non-frame message is sk
 : >"$AUTH_LOG"
 "$BIN" poll --apply >/dev/null 2>&1
 check_status "$(grep -c 'DECIDE ' "$AUTH_LOG")" "0" "an already-seen reply is not forwarded again"
+
+# A non-frame or a boundary frame is never carried twice (since=<time> is
+# inclusive), and a non-ntfy config is a no-op, not a crash.
+printf 'transport=gotify\nurl=http://127.0.0.1:%s\ntopic=test\ntoken=tok\n' "$PORT" >"$ETC/courier.conf"
+check_contains "$("$BIN" poll --apply 2>&1)" "nothing to poll" "a gotify config polls nothing (not a crash)"
+printf 'transport=ntfy\nurl=http://127.0.0.1:%s\ntopic=test\nreply_topic=replies\n' "$PORT" >"$ETC/courier.conf"
+
+# An offline server does not traceback.
+printf 'transport=ntfy\nurl=https://127.0.0.1:1\ntopic=test\nreply_topic=replies\n' >"$ETC/courier.conf"
+out="$("$BIN" poll --apply 2>&1)"
+check_status "$?" 0 "an unreachable server is not a crash"
+check_contains "$out" "unreachable" "the unreachable server is reported"
+printf 'transport=ntfy\nurl=http://127.0.0.1:%s\ntopic=test\nreply_topic=replies\n' "$PORT" >"$ETC/courier.conf"
 
 # A dry run forwards nothing.
 rm -f "$ROOT/run/omarchy-kids/courier-cursor"

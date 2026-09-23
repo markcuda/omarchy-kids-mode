@@ -29,7 +29,7 @@ The envelope is **confidential but not authenticated**: any holder of a device's
 one, so the app must treat a sealed document as untrusted display data and never act on it — the
 decisions the app sends are signed separately and verified by root (Appendix H;
 `clients/parent/README.md`). `omarchy-kids-relay-courier poll --apply` is the way back: it fetches the replies (an ntfy topic's
-JSON stream, or a Gotify app's messages) and carries each signed decision frame to `authd`'s DECIDE
+JSON stream) and carries each signed decision frame to `authd`'s DECIDE
 socket, which verifies the device's signature and applies it — the courier never decides (R-NOTIFY-4).
 A message that is not a decision frame is skipped, and and the cursor (the newest message time, advanced only once
 authd has answered every carried frame) keeps a seen reply from being carried twice and retries one

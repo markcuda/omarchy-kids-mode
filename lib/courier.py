@@ -154,6 +154,9 @@ def _get(url, timeout):
     except urllib.error.HTTPError as exc:
         print(f"courier: the server answered {exc.code}", file=sys.stderr)
         return ""
+    except (urllib.error.URLError, OSError) as exc:
+        print(f"courier: the server is unreachable ({exc})", file=sys.stderr)
+        return ""
 
 
 def _post(url, body, headers, timeout):
@@ -198,21 +201,32 @@ def fetch_ntfy_replies(base_url, topic, since, timeout=15):
 
 
 def read_cursor(path):
+    """The last-seen cursor: {"time": unix, "ids": [...]}. Empty on any failure."""
     try:
         with open(path, "r", encoding="utf-8") as f:
-            return f.read().strip() or None
-    except OSError:
-        return None
+            data = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
-def write_cursor(path, value):
+def write_cursor(path, time_value, ids):
     directory = os.path.dirname(path)
     if directory:
         os.makedirs(directory, mode=0o755, exist_ok=True)
     tmp = f"{path}.{os.getpid()}.tmp"
     with open(tmp, "w", encoding="utf-8") as f:
-        f.write(str(value) + "\n")
+        json.dump({"time": time_value, "ids": sorted(ids)}, f, sort_keys=True)
     os.replace(tmp, path)
+
+
+# Answers from authd that mean "try again", not a verdict on the frame: the
+# cursor must not move past them or the decision is lost.
+RETRYABLE = (None, "", "no busy", "no apply failed", "no ledger-unreadable")
+
+
+def _retryable(answer):
+    return answer in RETRYABLE
 
 
 def poll(config, auth_sock, cursor_path, apply, timeout=15):
@@ -221,9 +235,10 @@ def poll(config, auth_sock, cursor_path, apply, timeout=15):
     Replies come from an ntfy topic (Gotify's GET needs a client token we do not
     hold, so it is not supported). The app posts a signed decision frame; the
     courier only carries it -- authd verifies and applies. A message that is not a
-    decision frame is skipped. The cursor is the newest message time, advanced only
-    when every carried frame got a definite answer from authd, so a decision that
-    arrived while authd was down is retried rather than lost. Returns
+    decision frame is skipped. The cursor is the newest message time plus the ids
+    seen at that time (ntfy's since=<time> is inclusive), advanced only once authd
+    has given a verdict on every carried frame, so a decision that arrived while
+    authd was busy or down is retried rather than lost. Returns
     [(id, authd_reply_or_None), ...].
     """
     if config.get("transport") != "ntfy":
@@ -231,8 +246,12 @@ def poll(config, auth_sock, cursor_path, apply, timeout=15):
     url = config.get("url", "")
     if not url_allowed(url):
         raise ValueError("the configured server must be https (or loopback for tests)")
-    since = read_cursor(cursor_path)
+    cursor = read_cursor(cursor_path)
+    since = cursor.get("time")
+    seen = set(cursor.get("ids", [])) if isinstance(cursor.get("ids"), list) else set()
     replies = fetch_ntfy_replies(url, config.get("reply_topic", ""), since, timeout)
+    # since=<time> is inclusive: drop the frames already carried at that time.
+    replies = [r for r in replies if not (r.get("time") == since and r.get("id") in seen)]
     frames = []
     for reply in replies:
         try:
@@ -246,22 +265,18 @@ def poll(config, auth_sock, cursor_path, apply, timeout=15):
             print("  [dry-run] would carry one signed decision to authd")
         return [(reply.get("id"), None) for reply in frames]
     forwarded = []
-    definite = True
+    retry = False
     for reply in frames:
         answer = relay.forward_decide(auth_sock, reply["message"])
         forwarded.append((reply.get("id"), answer))
-        if answer is None:
-            definite = False
-    # Advance to the newest time only when nothing was left half-done; a retry of
-    # a carried frame is refused by authd's nonce ledger, so this never loses one.
-    if frames and definite:
-        times = [reply["time"] for reply in frames if isinstance(reply.get("time"), int)]
+        if _retryable(answer):
+            retry = True
+    if not retry:
+        handled = frames or replies
+        times = [r["time"] for r in handled if isinstance(r.get("time"), int)]
         if times:
-            write_cursor(cursor_path, max(times))
-    elif not frames and replies:
-        times = [reply["time"] for reply in replies if isinstance(reply.get("time"), int)]
-        if times:
-            write_cursor(cursor_path, max(times))
+            newest = max(times)
+            write_cursor(cursor_path, newest, [r["id"] for r in handled if r.get("time") == newest])
     return forwarded
 
 
@@ -319,7 +334,10 @@ def main(argv):
         if not url_allowed(config.get("url", "")):
             print("courier: the configured server must be https; refusing", file=sys.stderr)
             return 2
-        if config.get("transport") == "ntfy" and not config.get("reply_topic"):
+        if config.get("transport") != "ntfy":
+            print("courier: replies are only fetched from ntfy; nothing to poll")
+            return 0
+        if not config.get("reply_topic"):
             print("courier: no reply topic is configured; nothing to poll")
             return 0
         if not args.apply:

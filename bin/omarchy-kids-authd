@@ -456,8 +456,8 @@ def may_present_decide(uid: "int | None", relay_uid: "int | None") -> bool:
 def handle_decide(header: str, conn: socket.socket, cfg) -> bytes:
     """A paired device's signed decision, verified and applied as root.
 
-    R-NOTIFY-4: only the relay account may present it, the signature is
-    verified against the root-owned device key, and the decision is then
+    R-NOTIFY-4: the relay account or root may present it (the away courier runs as
+    root), the signature is verified against the root-owned device key, and the decision is then
     applied through omarchy-kids-ask (which itself refuses an already-decided
     record). The relay never decides (R-NOTIFY-2).
     """
@@ -630,7 +630,7 @@ def parse_args(argv):
     parser.add_argument(
         "--relay-user",
         default=RELAY_USER,
-        help="Account whose uid may present a DECIDE frame (the LAN relay)",
+        help="Account whose uid may present a DECIDE frame (the LAN relay; root may too)",
     )
     return parser.parse_args(argv)
 
