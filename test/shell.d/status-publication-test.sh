@@ -90,7 +90,9 @@ time_is_paused() { return 1; }
 active_kid_sessions() { printf 'kid-ada\n'; }
 kids_list() { printf 'kid-ada\n'; }
 
-PATH="$STUBS:/usr/bin:/bin"
+# python3 is needed by open_requests_count (it delegates to lib/ask.py); keep the
+# stub dir first, then whatever dir holds python3, then the base tools.
+PATH="$STUBS:$(dirname "$(command -v python3)"):/usr/bin:/bin"
 # shellcheck disable=SC2034 # consumed by the extracted production function
 KIDS_DIR="$ROOT/etc/omarchy-kids/kids"
 RUN_DIR="$ROOT/run/omarchy-kids"
@@ -98,6 +100,10 @@ STATUS_JSON="$RUN_DIR/status.json"
 PAIRING_DIR="$RUN_DIR/pairing"
 REVIEW_DIR="$RUN_DIR/reviews/open"
 QUEUE_DIR="$ROOT/var/lib/omarchy-kids/queue"
+# open_requests_count delegates to lib/ask.py’s list-open, so the extracted
+# write_status_json needs both the interpreter and the module path.
+KIDS_PY=python3
+ASK_PY="$DIR/lib/ask.py"
 printf '%s\n' '{"generated_at":"old","kids":[]}' >"$STATUS_JSON"
 OLD_HASH="$(file_hash "$STATUS_JSON")"
 
@@ -135,7 +141,7 @@ check "$(jq -r '.reviews' "$STATUS_JSON")" "0" "no open review publishes 0"
 
 # The open-request count (R-BAR-3 as amended) rides the same document.
 mkdir -p "$QUEUE_DIR"
-printf '{"kid": "kid-ada", "kind": "time", "what": "10", "minutes": 10, "asked_at": 1, "state": "open"}\n' \
+printf '{"kid": "kid-ada", "kind": "time", "what": "10", "minutes": 10, "asked_at": 1000000000, "state": "open"}\n' \
   >"$QUEUE_DIR/1-kid-ada-time.json"
 write_status_json
 check "$(jq -r '.open_requests' "$STATUS_JSON")" "1" "publishes the open-request count"

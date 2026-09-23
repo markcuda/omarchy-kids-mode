@@ -135,7 +135,7 @@ consent, both ways).
   `A`), colored differently while `"paused": true`.
 - A badge with the count of open requests, read from `status.json`'s `open_requests` (R-BAR-3 as
   amended): the ledger publishes it, so the widget runs no subprocess and needs no 30-second
-  polling (it follows the file). The requests row opens the panel, which lists them.)
+  polling (it follows the file). The requests row opens the panel, which lists them.
 - Click or Enter opens a menu: two-line "Give 15 more" and "End session" rows for each live kid,
   with the affected kid's status and minutes on the detail line (R-BAR-1's
   "Ada · paused · 32 min"), then "Open requests" and "Open Kids Mode".
@@ -233,8 +233,8 @@ this issue's two spec-vs-ticket comments.
 
 `share/bar/KidsModule.qml` reads one env value at runtime (`Quickshell.env(...)`):
 `OMARCHY_KIDS_STATUS_JSON` (default `/run/omarchy-kids/status.json`). The commands it runs are
-absolute and hardcoded, not from the environment (AGENTS.md rule 9): `/usr/bin/omarchy-kids-ask`,
-`/usr/bin/omarchy-kids-bar`, `/usr/bin/omarchy-kids`.
+absolute and hardcoded, not from the environment (AGENTS.md rule 9): `/usr/bin/omarchy-kids-bar`
+and `/usr/bin/omarchy-kids`.
 
 ## What's unverified -- check in the VM
 

@@ -251,17 +251,11 @@ pairing_pending() { [[ "$(pairing_open_until)" -gt 0 ]]; }
 # open_requests_count -- how many ask requests wait for the parent; published in
 # status.json next to the review count (R-BAR-3 as amended).
 open_requests_count() {
-  local dir="$QUEUE_DIR" f n=0 state
-  [[ -d "$dir" ]] || {
-    echo 0
-    return 0
-  }
-  for f in "$dir"/*.json; do
-    [[ -f "$f" ]] || continue
-    state="$(jq -r '.state // empty' "$f" 2>/dev/null || true)"
-    [[ "$state" == "open" ]] && n=$((n + 1))
-  done
-  echo "$n"
+  # The same definition `omarchy-kids-ask list` uses (lib/ask.py's list-open,
+  # which re-validates each record), so the badge and the list cannot drift.
+  local rows
+  rows="$("$KIDS_PY" "$ASK_PY" list-open "$QUEUE_DIR" 2>/dev/null | grep -c . || true)"
+  echo "${rows:-0}"
 }
 
 # open_reviews_count -- how many add-on reviews (R-NOTIFY-12) wait for the parent;
