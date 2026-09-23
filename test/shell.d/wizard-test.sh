@@ -212,7 +212,7 @@ check_contains "$out" "omarchy-kids-conf machine set parent $EXPECTED_INVOKING_U
   "Apply's first step writes machine.conf's parent=, to id -un"
 check_not_contains "$out" "omarchy-kids-conf machine set parent forged-parent" \
   "OMARCHY_KIDS_INVOKING_USER cannot change Apply's parent identity"
-check_contains "$out" "sudo systemctl enable --now omarchy-kids-boot-login.service omarchy-kids-boot-login-cleanup.service omarchy-kids-assert.service omarchy-kids-authd.socket omarchy-kids-wifid.socket omarchy-kids-time.timer omarchy-kids-ask-collect.timer" \
+check_contains "$out" "sudo systemctl enable --now omarchy-kids-boot-login.service omarchy-kids-boot-login-cleanup.service omarchy-kids-assert.service omarchy-kids-authd.socket omarchy-kids-wifid.socket omarchy-kids-time.timer omarchy-kids-ask-collect.timer omarchy-kids-review.timer" \
   "Apply's first step enables and starts the package's units, before provisioning"
 check_contains "$out" "omarchy-kids-provision add Ada --band 6-8 --avatar owl --password-stdin --parent-password-stdin --apply" \
   "apply runs provision add with the exact flags, including the chosen face"

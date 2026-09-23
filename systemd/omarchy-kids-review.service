@@ -7,5 +7,16 @@ Type=oneshot
 ExecStart=/usr/bin/omarchy-kids-review scan --apply
 # Reads a kid's apps.extra through omarchy-kids-conf and the .desktop files under
 # /usr/share/applications, and writes only /var/lib/omarchy-kids/reviews/ -- never
-# a home. docs/review.md.
+# a home, and never /run/user, so ProtectHome=yes is safe here (unlike the ledger
+# and ask-collect, which must read a kid's own XDG_RUNTIME_DIR). Locked down the
+# same way omarchy-kids-time-ledger.service is. docs/review.md.
 NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
+ReadWritePaths=/var/lib/omarchy-kids

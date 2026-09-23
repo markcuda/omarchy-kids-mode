@@ -79,9 +79,10 @@ account with a recorded kid slot because portal mode cannot prove that key is go
      the same shared list `bin/omarchy-kids-assert`'s own "units" lock and `bin/omarchy-kids-wizard`'s
      Apply step use (issue #46) — plus this command's own `KIDS_EXTRA_UNITS` (the socket/timer-activated
      services with no `[Install]` section of their own: `omarchy-kids-authd.service`,
-     `omarchy-kids-wifid.service`, `omarchy-kids-time-ledger.service`, `omarchy-kids-ask-collect.service`).
+     `omarchy-kids-wifid.service`, `omarchy-kids-time-ledger.service`, `omarchy-kids-ask-collect.service`,
+     `omarchy-kids-review.service`).
      Sourcing the shared list rather than keeping a second copy means a unit added there —
-     `omarchy-kids-wifid.socket`, `omarchy-kids-ask-collect.timer` — is disabled and stopped here too,
+     `omarchy-kids-wifid.socket`, `omarchy-kids-ask-collect.timer`, `omarchy-kids-review.timer` — is disabled and stopped here too,
      with nothing to keep in sync by hand (issue #45 item 5).
    - Removes the "away from home" relay drop-in
      (`/etc/systemd/system/omarchy-kids-relayd.service.d/away.conf`, N-10) if the parent had turned it
