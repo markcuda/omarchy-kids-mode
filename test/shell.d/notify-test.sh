@@ -238,6 +238,8 @@ check_eq "$("$BIN" mailbox-status)" "ntfy" "mailbox-status: ntfy after apply"
 
 "$BIN" mailbox ntfy --url http://insecure.example --topic kid --apply >/dev/null 2>&1
 check_eq "$?" 2 "mailbox refuses a non-https url"
+"$BIN" mailbox ntfy --url https://ntfy.example --topic kid --token leaked --apply >/dev/null 2>&1
+check_eq "$?" 2 "--token is not an option (a secret must not be on argv)"
 printf '\n' | "$BIN" mailbox gotify --url https://gotify.example --topic kid --apply >/dev/null 2>&1
 check_eq "$?" 2 "gotify needs a token on stdin"
 printf 'tok-secret\n' | "$BIN" mailbox gotify --url https://gotify.example --topic kid --apply >/dev/null 2>&1
