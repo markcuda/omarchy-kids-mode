@@ -10,7 +10,8 @@ package — `lib/notify_crypto.dart` (the box's signing, pairing and envelope co
 `lib/transport.dart` (the trust anchor and the client: the certificate's SPKI SHA-256 — the value
 the parent reads off the pairing screen and the app pins — and a `KidsRelayClient` that speaks TLS
 to the relay with the signed headers, streams the `/v1/events` SSE feed (a stream that goes three heartbeats quiet ends with an error, so a half-open connection cannot hang), and posts decisions and
-pairings). The
+pairings) and `lib/state_model.dart` (the relay's document as typed kids, requests and recent
+decisions, parsed defensively). The
 crypto and the wire frames are proven against the shared vectors, byte for byte; the reply chips and
 the pairing-URI parser and the SPKI pin are pinned by the package's own tests (the pin fixture,
 `test/fixtures/relay-cert.pem`, is a throwaway public certificate minted by `lib/cert.py`;

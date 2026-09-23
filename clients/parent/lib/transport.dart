@@ -21,6 +21,7 @@ import 'package:cryptography/cryptography.dart';
 
 import 'notify_crypto.dart';
 import 'relay_client.dart';
+import 'state_model.dart';
 
 /// The SubjectPublicKeyInfo of a certificate's tbsCertificate.
 ASN1Sequence _subjectPublicKeyInfo(ASN1Sequence tbs) {
@@ -216,6 +217,10 @@ class KidsRelayClient {
     }
     return jsonDecode(reply.body) as Map<String, dynamic>;
   }
+
+  /// GET /v1/state, parsed into the app's model.
+  Future<BoxState> boxState({required int ts, required String nonce}) async =>
+      BoxState.fromJson(await state(ts: ts, nonce: nonce));
 
   /// POST /v1/requests/<id>/decision with the signed record.
   Future<Map<String, dynamic>> decide({

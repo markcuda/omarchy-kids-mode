@@ -72,6 +72,10 @@ void main() {
       final state = await client.state(ts: _now(), nonce: 'it-1');
       expect(state.containsKey('kids'), isTrue);
       expect(state['kids'], isEmpty);
+      // The same document through the app's model.
+      final model = await client.boxState(ts: _now(), nonce: 'it-model');
+      expect(model.kids, isEmpty);
+      expect(model.requests, isEmpty);
 
       // The SSE stream sends the state as soon as it connects; the heartbeat
       // comments are dropped by the parser.
