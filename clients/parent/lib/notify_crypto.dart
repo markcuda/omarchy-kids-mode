@@ -6,7 +6,8 @@
 // The one trap worth naming: the box canonicalises with Python's json.dumps,
 // whose `ensure_ascii` default escapes every non-ASCII character as \uXXXX.
 // Dart's jsonEncode does not, so `canonicalJson` below does it by hand; the
-// vectors carry a "Après dîner" reply to catch exactly that.
+// vectors carry a reply with non-ASCII, a quote and a backslash to catch
+// exactly that.
 
 import 'dart:convert';
 import 'dart:typed_data';

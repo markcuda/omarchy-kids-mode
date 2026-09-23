@@ -41,7 +41,7 @@ Ed25519, base64 (standard alphabet) of the 64-byte signature. The exact bytes ar
 prefix**, a newline, then JSON as **the box serializes it**: `json.dumps(record, sort_keys=True,
 separators=(",", ":"))` with Python's default `ensure_ascii=True`, i.e. compact, sorted keys, and
 every non-ASCII character escaped as `\uXXXX`. A Dart `jsonEncode` emits raw UTF-8 and will not match
-for a non-ASCII reply like `"Après dîner"` — the vectors carry exactly that case. UTF-8 encode the
+for a reply with non-ASCII, a quote or a backslash — the shared vectors carry exactly that case. UTF-8 encode the
 resulting string.
 
 - **Decision**: `"omarchy-kids-decision-v1\n"` + `{device_id, request_id, decision, reply?, ts, nonce}`
