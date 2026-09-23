@@ -374,6 +374,7 @@ cmd_mailbox() {
       [[ "$url" == https://* ]] || die "mailbox: --url must be https"
       [[ "$topic" =~ ^[A-Za-z0-9._-]+$ ]] || die "mailbox: --topic must be letters, digits, dot, dash or underscore"
       if [[ -n "$reply_topic" ]]; then
+        [[ "$mode" == ntfy ]] || die "mailbox: --reply-topic is for ntfy (Gotify's GET needs a client token we do not hold)"
         [[ "$reply_topic" =~ ^[A-Za-z0-9._-]+$ ]] || die "mailbox: --reply-topic must be letters, digits, dot, dash or underscore"
       fi
       if [[ "$mode" == gotify ]] && ((! DRY_RUN)); then

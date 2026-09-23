@@ -81,17 +81,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 lines = [line for line in f.read().splitlines() if line.strip()]
         except OSError:
             lines = []
-        # Honour ntfy's `since`: return only the lines after that id.
+        # Honour ntfy's `since`: a unix time; return only newer lines.
         query = urllib.parse.urlsplit(self.path).query
         since = urllib.parse.parse_qs(query).get("since", [None])[0]
-        if since:
-            for index, line in enumerate(lines):
+        if since and since.isdigit():
+            kept = []
+            for line in lines:
                 try:
-                    if json.loads(line).get("id") == since:
-                        lines = lines[index + 1 :]
-                        break
+                    if (json.loads(line).get("time") or 0) > int(since):
+                        kept.append(line)
                 except ValueError:
                     continue
+            lines = kept
         body = ("\n".join(lines) + "\n").encode() if lines else b""
         self.send_response(200)
         self.send_header("Content-Type", "application/x-ndjson")
@@ -258,7 +259,8 @@ done
 printf 'transport=ntfy\nurl=http://127.0.0.1:%s\ntopic=test\nreply_topic=replies\n' "$PORT" >"$ETC/courier.conf"
 frame='{"record":{"request_id":"r1"},"signature":"sig"}'
 # A decision frame, and one non-frame the courier must skip.
-python3 -c 'import json,sys; print(json.dumps({"id":"m1","message":sys.argv[1]})); print(json.dumps({"id":"m2","message":"not a frame"}))' "$frame" >"$GETBODY"
+# A decision frame (time 1000) and a non-frame (time 1001) the courier must skip.
+python3 -c 'import json,sys; print(json.dumps({"id":"m1","time":1000,"message":sys.argv[1]})); print(json.dumps({"id":"m2","time":1001,"message":"not a frame"}))' "$frame" >"$GETBODY"
 : >"$GETLOG"
 out="$("$BIN" poll --apply 2>&1)"
 check_contains "$(cat "$AUTH_LOG")" "DECIDE " "a reply is carried to authd as a DECIDE"
@@ -272,10 +274,9 @@ check_status "$(grep -c 'DECIDE ' "$AUTH_LOG")" "1" "the non-frame message is sk
 check_status "$(grep -c 'DECIDE ' "$AUTH_LOG")" "0" "an already-seen reply is not forwarded again"
 
 # A dry run forwards nothing.
-printf 'transport=ntfy\nurl=http://127.0.0.1:%s\ntopic=test\nreply_topic=replies\n' "$PORT" >"$ETC/courier.conf"
 rm -f "$ROOT/run/omarchy-kids/courier-cursor"
-:"$BIN" poll >/dev/null 2>&1
 check_contains "$("$BIN" poll 2>&1)" "[dry-run]" "poll previews by default"
+check_status "$(grep -c 'DECIDE ' "$AUTH_LOG")" "0" "a dry run carries nothing"
 
 # --- the unit and timer ---------------------------------------------------
 SERVICE="$DIR/systemd/omarchy-kids-relay-courier.service"
@@ -283,7 +284,11 @@ TIMER="$DIR/systemd/omarchy-kids-relay-courier.timer"
 [[ -f "$SERVICE" ]] && pass "the courier service unit exists" || fail "no courier service unit"
 [[ -f "$TIMER" ]] && pass "the courier timer unit exists" || fail "no courier timer unit"
 check_contains "$(cat "$TIMER")" "Unit=omarchy-kids-relay-courier.service" "the timer drives the courier service"
-check_contains "$(cat "$SERVICE")" "ExecStart=/usr/bin/omarchy-kids-relay-courier --apply" "the service posts on the timer"
+grep -qx 'ExecStart=-/usr/bin/omarchy-kids-relay-courier --apply' "$SERVICE" &&
+  pass "the service sends on the timer (and a failed send does not block the poll)" ||
+  fail "the send ExecStart is missing or not prefixed with -"
+grep -qx 'ExecStart=/usr/bin/omarchy-kids-relay-courier poll --apply' "$SERVICE" &&
+  pass "the service polls on the timer" || fail "the poll ExecStart is missing"
 grep -qx 'RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6' "$SERVICE" &&
   pass "the courier may open the network" || fail "the courier's address families are wrong"
 grep -qx 'CapabilityBoundingSet=' "$SERVICE" &&

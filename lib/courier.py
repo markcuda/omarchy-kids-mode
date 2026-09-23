@@ -10,8 +10,8 @@ redirects followed, and the proxy environment ignored, so a redirected or proxie
 request cannot reach a third host. The Gotify token rides an `X-Gotify-Key`
 header, never the query string (proxy and access logs keep query strings).
 
-This is the outbound half; pulling the parent's signed decisions back is a later
-step. The courier never decides. Exit status is nonzero if any device's send
+Both directions: send the sealed state out, and carry the app's signed decisions
+back to authd. The courier never decides. The courier never decides. Exit status is nonzero if any device's send
 failed, so a timer can notice. Stdlib only (+ python-cryptography via envelope.py).
 """
 
@@ -148,8 +148,12 @@ def write_sent(path, digest):
 
 def _get(url, timeout):
     request = urllib.request.Request(url, method="GET")
-    with _opener().open(request, timeout=timeout) as response:  # noqa: S310 -- one configured server
-        return response.read().decode("utf-8", "replace")
+    try:
+        with _opener().open(request, timeout=timeout) as response:  # noqa: S310 -- one configured server
+            return response.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as exc:
+        print(f"courier: the server answered {exc.code}", file=sys.stderr)
+        return ""
 
 
 def _post(url, body, headers, timeout):
@@ -189,27 +193,7 @@ def fetch_ntfy_replies(base_url, topic, since, timeout=15):
         except ValueError:
             continue
         if isinstance(message, dict) and isinstance(message.get("message"), str):
-            out.append({"id": message.get("id"), "message": message["message"]})
-    return out
-
-
-def fetch_gotify_replies(base_url, token, since, timeout=15):
-    """Messages on a Gotify app: [{id, message}] with id greater than `since`."""
-    target = (
-        base_url.rstrip("/") + "/message?token=" + urllib.parse.quote(token, safe="") + "&limit=50"
-    )
-    try:
-        data = json.loads(_get(target, timeout))
-    except ValueError:
-        return []
-    out = []
-    for message in data.get("messages", []) if isinstance(data, dict) else []:
-        if not isinstance(message, dict) or not isinstance(message.get("message"), str):
-            continue
-        message_id = message.get("id")
-        if not isinstance(message_id, int) or (since is not None and message_id <= since):
-            continue
-        out.append({"id": message_id, "message": message["message"]})
+            out.append({"id": message.get("id"), "time": message.get("time"), "message": message["message"]})
     return out
 
 
@@ -234,36 +218,50 @@ def write_cursor(path, value):
 def poll(config, auth_sock, cursor_path, apply, timeout=15):
     """Fetch new replies and carry each signed decision to authd (R-NOTIFY-4/8).
 
-    The app posts a signed decision frame; the courier only carries it -- authd
-    verifies and applies. A message that is not a JSON object is skipped. Returns
-    [(id, authd_reply_or_None), ...] for the frames it tried to forward.
+    Replies come from an ntfy topic (Gotify's GET needs a client token we do not
+    hold, so it is not supported). The app posts a signed decision frame; the
+    courier only carries it -- authd verifies and applies. A message that is not a
+    decision frame is skipped. The cursor is the newest message time, advanced only
+    when every carried frame got a definite answer from authd, so a decision that
+    arrived while authd was down is retried rather than lost. Returns
+    [(id, authd_reply_or_None), ...].
     """
-    transport = config.get("transport")
+    if config.get("transport") != "ntfy":
+        raise ValueError("replies are only fetched from ntfy")
     url = config.get("url", "")
     if not url_allowed(url):
         raise ValueError("the configured server must be https (or loopback for tests)")
-    cursor = read_cursor(cursor_path)
-    if transport == "ntfy":
-        replies = fetch_ntfy_replies(url, config.get("reply_topic", ""), cursor, timeout)
-    else:
-        replies = fetch_gotify_replies(
-            url, config.get("token", ""), int(cursor) if cursor and cursor.isdigit() else None, timeout
-        )
-    forwarded = []
+    since = read_cursor(cursor_path)
+    replies = fetch_ntfy_replies(url, config.get("reply_topic", ""), since, timeout)
+    frames = []
     for reply in replies:
         try:
             frame = json.loads(reply["message"])
         except ValueError:
-            continue  # not a decision frame
-        if not isinstance(frame, dict) or "record" not in frame:
             continue
-        if not apply:
+        if isinstance(frame, dict) and "record" in frame:
+            frames.append(reply)
+    if not apply:
+        for _ in frames:
             print("  [dry-run] would carry one signed decision to authd")
-            forwarded.append((reply.get("id"), None))
-            continue
-        forwarded.append((reply.get("id"), relay.forward_decide(auth_sock, reply["message"])))
-    if apply and replies:
-        write_cursor(cursor_path, replies[-1]["id"])
+        return [(reply.get("id"), None) for reply in frames]
+    forwarded = []
+    definite = True
+    for reply in frames:
+        answer = relay.forward_decide(auth_sock, reply["message"])
+        forwarded.append((reply.get("id"), answer))
+        if answer is None:
+            definite = False
+    # Advance to the newest time only when nothing was left half-done; a retry of
+    # a carried frame is refused by authd's nonce ledger, so this never loses one.
+    if frames and definite:
+        times = [reply["time"] for reply in frames if isinstance(reply.get("time"), int)]
+        if times:
+            write_cursor(cursor_path, max(times))
+    elif not frames and replies:
+        times = [reply["time"] for reply in replies if isinstance(reply.get("time"), int)]
+        if times:
+            write_cursor(cursor_path, max(times))
     return forwarded
 
 

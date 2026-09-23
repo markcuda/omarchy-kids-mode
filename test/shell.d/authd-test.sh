@@ -25,6 +25,32 @@ bad() {
   fail=1
 }
 
+# Who may present a DECIDE (R-NOTIFY-4): the relay or root, nothing else. The
+# away courier runs as root and carries the app's signed decision, so root must
+# be accepted; a pure function makes that testable without a root daemon.
+python3 - "$AUTHD" <<'PY' || fail=1
+import importlib.machinery, importlib.util, sys
+loader = importlib.machinery.SourceFileLoader("kids_authd", sys.argv[1])
+spec = importlib.util.spec_from_loader("kids_authd", loader)
+authd = importlib.util.module_from_spec(spec)
+loader.exec_module(authd)
+fails = []
+
+
+def check(cond, label):
+    print(("ok   " if cond else "FAIL ") + label)
+    if not cond:
+        fails.append(label)
+
+
+check(authd.may_present_decide(1000, 1000), "DECIDE: the relay uid may present")
+check(authd.may_present_decide(0, 1000), "DECIDE: root (the away courier) may present")
+check(authd.may_present_decide(0, None), "DECIDE: root may present with no relay uid")
+check(not authd.may_present_decide(1001, 1000), "DECIDE: another account is refused")
+check(not authd.may_present_decide(None, 1000), "DECIDE: an unknown peer is refused")
+sys.exit(1 if fails else 0)
+PY
+
 TMP="$(mktemp -d)"
 DAEMON_PID=""
 # shellcheck disable=SC2329 # invoked via `trap ... EXIT`, not called directly
