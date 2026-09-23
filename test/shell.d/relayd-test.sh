@@ -171,6 +171,24 @@ try:
     code, _ = request("POST", "/v1/requests/req-1/decision", {}, frame.encode())
     check(code == 403, "an unsigned decision POST is refused at the relay (P1)")
 
+    # SSE: a signed /v1/events streams a state event
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+    ss = ctx.wrap_socket(socket.create_connection(("127.0.0.1", port), timeout=10), server_hostname="127.0.0.1")
+    h = signed_headers("/v1/events")
+    ss.sendall(("GET /v1/events HTTP/1.1\r\nHost: x\r\n" + "".join(f"{k}: {v}\r\n" for k, v in h.items()) + "\r\n").encode())
+    data = b""
+    ss.settimeout(8)
+    try:
+        while b"event: state" not in data:
+            chunk = ss.recv(4096)
+            if not chunk:
+                break
+            data += chunk
+    except OSError:
+        pass
+    ss.close()
+    check(b"event: state" in data and b"kid-ada" in data, "a signed SSE stream sends the state")
+
     # a plaintext client gets no HTTP response (TLS is required)
     raw = socket.create_connection(("127.0.0.1", port), timeout=5)
     raw.sendall(b"GET /v1/state HTTP/1.1\r\nHost: x\r\n\r\n")

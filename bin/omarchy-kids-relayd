@@ -31,6 +31,8 @@ MAX_REQUEST = 64 * 1024
 MAX_HEADERS = 64
 MAX_CONNECTIONS = 32
 CLIENT_TIMEOUT = 30
+EVENTS_POLL = 5
+HEARTBEAT = 25
 
 RE_AVATAR = re.compile(r"\A[A-Za-z0-9_-]{1,32}\Z")
 
@@ -114,7 +116,10 @@ class Relay:
             return
         self.connected += 1
         try:
-            await asyncio.wait_for(self.serve(reader, writer), timeout=CLIENT_TIMEOUT)
+            method, path, headers, body = await asyncio.wait_for(
+                self.read_request(reader), timeout=CLIENT_TIMEOUT
+            )
+            await self.dispatch(method, path, headers, body, writer)
         except (TimeoutError, asyncio.IncompleteReadError, ConnectionError, ValueError):
             pass
         except Exception:  # noqa: BLE001 -- never let a client kill the relay
@@ -127,8 +132,7 @@ class Relay:
             except OSError:
                 pass
 
-    async def serve(self, reader, writer):
-        method, path, headers, body = await self.read_request(reader)
+    async def dispatch(self, method, path, headers, body, writer):
         self.last_activity = time.monotonic()
 
         if path == "/v1/state" and method == "GET":
@@ -137,6 +141,12 @@ class Relay:
                 return await self.reply(writer, 403, {"error": reason})
             state = self.relay.build_state(self.args.status, self.args.queue)
             return await self.reply(writer, 200, state)
+
+        if path == "/v1/events" and method == "GET":
+            ok, reason = self.authorized(method, path, headers, body)
+            if not ok:
+                return await self.reply(writer, 403, {"error": reason})
+            return await self.serve_events(writer)
 
         if path.startswith("/v1/avatars/") and method == "GET":
             ok, reason = self.authorized(method, path, headers, body)
@@ -175,6 +185,32 @@ class Relay:
             return await self.reply(writer, 200 if reply == "ok" else 403, {"reply": reply})
 
         return await self.reply(writer, 404, {"error": "not found"})
+
+    async def serve_events(self, writer):
+        """Server-Sent Events: the state whenever it changes, plus a heartbeat.
+
+        Signed once at connect; a long-lived stream authenticates the connection,
+        not each event (Appendix H). It ends when the client goes away.
+        """
+        writer.write(
+            b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n"
+            b"Cache-Control: no-cache\r\nConnection: keep-alive\r\n\r\n"
+        )
+        await writer.drain()
+        last = None
+        last_beat = time.monotonic()
+        while True:
+            state = self.relay.build_state(self.args.status, self.args.queue)
+            body = json.dumps(state, sort_keys=True)
+            if body != last:
+                writer.write(f"event: state\ndata: {body}\n\n".encode("utf-8"))
+                last = body
+                last_beat = time.monotonic()
+            elif time.monotonic() - last_beat >= HEARTBEAT:
+                writer.write(b": heartbeat\n\n")
+                last_beat = time.monotonic()
+            await writer.drain()
+            await asyncio.sleep(EVENTS_POLL)
 
     async def reply(self, writer, status, obj):
         body = json.dumps(obj).encode("utf-8")
