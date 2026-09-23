@@ -41,7 +41,8 @@ import time
 
 KINDS = ("time", "app", "plugin", "site")
 STATES = ("open", "approved", "declined")
-BY = ("keyboard", "panel", "widget")
+BY = ("keyboard", "panel", "widget", "device")
+RE_DEVICE_ID = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._-]{0,62}\Z")
 
 # --- the strict allowlist (the one home; see the module docstring) ---------
 #
@@ -204,16 +205,22 @@ def cmd_write(argv):
 
 
 def cmd_decide(argv):
-    opts, rest = parse_kv_args(argv, {"state", "by"})
+    opts, rest = parse_kv_args(argv, {"state", "by", "device"})
     if len(rest) != 1:
         die("decide: needs PATH")
     path = rest[0]
     state = opts.get("state")
     by = opts.get("by")
+    device = opts.get("device")
     if state not in ("approved", "declined"):
         die("decide: --state must be 'approved' or 'declined'")
     if by not in BY:
         die(f"decide: --by must be one of {', '.join(BY)}")
+    if by == "device":
+        if not isinstance(device, str) or not RE_DEVICE_ID.match(device):
+            die("decide: --by device needs --device <id>")
+    else:
+        device = None
 
     record = load_record(path)
     if record.get("state") != "open":
@@ -222,6 +229,8 @@ def cmd_decide(argv):
     record["state"] = state
     record["decided_at"] = int(time.time())
     record["by"] = by
+    if device is not None:
+        record["device"] = device
     write_atomic(path, record)
 
 

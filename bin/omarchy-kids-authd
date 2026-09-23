@@ -8,6 +8,7 @@ A root, socket-activated oracle. Three request shapes, one per connection:
     VERIFY\n<password>\n               -> "ok" / "no"   (verify, R-SEC-2)
     BOOTSTRAP\n<password>\n           -> "ok" / "no"   (wizard bootstrap)
     GRANT <json-request>\n<password>\n -> "ok" / "no <reason>"
+    DECIDE <json-frame>\n              -> "ok" / "no <reason>"  (a paired device, R-NOTIFY-4)
 
 The second is the *only* way an "Ask a grown-up" request is ever granted
 on the spot (review S1): root verifies the parent's password here, checks
@@ -56,6 +57,12 @@ DEFAULT_ASK_BIN = "/usr/bin/omarchy-kids-ask"
 GRANT_PREFIX = "GRANT "
 BOOTSTRAP_PREFIX = "BOOTSTRAP"
 VERIFY_PREFIX = "VERIFY"
+# A device's signed decision (R-NOTIFY-4). One line: DECIDE <json>\n, where the
+# json is {"record": {...}, "signature": "b64", "scope": "decide"}. Only the
+# relay account may send it, and only root verifies and applies it.
+DECIDE_PREFIX = "DECIDE "
+RELAY_USER = "omarchy-kids-relay"
+DEFAULT_NONCE_LEDGER = "/var/lib/omarchy-kids/devices/nonces.json"
 
 _LIBCRYPT = None
 
@@ -251,6 +258,29 @@ def load_ask_module(lib_dir: str):
     return module
 
 
+def load_devices_module(lib_dir: str):
+    """lib/devices.py, by path -- the one home for device verification."""
+    spec = importlib.util.spec_from_file_location(
+        "omarchy_kids_devices_lib", os.path.join(lib_dir, "devices.py")
+    )
+    if spec is None or spec.loader is None:
+        raise OSError(f"no devices.py under {lib_dir}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def relay_uid(name: str = RELAY_USER) -> "int | None":
+    """The uid of the relay account, or None where it is not set up.
+
+    Fail closed: an unresolved relay account means no DECIDE is ever accepted.
+    """
+    try:
+        return pwd.getpwnam(name).pw_uid
+    except KeyError:
+        return None
+
+
 def check_grant(request: dict, uid: int, etc_dir: str, lib_dir: str):
     """None if root may apply this request, else a one-line reason.
 
@@ -343,6 +373,48 @@ def handle_verify(password: bytes, conn: socket.socket, cfg, limiter: RateLimite
     return b"no\n"
 
 
+def handle_decide(header: str, conn: socket.socket, cfg) -> bytes:
+    """A paired device's signed decision, verified and applied as root.
+
+    R-NOTIFY-4: only the relay account may present it, the signature is
+    verified against the root-owned device key, and the decision is then
+    applied through omarchy-kids-ask (which itself refuses an already-decided
+    record). The relay never decides (R-NOTIFY-2).
+    """
+    if cfg.devices is None or cfg.ledger is None:
+        return b"no devices unavailable\n"
+    if cfg.relay_uid is None or peer_uid(conn) != cfg.relay_uid:
+        return b"no not the relay\n"
+    try:
+        frame = json.loads(header[len(DECIDE_PREFIX):])
+        record = frame["record"]
+        signature = frame["signature"]
+        scope = frame.get("scope", "decide")
+    except (ValueError, KeyError, TypeError):
+        return b"no malformed\n"
+    ok, reason = cfg.devices.verify_decision(
+        cfg.etc, cfg.ledger, record, signature, int(time.time()), scope
+    )
+    if not ok:
+        return b"no " + reason.encode("utf-8", "replace") + b"\n"
+    action = "approve" if record.get("decision") == "approve" else "decline"
+    argv = [
+        cfg.ask_bin,
+        action,
+        str(record.get("request_id", "")),
+        "--by",
+        f"device:{record.get('device_id', '')}",
+        "--apply",
+    ]
+    try:
+        proc = subprocess.run(argv, capture_output=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return b"no apply failed\n"
+    if proc.returncode != 0:
+        return b"no apply failed\n"
+    return b"ok\n"
+
+
 def read_candidate_line(conn: socket.socket, buf: bytearray) -> "tuple[bytes | None, bool]":
     """Read one line and flag malformed frames separately from missing lines."""
     while b"\n" not in buf:
@@ -388,6 +460,9 @@ def handle_client(conn: socket.socket, cfg, limiter: RateLimiter, slot=None):
                     reply = handle_bootstrap(password, conn, cfg, limiter)
                 else:
                     reply = handle_verify(password, conn, cfg, limiter)
+            elif header.startswith(DECIDE_PREFIX):
+                # One line: the signed decision carries its own signature.
+                reply = handle_decide(header, conn, cfg)
             else:
                 reply = b"no\n"
         try:
@@ -451,6 +526,16 @@ def parse_args(argv):
     parser.add_argument("--etc", default=DEFAULT_ETC, help="Path to /etc/omarchy-kids (GRANT: the kid registry)")
     parser.add_argument("--lib", default=DEFAULT_LIB, help="Directory holding ask.py (GRANT: the request allowlist)")
     parser.add_argument("--ask-bin", default=DEFAULT_ASK_BIN, help="Path to omarchy-kids-ask (GRANT: applies the request)")
+    parser.add_argument(
+        "--nonce-ledger",
+        default=DEFAULT_NONCE_LEDGER,
+        help="Path to the device-decision nonce ledger (DECIDE: replay refusal)",
+    )
+    parser.add_argument(
+        "--relay-user",
+        default=RELAY_USER,
+        help="Account whose uid may present a DECIDE frame (the LAN relay)",
+    )
     return parser.parse_args(argv)
 
 
@@ -464,6 +549,11 @@ class Config:
         self.etc = args.etc
         self.lib = args.lib
         self.ask_bin = args.ask_bin
+        self.nonce_ledger = args.nonce_ledger
+        # Filled in by main() for the DECIDE path; None means fail closed.
+        self.devices = None
+        self.ledger = None
+        self.relay_uid = None
 
     @property
     def parent(self):
@@ -475,6 +565,16 @@ def main(argv=None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     cfg = Config(args)
     limiter = RateLimiter()
+
+    # The DECIDE path needs lib/devices.py and a shared nonce ledger. A missing
+    # module or ledger leaves cfg.devices None, so every DECIDE fails closed.
+    try:
+        cfg.devices = load_devices_module(cfg.lib)
+        cfg.ledger = cfg.devices.NonceLedger(cfg.nonce_ledger)
+    except OSError:
+        cfg.devices = None
+        cfg.ledger = None
+    cfg.relay_uid = relay_uid(args.relay_user)
 
     sock = get_systemd_socket()
     owns_socket_file = False

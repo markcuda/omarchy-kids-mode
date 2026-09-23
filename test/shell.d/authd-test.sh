@@ -381,6 +381,16 @@ sys.stdout.write(s.recv(4096).decode(errors="replace").strip())
 ' "$SOCK"
 }
 
+send_decide() { # frame-file -> reply, trimmed
+  python3 - "$SOCK" "$1" <<'PY'
+import socket, sys
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); s.settimeout(5)
+s.connect(sys.argv[1])
+s.sendall(b"DECIDE " + open(sys.argv[2], "rb").read() + b"\n")
+sys.stdout.write(s.recv(4096).decode(errors="replace").strip())
+PY
+}
+
 # A record of every apply-grant the daemon asks for, so we can prove it
 # asked for none of the ones it should have refused.
 APPLIED="$TMP/applied.log"
@@ -392,12 +402,13 @@ chmod +x "$TMP/fake-ask"
 : >"$APPLIED"
 
 start_daemon() {
-  local parent="${1:-$PARENT}"
+  local parent="${1:-$PARENT}" relay="${2:-$(id -un)}"
   kill "$DAEMON_PID" >/dev/null 2>&1
   [[ -n "$DAEMON_PID" ]] && wait "$DAEMON_PID" 2>/dev/null
   rm -f "$SOCK"
   python3 "$AUTHD" --socket "$SOCK" --shadow "$SHADOW" --parent "$parent" \
-    --etc "$ETC" --lib "$DIR/lib" --ask-bin "$TMP/fake-ask" &
+    --etc "$ETC" --lib "$DIR/lib" --ask-bin "$TMP/fake-ask" \
+    --nonce-ledger "$TMP/nonces.json" --relay-user "$relay" &
   DAEMON_PID=$!
   for _ in $(seq 1 50); do
     [[ -S "$SOCK" ]] && break
@@ -436,6 +447,48 @@ case "$r" in
   no*) ok "a malformed GRANT is refused" ;;
   *) bad "a malformed GRANT gave '$r'" ;;
 esac
+
+# =====================================================================
+# DECIDE: a paired device's signed decision (R-NOTIFY-4). Needs crypto.
+# =====================================================================
+if python3 -c "import cryptography" >/dev/null 2>&1; then
+  mkdir -p "$ETC/devices"
+  python3 - "$DIR/lib/devices.py" "$ETC" "$TMP" <<'PY'
+import base64, importlib.util, json, os, sys, time
+devices_py, etc, tmp = sys.argv[1], sys.argv[2], sys.argv[3]
+spec = importlib.util.spec_from_file_location("kids_devices", devices_py)
+devices = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(devices)
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+key = Ed25519PrivateKey.generate()
+pub = base64.b64encode(key.public_key().public_bytes_raw()).decode()
+os.makedirs(os.path.join(etc, "devices"), exist_ok=True)
+with open(os.path.join(etc, "devices", "d1.conf"), "w") as f:
+    f.write(f"id=d1\nname=Phone\nplatform=android\nsign_pub={pub}\nbox_pub={pub}\nscopes=decide,act\n")
+rec = {"device_id": "d1", "request_id": "req-1", "decision": "approve", "ts": int(time.time()), "nonce": "n1"}
+sig = base64.b64encode(key.sign(devices.canonical(rec))).decode()
+with open(os.path.join(tmp, "decide-frame.json"), "w") as f:
+    json.dump({"record": rec, "signature": sig}, f, separators=(",", ":"))
+PY
+  start_daemon
+  : >"$APPLIED"
+  r="$(send_decide "$TMP/decide-frame.json")"
+  if [[ "$(uname -s)" == "Linux" ]]; then
+    # SO_PEERCRED is what makes the relay check real; it is Linux-only.
+    check "$r" "ok" "DECIDE: a device's signed decision is applied"
+    grep -q 'approve req-1 --by device:d1 --apply' "$APPLIED" &&
+      ok "DECIDE: applied through omarchy-kids-ask by device id" ||
+      bad "DECIDE: did not apply through ask"
+    check "$(send_decide "$TMP/decide-frame.json")" "no replayed-nonce" "DECIDE: a replay is refused"
+  else
+    # Elsewhere peer_uid is unknown, so the relay check fails closed.
+    check "$r" "no not the relay" "DECIDE: without SO_PEERCRED it fails closed (the gate runs the accept path)"
+  fi
+  start_daemon "$PARENT" "no-such-relay-account"
+  check "$(send_decide "$TMP/decide-frame.json")" "no not the relay" "DECIDE: a non-relay caller is refused"
+else
+  echo "SKIP authd-test.sh: DECIDE checks need python-cryptography"
+fi
 
 # =====================================================================
 # The live daemon (needs a working crypt(3) on this host)
