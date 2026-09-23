@@ -1,0 +1,145 @@
+#!/bin/bash
+# omarchy:summary=Turn the parent's device notifications on or off, and manage the paired devices
+# omarchy:args=<enable|disable|status|devices|revoke|rename|scopes> ...
+# omarchy:hidden=true
+# The parent's side of the notification system (R-NOTIFY-1/3/5): the relay's
+# certificate, and the paired devices. Root only; DRY_RUN=1 prints the plan.
+# See docs/phase1/SPEC-AMENDMENT-notifications.md.
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+LIB="$DIR/lib"
+[[ -f "$LIB/kids.sh" ]] || LIB=/usr/lib/omarchy-kids
+# shellcheck source=lib/kids.sh
+source "$LIB/kids.sh"
+
+ETC=/etc/omarchy-kids
+RELAY_DIR="$ETC/relay"
+CERT="$RELAY_DIR/cert.pem"
+KEY="$RELAY_DIR/key.pem"
+PORT=8447
+SYSROOT=""
+DRY_RUN=1
+DEVICES_BIN="$(kids_bin devices "$DIR")"
+
+die() {
+  echo "omarchy-kids-notify: $1" >&2
+  exit "${2:-2}"
+}
+
+usage() {
+  cat <<'EOF'
+Usage: omarchy-kids-notify enable [--host NAME] [--apply]
+       omarchy-kids-notify disable [--apply]
+       omarchy-kids-notify status
+       omarchy-kids-notify devices [--json]
+       omarchy-kids-notify rename <id> <name> [--apply]
+       omarchy-kids-notify scopes <id> decide[,act] [--apply]
+       omarchy-kids-notify revoke <id> [--apply]
+
+Turns the parent's device notifications on or off (R-NOTIFY-1): `enable` mints
+the relay's self-signed certificate (the parent's devices pin its fingerprint at
+pairing), `disable` revokes every device and removes the certificate. The device
+commands delegate to omarchy-kids-devices. Root only; DRY_RUN=1 prints the plan.
+EOF
+}
+
+enabled() { [[ -f "$CERT" && -f "$KEY" ]]; }
+
+cmd_status() {
+  if enabled; then
+    echo "notifications: on (relay port $PORT, home network only)"
+    echo "certificate: $CERT"
+  else
+    echo "notifications: off (run 'omarchy-kids-notify enable' on the parent's account)"
+  fi
+  "$DEVICES_BIN" list
+}
+
+cmd_enable() {
+  local host="$(hostname -s 2>/dev/null || echo omarchy-kids)"
+  while (($#)); do
+    case "$1" in
+      --host)
+        host="${2:?}"
+        shift 2
+        ;;
+      --apply)
+        DRY_RUN=0
+        shift
+        ;;
+      *) die "enable: unknown argument '$1'" ;;
+    esac
+  done
+  if ((DRY_RUN)); then
+    echo "  [dry-run] would mint $CERT and $KEY for '$host' (port $PORT)"
+    echo "  [dry-run] cert 0644, key 0640 root:omarchy-parents, dir 0750 root:omarchy-parents"
+    return 0
+  fi
+  command -v getent >/dev/null 2>&1 && getent group omarchy-parents >/dev/null 2>&1 ||
+    groupadd -f omarchy-parents 2>/dev/null || true
+  install -d -m 0750 "$RELAY_DIR"
+  chgrp omarchy-parents "$RELAY_DIR" 2>/dev/null || true
+  local fingerprint
+  fingerprint="$("$KIDS_PY" "$LIB/cert.py" "$CERT" "$KEY" --host "$host")" ||
+    die "enable: could not mint the certificate (python-cryptography?)"
+  chmod 0644 "$CERT"
+  chmod 0640 "$KEY"
+  chgrp omarchy-parents "$CERT" "$KEY" 2>/dev/null || true
+  echo "omarchy-kids-notify: notifications on (relay port $PORT)"
+  echo "  host:        $host"
+  echo "  fingerprint: $fingerprint"
+  echo "Pair a device from the panel, or run 'omarchy-kids-devices pair-start'."
+}
+
+cmd_disable() {
+  local apply=0
+  [[ "${1:-}" == "--apply" ]] && apply=1
+  $DEVICES_BIN list --json 2>/dev/null | jq -r '.[].id' 2>/dev/null | while read -r id; do
+    [[ -n "$id" ]] || continue
+    if ((apply)); then
+      "$DEVICES_BIN" revoke "$id" --apply >/dev/null
+    else
+      echo "  [dry-run] would revoke $id"
+    fi
+  done
+  if ((apply)); then
+    rm -f "$CERT" "$KEY"
+    rmdir "$RELAY_DIR" 2>/dev/null || true
+    echo "omarchy-kids-notify: notifications off; certificate removed"
+  else
+    echo "  [dry-run] would remove $CERT and $KEY"
+    echo "  (run with --apply to make it real)"
+  fi
+}
+
+delegate() { # SUBCOMMAND... -- straight through to omarchy-kids-devices
+  "$DEVICES_BIN" "$@"
+}
+
+[[ $# -ge 1 ]] || {
+  usage >&2
+  exit 2
+}
+case "$1" in
+  -h | --help)
+    usage
+    exit 0
+    ;;
+esac
+is_root || die "root only (it owns the relay certificate and the device registry)"
+cmd="$1"
+shift
+case "$cmd" in
+  enable) cmd_enable "$@" ;;
+  disable) cmd_disable "$@" ;;
+  status) cmd_status ;;
+  devices) delegate list "$@" ;;
+  list) delegate list "$@" ;;
+  rename) delegate rename "$@" ;;
+  scopes) delegate scopes "$@" ;;
+  revoke) delegate revoke "$@" ;;
+  publish) delegate publish "$@" ;;
+  pair-start) delegate pair-start "$@" ;;
+  *) die "unknown command: '$cmd' (see --help)" ;;
+esac
