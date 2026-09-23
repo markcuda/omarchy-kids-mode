@@ -141,8 +141,9 @@ def write_sent(path, digest):
         with open(tmp, "w", encoding="utf-8") as f:
             f.write(digest + "\n")
         os.replace(tmp, path)
-    except OSError:
-        pass
+    except OSError as exc:
+        # Not fatal, but it means the next run re-sends: say so.
+        print(f"courier: could not record the last-sent state: {exc}", file=sys.stderr)
 
 
 def _post(url, body, headers, timeout):

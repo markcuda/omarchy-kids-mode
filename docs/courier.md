@@ -33,9 +33,10 @@ decisions the app sends are signed separately and verified by root (Appendix H;
 `systemd/omarchy-kids-relay-courier.timer` runs the service every five minutes (and three minutes
 after boot); with no config the run exits at once, and a run whose state has not changed since the
 last successful send **does not post**, so an idle box does not deliver a message every five minutes.
-Like the relay the service uses `AF_INET`/`AF_INET6`, but it is the one unit with no `IPAddressAllow`/
-`IPAddressDeny` fence — that, not the address family, is what lets it leave the LAN. It carries no
-capabilities and a strict filesystem view.
+Like the relay the service uses `AF_INET`/`AF_INET6`; unlike the relay it carries no `IPAddressAllow`/
+`IPAddressDeny` fence at all — it may reach the one server the parent named, and only that (the code
+refuses any other URL, and no redirects or proxy). It carries no capabilities and a strict filesystem
+view.
 
 ## The one fence that matters
 

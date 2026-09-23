@@ -37,13 +37,13 @@ Seals the current state for every paired device and posts it to the ntfy or
 Gotify topic the parent configured (omarchy-kids-notify mailbox). It is the only
 Kids Mode process that may reach beyond the LAN (R-NOTIFY-8).
 
-Nothing is sent while notifications are off or no server is configured, and
-A run whose state has not changed since the last successful send does nothing, so
-an idle box does not post a message every five minutes. DRY_RUN=1 is the default:
-without --apply it prints the plan. The server must be
-https (the config writer enforces that; the courier re-checks). A send is best
+Nothing is sent while notifications are off or no server is configured, and a run
+whose state, server and devices are unchanged since the last successful send does
+nothing — an idle box does not post a message every five minutes. The server must
+be https (the config writer enforces that; the courier re-checks). A send is best
 effort per device: one device's failure does not stop the others, and the command
-exits nonzero if any device's send failed, so a timer can notice.
+exits nonzero if any failed, so a timer can notice. DRY_RUN=1 is the default:
+without --apply it prints the plan.
 
   --apply     Really post.
   --dry-run   Print the plan (the default).
