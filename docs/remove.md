@@ -83,6 +83,9 @@ account with a recorded kid slot because portal mode cannot prove that key is go
      Sourcing the shared list rather than keeping a second copy means a unit added there —
      `omarchy-kids-wifid.socket`, `omarchy-kids-ask-collect.timer` — is disabled and stopped here too,
      with nothing to keep in sync by hand (issue #45 item 5).
+   - Removes the "away from home" relay drop-in
+     (`/etc/systemd/system/omarchy-kids-relayd.service.d/away.conf`, N-10) if the parent had turned it
+     on, and reloads systemd — so no fence widened by hand outlives the removal.
    - Removes the parent from the `omarchy-parents` group (`gpasswd -d <parent> omarchy-parents`),
      unless `--keep-parent-group` is given, in which case this step is left `skipped` on purpose
      (issue #45 item 3). Runs before `etc-and-varlib` below, since it still needs `machine.conf`'s

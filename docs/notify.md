@@ -60,9 +60,10 @@ Running this as root — from a terminal, or through the panel's warmed sudo —
 authentication, so there is no second password prompt. The window is consumed by the first device
 that presents the token and expires on its own; `pair` refuses while notifications are off.
 
-The URI's `addr=` list carries the box's own routable addresses (every global IPv4, and the tailnet
-address when `away tailnet` is on), so the app can try another when one fails (N-10). The addresses
-also ride the single-use record; each is validated before it reaches the URI.
+The URI's `addr=` list carries the box's own routable addresses (every global IPv4 except the
+CGNAT range unless away is on, plus the tailnet address when `away tailnet` is on), so the app can
+try another when one fails (N-10). The addresses also ride the single-use record; each is validated
+before it reaches the URI.
 
 ## Away from home (N-10)
 

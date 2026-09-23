@@ -441,6 +441,12 @@ check_eq "$?" 2 "an unknown flag exits 2"
 
 # --- --dry-run: prints the plan, writes nothing ---------------------------
 
+# The away drop-in (N-10) is a machine-wide step too; seed it so both passes see
+# it.
+AWAY_CONF="$SCRATCH_ROOT/etc/systemd/system/omarchy-kids-relayd.service.d/away.conf"
+mkdir -p "$(dirname "$AWAY_CONF")"
+printf '[Service]\n' >"$AWAY_CONF"
+
 out="$("$BIN" --dry-run 2>&1)"
 st=$?
 check_eq "$st" 0 "--dry-run exits 0"
@@ -450,7 +456,7 @@ for desc in "mount:kid-ada" "fstab:kid-ada" "luks:kid-ada" "namespace:kid-ada" \
   "polkit-admin" "polkit-deny" "getty:tty2" "sddm-theme" \
   "parent-unlock:sddm" "parent-unlock:omarchy-lock-password" \
   "chromium-policy:6-8" "limine-snapshots" "mkinitcpio-hook" "sddm-autologin" \
-  "units" "parent-group" "etc-and-varlib"; do
+  "units" "away" "parent-group" "etc-and-varlib"; do
   check_status "$out" "$desc" "would-remove" "--dry-run: $desc would be removed"
 done
 # The second slot fixture has a profile but no portal entry, so this seeded
@@ -494,6 +500,8 @@ argv="$(cat "$ARGV_LOG")"
 check_eq "$st" 0 "real run exits 0"
 check_contains "$out" "Plan:" "real run still prints the plan first"
 check_contains "$out" "Removing:" "real run prints a Removing section after the plan"
+[[ ! -e "$AWAY_CONF" ]] && pass "the away drop-in was removed (N-10)" ||
+  fail "the away drop-in outlived removal"
 
 check_status "$out" "mount:kid-ada" "removed" "mount:kid-ada removed"
 check_contains "$argv" "umount $HOMEROOT/home/kid-ada" "mount: unmounted the home"

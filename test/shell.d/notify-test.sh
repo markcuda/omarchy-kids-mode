@@ -56,10 +56,12 @@ EOF
 chmod +x "$STUBS/qrencode"
 export QR_LOG
 
-# An `ip` stub so pairing's address enumeration is owned by the test (N-10).
+# An `ip` stub so pairing's address enumeration is owned by the test (N-10):
+# a LAN address and a tailnet (CGNAT) address.
 cat >"$STUBS/ip" <<'EOF'
 #!/bin/bash
 printf '2: eth0    inet 10.0.0.9/24 brd 10.0.0.255 scope global eth0\n'
+printf '3: tailscale0    inet 100.64.0.7/32 scope global tailscale0\n'
 EOF
 chmod +x "$STUBS/ip"
 
@@ -139,6 +141,8 @@ PY
   check_eq "$?" "0" "pair --apply starts a pairing window"
   check_contains "$out3" "omarchy-kids://pair" "pair prints the URI the device scans"
   check_contains "$out3" "addr=10.0.0.9" "pair passes the box's own address (N-10)"
+  [[ "$out3" != *"100.64.0.7"* ]] && pass "the CGNAT address is left out while away is off (N-10)" ||
+    fail "the CGNAT address rode the URI with away off"
   check_contains "$out3" "fingerprint: $recomputed" "pair prints the SPKI fingerprint to check on the device"
   check_contains "$(cat "$QR_LOG")" "omarchy-kids://pair" "pair renders the URI as a QR (qrencode, on stdin)"
   ls "$PAIR_DIR"/* >/dev/null 2>&1 && pass "pair wrote a single-use pairing record" ||
@@ -195,6 +199,11 @@ check_contains "$(cat "$AWAY_FILE")" "100.64.0.0/10" "the drop-in allows the tai
 check_contains "$(cat "$AWAY_FILE")" "192.168.0.0/16" "the drop-in keeps the LAN ranges"
 check_contains "$(cat "$SYSTEMCTL_LOG")" "daemon-reload" "away reloads systemd"
 check_eq "$("$BIN" away-status)" "tailnet" "away-status: tailnet after apply"
+if python3 -c "import cryptography" >/dev/null 2>&1; then
+  "$BIN" enable --apply >/dev/null 2>&1
+  out="$("$BIN" pair --apply 2>&1)"
+  check_contains "$out" "100.64.0.7" "pair offers the tailnet address once away is on (N-10)"
+fi
 
 out="$("$BIN" away off --apply 2>&1)"
 check_eq "$?" 0 "away off --apply succeeds"
