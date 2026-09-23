@@ -640,6 +640,21 @@ check_not_contains "$out" "rejected before it was sent" "grant time 7 carries mi
 check_contains "$(cat "$ROOT_DIR/share/ask/shell.qml")" '"Your password"' \
   "the ask modal's empty field says whose password is wanted"
 
+# --- reply validation (Appendix D): printable and bounded at read time -------
+
+python3 "$ROOT_DIR/lib/ask.py" write "$QUEUE_DIR" --kid kid-ada --kind time --what 5 --minutes 5 >/dev/null
+reply_rec="$(ls -t "$QUEUE_DIR"/*.json 2>/dev/null | head -1)"
+python3 "$ROOT_DIR/lib/ask.py" decide "$reply_rec" --state declined --by panel \
+  --reply "$(printf 'a%.0s' $(seq 1 81))" >/dev/null 2>&1
+check_eq "$?" 2 "decide: an over-long reply is refused (Appendix D)"
+python3 "$ROOT_DIR/lib/ask.py" decide "$reply_rec" --state declined --by panel \
+  --reply "$(printf 'bad\treply')" >/dev/null 2>&1
+check_eq "$?" 2 "decide: a control character in the reply is refused (Appendix D)"
+python3 "$ROOT_DIR/lib/ask.py" decide "$reply_rec" --state declined --by panel \
+  --reply "After dinner" >/dev/null 2>&1
+check_eq "$?" 0 "decide: a valid reply is accepted"
+check_contains "$(cat "$reply_rec")" '"reply": "After dinner"' "decide: the reply is stored"
+
 # --- R-NOTIFY-7: a record takes the queue directory's group, not the writer's --
 # The N-1 blocking fix. Observable: point the queue at a *secondary* group of
 # the test user, collect, and check the record took that group -- a record that
