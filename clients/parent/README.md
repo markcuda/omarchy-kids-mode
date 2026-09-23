@@ -15,8 +15,8 @@ the pairing-URI parser and the SPKI pin are pinned by the package's own tests (t
 `test/fixtures/relay-cert.pem`, is a throwaway public certificate minted by `lib/cert.py`;
 `test/shell.d/parent-app-test.sh` also checks the Dart constant equals what `lib/cert.py` prints),
 and the client is proven end to end against the box's own relay
-(`test/relay_integration_test.dart` starts `bin/omarchy-kids-relayd`, pins it and makes a signed
-read). There is no Flutter project and nothing to install
+(`test/relay_integration_test.dart` starts `bin/omarchy-kids-relayd`, pins it, makes a signed read,
+and shows a decision POST and a pairing POST reach the relay's authd-forwarding step). There is no Flutter project and nothing to install
 on a phone yet, so there is nothing to scan a pairing QR with — `AGENTS.md` rule 6 is why this file
 says so plainly. The box side is complete (`docs/notify.md`, `docs/relayd.md`, `docs/devices.md`).
 

@@ -128,6 +128,9 @@ class KidsRelayClient {
     try {
       final uri = Uri(scheme: 'https', host: host, port: port, path: path);
       final request = await client.openUrl(method, uri).timeout(timeout);
+      // The relay reads Content-Length, never a chunked body, and it never
+      // redirects: sign and send exactly one request.
+      request.followRedirects = false;
       final headers = await signedHeaders(
         keyPair: keyPair,
         deviceId: deviceId,
@@ -140,6 +143,8 @@ class KidsRelayClient {
       headers.forEach(request.headers.set);
       if (body.isNotEmpty) {
         request.headers.contentType = ContentType.json;
+        request.contentLength = body.length;
+        request.headers.chunkedTransferEncoding = false;
         request.add(body);
       }
       final response = await request.close().timeout(timeout);
@@ -181,8 +186,12 @@ class KidsRelayClient {
     try {
       final uri = Uri(scheme: 'https', host: host, port: port, path: '/v1/pair');
       final request = await client.postUrl(uri).timeout(timeout);
+      request.followRedirects = false;
+      final payload = utf8.encode(frame);
       request.headers.contentType = ContentType.json;
-      request.add(utf8.encode(frame));
+      request.contentLength = payload.length;
+      request.headers.chunkedTransferEncoding = false;
+      request.add(payload);
       final response = await request.close().timeout(timeout);
       final text = await utf8.decoder.bind(response).join();
       if (response.statusCode != 200) {

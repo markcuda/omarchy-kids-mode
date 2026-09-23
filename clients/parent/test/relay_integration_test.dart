@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:cryptography/cryptography.dart';
 import 'package:test/test.dart';
 
+import '../lib/relay_client.dart';
 import '../lib/transport.dart';
 
 void main() {
@@ -72,6 +73,31 @@ void main() {
       expect(state.containsKey('kids'), isTrue);
       expect(state['kids'], isEmpty);
 
+      // A POST reaches the relay's forwarding step: the signature verifies (a
+      // framing or signature error would be 400/403), and only authd is missing,
+      // so the relay answers 502. This is what would have caught a chunked body.
+      Future<void> expectReachesAuthd(Future<Object?> call) async {
+        try {
+          await call;
+          fail('the relay answered, but authd is not running');
+        } on HttpException catch (e) {
+          expect(e.message, contains('502'), reason: 'expected the relay to forward, got ${e.message}');
+        }
+      }
+
+      await expectReachesAuthd(client.decide(
+        record: {
+          'device_id': deviceId,
+          'request_id': 'req-it',
+          'decision': 'approve',
+          'ts': _now(),
+          'nonce': 'it-decide',
+        },
+        ts: _now(),
+        nonce: 'it-decide',
+      ));
+      await expectReachesAuthd(client.pair(await _pairFrame(deviceId, deviceKey, cert)));
+
       // A different pin must not be accepted: the self-signed certificate the
       // relay presents is exactly what the pin decides.
       final wrong = KidsRelayClient(
@@ -88,6 +114,20 @@ void main() {
       tmp.deleteSync(recursive: true);
     }
   }, skip: hasPython ? false : 'python3 or python-cryptography not installed');
+}
+
+/// A pairing frame for the test: the token never travels, only the proof.
+Future<String> _pairFrame(String deviceId, SimpleKeyPair key, String certPath) async {
+  final token = 'ab' * 20; // 40 hex characters
+  final signPub = base64.encode((await key.extractPublicKey()).bytes);
+  return buildPairFrame(
+    id: deviceId,
+    name: 'Integration',
+    platform: 'linux',
+    tokenHex: token,
+    signPub: signPub,
+    boxPub: signPub,
+  );
 }
 
 int _now() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
