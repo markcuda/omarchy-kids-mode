@@ -103,8 +103,8 @@ def forward_decide(auth_sock, frame_json, timeout=30.0):
 def forward_pair(auth_sock, frame_json, timeout=30.0):
     """Send `PAIR <json>\\n` to authd and return its reply line.
 
-    Pairing is pre-auth and the single-use token in the frame is the credential
-    (R-NOTIFY-5): the relay never reads the root-only pairing record (R-NOTIFY-2),
+    Pairing is pre-auth: the frame carries a proof that the device holds the
+    single-use token, and the token itself never travels (R-NOTIFY-5): the relay never reads the root-only pairing record (R-NOTIFY-2),
     it just carries the frame to authd, which verifies the proof and registers
     the device.
     """

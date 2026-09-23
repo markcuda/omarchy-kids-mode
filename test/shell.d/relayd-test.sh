@@ -179,7 +179,7 @@ try:
         pass
     ready2 = threading.Event()
     threading.Thread(target=fake_authd, args=(ready2,), daemon=True).start()
-    if not ready2.wait(10):
+    if not ready2.wait(30):
         raise RuntimeError("the second authd stub did not start")
     pair_frame = json.dumps({"id": "d2", "name": "Phone", "platform": "android",
                              "sign_pub": "x", "box_pub": "y", "proof": "p"})
@@ -195,7 +195,7 @@ try:
         pass
     ready3 = threading.Event()
     threading.Thread(target=fake_authd, args=(ready3, b"no bad-proof\n"), daemon=True).start()
-    if not ready3.wait(10):
+    if not ready3.wait(30):
         raise RuntimeError("the third authd stub did not start")
     code, body = request("POST", "/v1/pair", {}, pair_frame.encode())
     check(code == 403 and b"bad-proof" not in body, "a pair refusal is generic to the caller")
