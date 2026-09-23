@@ -1,0 +1,11 @@
+[Unit]
+Description=Re-check approved add-ons for a changed surface or exec (SPEC.md R-NOTIFY-12)
+Documentation=https://github.com/markcuda/omarchy-kids-mode/blob/main/docs/review.md
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/omarchy-kids-review scan --apply
+# Reads a kid's apps.extra through omarchy-kids-conf and the .desktop files under
+# /usr/share/applications, and writes only /var/lib/omarchy-kids/reviews/ -- never
+# a home. docs/review.md.
+NoNewPrivileges=yes

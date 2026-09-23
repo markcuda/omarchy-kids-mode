@@ -440,7 +440,7 @@ autologin_remove() { rm -f "$(autologin_dropin)"; }
 # are activated-by-the-above units with no [Install] section of their own
 # (no .wants symlink to check), so they're only ever stopped, never
 # checked for "is this enabled".
-KIDS_EXTRA_UNITS=(omarchy-kids-authd.service omarchy-kids-wifid.service omarchy-kids-time-ledger.service omarchy-kids-ask-collect.service)
+KIDS_EXTRA_UNITS=(omarchy-kids-authd.service omarchy-kids-wifid.service omarchy-kids-time-ledger.service omarchy-kids-ask-collect.service omarchy-kids-review.service)
 unit_link() { printf '%s/etc/systemd/system/%s.wants/%s' "$(posture_root)" "$1" "$2"; }
 units_present() {
   local u

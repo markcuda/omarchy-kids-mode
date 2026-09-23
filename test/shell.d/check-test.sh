@@ -352,6 +352,7 @@ ln -sf /usr/lib/systemd/system/omarchy-kids-wifid.socket "$SCRATCH_ROOT/etc/syst
 mkdir -p "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants"
 ln -sf /usr/lib/systemd/system/omarchy-kids-ask-collect.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-ask-collect.timer"
 ln -sf /usr/lib/systemd/system/omarchy-kids-time.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-time.timer"
+ln -sf /usr/lib/systemd/system/omarchy-kids-review.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-review.timer"
 
 mkdir -p "$ETC/hyprland"
 cp "$SHARE"/hyprland/*.lua "$ETC/hyprland/"

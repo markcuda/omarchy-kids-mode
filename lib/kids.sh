@@ -572,4 +572,4 @@ KIDS_SOCKETS=(omarchy-kids-authd.socket omarchy-kids-wifid.socket)
 # ask-collect.timer: the every-minute backstop that applies an "ask a
 # parent" request submitted while no one was running the panel.
 # shellcheck disable=SC2034 # read by sourcing callers, not here
-KIDS_TIMERS=(omarchy-kids-time.timer omarchy-kids-ask-collect.timer)
+KIDS_TIMERS=(omarchy-kids-time.timer omarchy-kids-ask-collect.timer omarchy-kids-review.timer)

@@ -615,7 +615,7 @@ check_status "$out" "units" "removed" "units removed"
 # command's own KIDS_EXTRA_UNITS, so a unit added there --
 # omarchy-kids-wifid.socket, omarchy-kids-ask-collect.timer -- is torn
 # down here too, with no separate list to fall out of sync.
-check_contains "$argv" "systemctl --root=$SCRATCH_ROOT disable omarchy-kids-boot-login.service omarchy-kids-boot-login-cleanup.service omarchy-kids-assert.service omarchy-kids-authd.socket omarchy-kids-wifid.socket omarchy-kids-time.timer omarchy-kids-ask-collect.timer omarchy-kids-authd.service omarchy-kids-wifid.service omarchy-kids-time-ledger.service omarchy-kids-ask-collect.service" \
+check_contains "$argv" "systemctl --root=$SCRATCH_ROOT disable omarchy-kids-boot-login.service omarchy-kids-boot-login-cleanup.service omarchy-kids-assert.service omarchy-kids-authd.socket omarchy-kids-wifid.socket omarchy-kids-time.timer omarchy-kids-ask-collect.timer omarchy-kids-review.timer omarchy-kids-authd.service omarchy-kids-wifid.service omarchy-kids-time-ledger.service omarchy-kids-ask-collect.service omarchy-kids-review.service" \
   "units: disable called (via --root, since this is a scratch tree) with the full lib/kids.sh list, including omarchy-kids-wifid.socket"
 for u in omarchy-kids-boot-login.service omarchy-kids-boot-login-cleanup.service omarchy-kids-assert.service; do
   [[ -e "$SCRATCH_ROOT/etc/systemd/system/multi-user.target.wants/$u" ]] && fail "$u should be disabled" ||

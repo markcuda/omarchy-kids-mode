@@ -61,8 +61,9 @@ record, not enforcement): hiding the app again is the only action, and a kid can
   review-approve|review-deny|review-check` (`docs/notify.md`). The count rides `status.json` as `reviews`. The panel's Requests screen does
   not list reviews yet — the next slice adds that — and `omarchy-kids-review list` is the command
   line view.
-- The scan is not on a timer yet; run `omarchy-kids-review scan --apply` after updates (or by hand),
-  until the ledger tick or a timer drives it.
+- **The scan runs on a timer** (`systemd/omarchy-kids-review.timer`, hourly and five minutes after
+  boot, driving `omarchy-kids-review scan --apply`), so an update is detected without the parent
+  doing anything. `omarchy-kids-review scan --apply` still runs it by hand.
 
 ## Tests
 

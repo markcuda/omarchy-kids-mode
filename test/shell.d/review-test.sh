@@ -204,5 +204,14 @@ check_status "$?" 2 "approve with no id is refused"
 "$BIN" bogus >/dev/null 2>&1
 check_status "$?" 2 "an unknown command is refused"
 
+# --- the timer that runs the scan -----------------------------------------
+TIMER="$DIR/systemd/omarchy-kids-review.timer"
+SERVICE="$DIR/systemd/omarchy-kids-review.service"
+[[ -f "$TIMER" ]] && pass "the review timer unit exists" || fail "no review timer unit"
+check_contains "$(cat "$TIMER")" "Unit=omarchy-kids-review.service" "the timer drives the review service"
+check_contains "$(cat "$TIMER")" "WantedBy=timers.target" "the timer is timer-activated"
+check_contains "$(cat "$SERVICE")" "ExecStart=/usr/bin/omarchy-kids-review scan --apply" \
+  "the service scans for real"
+
 echo "review-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc
