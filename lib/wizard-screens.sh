@@ -343,7 +343,7 @@ screen_summary() {
     _tui_build_summary_lines rows
     TUI_SUMMARY_LINES=("Here's what happens next for $DISPLAY_NAME." "" "${TUI_SUMMARY_LINES[@]}")
     # One line, not a row: a long label would widen every row's padding (N-6).
-    TUI_SUMMARY_LINES+=("" "Your phone can get $DISPLAY_NAME's requests — pair it from the panel, after this.")
+    TUI_SUMMARY_LINES+=("" "You can pair a parent app for $DISPLAY_NAME's requests later — the panel's Notifications screen does that (the app is still being built).")
 
     local choices=("apply|Apply|" "change|Change something|")
     tui_screen_choose "Ready?" 13 "$TOTAL_STEPS" 0 "" choices "apply" "$TUI_FOOTER_DEFAULT" TUI_SUMMARY_LINES

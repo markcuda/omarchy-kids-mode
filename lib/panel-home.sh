@@ -49,7 +49,7 @@ screen_home() {
     choices+=(
       "add|Add a kid|"
       "requests|Requests ($total_open)|"
-      "notifications|Notifications|Pair your phone to approve or decline (R-NOTIFY)"
+      "notifications|Notifications|Turn notifications on or off, and pair a device (R-NOTIFY)"
       "machine|Machine safety|The read-only safety report (R-TRUST-2)"
       "remove_kids_mode|Remove Kids Mode|"
       "quit|Quit|"

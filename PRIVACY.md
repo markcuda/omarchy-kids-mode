@@ -35,9 +35,11 @@ enforces or could tamper with (I-3). The only people who can read it:
   screens) — the same numbers the ledger recorded, nothing added.
 - **The kid themselves**, on their own "What my grown-ups can see" screen at every login
   (R-DATA-3) — see "In kid words" below.
-- **Nobody else.** Nothing here is uploaded, synced, or reachable over the network. I-2: nothing
-  about a child leaves the machine, ever — no telemetry, no cloud account, no listener that a
-  request from outside could reach.
+- **Nobody else, unless the parent turns notifications on.** Nothing here is uploaded, synced, or
+  reachable over the network by default. I-2: nothing about a child leaves the machine except to a
+  device the parent paired or a server the parent named, and only while notifications are on (see
+  "Parental notifications" below) — no telemetry, no cloud account. With notifications off there is
+  no network listener at all.
 
 ## History, specifically
 
@@ -71,8 +73,7 @@ Turning notifications off revokes every paired device and removes the certificat
 
 ## In kid words
 
-This is the actual text of the screen a kid sees, every time they log in (K5, SPEC.md Appendix
-A) — not a paraphrase of it:
+This is the screen a kid sees at every login, in its own words (K5, SPEC.md Appendix A):
 
 > **What my grown-ups can see**
 >
@@ -82,10 +83,10 @@ A) — not a paraphrase of it:
 > - The websites you visited — *only if that's turned on for you. If it's off, this says so and
 >   nobody sees it.*
 >
-> Nobody outside this computer sees any of this — unless your grown-up turns on notifications, and
-> then only their own phone or computer, and only things like how many minutes you have, whether
-> you're on a break, and what you asked for ("Ada asked for 15 more minutes") and what happened.
-> Nobody reads what you type or takes pictures of your screen.
+> Nothing you type, no pictures of your screen, and nothing you write in a message is ever
+> recorded. Only your grown-ups can see any of this. It stays on this computer — unless your
+> grown-ups turn notifications on, and then only their own phone or computer, and only things like
+> your minutes and your asks.
 
 ## If you think this is wrong
 

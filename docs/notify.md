@@ -50,10 +50,11 @@ devices. The bar widget and the panel read the same state.
 ## `pair`
 
 Starts a single-use pairing window (`omarchy-kids-devices pair-start`, R-NOTIFY-5) and prints the
-`omarchy-kids://pair` URI plus the relay's fingerprint. Where `qrencode` is installed the URI is
-also drawn as a QR; otherwise the code is there to read into the app. The URI carries the single-use
-token, so it is piped to `qrencode` on **stdin**, never passed as an argument a local session could
-read out of `/proc`.
+`omarchy-kids://pair` URI plus the relay's fingerprint. Where `qrencode` is installed the URI is also
+drawn as a QR; otherwise the URI is there as the code. The parent app that would consume it is not
+built on this branch, so the window is ready for it with nothing on the device side to scan yet. The
+URI carries the single-use token, so it is piped to `qrencode` on **stdin**, never passed as an
+argument a local session could read out of `/proc`.
 
 Running this as root — from a terminal, or through the panel's warmed sudo — **is** the parent's
 authentication, so there is no second password prompt. The window is consumed by the first device

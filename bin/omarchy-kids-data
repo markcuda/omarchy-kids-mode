@@ -284,8 +284,9 @@ cmd_mine() {
   fi
   echo
   echo "Nothing you type, no pictures of your screen, and nothing you write in a"
-  echo "message is ever recorded. Only your grown-ups can see any of this — it never"
-  echo "leaves this computer."
+  echo "message is ever recorded. Only your grown-ups can see any of this. It stays"
+  echo "on this computer — unless your grown-ups turn notifications on, and then only"
+  echo "their own phone or computer, and only things like your minutes and your asks."
   echo
 
   local usage_dir earliest last_day

@@ -58,12 +58,11 @@ computer, if you've set that up — `systemctl restart sddm` there is the gentle
 4. **Add another kid.** Home screen → "Add a kid" — the same wizard as the first one, one kid at
    a time.
 
-**And to have requests come to you.** Home screen → **Notifications** → **Turn on
-notifications** → **Pair a device**. The desktop notifier (on this computer) then shows each request
-with **Approve** and **Decline** (`docs/notify.md`). **Paired devices** lists them and revokes any
-you no longer want; turning notifications off revokes them all. The phone app that would scan the
-pairing QR is **not built yet** — until it ships, pairing is ready for it but there is nothing on the
-phone side to scan.
+**Desktop notifications.** With the Kids Mode bar widget on, `omarchy-kids-bar notify-enable` shows
+each request on your own desktop with **Approve** and **Decline** (`docs/notify.md`). The panel's
+**Notifications** screen turns the device side on or off, pairs a device, and lists or revokes the
+paired ones. The phone app itself is **not built yet**, so a pairing window is ready for it but there
+is nothing on the phone side to scan yet.
 
 ## What's not built yet
 

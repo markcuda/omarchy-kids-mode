@@ -19,16 +19,6 @@ QUEUE_DIR="$SYSROOT/var/lib/omarchy-kids/queue"
 STATE_FILE=""
 BAR_BIN="$(kids_bin bar "$DIR")"
 
-if [[ -z "$STATE_FILE" ]]; then
-  # No /tmp fallback: a kid-writable directory would let a pre-created name make
-  # the watcher's state write fail (or suppress a notification) for good.
-  if [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
-    echo "omarchy-kids-notify-watch: XDG_RUNTIME_DIR is unset; run it from a session, not by hand" >&2
-    exit 2
-  fi
-  STATE_FILE="$XDG_RUNTIME_DIR/omarchy-kids-notify-watch.state"
-fi
-
 for arg in "$@"; do
   case "$arg" in
     -h | --help)
@@ -48,6 +38,16 @@ EOF
       ;;
   esac
 done
+
+if [[ -z "$STATE_FILE" ]]; then
+  # No /tmp fallback: a kid-writable directory would let a pre-created name make
+  # the watcher's state write fail (or suppress a notification) for good.
+  if [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
+    echo "omarchy-kids-notify-watch: XDG_RUNTIME_DIR is unset; run it from a session, not by hand" >&2
+    exit 2
+  fi
+  STATE_FILE="$XDG_RUNTIME_DIR/omarchy-kids-notify-watch.state"
+fi
 
 exec "$KIDS_PY" "$LIB/notify_watch.py" \
   --queue "$QUEUE_DIR" --state "$STATE_FILE" --bar "$BAR_BIN" "$@"

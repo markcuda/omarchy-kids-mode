@@ -57,7 +57,7 @@ notify_pair_show() {
   fi
   uri="$(printf '%s\n' "$out" | awk '/omarchy-kids:\/\/pair/{print $NF}')"
   fp="$(printf '%s\n' "$out" | awk '/fingerprint:/{print $2}')"
-  NOTIFY_NOTICE="Pairing window open. In your phone app, open this code: $uri"
+  NOTIFY_NOTICE="Pairing window open. A parent app can use this code: $uri"
   [[ -n "$fp" ]] && NOTIFY_NOTICE+="  ·  fingerprint: $fp"
   return 0
 }
@@ -136,7 +136,7 @@ screen_notify() {
     local -a choices=()
     if ((read_ok)); then
       if ((on)); then
-        choices+=("pair|Pair a device|Shows a code and fingerprint to check on your phone")
+        choices+=("pair|Pair a device|Start a pairing window for the parent app (not built yet)")
         choices+=("disable|Turn off notifications|Revokes every paired device")
       else
         choices+=("enable|Turn on notifications|Mints the relay's certificate")
