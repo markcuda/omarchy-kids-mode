@@ -33,8 +33,9 @@ enforces or could tamper with (I-3). The only people who can read it:
 
 - **The parent**, through the panel (`omarchy-kids-time status`, `docs/panel.md`'s Home and Kid
   screens) — the same numbers the ledger recorded, nothing added.
-- **The kid themselves**, on their own "What my grown-ups can see" screen at every login
-  (R-DATA-3) — see "In kid words" below.
+- **The kid themselves**, on their own "What my grown-ups can see" screen (R-DATA-3) — a launcher
+  tile for bands 9-12 and 13+, run with a grown-up for younger kids (`docs/data.md`). See "In kid
+  words" below.
 - **Nobody else, unless the parent turns notifications on.** Nothing here is uploaded, synced, or
   reachable over the network by default. I-2: nothing about a child leaves the machine except to a
   device the parent paired or a server the parent named, and only while notifications are on (see
@@ -73,8 +74,8 @@ Turning notifications off revokes every paired device and removes the certificat
 
 ## In kid words
 
-This is the screen a kid sees at every login, quoted from `bin/omarchy-kids-data`'s `mine`
-(K5, SPEC.md Appendix A):
+This is the screen behind the "What grown-ups see" tile (bands 9-12 and 13+; a grown-up can run it
+with a younger kid), quoted from `bin/omarchy-kids-data`'s `mine` (K5, SPEC.md Appendix A):
 
 > **What my grown-ups can see**
 >
