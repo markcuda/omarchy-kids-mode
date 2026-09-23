@@ -5,9 +5,14 @@ document for each paired device (`lib/envelope.py`) and posts it to the server t
 parent named -- an ntfy or Gotify topic of their own. Off by default: with no
 config it refuses, and with notifications off there is no state to send.
 
+It talks only to the configured URL: https (or http to loopback, for tests), no
+redirects followed, and the proxy environment ignored, so a redirected or proxied
+request cannot reach a third host. The Gotify token rides an `X-Gotify-Key`
+header, never the query string (proxy and access logs keep query strings).
+
 This is the outbound half; pulling the parent's signed decisions back is a later
-step. Nothing here decides, and nothing is sent anywhere but the configured
-server. Stdlib only (+ python-cryptography through envelope.py).
+step. The courier never decides. Exit status is nonzero if any device's send
+failed, so a timer can notice. Stdlib only (+ python-cryptography via envelope.py).
 """
 
 from __future__ import annotations
@@ -17,11 +22,13 @@ import importlib.util
 import json
 import os
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TRANSPORTS = ("ntfy", "gotify")
+LOOPBACK_HOSTS = ("127.0.0.1", "::1", "localhost")
 
 
 def _load(path, name):
@@ -33,6 +40,32 @@ def _load(path, name):
 
 envelope = _load(os.path.join(HERE, "envelope.py"), "kids_envelope")
 relay = _load(os.path.join(HERE, "relay.py"), "kids_relay")
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """A redirect is not followed: returning None raises HTTPError instead."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _opener():
+    # No proxy (root's https_proxy must not reroute this), no redirects.
+    return urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+
+
+def url_allowed(url):
+    """https, or http to loopback only (the tests' local server)."""
+    if url.startswith("https://"):
+        return True
+    if not url.startswith("http://"):
+        return False
+    try:
+        host = urllib.parse.urlsplit(url).hostname or ""
+    except ValueError:
+        return False
+    host = host.strip("[]")
+    return host in LOOPBACK_HOSTS
 
 
 def load_config(path):
@@ -72,35 +105,40 @@ def load_devices(path):
     return out
 
 
-def _post(url, body, timeout):
-    request = urllib.request.Request(
-        url, data=body, method="POST", headers={"Content-Type": "application/json"}
-    )
-    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310 -- the configured server
-        return response.status
+def _post(url, body, headers, timeout):
+    request = urllib.request.Request(url, data=body, method="POST", headers=headers)
+    try:
+        with _opener().open(request, timeout=timeout) as response:  # noqa: S310 -- one configured server
+            return response.status
+    except urllib.error.HTTPError as exc:
+        return exc.code
 
 
 def post_ntfy(base_url, topic, body, timeout=15):
     """ntfy: POST the body to <base>/<topic>."""
     target = base_url.rstrip("/") + "/" + urllib.parse.quote(topic, safe="")
-    return _post(target, body, timeout)
+    return _post(target, body, {"Content-Type": "application/json"}, timeout)
 
 
 def post_gotify(base_url, token, title, body, timeout=15):
-    """Gotify: POST /message?token=... with a JSON title/message."""
-    target = base_url.rstrip("/") + "/message?token=" + urllib.parse.quote(token, safe="")
+    """Gotify: POST /message with the token in a header (not the query string)."""
+    target = base_url.rstrip("/") + "/message"
     payload = json.dumps({"title": title, "message": body.decode("utf-8")}).encode("utf-8")
-    return _post(target, payload, timeout)
+    return _post(target, payload, {"Content-Type": "application/json", "X-Gotify-Key": token}, timeout)
 
 
 def send(config, state, devices, timeout=15):
     """Seal `state` for each device and post it. Best effort per device.
 
-    Returns [(device_id, status_or_error), ...]; the caller reports them.
+    Returns [(device_id, status_or_error), ...]; the caller reports them and
+    decides its exit status.
     """
     transport = config.get("transport")
     if transport not in TRANSPORTS:
         raise ValueError(f"unknown transport {transport!r}")
+    url = config.get("url", "")
+    if not url_allowed(url):
+        raise ValueError("the configured server must be https (or loopback for tests)")
     plaintext = json.dumps(state, separators=(",", ":"), sort_keys=True).encode("utf-8")
     results = []
     for device in devices:
@@ -108,15 +146,17 @@ def send(config, state, devices, timeout=15):
             sealed = envelope.seal(device["id"], device["box_pub"], plaintext)
             body = json.dumps(sealed, separators=(",", ":")).encode("utf-8")
             if transport == "ntfy":
-                status = post_ntfy(config["url"], config.get("topic", "omarchy-kids"), body, timeout)
+                status = post_ntfy(url, config.get("topic", "omarchy-kids"), body, timeout)
             else:
-                status = post_gotify(
-                    config["url"], config.get("token", ""), "omarchy-kids", body, timeout
-                )
+                status = post_gotify(url, config.get("token", ""), "omarchy-kids", body, timeout)
             results.append((device["id"], status))
         except Exception as exc:  # noqa: BLE001 -- one device's failure is not the others'
             results.append((device["id"], f"error: {exc}"))
     return results
+
+
+def _failed(result):
+    return isinstance(result[1], str) or not (200 <= result[1] < 300)
 
 
 def main(argv):
@@ -131,21 +171,27 @@ def main(argv):
 
     config = load_config(args.config)
     if config is None:
-        print("courier: no parent server is configured (off)", file=sys.stderr)
+        print("courier: no parent server is configured (off)")
         return 0
     devices = load_devices(args.devices)
     if not devices:
         print("courier: no device is paired; nothing to send")
         return 0
+    if not url_allowed(config.get("url", "")):
+        print("courier: the configured server must be https; refusing", file=sys.stderr)
+        return 2
     state = relay.build_state(args.status, args.queue)
     if not args.apply:
         for device in devices:
-            print(f"  [dry-run] would seal the state for {device['id']} and POST it to "
-                  f"{config['transport']} {config['url']}")
+            print(
+                f"  [dry-run] would seal the state for {device['id']} and POST it to "
+                f"{config['transport']} {config['url']}"
+            )
         return 0
-    for device_id, status in send(config, state, devices, args.timeout):
+    results = send(config, state, devices, args.timeout)
+    for device_id, status in results:
         print(f"courier: {device_id}: {status}")
-    return 0
+    return 1 if any(_failed(result) for result in results) else 0
 
 
 if __name__ == "__main__":  # pragma: no cover

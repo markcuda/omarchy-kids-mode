@@ -44,7 +44,7 @@ Usage: omarchy-kids-notify enable [--host NAME] [--rekey] [--apply]
        omarchy-kids-notify pair [--scopes decide,act] [--apply]
        omarchy-kids-notify away <off|tailnet> [--apply]
        omarchy-kids-notify away-status
-       omarchy-kids-notify mailbox <off|ntfy|gotify> [--url U --topic T [--token K]] [--apply]
+       omarchy-kids-notify mailbox <off|ntfy|gotify> [--url U --topic T] [--apply]
        omarchy-kids-notify mailbox-status
        omarchy-kids-notify devices [--json]
        omarchy-kids-notify rename <id> <name> [--apply]
@@ -370,8 +370,10 @@ cmd_mailbox() {
       [[ -n "$url" && -n "$topic" ]] || die "mailbox $mode: needs --url and --topic"
       [[ "$url" == https://* ]] || die "mailbox: --url must be https"
       [[ "$topic" =~ ^[A-Za-z0-9._-]+$ ]] || die "mailbox: --topic must be letters, digits, dot, dash or underscore"
-      if [[ "$mode" == gotify && -z "$token" ]]; then
-        die "mailbox gotify: needs --token"
+      if [[ "$mode" == gotify ]] && ((! DRY_RUN)); then
+        # Like a password: the token comes on stdin, never argv (AGENTS.md).
+        IFS= read -r token || true
+        [[ -n "$token" ]] || die "mailbox gotify: type the token on stdin"
       fi
       if ((DRY_RUN)); then
         echo "  [dry-run] would write $COURIER_CONF (transport=$mode url=$url topic=$topic)"

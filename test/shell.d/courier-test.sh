@@ -60,8 +60,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(length)
+        key = self.headers.get("X-Gotify-Key", "")
         with open(posts, "ab") as f:
-            f.write(body + b"\n")
+            f.write(("%s\t%s\t" % (self.path, key)).encode() + body + b"\n")
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"ok")
@@ -110,7 +111,7 @@ check_status "$(wc -c <"$POSTS" | tr -d ' ')" "0" "dry-run posts nothing"
 # --- --apply seals and posts ----------------------------------------------
 out="$("$BIN" --apply 2>&1)"
 check_contains "$out" "d-vector: 200" "the courier reports the post"
-body="$(head -n1 "$POSTS")"
+body="$(head -n1 "$POSTS" | cut -f3-)"
 [[ -n "$body" ]] && pass "the server received a POST" || fail "the server received nothing"
 
 python3 - "$DIR" "$TMP/key.json" "$ROOT/run/omarchy-kids/status.json" "$body" <<'PY'
@@ -131,6 +132,40 @@ print(("PASS  " if ok else "FAIL  ") + "the posted body is a sealed envelope the
 sys.exit(0 if ok else 1)
 PY
 [[ $? -eq 0 ]] && pass "the posted envelope carries the state" || fail "the posted envelope did not open to the state"
+
+# --- the Gotify transport: /message with the token in a header -------------
+printf 'transport=gotify\nurl=http://127.0.0.1:%s\ntopic=test\ntoken=tok-secret\n' "$PORT" >"$ETC/courier.conf"
+: >"$POSTS"
+out="$("$BIN" --apply 2>&1)"
+check_contains "$out" "d-vector: 200" "the gotify post succeeds"
+line="$(head -n1 "$POSTS")"
+check_contains "$(printf '%s' "$line" | cut -f1)" "/message" "gotify posts to /message"
+check_contains "$(printf '%s' "$line" | cut -f2)" "tok-secret" "gotify sends the token in a header"
+python3 - "$DIR" "$TMP/key.json" "$(printf '%s' "$line" | cut -f3-)" <<'PY'
+import importlib.util, json, os, sys
+root, keyfile, body = sys.argv[1:4]
+spec = importlib.util.spec_from_file_location("kids_envelope", os.path.join(root, "lib", "envelope.py"))
+envelope = importlib.util.module_from_spec(spec); spec.loader.exec_module(envelope)
+key = json.load(open(keyfile))
+message = json.loads(body)["message"]
+state = json.loads(envelope.open_envelope("d-vector", bytes.fromhex(key["priv_hex"]), json.loads(message)))
+print(("PASS  " if state["kids"][0]["kid"] == "kid-ada" else "FAIL  ") + "the gotify message carries the sealed state")
+sys.exit(0 if state["kids"][0]["kid"] == "kid-ada" else 1)
+PY
+[[ $? -eq 0 ]] || fail "the gotify message did not carry the state"
+
+# --- a non-https server is refused ----------------------------------------
+printf 'transport=ntfy\nurl=http://example.com\ntopic=test\n' >"$ETC/courier.conf"
+: >"$POSTS"
+out="$("$BIN" --apply 2>&1)"
+check_status "$?" 2 "a non-https server is refused"
+check_contains "$out" "must be https" "the refusal says why"
+check_status "$(wc -c <"$POSTS" | tr -d ' ')" "0" "nothing is posted to a non-https server"
+
+# --- a failed send exits nonzero ------------------------------------------
+printf 'transport=ntfy\nurl=https://127.0.0.1:1\ntopic=test\n' >"$ETC/courier.conf"
+out="$("$BIN" --apply 2>&1)"
+check_status "$?" 1 "a failed send exits nonzero"
 
 # --- notifications off sends nothing --------------------------------------
 rm -f "$ETC/relay/cert.pem"

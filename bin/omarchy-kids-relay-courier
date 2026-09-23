@@ -37,7 +37,10 @@ Gotify topic the parent configured (omarchy-kids-notify mailbox). It is the only
 Kids Mode process that may reach beyond the LAN (R-NOTIFY-8).
 
 Nothing is sent while notifications are off or no server is configured, and
-DRY_RUN=1 is the default: without --apply it prints the plan.
+DRY_RUN=1 is the default: without --apply it prints the plan. The server must be
+https (the config writer enforces that; the courier re-checks). A send is best
+effort per device: one device's failure does not stop the others, and the command
+exits nonzero if any device's send failed, so a timer can notice.
 
   --apply     Really post.
   --dry-run   Print the plan (the default).
