@@ -33,6 +33,7 @@ APP_NAME = "omarchy-kids"
 RE_ID = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._+@-]{0,127}\Z")
 KINDS = ("time", "app", "plugin", "site")
 ACTION_INVOKED = re.compile(r"ActionInvoked \(uint32 (\d+), '([^']*)'\)")
+NOTIFICATION_CLOSED = re.compile(r"NotificationClosed \(uint32 (\d+), uint32 \d+\)")
 # --once is a test/debug mode: give the action signal a moment to arrive.
 ONCE_GRACE = 1.0
 
@@ -201,6 +202,12 @@ class GdbusNotifier:
                 return
             if proc.stdout is not None:
                 for line in proc.stdout:
+                    closed = NOTIFICATION_CLOSED.search(line)
+                    if closed:
+                        # Dismissed without an answer: forget its id.
+                        with self.lock:
+                            self.ids.pop(int(closed.group(1)), None)
+                        continue
                     match = ACTION_INVOKED.search(line)
                     if not match:
                         continue
@@ -247,8 +254,12 @@ def watch(queue_dir, state_path, bar_bin, interval, once, use_gdbus=True):
             shown = notifier is not None and notifier.send(row)
             if not shown:
                 title, body = summary_body(row)
-                notify_send(title, body)
-            notified.add(row["id"])
+                shown = notify_send(title, body)
+            # Remember it only once something showed it: at login the daemon may
+            # not be up yet, and marking a failed send would lose the request
+            # until it is decided.
+            if shown:
+                notified.add(row["id"])
         save_state(state_path, notified)
         if once:
             time.sleep(ONCE_GRACE)  # let a stubbed or real action signal arrive

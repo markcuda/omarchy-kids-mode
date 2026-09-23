@@ -93,6 +93,7 @@ files are created later by the commands.
 | `initcpio/omarchy-kids-open` | `/usr/lib/initcpio/omarchy-kids-open` | 755 | Boot-time cryptsetup helper |
 | `share/boot/omarchy_kids.conf` | `/usr/share/omarchy-kids/boot/omarchy_kids.conf` | 644 | Package-owned inactive template; the disk transition copies it to `/etc/mkinitcpio.conf.d/omarchy_kids.conf` |
 | `systemd/*.service`, `systemd/*.socket`, `systemd/*.timer` | `/usr/lib/systemd/system/` | 644 | Auth, Wi-Fi, boot/login, assertion, screen-time, request, and app-install units |
+| `systemd/*.user.service` | `/usr/lib/systemd/user/` (the `.user` suffix dropped) | 644 | The parent's desktop notifier (N-9); installed by `omarchy-kids-bar notify-enable`, never enabled by the package |
 | `share/**` | `/usr/share/omarchy-kids/` | source modes | Bands, packs, desktop data, policy, avatars, menus, and QML |
 | `share/sddm-theme/**` | `/usr/share/sddm/themes/omarchy-kids/` | source modes | The SDDM greeter theme is copied there separately |
 | `pacman/omarchy-kids.hook` | `/usr/share/libalpm/hooks/omarchy-kids.hook` | 644 | Post-transaction lock check |

@@ -53,7 +53,7 @@ cat >"$STUBS/gdbus" <<'EOF'
 #!/bin/bash
 printf 'gdbus %s\n' "$*" >>"$GDBUS_LOG"
 case "${1:-}" in
-  call) printf '(uint32 7,)\n' ;;
+  call) [[ -n "${GDBUS_FAIL:-}" ]] && exit 1; printf '(uint32 7,)\n' ;;
   monitor) printf "ActionInvoked (uint32 7, '%s')\n" "${GDBUS_ACTION:-approve}" ;;
 esac
 exit 0
@@ -61,6 +61,8 @@ EOF
 cat >"$STUBS/notify-send" <<'EOF'
 #!/bin/bash
 printf 'notify-send %s\n' "$*" >>"$NOTIFY_LOG"
+[[ -n "${NOTIFY_FAIL:-}" ]] && exit 1
+exit 0
 EOF
 chmod +x "$STUBS"/*
 export PATH="$STUBS:$PATH"
@@ -125,6 +127,14 @@ printf 'not json\n' >"$QUEUE_DIR/$ID.json"
 "$BIN" --once >/dev/null 2>&1
 check_status "$?" 0 "a malformed record does not crash the watcher"
 check "$(grep -c Notify "$GDBUS_LOG")" "0" "a malformed record is not notified"
+
+# --- a failed send is not marked, so a later poll retries (login ordering) ---
+reset
+write_record open
+GDBUS_FAIL=1 NOTIFY_FAIL=1 "$BIN" --once >/dev/null 2>&1
+check "$(cat "$TMP/watch.state")" "[]" "a send that failed everywhere is not remembered"
+"$BIN" --once >/dev/null 2>&1
+check_contains "$(cat "$TMP/watch.state")" "$ID" "the next poll shows and remembers it"
 
 # --- no /tmp fallback: an unset XDG_RUNTIME_DIR is refused (rule 9/privacy) --
 kids_tree "$TMP/tree-plain" "$DIR"

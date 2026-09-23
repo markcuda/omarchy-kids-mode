@@ -9,6 +9,7 @@
 [Unit]
 Description=Kids Mode desktop notifier (R-NOTIFY)
 Documentation=https://github.com/markcuda/omarchy-kids-mode/blob/main/docs/notify.md
+After=graphical-session.target
 PartOf=graphical-session.target
 
 [Service]

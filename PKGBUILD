@@ -74,8 +74,21 @@ package() {
 	# issue #26), boot-login + its cleanup unit, the screen-time ledger's
 	# timer/service, R-TIME-1, and the ask-collect timer, R-ASK-1..3,
 	# issue #25).
-	install -dm755 "$pkgdir/usr/lib/systemd/system"
-	install -m644 systemd/*.service systemd/*.socket systemd/*.timer "$pkgdir/usr/lib/systemd/system/"
+	install -dm755 "$pkgdir/usr/lib/systemd/system" "$pkgdir/usr/lib/systemd/user"
+	for unit in systemd/*.service systemd/*.socket systemd/*.timer; do
+		[ -e "$unit" ] || continue
+		case "$unit" in
+		*.user.service)
+			# A user unit (N-9): the parent's desktop notifier belongs in the
+			# user manager, with the .user suffix dropped from its name.
+			install -m644 "$unit" \
+				"$pkgdir/usr/lib/systemd/user/$(basename "${unit%.user.service}").service"
+			;;
+		*)
+			install -m644 "$unit" "$pkgdir/usr/lib/systemd/system/"
+			;;
+		esac
+	done
 	# The relay's system account (R-NOTIFY-1): authd accepts a DECIDE only from it.
 	install -dm755 "$pkgdir/usr/lib/sysusers.d"
 	install -m644 systemd/omarchy-kids-relay.sysusers "$pkgdir/usr/lib/sysusers.d/omarchy-kids-relay.conf"
