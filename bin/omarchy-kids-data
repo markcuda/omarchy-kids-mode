@@ -276,6 +276,7 @@ cmd_mine() {
   echo
   echo "  - How many minutes you use it each day. Kept for 1 year."
   echo "  - Which apps you open from your launcher. Kept for 90 days."
+  echo "  - What you asked for (\"Ask a parent\") and what happened. Kept for 90 days."
   if [[ "$hv" == yes ]]; then
     echo "  - The websites you visit. Kept as long as the web browser itself keeps it."
   else

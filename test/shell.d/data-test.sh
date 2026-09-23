@@ -340,6 +340,7 @@ echo
 
 out="$(KIDS_TEST_ACCOUNT=kid-ada OMARCHY_KIDS_NOW="2026-09-02 10:00:00" "$DATA" mine)"
 check_contains "$out" "What my grown-ups can see" "mine: title"
+check_contains "$out" "What you asked for" "mine: names the Ask a parent record (R-DATA-1/3)"
 check_contains "$out" "1 year" "mine: states the minutes retention"
 check_contains "$out" "90 days" "mine: states the launches retention"
 check_contains "$out" "websites you visit" "mine: mentions browsing history when it's visible"

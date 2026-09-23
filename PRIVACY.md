@@ -73,15 +73,19 @@ Turning notifications off revokes every paired device and removes the certificat
 
 ## In kid words
 
-This is the screen a kid sees at every login, in its own words (K5, SPEC.md Appendix A):
+This is the screen a kid sees at every login, quoted from `bin/omarchy-kids-data`'s `mine`
+(K5, SPEC.md Appendix A):
 
 > **What my grown-ups can see**
 >
-> - How many minutes you were on the computer today, and other days.
-> - What apps you opened.
-> - What you asked for ("Ask a parent") and what happened.
-> - The websites you visited — *only if that's turned on for you. If it's off, this says so and
->   nobody sees it.*
+> Hi! Here's what this computer remembers about how you use it:
+>
+>   - How many minutes you use it each day. Kept for 1 year.
+>   - Which apps you open from your launcher. Kept for 90 days.
+>   - What you asked for ("Ask a parent") and what happened. Kept for 90 days.
+>   - The websites you visit. Kept as long as the web browser itself keeps it. — *or, when it is
+>     off for that kid:* Your grown-ups have turned OFF website history for you — they cannot see
+>     which sites you visit.
 >
 > Nothing you type, no pictures of your screen, and nothing you write in a message is ever
 > recorded. Only your grown-ups can see any of this. It stays on this computer — unless your
