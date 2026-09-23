@@ -133,6 +133,15 @@ sys.exit(0 if ok else 1)
 PY
 [[ $? -eq 0 ]] && pass "the posted envelope carries the state" || fail "the posted envelope did not open to the state"
 
+# --- an unchanged state is not posted again -------------------------------
+: >"$POSTS"
+out="$("$BIN" --apply 2>&1)"
+check_contains "$out" "state has not changed" "an unchanged state is skipped"
+check_status "$(wc -c <"$POSTS" | tr -d ' ')" "0" "nothing is posted for an unchanged state"
+printf '{"generated_at":"y","kids":[{"kid":"kid-ada","live":false}]}\n' >"$ROOT/run/omarchy-kids/status.json"
+out="$("$BIN" --apply 2>&1)"
+check_contains "$out" "d-vector: 200" "a changed state is posted again"
+
 # --- the Gotify transport: /message with the token in a header -------------
 printf 'transport=gotify\nurl=http://127.0.0.1:%s\ntopic=test\ntoken=tok-secret\n' "$PORT" >"$ETC/courier.conf"
 : >"$POSTS"
@@ -188,8 +197,10 @@ TIMER="$DIR/systemd/omarchy-kids-relay-courier.timer"
 [[ -f "$TIMER" ]] && pass "the courier timer unit exists" || fail "no courier timer unit"
 check_contains "$(cat "$TIMER")" "Unit=omarchy-kids-relay-courier.service" "the timer drives the courier service"
 check_contains "$(cat "$SERVICE")" "ExecStart=/usr/bin/omarchy-kids-relay-courier --apply" "the service posts on the timer"
-check_contains "$(cat "$SERVICE")" "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6" "the courier may open the network"
-check_contains "$(cat "$SERVICE")" "CapabilityBoundingSet=" "the courier holds no capabilities"
+grep -qx 'RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6' "$SERVICE" &&
+  pass "the courier may open the network" || fail "the courier's address families are wrong"
+grep -qx 'CapabilityBoundingSet=' "$SERVICE" &&
+  pass "the courier holds no capabilities" || fail "the courier's capabilities are not exactly empty"
 
 echo "courier-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc

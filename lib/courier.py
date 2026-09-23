@@ -18,6 +18,7 @@ failed, so a timer can notice. Stdlib only (+ python-cryptography via envelope.p
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -105,6 +106,45 @@ def load_devices(path):
     return out
 
 
+def state_digest(state, config, devices):
+    """A digest of what a send would carry: the state's meaning (everything but
+    generated_at, which every 30-second tick rewrites), the server it would go to,
+    and the devices. The courier skips an unchanged digest so an idle box does not
+    post a message every five minutes, but a changed config or device still sends.
+    """
+    clone = dict(state)
+    clone.pop("generated_at", None)
+    material = {
+        "state": clone,
+        "transport": config.get("transport"),
+        "url": config.get("url"),
+        "topic": config.get("topic"),
+        "devices": sorted(device["id"] for device in devices),
+    }
+    return hashlib.sha256(json.dumps(material, separators=(",", ":"), sort_keys=True).encode()).hexdigest()
+
+
+def read_sent(path):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def write_sent(path, digest):
+    try:
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, mode=0o755, exist_ok=True)
+        tmp = f"{path}.{os.getpid()}.tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(digest + "\n")
+        os.replace(tmp, path)
+    except OSError:
+        pass
+
+
 def _post(url, body, headers, timeout):
     request = urllib.request.Request(url, data=body, method="POST", headers=headers)
     try:
@@ -165,6 +205,7 @@ def main(argv):
     parser.add_argument("--devices", required=True)
     parser.add_argument("--status", required=True)
     parser.add_argument("--queue", required=True)
+    parser.add_argument("--sent", default="")
     parser.add_argument("--timeout", type=int, default=15)
     parser.add_argument("--apply", action="store_true", help="really post (default: print the plan)")
     args = parser.parse_args(argv)
@@ -188,10 +229,17 @@ def main(argv):
                 f"{config['transport']} {config['url']}"
             )
         return 0
+    digest = state_digest(state, config, devices)
+    if args.sent and read_sent(args.sent) == digest:
+        print("courier: the state has not changed; nothing sent")
+        return 0
     results = send(config, state, devices, args.timeout)
     for device_id, status in results:
         print(f"courier: {device_id}: {status}")
-    return 1 if any(_failed(result) for result in results) else 0
+    failed = any(_failed(result) for result in results)
+    if not failed and args.sent:
+        write_sent(args.sent, digest)
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":  # pragma: no cover

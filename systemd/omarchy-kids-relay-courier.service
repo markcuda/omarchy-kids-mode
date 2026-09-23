@@ -5,11 +5,13 @@ Documentation=https://github.com/markcuda/omarchy-kids-mode/blob/main/docs/couri
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/omarchy-kids-relay-courier --apply
-# The one process that may open a connection beyond the LAN (R-NOTIFY-8). It
-# needs AF_INET/AF_INET6, unlike every other unit here; everything else is locked
-# down hard, and it writes nothing (ReadOnlyPaths). It runs as root only because
-# it reads the root-owned state and the 0600 config; --apply is the only way it
-# posts, and with no config it exits at once. docs/courier.md.
+# The one process that may open a connection beyond the LAN (R-NOTIFY-8): like the
+# relay it needs AF_INET/AF_INET6, but it is the one unit with no IPAddressAllow/
+# IPAddressDeny fence, which is what lets it leave the LAN. Everything else is
+# locked down hard; it reads root-owned files and writes only the last-sent digest
+# under /run/omarchy-kids. It runs as root only because it reads the root-owned
+# state and the 0600 config; --apply is the only way it posts, and with no config
+# it exits at once. docs/courier.md.
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
@@ -21,4 +23,5 @@ ProtectControlGroups=yes
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 CapabilityBoundingSet=
 AmbientCapabilities=
-ReadOnlyPaths=/etc/omarchy-kids /run/omarchy-kids /var/lib/omarchy-kids
+ReadOnlyPaths=/etc/omarchy-kids /var/lib/omarchy-kids
+ReadWritePaths=/run/omarchy-kids
