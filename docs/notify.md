@@ -107,13 +107,13 @@ is still needed.
 On the Omarchy box the parent is told through their own desktop, not a device: `bin/omarchy-kids-notify-watch`
 is a user-side process that polls the request queue (world-readable today; R-NOTIFY-7 tightens it to
 `0750 root:omarchy-parents`, which the parent's group also reads) and the open add-on reviews
-(`docs/review.md`), and posts one
-libnotify notification per item, with **Approve** and **Decline** on a request, and **Approve**,
-**Deny** and **Check** on a changed add-on (Check shows the change and decides nothing). An action runs `omarchy-kids-bar approve|decline <id>`, or
-`omarchy-kids-bar review-approve|review-deny|review-check <kid> <id>` (Check shows the change and
-decides nothing, and the notification is posted again so it stays answerable). (`docs/bar.md`), so it ends at the parent's own floating
-terminal and sudo prompt. Nothing here is privileged and nothing here decides: with the watcher
-stopped, a kid is affected in no way and the panel still works.
+(`docs/review.md`), and posts one libnotify notification per item. A request offers **Approve** and
+**Decline**; a changed add-on offers **Approve**, **Deny** and **Check**. An action runs
+`omarchy-kids-bar approve|decline <id>` or `omarchy-kids-bar review-approve|review-deny|review-check
+<kid> <id>` (`docs/bar.md`), which ends at the parent's own floating terminal and sudo prompt. Check
+only shows the change and the notification is posted again, so the item stays answerable. Nothing
+here is privileged and nothing here decides: with the watcher stopped, a kid is affected in no way
+and the panel still works.
 
 The action buttons come from `org.freedesktop.Notifications` over the session bus (`gdbus`); where
 that is unavailable the fallback is a plain `notify-send` with no buttons and a body that points at
