@@ -18,7 +18,6 @@ RELAY_DIR="$ETC/relay"
 CERT="$RELAY_DIR/cert.pem"
 KEY="$RELAY_DIR/key.pem"
 PORT=8447
-SYSROOT=""
 DRY_RUN=1
 DEVICES_BIN="$(kids_bin devices "$DIR")"
 
@@ -29,7 +28,7 @@ die() {
 
 usage() {
   cat <<'EOF'
-Usage: omarchy-kids-notify enable [--host NAME] [--apply]
+Usage: omarchy-kids-notify enable [--host NAME] [--rekey] [--apply]
        omarchy-kids-notify disable [--apply]
        omarchy-kids-notify status
        omarchy-kids-notify devices [--json]
@@ -38,13 +37,27 @@ Usage: omarchy-kids-notify enable [--host NAME] [--apply]
        omarchy-kids-notify revoke <id> [--apply]
 
 Turns the parent's device notifications on or off (R-NOTIFY-1): `enable` mints
-the relay's self-signed certificate (the parent's devices pin its fingerprint at
-pairing), `disable` revokes every device and removes the certificate. The device
-commands delegate to omarchy-kids-devices. Root only; DRY_RUN=1 prints the plan.
+the relay's self-signed certificate (the parent's devices pin its SPKI
+fingerprint at pairing; running it again just prints that fingerprint),
+`enable --rekey` mints a new one and unpairs every device, and `disable` revokes
+every device and removes the certificate. The device commands delegate to
+omarchy-kids-devices. Root only; DRY_RUN=1 prints the plan.
 EOF
 }
 
 enabled() { [[ -f "$CERT" && -f "$KEY" ]]; }
+
+revoke_all() { # apply -- revoke every paired device, or print what would be revoked
+  local apply="$1"
+  "$DEVICES_BIN" list --json 2>/dev/null | jq -r '.[].id' 2>/dev/null | while read -r id; do
+    [[ -n "$id" ]] || continue
+    if ((apply)); then
+      "$DEVICES_BIN" revoke "$id" --apply >/dev/null
+    else
+      echo "  [dry-run] would revoke $id"
+    fi
+  done
+}
 
 cmd_status() {
   if enabled; then
@@ -57,12 +70,18 @@ cmd_status() {
 }
 
 cmd_enable() {
-  local host="$(hostname -s 2>/dev/null || echo omarchy-kids)"
+  local host
+  host="$(hostname -s 2>/dev/null || echo omarchy-kids)"
+  local rekey=0
   while (($#)); do
     case "$1" in
       --host)
         host="${2:?}"
         shift 2
+        ;;
+      --rekey)
+        rekey=1
+        shift
         ;;
       --apply)
         DRY_RUN=0
@@ -71,13 +90,27 @@ cmd_enable() {
       *) die "enable: unknown argument '$1'" ;;
     esac
   done
+  # Already on: print the fingerprint the devices pinned and stop. Re-keying is
+  # explicit, because every paired device pins the current key.
+  if enabled && ((rekey == 0)); then
+    echo "omarchy-kids-notify: notifications already on (relay port $PORT)"
+    echo "  fingerprint: $("$KIDS_PY" "$LIB/cert.py" spki "$CERT" 2>/dev/null)"
+    echo "  Re-keying needs --rekey, and it unpairs every device."
+    return 0
+  fi
   if ((DRY_RUN)); then
     echo "  [dry-run] would mint $CERT and $KEY for '$host' (port $PORT)"
     echo "  [dry-run] cert 0644, key 0640 root:omarchy-parents, dir 0750 root:omarchy-parents"
     return 0
   fi
-  command -v getent >/dev/null 2>&1 && getent group omarchy-parents >/dev/null 2>&1 ||
+  if ! getent group omarchy-parents >/dev/null 2>&1; then
     groupadd -f omarchy-parents 2>/dev/null || true
+  fi
+  if ((rekey)) && enabled; then
+    # The paired devices pinned the old key, so a new certificate unpairs them.
+    echo "omarchy-kids-notify: re-keying; unpairing every device"
+    revoke_all 1
+  fi
   install -d -m 0750 "$RELAY_DIR"
   chgrp omarchy-parents "$RELAY_DIR" 2>/dev/null || true
   local fingerprint
@@ -94,18 +127,14 @@ cmd_enable() {
 
 cmd_disable() {
   local apply=0
-  [[ "${1:-}" == "--apply" ]] && apply=1
-  $DEVICES_BIN list --json 2>/dev/null | jq -r '.[].id' 2>/dev/null | while read -r id; do
-    [[ -n "$id" ]] || continue
-    if ((apply)); then
-      "$DEVICES_BIN" revoke "$id" --apply >/dev/null
-    else
-      echo "  [dry-run] would revoke $id"
-    fi
-  done
+  if [[ "${1:-}" == "--apply" ]]; then apply=1; fi
+  revoke_all "$apply"
   if ((apply)); then
     rm -f "$CERT" "$KEY"
     rmdir "$RELAY_DIR" 2>/dev/null || true
+    # A running relay holds the certificate in memory; stop it so no listener
+    # exists while notifications are off (R-NOTIFY-1).
+    systemctl stop omarchy-kids-relayd.service >/dev/null 2>&1 || true
     echo "omarchy-kids-notify: notifications off; certificate removed"
   else
     echo "  [dry-run] would remove $CERT and $KEY"

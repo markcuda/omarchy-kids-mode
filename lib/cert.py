@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import ipaddress
 import os
 import sys
@@ -29,12 +30,28 @@ except ImportError:  # pragma: no cover - the skip path
 DEFAULT_DAYS = 3650
 
 
+def spki_fingerprint(cert_pem_path):
+    """The SHA-256 of the certificate's SubjectPublicKeyInfo, lower-case hex.
+
+    This is what the device pins (the mobile pinning APIs take the SPKI), so it
+    is what the parent reads off the screen -- not the whole-certificate hash.
+    """
+    if not HAVE_CRYPTO:
+        raise RuntimeError("python-cryptography is not installed")
+    with open(cert_pem_path, "rb") as f:
+        cert = x509.load_pem_x509_certificate(f.read())
+    spki = cert.public_key().public_bytes(
+        serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    return hashlib.sha256(spki).hexdigest()
+
+
 def make_self_signed(cert_path, key_path, common_name, days=DEFAULT_DAYS):
     """Write a fresh EC P-256 certificate and its key (PEM). Returns the SPKI hash.
 
-    The security comes from the parent pinning the fingerprint at pairing, not
-    from any name, so the SAN carries the host as a name and as an IP when it is
-    one.
+    The security comes from the parent pinning the SPKI fingerprint at pairing,
+    not from any name, so the SAN carries the host as a name and as an IP when it
+    is one.
     """
     if not HAVE_CRYPTO:
         raise RuntimeError("python-cryptography is not installed")
@@ -68,14 +85,19 @@ def make_self_signed(cert_path, key_path, common_name, days=DEFAULT_DAYS):
         with open(tmp, "wb") as f:
             f.write(data)
         os.replace(tmp, path)
-    fingerprint = cert.fingerprint(hashes.SHA256()).hex()
-    return fingerprint
+    return spki_fingerprint(cert_path)
 
 
 def _main(argv):
     if not HAVE_CRYPTO:
         print("cert.py: python-cryptography is not installed", file=sys.stderr)
         return 1
+    if argv and argv[0] == "spki":
+        if len(argv) != 2:
+            print("usage: cert.py spki CERT", file=sys.stderr)
+            return 2
+        print(spki_fingerprint(argv[1]))
+        return 0
     parser = argparse.ArgumentParser(prog="cert.py")
     parser.add_argument("cert_path")
     parser.add_argument("key_path")
