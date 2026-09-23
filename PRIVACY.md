@@ -42,6 +42,10 @@ enforces or could tamper with (I-3). The only people who can read it:
 
 ## Parental notifications (optional, off by default)
 
+**Not in this version yet.** No relay, courier or notifications setting ships in the current build;
+the amended I-2 fixes the shape they must take when they land, and this section describes that shape
+so the promise is on the record before the code exists. When they do:
+
 When a parent turns notifications on, one local process (`omarchy-kids-relayd`) may listen on the
 home network so the parent's own paired devices can receive a kid's "Ask a parent" requests and
 answer them. It runs only while Kids Mode is in use, is fenced to the home network by its
@@ -76,8 +80,8 @@ A) — not a paraphrase of it:
 > - The websites you visited — *only if that's turned on for you. If it's off, this says so and
 >   nobody sees it.*
 >
-> Nobody outside this computer ever sees any of this, except your grown-up on their own phone or
-> computer if they've turned that on. Nobody reads what you type or takes pictures of your screen.
+> Nobody outside this computer ever sees any of this. Nobody reads what you type or takes
+> pictures of your screen.
 
 ## If you think this is wrong
 

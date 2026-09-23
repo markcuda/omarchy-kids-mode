@@ -25,6 +25,11 @@ kids_file_mtime() {
   if stat --version >/dev/null 2>&1; then stat -c '%Y' "$1"; else stat -f '%m' "$1"; fi
 }
 
+# kids_file_gid FILE — FILE's numeric group id, same GNU-first rule.
+kids_file_gid() {
+  if stat --version >/dev/null 2>&1; then stat -c '%g' "$1"; else stat -f '%g' "$1"; fi
+}
+
 # KIDS_BASE_TOOLS — bash plus the coreutils/text tools bin/ and lib/ use.
 # Deliberately absent: everything a test may need to *not* find — getent,
 # lsblk, socat, limine, every omarchy-* and omarchy-kids-* command. Name

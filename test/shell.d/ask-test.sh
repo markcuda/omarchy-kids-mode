@@ -363,6 +363,8 @@ check_eq "$(kids_file_mode "$QUEUE_DIR")" "750" "queue directory is 0750 (R-NOTI
 for f in "$QUEUE_DIR"/*.json; do
   [[ -e "$f" ]] || continue
   check_eq "$(kids_file_mode "$f")" "640" "queue record $(basename "$f") is 0640 (R-NOTIFY-7)"
+  check_eq "$(kids_file_gid "$f")" "$(kids_file_gid "$QUEUE_DIR")" \
+    "queue record $(basename "$f") takes the queue directory's group (R-NOTIFY-7)"
 done
 
 # S3: the path-like kid never reached the queue, and root created nothing.
@@ -486,10 +488,20 @@ for subcommand in approve decline; do
 done
 "$BIN" list >/dev/null 2>&1
 check_eq "$?" 0 "list: works when the queue is readable (the test user owns it)"
-chmod 0000 "$QUEUE_DIR"
-"$BIN" list >/dev/null 2>&1
-check_eq "$?" 1 "list: refuses when the queue is not readable (a kid's case, R-NOTIFY-7)"
-chmod 0750 "$QUEUE_DIR"
+if [[ "${EUID:-0}" -ne 0 ]]; then
+  chmod 0000 "$QUEUE_DIR"
+  "$BIN" list >/dev/null 2>&1
+  check_eq "$?" 1 "list: refuses when the queue is not readable (a kid's case, R-NOTIFY-7)"
+  chmod 0750 "$QUEUE_DIR"
+else
+  pass "list: running as root, so the unreadable-queue assertion is skipped (root reads any queue)"
+fi
+# A fresh box has no queue; that is an empty queue, not an error.
+mv "$QUEUE_DIR" "$QUEUE_DIR.absent"
+out="$("$BIN" list 2>&1)"
+check_eq "$?" 0 "list: an absent queue exits 0 (fresh box)"
+check_contains "$out" "no open requests" "list: an absent queue says so"
+mv "$QUEUE_DIR.absent" "$QUEUE_DIR"
 export KIDS_TEST_UID=0
 
 # =====================================================================

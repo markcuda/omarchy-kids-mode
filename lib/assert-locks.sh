@@ -333,6 +333,9 @@ queue_ok() {
 queue_fix() {
   local dir file
   dir="$(posture_root)/var/lib/omarchy-kids/queue"
+  # A fresh install may not have the group yet; parent-group creates it too,
+  # but queue must not report FAIL on the run before that.
+  getent group omarchy-parents >/dev/null 2>&1 || groupadd -f omarchy-parents 2>/dev/null || true
   time_metadata_dir_fix "$dir" 750 omarchy-parents || return 1
   for file in "$dir"/*.json; do
     [[ -e "$file" || -L "$file" ]] || continue
