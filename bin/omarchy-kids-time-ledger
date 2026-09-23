@@ -220,35 +220,6 @@ write_status_json() {
   rm -f "$rows" "$tmp"
 }
 
-cmd_tick() {
-  if ! is_root; then
-    die "tick must run as root (it is meant to be run by systemd/omarchy-kids-time.timer)" 1
-  fi
-  local now day weekend monotonic kid is_active kid_status tick_status=0
-  now="$(time_root_now)"
-  IFS=$'\t' read -r day weekend <<<"$(time_logical_day "$now")" || die "could not compute today's logical day"
-  monotonic="$(time_monotonic)" || die "could not read the monotonic clock"
-  while IFS= read -r kid; do
-    [[ -n "$kid" ]] || continue
-    if ! is_active="$(kid_active_state "$kid")"; then
-      is_active=unknown
-    fi
-    [[ "$is_active" == unknown ]] || { time_is_paused "$kid" && is_active=no; }
-    set +e
-    (
-      set -e
-      tick_kid "$kid" "$day" "$weekend" "$now" "$monotonic" "$is_active"
-    )
-    kid_status=$?
-    set -e
-    if [[ "$kid_status" -ne 0 ]]; then tick_status=1; fi
-  done < <(kids_list "$KIDS_DIR")
-  write_status_json
-  fold_all_launches
-  nudge_relay
-  return "$tick_status"
-}
-
 # relay_enabled — notifications are on: the parent has minted the certificate
 # (omarchy-kids-notify enable). No certificate, no relay to start.
 relay_enabled() { [[ -f "$RELAY_CERT" && -f "$RELAY_KEY" ]]; }
@@ -258,7 +229,7 @@ relay_enabled() { [[ -f "$RELAY_CERT" && -f "$RELAY_KEY" ]]; }
 # can keep itself up while a phone pairs without ever reading the record
 # (R-NOTIFY-2/5).
 pairing_open_until() {
-  local dir="$PAIRING_DIR" f exp now max=0
+  local dir="${PAIRING_DIR:-}" f exp now max=0
   [[ -d "$dir" ]] || {
     echo 0
     return 0
@@ -289,6 +260,35 @@ nudge_relay() {
   [[ -n "$active" || "${open:-0}" -gt 0 ]] || pairing_pending || return 0
   systemctl start --no-block "$RELAY_UNIT" >/dev/null 2>&1 || return 0
   echo "omarchy-kids-time-ledger: asked $RELAY_UNIT to start (a kid is live, a request is open, or a device is pairing)"
+}
+
+cmd_tick() {
+  if ! is_root; then
+    die "tick must run as root (it is meant to be run by systemd/omarchy-kids-time.timer)" 1
+  fi
+  local now day weekend monotonic kid is_active kid_status tick_status=0
+  now="$(time_root_now)"
+  IFS=$'\t' read -r day weekend <<<"$(time_logical_day "$now")" || die "could not compute today's logical day"
+  monotonic="$(time_monotonic)" || die "could not read the monotonic clock"
+  while IFS= read -r kid; do
+    [[ -n "$kid" ]] || continue
+    if ! is_active="$(kid_active_state "$kid")"; then
+      is_active=unknown
+    fi
+    [[ "$is_active" == unknown ]] || { time_is_paused "$kid" && is_active=no; }
+    set +e
+    (
+      set -e
+      tick_kid "$kid" "$day" "$weekend" "$now" "$monotonic" "$is_active"
+    )
+    kid_status=$?
+    set -e
+    if [[ "$kid_status" -ne 0 ]]; then tick_status=1; fi
+  done < <(kids_list "$KIDS_DIR")
+  write_status_json
+  fold_all_launches
+  nudge_relay
+  return "$tick_status"
 }
 
 # kid_active_state ACCOUNT — yes/no when the account's sessions are known;

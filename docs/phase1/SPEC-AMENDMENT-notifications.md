@@ -80,6 +80,8 @@ After:
 > R-BAR-3 Reads `/run/omarchy-kids/status.json`, root-written, group `omarchy-parents` readable.
 > The document carries each live kid's minutes-left and paused state, and the open-request count and
 > list (R-NOTIFY-7); the bar widget's badge reads the count from it rather than running any command.
+> It also carries the pairing window's expiry (`pairing_open_until`), never the token, so the relay
+> can keep itself up while a phone pairs (R-NOTIFY-2/5).
 
 ## 4. Appendix D (exact)
 

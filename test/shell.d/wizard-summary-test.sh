@@ -17,13 +17,18 @@ case "${1:-}" in
   style)
     shift
     seen=0
-    : >>"${DISPLAY_BUFFER:?DISPLAY_BUFFER must be set}"
+    text=()
     for arg in "$@"; do
-      if ((seen)); then
-        printf '%s\n' "$arg" >>"$DISPLAY_BUFFER"
-        printf '%s\n' "$arg"
-      fi
+      ((seen)) && text+=("$arg")
       [[ "$arg" == -- ]] && seen=1
+    done
+    if ((${#text[@]} == 0)); then
+      while IFS= read -r line; do text+=("$line"); done
+    fi
+    : >>"${DISPLAY_BUFFER:?DISPLAY_BUFFER must be set}"
+    for arg in "${text[@]+"${text[@]}"}"; do
+      printf '%s\n' "$arg" >>"$DISPLAY_BUFFER"
+      printf '%s\n' "$arg"
     done
     ;;
   choose) printf '%s\n' "${GUM_OUTPUT:-apply}" ;;

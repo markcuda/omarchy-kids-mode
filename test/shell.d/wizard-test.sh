@@ -110,10 +110,15 @@ case "${1:-}" in
     style)
         shift
         seen=0
+        text=()
         for a in "$@"; do
-            if [[ $seen == 1 ]]; then printf '%s\n' "$a"; fi
+            [[ $seen == 1 ]] && text+=("$a")
             [[ "$a" == "--" ]] && seen=1
         done
+        if ((${#text[@]} == 0)); then
+            while IFS= read -r line; do text+=("$line"); done
+        fi
+        ((${#text[@]})) && printf '%s\n' "${text[@]}"
         ;;
     *) exit 0 ;;
 esac

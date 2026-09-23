@@ -95,6 +95,7 @@ PATH="$STUBS:/usr/bin:/bin"
 KIDS_DIR="$ROOT/etc/omarchy-kids/kids"
 RUN_DIR="$ROOT/run/omarchy-kids"
 STATUS_JSON="$RUN_DIR/status.json"
+PAIRING_DIR="$RUN_DIR/pairing"
 printf '%s\n' '{"generated_at":"old","kids":[]}' >"$STATUS_JSON"
 OLD_HASH="$(file_hash "$STATUS_JSON")"
 
@@ -109,6 +110,16 @@ mkdir -p "$STATUS_META_DIR"
 write_status_json
 check "$(jq -r '.kids[0].kid' "$STATUS_JSON")" kid-ada "publishes complete JSON"
 check "$(cat "$STATUS_MV_BOUNDARY")" 'root:omarchy-parents:640' "metadata is complete at publication boundary"
+
+# A pending pairing window is published as its expiry, never the token, so the
+# relay can keep itself up while a phone pairs (R-NOTIFY-2/5).
+mkdir -p "$PAIRING_DIR"
+printf '{"expires_at": 4102444800}\n' >"$PAIRING_DIR/d-1"
+write_status_json
+check "$(jq -r '.pairing_open_until' "$STATUS_JSON")" "4102444800" "publishes the pairing window's expiry"
+rm -rf "$PAIRING_DIR"
+write_status_json
+check "$(jq -r '.pairing_open_until' "$STATUS_JSON")" "0" "no pairing window publishes 0"
 
 for failure in jq-row jq-final chown chgrp chmod mv getent; do
   rm -f "$RUN_DIR"/status.json.* "$STATUS_MV_BOUNDARY"
