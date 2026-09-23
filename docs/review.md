@@ -26,8 +26,9 @@ omarchy-kids-review deny <kid> <id> [--apply]
   this command rather than flagging all of them), opens a review for one whose fingerprint changed,
   and clears a review for one that changed back. Best-effort per id.
 - `approve` re-stamps the current surface and clears its review — the parent accepts the update.
-- `deny` asks `omarchy-kids-apps hide <kid> <id>` to hide it again, drops the stamp, and clears the
-  review.
+- `deny` asks `omarchy-kids-apps hide <kid> <id>` to hide it again, and only once that succeeds
+drops the stamp and clears the review (a failed hide leaves the review open to retry). The hide
+lands in the kid's launcher at the next sign-in, like every `hide` (`docs/apps.md`).
 - Root only; `DRY_RUN=1` prints the plan (`--apply` makes it real, AGENTS.md rule 8).
 
 ## Where it lives
@@ -37,8 +38,12 @@ omarchy-kids-review deny <kid> <id> [--apply]
 | `/var/lib/omarchy-kids/reviews/baseline/<kid>.json` | `0640 root:omarchy-parents`, one id → fingerprint map |
 | `/var/lib/omarchy-kids/reviews/open/<kid>-<id>.json` | `0640 root:omarchy-parents`, `{kid, id, was, now, detected_at, state}` |
 
-Nothing here is a lock (I-3 exempts nothing, but this is a record, not enforcement): hiding the app
-again is the only action, and a kid cannot reach any of it (root-owned, outside every home).
+One writer at a time: the command takes a mutex under the review directory, so a `scan` cannot
+interleave with an `approve` or `deny` and resurrect a review the parent just answered. An `open`
+review is cleared when the surface changes back, when an id leaves `apps.extra`, when `approve`
+restamps it, or when a `deny` hides it. Nothing here is a lock (I-3 exempts nothing, but this is a
+record, not enforcement): hiding the app again is the only action, and a kid cannot reach any of it
+(root-owned, outside every home).
 
 ## What is not built yet
 

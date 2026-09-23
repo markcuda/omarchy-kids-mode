@@ -49,18 +49,21 @@ kids_set_const "$BIN" ETC "$ETC"
 kids_set_const "$BIN" SYSROOT "$ROOT"
 kids_set_const "$TMP/tree/bin/omarchy-kids-conf" ETC "$ETC"
 export KIDS_TEST_UID=0
-export OMARCHY_KIDS_APPLICATIONS_DIRS="$APPDIR"
+kids_set_const "$BIN" APPLICATIONS_DIRS "$APPDIR"
 
 printf 'name=Ada\nband=6-8\napps.extra=minecraft\n' >"$KIDS/kid-ada.conf"
 desktop() { printf '[Desktop Entry]\nName=Minecraft\nExec=%s %%u\n' "$1" >"$APPDIR/minecraft.desktop"; }
 desktop "minecraft first"
 BASELINE="$ROOT/var/lib/omarchy-kids/reviews/baseline/kid-ada.json"
-OPEN_REVIEW="$ROOT/var/lib/omarchy-kids/reviews/open/kid-ada-minecraft.json"
+REVIEW_HASH="$(python3 -c 'import hashlib; print(hashlib.sha256(b"minecraft").hexdigest()[:16])')"
+OPEN_REVIEW="$ROOT/var/lib/omarchy-kids/reviews/open/kid-ada.$REVIEW_HASH.json"
 
 # apps is stubbed: deny must ask it to hide, and nothing else may run.
 kids_stub "$TMP/tree" omarchy-kids-apps <<EOF
 #!/bin/bash
 printf 'apps %s\n' "\$*" >>"$TMP/apps.log"
+[[ -f "$TMP/apps-fail" ]] && exit 1
+exit 0
 EOF
 APPS_LOG="$TMP/apps.log"
 
@@ -111,6 +114,21 @@ check_contains "$out" "denied kid-ada/minecraft" "deny reports it"
 check_contains "$(cat "$APPS_LOG")" "apps hide kid-ada minecraft --apply" "deny asks apps to hide the app"
 [[ -f "$OPEN_REVIEW" ]] && fail "deny left the review open" || pass "deny clears the review"
 check "$(jq -r 'has("minecraft")' "$BASELINE" 2>/dev/null)" "false" "deny drops the stamp"
+
+# --- deny fails closed: the review survives a failed hide -----------------
+desktop "minecraft redo base"
+"$BIN" scan --apply >/dev/null 2>&1 # re-stamp: the previous deny dropped it
+desktop "minecraft redo"
+"$BIN" scan --apply >/dev/null 2>&1 # a change -> a review
+[[ -f "$OPEN_REVIEW" ]] || fail "setup: expected a review before the deny-failure case"
+: >"$TMP/apps-fail"
+"$BIN" deny kid-ada minecraft --apply >/dev/null 2>&1
+check_status "$?" 1 "deny exits non-zero when the hide fails"
+[[ -f "$OPEN_REVIEW" ]] && pass "a failed hide leaves the review open to retry" ||
+  fail "the review was cleared although the hide failed"
+check "$(jq -r 'has("minecraft")' "$BASELINE" 2>/dev/null)" "true" "a failed hide keeps the stamp"
+rm -f "$TMP/apps-fail"
+"$BIN" deny kid-ada minecraft --apply >/dev/null 2>&1
 
 # --- a removed package reads as missing -----------------------------------
 desktop "minecraft fourth"

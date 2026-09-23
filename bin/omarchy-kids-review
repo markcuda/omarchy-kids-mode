@@ -20,8 +20,10 @@ KIDS_DIR="$ETC/kids"
 REVIEW_DIR="$SYSROOT/var/lib/omarchy-kids/reviews"
 BASELINE_DIR="$REVIEW_DIR/baseline"
 OPEN_DIR="$REVIEW_DIR/open"
-# The same surface search the launcher and omarchy-kids-apps use (docs/apps.md).
-APPLICATIONS_DIRS="${OMARCHY_KIDS_APPLICATIONS_DIRS:-/usr/share/applications:/usr/local/share/applications}"
+# The surface search the launcher uses (lib/launcher-map.sh hardcodes the same
+# two). A build-time constant, never an environment read: this decides which file
+# root hashes and stamps as trusted (AGENTS.md rule 9).
+APPLICATIONS_DIRS="/usr/share/applications:/usr/local/share/applications"
 CONF_BIN="$(kids_bin conf "$DIR")"
 APPS_BIN="$(kids_bin apps "$DIR")"
 DRY_RUN=1
@@ -83,6 +85,11 @@ print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$path"
 
 require_jq() { command -v jq >/dev/null 2>&1 || die "jq is required"; }
 
+# _chgrp_parents PATH -- best-effort group omarchy-parents, so the parent's tools
+# (the panel, a future review screen) read what root writes, like every other
+# omarchy-kids store.
+_chgrp_parents() { chgrp omarchy-parents "$1" 2>/dev/null || true; }
+
 # baseline_get KID ID -> the stamped fingerprint, or empty.
 baseline_get() {
   local kid="$1" id="$2"
@@ -96,6 +103,7 @@ baseline_set() {
   local kid="$1" id="$2" fp="$3"
   local file="$BASELINE_DIR/$kid.json" tmp
   install -d -m 0750 "$BASELINE_DIR"
+  _chgrp_parents "$BASELINE_DIR"
   tmp="$(mktemp "$BASELINE_DIR/.$kid.XXXXXX")"
   if [[ -s "$file" ]]; then
     jq --arg id "$id" --arg fp "$fp" '.[$id] = $fp' "$file" >"$tmp" 2>/dev/null ||
@@ -104,6 +112,7 @@ baseline_set() {
     jq -n --arg id "$id" --arg fp "$fp" '{($id): $fp}' >"$tmp"
   fi
   chmod 0640 "$tmp"
+  _chgrp_parents "$tmp"
   mv -f "$tmp" "$file"
 }
 
@@ -121,17 +130,24 @@ baseline_drop() {
   mv -f "$tmp" "$file"
 }
 
-open_review_path() { printf '%s/%s-%s.json' "$OPEN_DIR" "$1" "$2"; }
+# A kid and an app id may both contain '-' and '.', so the review file name is
+# the account plus a hash of the id: distinct reviews cannot collide.
+open_review_path() {
+  printf '%s/%s.%s.json' "$OPEN_DIR" "$1" \
+    "$("$KIDS_PY" -c 'import hashlib, sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])' "$2")"
+}
 
 open_review() {
   local kid="$1" id="$2" old="$3" new="$4" file tmp
   install -d -m 0750 "$OPEN_DIR"
+  _chgrp_parents "$OPEN_DIR"
   file="$(open_review_path "$kid" "$id")"
   tmp="$(mktemp "$OPEN_DIR/.$kid-$id.XXXXXX")"
   jq -n --arg kid "$kid" --arg id "$id" --arg old "$old" --arg new "$new" \
     --argjson at "$(date +%s)" \
     '{kid: $kid, id: $id, was: $old, now: $new, detected_at: $at, state: "open"}' >"$tmp"
   chmod 0640 "$tmp"
+  _chgrp_parents "$tmp"
   mv -f "$tmp" "$file"
 }
 
@@ -163,6 +179,7 @@ cmd_scan() {
           echo "  [dry-run] would stamp $kid/$id = $fp"
         else
           baseline_set "$kid" "$id" "$fp"
+          close_review "$kid" "$id" # a re-stamp after a deny must not leave a stale review
         fi
       elif [[ "$base" != "$fp" ]]; then
         changed=1
@@ -176,6 +193,19 @@ cmd_scan() {
         ((DRY_RUN)) || close_review "$kid" "$id"
       fi
     done < <(extra_ids "$kid")
+    # A review for an id the parent removed from apps.extra is no longer actionable.
+    local file
+    for file in "$OPEN_DIR"/*.json; do
+      [[ -e "$file" ]] || continue
+      [[ "$(jq -r '.kid' "$file")" == "$kid" ]] || continue
+      if ! extra_ids "$kid" | grep -qxF "$(jq -r '.id' "$file")"; then
+        if ((DRY_RUN)); then
+          echo "  [dry-run] would close a stale review for $(jq -r '.id' "$file")"
+        else
+          rm -f "$file"
+        fi
+      fi
+    done
   done
   ((changed)) || echo "omarchy-kids-review: nothing needs reviewing"
 }
@@ -233,10 +263,14 @@ cmd_deny() {
     echo "  [dry-run] would hide $id for $kid and clear its review"
     return 0
   fi
-  "$APPS_BIN" hide "$kid" "$id" --apply >/dev/null 2>&1 || true
+  # Drop the record only once the hide really happened: a failed hide with the
+  # review cleared would report the deny done and leave nothing to retry (I-6).
+  if ! "$APPS_BIN" hide "$kid" "$id" --apply >/dev/null 2>&1; then
+    die "deny: hiding $kid/$id failed; the review is left open to retry" 1
+  fi
   baseline_drop "$kid" "$id"
   close_review "$kid" "$id"
-  echo "omarchy-kids-review: denied $kid/$id; the app is hidden again"
+  echo "omarchy-kids-review: denied $kid/$id; it is hidden (the launcher drops it at the next sign-in, docs/apps.md)"
 }
 
 [[ $# -ge 1 ]] || {
@@ -252,6 +286,18 @@ case "$cmd" in
     ;;
 esac
 is_root || die "root only (the stamps and the app's surface are root-owned)"
+# One writer at a time: scan's compare-and-stamp must not interleave with an
+# approve or deny (rule 4). A mkdir mutex, released when the command exits.
+install -d -m 0750 "$REVIEW_DIR"
+_chgrp_parents "$REVIEW_DIR"
+LOCK_DIR="$REVIEW_DIR/.lock.d"
+lock_tries=0
+while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+  lock_tries=$((lock_tries + 1))
+  ((lock_tries > 100)) && die "another omarchy-kids-review is running" 1
+  sleep 0.05
+done
+trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
 want_kid=""
 want_json=""
 args=()

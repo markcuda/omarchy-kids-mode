@@ -61,7 +61,7 @@ ALLOWED=(
   OMARCHY_KIDS_LAUNCHER_CONTROL  # the kid's own control file, same dir
   OMARCHY_KIDS_LAUNCHER_JSON     # the kid's own tile list, same dir
   OMARCHY_KIDS_PLUGIN_INDEX      # marketplace index path (root-only command)
-  OMARCHY_KIDS_APPLICATIONS_DIRS # .desktop search path; a tile's own label only
+  OMARCHY_KIDS_APPLICATIONS_DIRS # the .desktop search path for a kid's app surfaces (omarchy-kids-apps)
   OMARCHY_KIDS_LUKS_DEVICE       # which block device (root-only command)
   OMARCHY_KIDS_UKI               # which boot image to inspect (read-only check)
   OMARCHY_KIDS_UID_MAP           # test fixture for uid->account, root-only path
