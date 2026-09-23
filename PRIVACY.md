@@ -35,9 +35,29 @@ enforces or could tamper with (I-3). The only people who can read it:
   screens) — the same numbers the ledger recorded, nothing added.
 - **The kid themselves**, on their own "What my grown-ups can see" screen at every login
   (R-DATA-3) — see "In kid words" below.
-- **Nobody else.** Nothing here is uploaded, synced, or reachable over the network. I-2: nothing
-  about a child leaves the machine, ever — no telemetry, no cloud account, no listener that a
-  request from outside could reach.
+- **Nobody else.** Nothing here is uploaded, synced, or reachable over the network. The amended I-2
+  permits one future exception that is **not present in this build**: if a parent later turns on
+  notifications (the "Parental notifications" section below, not yet shipped), a "Ask a parent"
+  request may reach a device the parent paired or a server the parent named. Until that ships, the
+  rule is absolute.
+
+## Parental notifications (optional, off by default)
+
+**Not in this version yet.** No relay, courier or notifications setting ships in the current build;
+the amended I-2 fixes the shape they must take when they land, and this section describes that shape
+so the promise is on the record before the code exists. When they do:
+
+When a parent turns notifications on, one local process (`omarchy-kids-relayd`) may listen on the
+home network so the parent's own paired devices can receive a kid's "Ask a parent" requests and
+answer them. It runs only while Kids Mode is in use, is fenced to the home network by its
+root-owned unit, and decides nothing itself — root verifies every answer. If the parent also names
+their own server (their own VPN, or a push server they run), one outbound process
+(`omarchy-kids-relay-courier`) may send end-to-end encrypted messages there, readable only by a
+device the parent paired. Nothing is ever sent to this project, its authors, or any push vendor; no
+usage data, browsing history, or app launches ever leave the machine — only the request fields the
+spec names. A platform push service may carry at most an empty wake-up signal, and only once the
+parent enables it. With notifications off, no Kids Mode process opens a network connection
+(`SPEC.md` I-2, R-NOTIFY; `docs/phase1/SPEC-AMENDMENT-notifications.md`).
 
 ## History, specifically
 

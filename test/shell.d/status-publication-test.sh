@@ -95,6 +95,13 @@ PATH="$STUBS:/usr/bin:/bin"
 KIDS_DIR="$ROOT/etc/omarchy-kids/kids"
 RUN_DIR="$ROOT/run/omarchy-kids"
 STATUS_JSON="$RUN_DIR/status.json"
+# R-NOTIFY-7: the ledger also reads the request queue for the open-request count.
+TIME_VARLIB="$ROOT/var/lib/omarchy-kids"
+mkdir -p "$TIME_VARLIB/queue"
+printf '%s\n' '{"kid":"kid-ada","kind":"time","what":"15","minutes":15,"asked_at":1000000000,"state":"open"}' \
+  >"$TIME_VARLIB/queue/1000000000-kid-ada-time.json"
+printf '%s\n' '{"kid":"kid-ada","kind":"app","what":"gcompris","asked_at":1000000000,"state":"approved","decided_at":1000000010,"by":"panel"}' \
+  >"$TIME_VARLIB/queue/1000000000-kid-ada-app.json"
 printf '%s\n' '{"generated_at":"old","kids":[]}' >"$STATUS_JSON"
 OLD_HASH="$(file_hash "$STATUS_JSON")"
 
@@ -109,6 +116,11 @@ mkdir -p "$STATUS_META_DIR"
 write_status_json
 check "$(jq -r '.kids[0].kid' "$STATUS_JSON")" kid-ada "publishes complete JSON"
 check "$(cat "$STATUS_MV_BOUNDARY")" 'root:omarchy-parents:640' "metadata is complete at publication boundary"
+# R-NOTIFY-7: the open-request count and list travel with the document; the
+# approved record is not counted.
+check "$(jq -r '.open_requests' "$STATUS_JSON")" 1 "status carries open_requests (R-NOTIFY-7)"
+check "$(jq -r '.requests[0].kid' "$STATUS_JSON")" kid-ada "status carries the open request list"
+check "$(jq -r '.requests | length' "$STATUS_JSON")" 1 "only open requests are listed"
 
 for failure in jq-row jq-final chown chgrp chmod mv getent; do
   rm -f "$RUN_DIR"/status.json.* "$STATUS_MV_BOUNDARY"

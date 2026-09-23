@@ -86,7 +86,7 @@ collect       Root: moves every kid's outbox into the real queue
               It never applies anything. Run by the panel, or by
               systemd/omarchy-kids-ask-collect.timer every minute.
 
-list          Root: every undecided (open) request, all kids or one.
+list          Root or omarchy-parents: every undecided (open) request, all kids or one.
 
 approve       Root: performs the action, marks the record approved.
 decline       Root: marks the record declined; never performs the action.
@@ -99,6 +99,15 @@ EOF
 }
 
 is_valid_kind() { is_in "$1" "${VALID_KINDS[@]}"; }
+
+# queue_ensure_dir -- root-only creation/repair of the request queue as the
+# parent's own store: 0750 root:omarchy-parents (R-NOTIFY-7). Root writes it
+# (collect, apply-grant); the parent reads it through the group; a kid cannot.
+queue_ensure_dir() {
+  install -d -m 0750 "$QUEUE_DIR"
+  chmod 0750 "$QUEUE_DIR" 2>/dev/null || true
+  chgrp omarchy-parents "$QUEUE_DIR" 2>/dev/null || true
+}
 
 # --- kid-side: open the modal ---------------------------------------------
 
@@ -395,7 +404,7 @@ cmd_collect() {
     esac
   done
 
-  install -d -m 0755 "$QUEUE_DIR"
+  queue_ensure_dir
 
   local collected=0 skipped=0
   local -a outbox_dirs=("$RUN_USER_ROOT"/*/omarchy-kids/ask-outbox)
@@ -500,7 +509,7 @@ cmd_apply_grant() {
     ${minutes:+--minutes "$minutes"} || die "apply-grant: refused"
   is_known_kid "$KIDS_DIR" "$kid" || die "apply-grant: '$kid' is not a provisioned kid account"
 
-  install -d -m 0755 "$QUEUE_DIR"
+  queue_ensure_dir
   local name
   name="$("$KIDS_PY" "$ASKPY" write "$QUEUE_DIR" --kid "$kid" --kind "$kind" --what "$what" \
     ${minutes:+--minutes "$minutes"})" || die "apply-grant: could not record the request"
@@ -517,9 +526,17 @@ cmd_apply_grant() {
 # --- root: list / approve / decline ---------------------------------------
 
 cmd_list() {
-  is_root || die "list: root only" 1
   local kid="${1:-}"
-  install -d -m 0755 "$QUEUE_DIR"
+  # R-NOTIFY-7: the queue is 0750 root:omarchy-parents, so the parent (and
+  # root) may read it and a kid cannot. No root check and no group check: the
+  # filesystem is the guard, and it is the one the panel already reads through.
+  # An absent queue is an empty one (a fresh box), not an error.
+  if [[ ! -e "$QUEUE_DIR" ]]; then
+    echo "omarchy-kids-ask: no open requests"
+    return 0
+  fi
+  [[ -d "$QUEUE_DIR" && -r "$QUEUE_DIR" ]] ||
+    die "list: $QUEUE_DIR is not readable by $(id -un) (requests are the parent's, R-NOTIFY-7)" 1
   local -a args=("list-open" "$QUEUE_DIR")
   [[ -n "$kid" ]] && args+=(--kid "$kid")
 

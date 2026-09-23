@@ -111,10 +111,10 @@ session, opening a terminal, nothing to preview.
   data that isn't there).
 - One dot per kid whose row has `"live": true`: the initial letter of the kid's slug (`kid-ada` →
   `A`), colored differently while `"paused": true`.
-- A badge with the count of open requests, refreshed every 30s by running `omarchy-kids-ask list`
-  in a `Process` and counting its output lines (that command prints a plain aligned table or the
-  literal line `omarchy-kids-ask: no open requests` -- there is no `--json`/`--count` mode, so this
-  counts lines rather than adding a new output mode to a command another issue owns).
+- A badge with the count of open requests, read from `status.json`'s root-written `open_requests`
+  (R-NOTIFY-7) with the rest of the document — no command runs from the bar. (The earlier design
+  polled `omarchy-kids-ask list`, which is readable only by root/`omarchy-parents` and so could
+  never populate from the parent's unprivileged session.)
 - Click or Enter opens a menu: two-line "Give 15 more" and "End session" rows for each live kid,
   with the affected kid's status and minutes on the detail line (R-BAR-1's
   "Ada · paused · 32 min"), then "Open requests" and "Open Kids Mode".

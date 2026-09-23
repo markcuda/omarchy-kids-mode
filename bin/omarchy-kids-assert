@@ -144,6 +144,8 @@ main() {
     # units is machine-level, not per-kid (R-BOOT-3): needed even with
     # no kid yet so the next wizard run's A2 works (issue #46, docs/assert.md).
     assert_one "units" units_ok units_fix
+    # queue is machine-level too (R-NOTIFY-7): absent is fine, wrong is not.
+    assert_one "queue" queue_ok queue_fix
     [[ "$QUIET" -eq 1 ]] || echo "omarchy-kids-assert: no kids provisioned; nothing else to assert"
     [[ "$ANY_FAIL" -eq 0 ]] || exit 1
     exit 0
@@ -185,6 +187,9 @@ main() {
   done
 
   assert_one "units" units_ok units_fix
+  # queue (R-NOTIFY-7): the request queue is the parent's store, 0750
+  # root:omarchy-parents; re-asserted on every update like the other locks.
+  assert_one "queue" queue_ok queue_fix
   assert_one "parent-group" parent_group_ok parent_group_fix
 
   assert_one "hyprland-configs" hyprland_ok hyprland_fix

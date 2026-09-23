@@ -128,12 +128,20 @@ def load_record(path):
 
 def write_atomic(path, record):
     directory = os.path.dirname(path) or "."
-    os.makedirs(directory, mode=0o755, exist_ok=True)
+    os.makedirs(directory, mode=0o750, exist_ok=True)
     tmp = f"{path}.{os.getpid()}.tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(record, f, sort_keys=True)
         f.write("\n")
-    os.chmod(tmp, 0o644)
+    # 0640, and the group of the containing directory: the queue is the
+    # parent's (R-NOTIFY-7, omarchy-parents) and the kid's own outbox keeps the
+    # kid's group. Without the chgrp a root-written queue record would be
+    # root:root and the parent could not read it.
+    os.chmod(tmp, 0o640)
+    try:
+        os.chown(tmp, -1, os.stat(directory).st_gid)
+    except OSError:
+        pass  # best-effort; a non-root caller cannot chgrp, and need not
     os.replace(tmp, path)
 
 
@@ -191,7 +199,7 @@ def cmd_write(argv):
         except ValueError:
             die("write: --minutes must be an integer")
 
-    os.makedirs(directory, mode=0o755, exist_ok=True)
+    os.makedirs(directory, mode=0o750, exist_ok=True)
     # <unix-ts>-<account>-<kind>.json (Appendix D); a counter suffix
     # keeps two requests in the same second from colliding.
     base = f"{now}-{kid}-{kind}"

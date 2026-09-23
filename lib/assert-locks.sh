@@ -318,6 +318,31 @@ time_metadata_fix() {
   done < <(kids_list "$KIDS_DIR")
 }
 
+# queue (R-NOTIFY-7, R-BAR-3): the request queue is the parent's store, not the
+# world's -- 0750 root:omarchy-parents, records 0640. Absent is fine (collect
+# creates it on the first request); present must be right.
+queue_ok() {
+  local dir file
+  dir="$(posture_root)/var/lib/omarchy-kids/queue"
+  [[ ! -e "$dir" && ! -L "$dir" ]] || time_metadata_dir_ok "$dir" 750 omarchy-parents || return 1
+  for file in "$dir"/*.json; do
+    [[ -e "$file" || -L "$file" ]] || continue
+    time_metadata_file_ok "$file" 640 omarchy-parents || return 1
+  done
+}
+queue_fix() {
+  local dir file
+  dir="$(posture_root)/var/lib/omarchy-kids/queue"
+  # A fresh install may not have the group yet; parent-group creates it too,
+  # but queue must not report FAIL on the run before that.
+  getent group omarchy-parents >/dev/null 2>&1 || groupadd -f omarchy-parents 2>/dev/null || true
+  time_metadata_dir_fix "$dir" 750 omarchy-parents || return 1
+  for file in "$dir"/*.json; do
+    [[ -e "$file" || -L "$file" ]] || continue
+    time_metadata_file_fix "$file" 640 omarchy-parents || return 1
+  done
+}
+
 # units (R-BOOT-3, R-SEC-2): enabled or the autologin drop-in never
 # gets written. KIDS_UNITS/SOCKETS/TIMERS come from lib/kids.sh, shared
 # with bin/omarchy-kids-wizard's Apply-time enable --now (issue #46).

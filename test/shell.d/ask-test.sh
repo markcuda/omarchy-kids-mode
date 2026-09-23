@@ -358,6 +358,15 @@ check_contains "$(cat "$QUEUE_DIR/1000000001-kid-ada-time.json")" '"state": "ope
 check_contains "$(cat "$QUEUE_DIR/1000000003-kid-bo-site.json")" '"kid": "kid-bo"' \
   "S2: the kid field is re-derived from the outbox owner, not read from the file"
 
+# R-NOTIFY-7: the queue and its records are the parent's, not the world's.
+check_eq "$(kids_file_mode "$QUEUE_DIR")" "750" "queue directory is 0750 (R-NOTIFY-7)"
+for f in "$QUEUE_DIR"/*.json; do
+  [[ -e "$f" ]] || continue
+  check_eq "$(kids_file_mode "$f")" "640" "queue record $(basename "$f") is 0640 (R-NOTIFY-7)"
+  check_eq "$(kids_file_gid "$f")" "$(kids_file_gid "$QUEUE_DIR")" \
+    "queue record $(basename "$f") takes the queue directory's group (R-NOTIFY-7)"
+done
+
 # S3: the path-like kid never reached the queue, and root created nothing.
 [[ -e "$QUEUE_DIR/1000000006-evil-site.json" ]] &&
   fail "S3: a record with a path-like kid must never be queued" ||
@@ -482,11 +491,30 @@ EOF
 "$BIN" collect --apply >/dev/null
 time_stub_gone
 
-# Root-only review commands reject a kid before touching sibling requests.
-for subcommand in list approve decline; do
+# approve/decline are root-only entry points; `list` reads through the queue's
+# own permissions (R-NOTIFY-7): it works for whoever can read the queue and
+# refuses when they cannot. The test user owns the scratch queue, so it works;
+# an unreadable queue (a kid's case) is refused.
+for subcommand in approve decline; do
   "$BIN" "$subcommand" no-such-id >/dev/null 2>&1
   check_eq "$?" 1 "$subcommand: refuses a non-root caller at entry"
 done
+"$BIN" list >/dev/null 2>&1
+check_eq "$?" 0 "list: works when the queue is readable (the test user owns it)"
+if [[ "${EUID:-0}" -ne 0 ]]; then
+  chmod 0000 "$QUEUE_DIR"
+  "$BIN" list >/dev/null 2>&1
+  check_eq "$?" 1 "list: refuses when the queue is not readable (a kid's case, R-NOTIFY-7)"
+  chmod 0750 "$QUEUE_DIR"
+else
+  pass "list: running as root, so the unreadable-queue assertion is skipped (root reads any queue)"
+fi
+# A fresh box has no queue; that is an empty queue, not an error.
+mv "$QUEUE_DIR" "$QUEUE_DIR.absent"
+out="$("$BIN" list 2>&1)"
+check_eq "$?" 0 "list: an absent queue exits 0 (fresh box)"
+check_contains "$out" "no open requests" "list: an absent queue says so"
+mv "$QUEUE_DIR.absent" "$QUEUE_DIR"
 export KIDS_TEST_UID=0
 
 # =====================================================================
@@ -611,6 +639,50 @@ check_not_contains "$out" "rejected before it was sent" "grant time 7 carries mi
 # (live review, 2026-09-21 -- same fix as the exit modal).
 check_contains "$(cat "$ROOT_DIR/share/ask/shell.qml")" '"Your password"' \
   "the ask modal's empty field says whose password is wanted"
+
+# --- R-NOTIFY-7: a record takes the queue directory's group, not the writer's --
+# The N-1 blocking fix. Observable: point the queue at a *secondary* group of
+# the test user, collect, and check the record took that group -- a record that
+# kept the writer's primary group (the bug) would show it. /usr/bin/id, not the
+# stubbed PATH id.
+if [[ "${EUID:-0}" -ne 0 ]]; then
+  real_id=/usr/bin/id
+  pgid="$("$real_id" -g 2>/dev/null || true)"
+  sgid=""
+  for g in $("$real_id" -G 2>/dev/null || true); do
+    [[ "$g" == "$pgid" ]] || {
+      sgid="$g"
+      break
+    }
+  done
+else
+  sgid=""
+fi
+if [[ -n "$sgid" ]]; then
+  rm -f "$QUEUE_DIR"/*.json 2>/dev/null || true
+  chgrp "$sgid" "$QUEUE_DIR" 2>/dev/null || true
+  cat >"$RUN_USER_ROOT/1000/omarchy-kids/ask-outbox/1000000099-kid-ada-time.json" <<'EOF'
+{"kid": "kid-ada", "kind": "time", "what": "5", "minutes": 5, "asked_at": 1000000099, "state": "open"}
+EOF
+  "$BIN" collect --apply >/dev/null 2>&1
+  f="$(ls "$QUEUE_DIR"/1000000099-*.json 2>/dev/null | head -1)"
+  if [[ -n "$f" ]]; then
+    # Assert against the directory's group as it stands (collect's own
+    # queue_ensure_dir may chgrp to omarchy-parents where that group exists),
+    # and only bite when it differs from the writer's primary group.
+    dir_gid="$(kids_file_gid "$QUEUE_DIR")"
+    if [[ "$dir_gid" != "$pgid" ]]; then
+      check_eq "$(kids_file_gid "$f")" "$dir_gid" \
+        "queue record takes the directory's (non-primary) group (R-NOTIFY-7)"
+    else
+      pass "queue group: the queue kept the primary group (no omarchy-parents here); nothing to observe"
+    fi
+  else
+    fail "queue group test: collect wrote no record"
+  fi
+else
+  pass "queue group: no secondary group (or run as root); skipping the observable-group assertion"
+fi
 
 echo "ask-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc
