@@ -60,6 +60,17 @@ Running this as root — from a terminal, or through the panel's warmed sudo —
 authentication, so there is no second password prompt. The window is consumed by the first device
 that presents the token and expires on its own; `pair` refuses while notifications are off.
 
+The URI's `addr=` list carries the box's own routable addresses (every global IPv4, and the tailnet
+address when `away tailnet` is on), so the app can try another when one fails (N-10). The addresses
+also ride the single-use record; each is validated before it reaches the URI.
+
+## Away from home (N-10)
+
+Off by default: the relay is fenced to the LAN (`docs/relayd.md`). `away tailnet` writes a systemd
+drop-in adding the CGNAT range Tailscale uses (`100.64.0.0/10`) to the relay's allow list, so a
+device on the parent's own tailnet can reach it; `away off` removes the drop-in. It changes nothing
+else about the fence, and it is the parent's own VPN, not a third party.
+
 ## The device subcommands
 
 `devices`, `rename`, `scopes`, `revoke` and `publish` delegate straight to `omarchy-kids-devices`

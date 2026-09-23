@@ -33,7 +33,7 @@ Usage: omarchy-kids-devices list [--json]
        omarchy-kids-devices scopes <id> decide[,act] [--apply]
        omarchy-kids-devices revoke <id> [--apply]
        omarchy-kids-devices publish [--apply]
-       omarchy-kids-devices pair-start [--id ID] [--scopes decide,act] [--apply]
+       omarchy-kids-devices pair-start [--id ID] [--scopes decide,act] [--address ADDR]... [--apply]
 
 The parent's paired notification devices (R-NOTIFY-3): each is a root-owned
 <id>.conf under /etc/omarchy-kids/devices/; `publish` writes the public copy the
@@ -43,7 +43,9 @@ plan, --apply performs it.
 pair-start writes one single-use pairing record (R-NOTIFY-5) and prints the
 omarchy-kids://pair URI (which carries the token) for the parent to show the
 device; the device's PAIR frame is verified and consumed by omarchy-kids-authd.
-Root only; the parent password gate is the caller's (it VERIFYs first).
+--address (repeatable) adds the box's own routable addresses to the record and
+the URI, so the app can try another when one fails (N-10). Root only; the parent
+password gate is the caller's (it VERIFYs first).
 EOF
 }
 
@@ -51,6 +53,9 @@ device_path() { printf '%s/%s.conf' "$DEVICES_DIR" "$1"; }
 valid_id() { [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$ ]]; }
 valid_text() { [[ -n "$1" && ${#1} -le 64 && "$1" != *[[:cntrl:]]* ]]; }
 valid_key() { [[ "$1" =~ ^[A-Za-z0-9+/]{40,64}={0,2}$ ]]; }
+# An IPv4/IPv6 literal or a hostname: what may ride the pairing URI's addr list
+# (N-10). No spaces, no scheme, no path, no brackets.
+valid_address() { [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9.:-]{0,63}$ ]]; }
 valid_scopes() {
   # One anchored match of the whole string: `read -ra` stops at a newline and
   # would accept `decide\nsign_pub=EVIL`, injecting a field into the record.
@@ -273,6 +278,7 @@ cmd_publish() {
 # fallback. The record expires and is consumed by the PAIR frame.
 cmd_pair_start() {
   local id="" scopes="decide,act"
+  local -a addrs=()
   while (($#)); do
     case "$1" in
       --id)
@@ -281,6 +287,11 @@ cmd_pair_start() {
         ;;
       --scopes)
         scopes="${2:?}"
+        shift 2
+        ;;
+      --address)
+        valid_address "${2:?}" || die "pair-start: bad --address '${2}'"
+        addrs+=("$2")
         shift 2
         ;;
       --apply)
@@ -315,11 +326,24 @@ cmd_pair_start() {
   command -v jq >/dev/null 2>&1 || die "pair-start: jq is required"
   local now rec token
   now="$(date +%s)"
-  rec="$("$KIDS_PY" "$LIB/devices.py" pair-start "$dir" "$id" --scopes "$scopes" --now "$now")" ||
+  local -a addr_args=()
+  local a
+  for a in "${addrs[@]+"${addrs[@]}"}"; do addr_args+=(--address "$a"); done
+  rec="$("$KIDS_PY" "$LIB/devices.py" pair-start "$dir" "$id" --scopes "$scopes" --now "$now" \
+    "${addr_args[@]+"${addr_args[@]}"}")" ||
     die "pair-start: could not write the pairing record"
   token="$(printf '%s' "$rec" | jq -r .token)"
+  local uri="omarchy-kids://pair?v=1&id=$id&token=$token"
+  if ((${#addrs[@]})); then
+    local csv
+    csv="$(
+      IFS=,
+      printf '%s' "${addrs[*]}"
+    )"
+    uri+="&addr=$csv"
+  fi
   echo "omarchy-kids-devices: pairing started for $id"
-  echo "  pair:  omarchy-kids://pair?v=1&id=$id&token=$token"
+  echo "  pair:  $uri"
 }
 
 [[ $# -ge 1 ]] || {

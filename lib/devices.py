@@ -318,7 +318,7 @@ def pairing_proof(token_hex, name, sign_pub, box_pub):
     return hmac.new(bytes.fromhex(token_hex), message, hashlib.sha256).hexdigest()
 
 
-def write_pairing(pairing_dir, pair_id, scopes, now, ttl=PAIRING_TTL_SECONDS):
+def write_pairing(pairing_dir, pair_id, scopes, now, ttl=PAIRING_TTL_SECONDS, addresses=()):
     """Root writes one single-use pairing record and returns it.
 
     No code: the token (in the QR) is the only credential, so there is no
@@ -326,12 +326,17 @@ def write_pairing(pairing_dir, pair_id, scopes, now, ttl=PAIRING_TTL_SECONDS):
     0600): the relay must not be able to read the token, or a compromised relay
     could pair a device with decide,act (R-NOTIFY-2). Root publishes only the
     window's expiry in status.json for the relay to read.
+
+    `addresses` are the box's own routable addresses (the LAN, and the tailnet
+    when "away" is on), so the app can fall back to another when one fails
+    (N-10); they ride the record and the pairing URI, never a private key.
     """
     token = secrets.token_hex(20)
     record = {
         "id": pair_id,
         "token": token,
         "scopes": scopes,
+        "addresses": list(addresses),
         "created_at": now,
         "expires_at": now + ttl,
     }
@@ -424,9 +429,14 @@ def _main(argv):  # pragma: no cover - a thin CLI for tests and the panel card
         parser.add_argument("directory")
         parser.add_argument("pair_id")
         parser.add_argument("--scopes", default="decide,act")
+        parser.add_argument("--address", action="append", default=[])
         parser.add_argument("--now", type=int, required=True)
         args = parser.parse_args(argv[1:])
-        json.dump(write_pairing(args.directory, args.pair_id, args.scopes, args.now), sys.stdout, sort_keys=True)
+        json.dump(
+            write_pairing(args.directory, args.pair_id, args.scopes, args.now, addresses=args.address),
+            sys.stdout,
+            sort_keys=True,
+        )
         print()
         return 0
     if argv and argv[0] == "pair-check":

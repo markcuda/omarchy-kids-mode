@@ -116,15 +116,20 @@ check_eq "$?" "0" "pair-start previews without --apply"
 check_contains "$out" "[dry-run]" "pair-start prints the plan"
 [[ -e "$PAIR_DIR/d9" ]] && fail "pair-start (dry-run): must not write the record" ||
   pass "pair-start (dry-run): writes nothing"
-out="$("$BIN" pair-start --id d9 --apply 2>&1)"
+out="$("$BIN" pair-start --id d9 --address 192.168.1.5 --address 100.64.0.7 --apply 2>&1)"
 check_eq "$?" "0" "pair-start --apply succeeds"
 [[ -f "$PAIR_DIR/d9" ]] && pass "pair-start writes the pairing record" || fail "pair-start: no record"
 check_eq "$(kids_file_mode "$PAIR_DIR/d9")" "600" "pairing record is 0600 root (the token never reaches the relay, R-NOTIFY-2/5)"
 check_contains "$out" "pair:  omarchy-kids://pair" "pair-start prints the pair URI"
+check_contains "$out" "addr=192.168.1.5,100.64.0.7" "the URI carries the box's addresses (N-10)"
+check_eq "$(jq -r '.addresses | join(",")' "$PAIR_DIR/d9")" "192.168.1.5,100.64.0.7" \
+  "the record carries the addresses (N-10)"
 [[ "$out" != *"code:"* ]] && pass "pair-start prints no code nothing accepts (I-6)" ||
   fail "pair-start still prints a code with no code path"
 "$BIN" pair-start --id 'bad:id' --apply >/dev/null 2>&1
 check_eq "$?" "2" "pair-start refuses a bad id"
+"$BIN" pair-start --id d11 --address 'bad addr' --apply >/dev/null 2>&1
+check_eq "$?" "2" "pair-start refuses a bad address"
 "$BIN" add --id d10 --name D --platform ios --sign-pub "$KEY" --box-pub "$KEY" --apply >/dev/null 2>&1
 "$BIN" pair-start --id d10 --apply >/dev/null 2>&1
 check_eq "$?" "2" "pair-start refuses an already-paired id"

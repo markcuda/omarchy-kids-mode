@@ -18,6 +18,15 @@ RELAY_DIR="$ETC/relay"
 CERT="$RELAY_DIR/cert.pem"
 KEY="$RELAY_DIR/key.pem"
 PORT=8447
+RELAY_UNIT="omarchy-kids-relayd.service"
+SYSROOT=""
+# "Away from home: my own VPN" (N-10): a drop-in that extends the relay's fence to
+# the CGNAT range Tailscale uses. The LAN list is repeated so the file is correct
+# whether systemd merges the drop-in's IPAddressAllow or replaces the unit's.
+AWAY_DIR="$SYSROOT/etc/systemd/system/$RELAY_UNIT.d"
+AWAY_FILE="$AWAY_DIR/away.conf"
+LAN_ALLOW="localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 fc00::/7 fe80::/10"
+CGNAT_RANGE="100.64.0.0/10"
 DRY_RUN=1
 DEVICES_BIN="$(kids_bin devices "$DIR")"
 
@@ -32,6 +41,8 @@ Usage: omarchy-kids-notify enable [--host NAME] [--rekey] [--apply]
        omarchy-kids-notify disable [--apply]
        omarchy-kids-notify status
        omarchy-kids-notify pair [--scopes decide,act] [--apply]
+       omarchy-kids-notify away <off|tailnet> [--apply]
+       omarchy-kids-notify away-status
        omarchy-kids-notify devices [--json]
        omarchy-kids-notify rename <id> <name> [--apply]
        omarchy-kids-notify scopes <id> decide[,act] [--apply]
@@ -45,6 +56,11 @@ every device and removes the certificate. `pair` starts a single-use pairing
 window and prints the URI (as a QR where qrencode is installed) plus the
 fingerprint to check on the device. The device commands delegate to
 omarchy-kids-devices. Root only; DRY_RUN=1 prints the plan.
+
+`away tailnet` is the opt-in "Away from home: my own VPN" fence (N-10): it writes
+a systemd drop-in adding the CGNAT range Tailscale uses to the relay's allow
+list, so a device on the parent's own tailnet can reach the relay; `away off`
+removes it. The relay otherwise stays fenced to the LAN.
 
 Run it as root -- from a terminal, or through a tool that elevates like sudo;
 that elevation is the parent's own authentication, so `pair` adds no second
@@ -158,6 +174,23 @@ cmd_disable() {
   fi
 }
 
+# notify_addresses — the box's own routable addresses, for the pairing URI so the
+# app can try another when one fails (N-10): every global IPv4, plus the tailnet
+# address when "away" is on and Tailscale is installed. Best effort and stdout
+# only; pair-start validates each.
+notify_addresses() {
+  local a
+  if command -v ip >/dev/null 2>&1; then
+    while IFS= read -r a; do
+      [[ -n "$a" ]] && printf '%s\n' "$a"
+    done < <(ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
+  fi
+  if away_enabled && command -v tailscale >/dev/null 2>&1; then
+    a="$(tailscale ip -4 2>/dev/null | head -n1)"
+    [[ -n "$a" ]] && printf '%s\n' "$a"
+  fi
+}
+
 # pair -- start a single-use pairing window and show the parent what the device
 # scans (R-NOTIFY-5). Running as root (the caller's own elevation, e.g. the sudo
 # prompt) is the gate, so there is no password prompt here.
@@ -178,6 +211,12 @@ cmd_pair() {
   done
   enabled || die "pair: notifications are off (run 'omarchy-kids-notify enable' first)"
   local args=(pair-start --scopes "$scopes")
+  local -a addr_args=()
+  local a
+  while IFS= read -r a; do
+    [[ -n "$a" ]] && addr_args+=(--address "$a")
+  done < <(notify_addresses)
+  args+=("${addr_args[@]+"${addr_args[@]}"}")
   ((apply)) && args+=(--apply)
   local out uri
   out="$("$DEVICES_BIN" "${args[@]}")" || exit $?
@@ -196,6 +235,68 @@ cmd_pair() {
       echo "  (install qrencode to show a QR; the device can open the URI above)"
     fi
   fi
+}
+
+# away — the "Away from home: my own VPN" consent (N-10). The relay stays fenced
+# to the LAN; this adds the CGNAT range Tailscale uses to its allow list, and
+# nothing else. Root only; DRY_RUN=1 by default.
+reload_relay() {
+  systemctl daemon-reload >/dev/null 2>&1 || true
+  systemctl try-restart "$RELAY_UNIT" >/dev/null 2>&1 || true
+}
+
+away_enabled() { [[ -f "$AWAY_FILE" ]] && grep -q "$CGNAT_RANGE" "$AWAY_FILE" 2>/dev/null; }
+
+cmd_away() {
+  local mode="${1:-}"
+  [[ -n "$mode" ]] || die "away: needs <off|tailnet> (see --help)"
+  shift
+  local a
+  for a in "$@"; do
+    case "$a" in
+      --apply) DRY_RUN=0 ;;
+      --dry-run) DRY_RUN=1 ;;
+      *) die "away: unknown argument '$a'" ;;
+    esac
+  done
+  case "$mode" in
+    off)
+      if ((DRY_RUN)); then
+        echo "  [dry-run] would remove $AWAY_FILE and reload the relay"
+        return 0
+      fi
+      rm -f "$AWAY_FILE"
+      rmdir "$AWAY_DIR" 2>/dev/null || true
+      reload_relay
+      echo "omarchy-kids-notify: away-from-home is off (the relay is fenced to the LAN)"
+      ;;
+    tailnet)
+      if ((DRY_RUN)); then
+        echo "  [dry-run] would write $AWAY_FILE allowing $CGNAT_RANGE, then reload the relay"
+        return 0
+      fi
+      install -d -m 0755 "$AWAY_DIR"
+      local tmp="$AWAY_FILE.$$"
+      cat >"$tmp" <<EOF
+# Kids Mode: "Away from home: my own VPN" (N-10), written by
+# omarchy-kids-notify away tailnet. Extends the relay's fence to the CGNAT range
+# Tailscale uses, so a device on the parent's own tailnet can reach it. "away off"
+# removes this file. The LAN list is repeated so this file is correct whether
+# systemd merges IPAddressAllow or replaces the unit's.
+[Service]
+IPAddressAllow=$LAN_ALLOW $CGNAT_RANGE
+EOF
+      chmod 0644 "$tmp"
+      mv -f "$tmp" "$AWAY_FILE"
+      reload_relay
+      echo "omarchy-kids-notify: away-from-home is on for the tailnet ($CGNAT_RANGE)"
+      ;;
+    *) die "away: mode must be 'off' or 'tailnet', got '$mode'" ;;
+  esac
+}
+
+cmd_away_status() {
+  if away_enabled; then echo "tailnet"; else echo "off"; fi
 }
 
 delegate() { # SUBCOMMAND... -- straight through to omarchy-kids-devices
@@ -220,6 +321,8 @@ case "$cmd" in
   disable) cmd_disable "$@" ;;
   status) cmd_status ;;
   pair) cmd_pair "$@" ;;
+  away) cmd_away "$@" ;;
+  away-status) cmd_away_status ;;
   devices) delegate list "$@" ;;
   list) delegate list "$@" ;;
   rename) delegate rename "$@" ;;

@@ -56,8 +56,16 @@ EOF
 chmod +x "$STUBS/qrencode"
 export QR_LOG
 
+# An `ip` stub so pairing's address enumeration is owned by the test (N-10).
+cat >"$STUBS/ip" <<'EOF'
+#!/bin/bash
+printf '2: eth0    inet 10.0.0.9/24 brd 10.0.0.255 scope global eth0\n'
+EOF
+chmod +x "$STUBS/ip"
+
 export PATH="$STUBS:$PATH"
 kids_set_const "$BIN" ETC "$ETC"
+kids_set_const "$BIN" SYSROOT "$SYSROOT"
 kids_set_const "$DEV" ETC "$ETC"
 kids_set_const "$DEV" SYSROOT "$SYSROOT"
 CERT="$ETC/relay/cert.pem"
@@ -130,6 +138,7 @@ PY
   out3="$("$BIN" pair --apply 2>&1)"
   check_eq "$?" "0" "pair --apply starts a pairing window"
   check_contains "$out3" "omarchy-kids://pair" "pair prints the URI the device scans"
+  check_contains "$out3" "addr=10.0.0.9" "pair passes the box's own address (N-10)"
   check_contains "$out3" "fingerprint: $recomputed" "pair prints the SPKI fingerprint to check on the device"
   check_contains "$(cat "$QR_LOG")" "omarchy-kids://pair" "pair renders the URI as a QR (qrencode, on stdin)"
   ls "$PAIR_DIR"/* >/dev/null 2>&1 && pass "pair wrote a single-use pairing record" ||
@@ -169,6 +178,31 @@ PY
 else
   echo "SKIP notify-test.sh: python-cryptography not installed — the minting checks did not run"
 fi
+
+# --- away from home: the tailnet drop-in (N-10) ---------------------------
+AWAY_FILE="$SYSROOT/etc/systemd/system/omarchy-kids-relayd.service.d/away.conf"
+check_eq "$("$BIN" away-status)" "off" "away-status: off by default"
+out="$("$BIN" away tailnet 2>&1)"
+check_eq "$?" 0 "away tailnet previews without --apply"
+check_contains "$out" "[dry-run]" "away tailnet prints the plan"
+[[ -e "$AWAY_FILE" ]] && fail "away tailnet preview must not write the drop-in" ||
+  pass "away tailnet preview writes nothing"
+
+: >"$SYSTEMCTL_LOG"
+out="$("$BIN" away tailnet --apply 2>&1)"
+check_eq "$?" 0 "away tailnet --apply succeeds"
+check_contains "$(cat "$AWAY_FILE")" "100.64.0.0/10" "the drop-in allows the tailnet's CGNAT range"
+check_contains "$(cat "$AWAY_FILE")" "192.168.0.0/16" "the drop-in keeps the LAN ranges"
+check_contains "$(cat "$SYSTEMCTL_LOG")" "daemon-reload" "away reloads systemd"
+check_eq "$("$BIN" away-status)" "tailnet" "away-status: tailnet after apply"
+
+out="$("$BIN" away off --apply 2>&1)"
+check_eq "$?" 0 "away off --apply succeeds"
+[[ ! -e "$AWAY_FILE" ]] && pass "away off removes the drop-in" || fail "away off left the drop-in"
+check_eq "$("$BIN" away-status)" "off" "away-status: off after away off"
+
+out="$("$BIN" away bogus --apply 2>&1)"
+check_eq "$?" 2 "an unknown away mode is refused"
 
 echo "notify-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc
