@@ -134,6 +134,8 @@ These are AGENTS.md's rules, restated for this specific harness:
 | `40-time-lights-out.sh` | 5 | Sets `lights_out` in the past, logs the kid in, confirms the Time's Up overlay auto-Finishes with no answer. |
 | `50-ask-grant.sh` | 6 | `omarchy-kids-ask time 15` from the kid's session, approved on the spot with the parent password, confirms the ledger reflects the grant. |
 | `60-wizard-easy.sh` | 1 | Drives the Easy wizard's fifteen screens over `ssh -tt` with an answers file, Applies for real, cold boots as the kid it provisions. |
+| `70-notify-pair-and-approve.sh` | R-NOTIFY-1/4/5 (N-6) | Enables notifications, starts the relay, pairs the scripted `test/live/clients/notify-client.py` through `/v1/pair`, queues a request root-side, approves it from the client's signed decision, and confirms the grant in the ledger. |
+| `71-notify-idle-exit.sh` | R-NOTIFY-1 (N-7) | With no kid live and no request open, starts the relay and confirms `ss` shows port 8447 closing within the not-in-use bound. |
 | `90-remove.sh` | 8 | `omarchy-kids-remove --dry-run` (always); under `LIVE_DESTRUCTIVE=1`, a real `omarchy-kids-provision remove` of just the wizard kid. |
 
 `05-unit-tests-on-vm.sh` is the answer to a green `test/all` on the Mac that hid four skipped
