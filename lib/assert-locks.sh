@@ -318,6 +318,28 @@ time_metadata_fix() {
   done < <(kids_list "$KIDS_DIR")
 }
 
+# devices (R-NOTIFY-3): the paired-device registry is root-owned, 0750 with
+# 0600 records. Absent is fine (no device paired yet); present must be right.
+devices_ok() {
+  local dir file
+  dir="$(posture_root)/etc/omarchy-kids/devices"
+  [[ ! -e "$dir" && ! -L "$dir" ]] || time_metadata_dir_ok "$dir" 750 || return 1
+  for file in "$dir"/*.conf; do
+    [[ -e "$file" || -L "$file" ]] || continue
+    time_metadata_file_ok "$file" 600 || return 1
+  done
+}
+devices_fix() {
+  local dir file
+  dir="$(posture_root)/etc/omarchy-kids/devices"
+  [[ -e "$dir" || -L "$dir" ]] || return 0 # nothing paired: nothing to fix
+  time_metadata_dir_fix "$dir" 750 || return 1
+  for file in "$dir"/*.conf; do
+    [[ -e "$file" || -L "$file" ]] || continue
+    time_metadata_file_fix "$file" 600 || return 1
+  done
+}
+
 # units (R-BOOT-3, R-SEC-2): enabled or the autologin drop-in never
 # gets written. KIDS_UNITS/SOCKETS/TIMERS come from lib/kids.sh, shared
 # with bin/omarchy-kids-wizard's Apply-time enable --now (issue #46).

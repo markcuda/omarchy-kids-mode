@@ -3,7 +3,7 @@
 # omarchy:hidden=true
 """omarchy-kids-authd -- the parent-password verifier (R-SEC-1, R-SEC-2).
 
-A root, socket-activated oracle. Three request shapes, one per connection:
+A root, socket-activated oracle. Four request shapes, one per connection:
 
     VERIFY\n<password>\n               -> "ok" / "no"   (verify, R-SEC-2)
     BOOTSTRAP\n<password>\n           -> "ok" / "no"   (wizard bootstrap)

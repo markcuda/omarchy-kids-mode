@@ -144,6 +144,8 @@ main() {
     # units is machine-level, not per-kid (R-BOOT-3): needed even with
     # no kid yet so the next wizard run's A2 works (issue #46, docs/assert.md).
     assert_one "units" units_ok units_fix
+    # devices is machine-level too (R-NOTIFY-3): absent is fine, wrong is not.
+    assert_one "devices" devices_ok devices_fix
     [[ "$QUIET" -eq 1 ]] || echo "omarchy-kids-assert: no kids provisioned; nothing else to assert"
     [[ "$ANY_FAIL" -eq 0 ]] || exit 1
     exit 0
@@ -185,6 +187,8 @@ main() {
   done
 
   assert_one "units" units_ok units_fix
+  # devices (R-NOTIFY-3): the paired-device registry stays root-owned.
+  assert_one "devices" devices_ok devices_fix
   assert_one "parent-group" parent_group_ok parent_group_fix
 
   assert_one "hyprland-configs" hyprland_ok hyprland_fix

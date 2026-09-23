@@ -23,7 +23,7 @@ bin/omarchy-kids-ask's `collect`/`apply-grant` (via `ask.py validate`).
 
 Usage:
     ask.py write DIR --kid K --kind KIND --what WHAT [--minutes N]
-    ask.py decide PATH --state approved|declined --by panel|keyboard|widget
+    ask.py decide PATH --state approved|declined --by panel|keyboard|widget|device [--device ID]
     ask.py show PATH [--field FIELD]
     ask.py list-open DIR [--kid KID]
     ask.py reopen PATH --kid KID

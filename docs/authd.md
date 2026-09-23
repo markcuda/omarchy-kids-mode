@@ -145,7 +145,7 @@ bash test/shell.d/authd-test.sh
 or as part of the full suite with `test/all`.
 ## The GRANT request type (2026-09-03)
 
-The daemon answers three request shapes, one per connection. Ordinary verification uses the
+The daemon answers four request shapes, one per connection. Ordinary verification uses the
 explicit `VERIFY` frame. The wizard's `BOOTSTRAP` frame adds the caller-identity check. The third
 is `GRANT <json-request-line>\n<password>\n`, and it exists because an "Ask a grown-up" approval
 cannot be an exit code from a process the kid owns (review S1). Root does all of it here: it
@@ -154,7 +154,12 @@ parses the request, runs it through `lib/ask.py`'s `validate_grant` (loaded by p
 the request's `kid`, confirms that kid has a profile under `--etc`, and only then spends a
 `crypt(3)` on the password. Everything that can be refused without the password is refused
 first. On success it runs `<--ask-bin> apply-grant --kid ... --apply` with a fixed argv list, so
-the "do the thing" code has exactly one home. Two other changes came from the same review: the
+the "do the thing" code has exactly one home. The fourth is `DECIDE <json-frame>\n`, a paired
+device's signed decision (R-NOTIFY-4): only the relay account (`--relay-user`) may send it,
+`lib/devices.py` verifies the Ed25519 signature, skew, nonce and the fixed `decide` scope as root,
+and on success root runs `<--ask-bin> approve|decline <id> --by device:<id> --apply`, which refuses
+an already-decided record. A missing module, ledger or relay account makes every DECIDE fail
+closed. Two other changes came from the same review: the
 rate limiter is keyed per peer uid and decays after a quiet window, so a kid looping wrong
 guesses at the world-connectable socket can no longer lock the parent out of their own exit
 modal (S7); and each connection is handled on its own thread, so a peer holding a connection

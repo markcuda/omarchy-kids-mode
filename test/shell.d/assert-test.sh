@@ -577,6 +577,18 @@ check_eq "$(kids_file_mtime "$TIME_STATE")" "$state_inode" "time infrastructure:
 check_eq "$(cat "$TIME_LEDGER_DIR/2026-09-04")" "$usage_before" "time infrastructure: usage ledger is unchanged"
 check_eq "$(cat "$TIME_LEDGER_DIR/2026-09-04.grant")" "$grant_before" "time infrastructure: grant ledger is unchanged"
 
+# --- paired-device registry (R-NOTIFY-3) -----------------------------------
+
+DEV_DIR="$SCRATCH_ROOT/etc/omarchy-kids/devices"
+mkdir -p "$DEV_DIR"
+printf 'id=d1\nname=Phone\n' >"$DEV_DIR/d1.conf"
+chmod 0777 "$DEV_DIR"
+chmod 0666 "$DEV_DIR/d1.conf"
+out="$($BIN)"
+check_status "$out" "devices" "fixed" "devices: broken modes report fixed (R-NOTIFY-3)"
+check_eq "$(kids_file_mode "$DEV_DIR")" "750" "devices: directory is mode 0750 (R-NOTIFY-3)"
+check_eq "$(kids_file_mode "$DEV_DIR/d1.conf")" "600" "devices: record is mode 0600 (R-NOTIFY-3)"
+
 # --- --quiet on an all-ok tree prints nothing ---------------------------
 
 out="$("$BIN" --quiet)"
