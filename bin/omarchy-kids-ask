@@ -22,9 +22,11 @@ SYSROOT=""
 RUN="/run/user/$(id -u)/omarchy-kids"
 RUN_USER_ROOT=/run/user
 KIDS_DIR="$ETC/kids"
-QUEUE_DIR="$SYSROOT/var/lib/omarchy-kids/queue"
+VARLIB="$SYSROOT/var/lib/omarchy-kids"
+QUEUE_DIR="$VARLIB/queue"
 OUTBOX_DIR="$RUN/ask-outbox"
 MODAL_QML="$SHARE/ask/shell.qml"
+DECIDED_QML="$SHARE/ask/decided.qml"
 MODAL_PIDFILE="$RUN/ask-modal.pid"
 # The verifier socket is a constant: a kid may not point a password
 # check anywhere (AGENTS.md, "The trust boundary"; review S4/§2.1).
@@ -58,10 +60,15 @@ Usage: omarchy-kids-ask time <minutes>
        omarchy-kids-ask list [<kid>]
        omarchy-kids-ask approve <id> [--apply]
        omarchy-kids-ask decline <id> [--apply]
+       omarchy-kids-ask watch
        omarchy-kids-ask --help
 
 time/app/plugin/site   Kid-side: opens share/ask/shell.qml, the "Ask a
               grown-up" modal, describing the request in kid words.
+
+watch         Kid-side: watches for a decision on this kid's requests and
+              shows the result card (share/ask/decided.qml). Started once per
+              kid session by omarchy-kids-session-start; never exits.
 
 submit        Internal: what the modal calls for "Ask later". Writes one
               Appendix D record, always state=open, into the kid's own
@@ -246,6 +253,49 @@ apply_record() {
       return 1
       ;;
   esac
+}
+
+# write_kid_decision PATH -- after root decides a record, drop the result where
+# the kid's own session can read it: <varlib>/<kid>/decisions/<id>.json, 0640
+# root:<kid> (R-NOTIFY-6). Best-effort: a failure here never fails the decision.
+write_kid_decision() {
+  local path="$1" kid id dir tmp
+  kid="$("$KIDS_PY" "$ASKPY" show "$path" --field kid 2>/dev/null)" || return 0
+  [[ -n "$kid" ]] || return 0
+  id="$(basename "$path" .json)"
+  dir="$VARLIB/$kid/decisions"
+  install -d -m 0750 "$dir" 2>/dev/null || return 0
+  chgrp "$kid" "$dir" 2>/dev/null || true
+  tmp="$(mktemp "$dir/.$id.XXXXXX")" || return 0
+  if ! "$KIDS_PY" "$ASKPY" show "$path" >"$tmp" 2>/dev/null; then
+    rm -f "$tmp"
+    return 0
+  fi
+  chmod 0640 "$tmp" 2>/dev/null || true
+  chgrp "$kid" "$tmp" 2>/dev/null || true
+  mv -f "$tmp" "$dir/$id.json" 2>/dev/null || rm -f "$tmp"
+}
+
+# cmd_watch -- kid-side (R-NOTIFY-6): show the decided card for any decision the
+# kid has not seen yet, then mark it seen in the kid's own runtime dir. Started
+# per session by omarchy-kids-session-start; never exits.
+cmd_watch() {
+  local kid decisions seen_dir f id
+  kid="$(id -un)"
+  decisions="$VARLIB/$kid/decisions"
+  seen_dir="$RUN/ask-seen"
+  install -d -m 0700 "$seen_dir" 2>/dev/null || true
+  while true; do
+    for f in "$decisions"/*.json; do
+      [[ -e "$f" ]] || continue
+      id="$(basename "$f" .json)"
+      [[ -e "$seen_dir/$id" ]] && continue
+      OMARCHY_KIDS_ACCOUNT="$kid" OMARCHY_KIDS_ASK_DECISION="$f" \
+        "$QUICKSHELL_BIN" -p "$DECIDED_QML" >/dev/null 2>&1 || true
+      : >"$seen_dir/$id" 2>/dev/null || true
+    done
+    sleep 2
+  done
 }
 
 # apply_time KID MINUTES -- through the sibling command, resolved beside
@@ -459,6 +509,7 @@ cmd_apply_grant() {
   apply_record "$path" || die "apply-grant: could not apply the request"
   if [[ "$DRY_RUN" == "0" ]]; then
     "$KIDS_PY" "$ASKPY" decide "$path" --state approved --by keyboard
+    write_kid_decision "$path"
   fi
   echo "omarchy-kids-ask: granted $kind '$what' to $kid"
 }
@@ -526,6 +577,7 @@ cmd_approve() {
   apply_record "$path" || echo "omarchy-kids-ask: could not apply $id (see above) -- approving it anyway" >&2
   if [[ "$DRY_RUN" == "0" ]]; then
     "$KIDS_PY" "$ASKPY" decide "$path" --state approved --by panel
+    write_kid_decision "$path"
     echo "omarchy-kids-ask: approved $id"
   else
     echo "  [dry-run] would mark $id approved (by=panel)"
@@ -562,6 +614,7 @@ cmd_decline() {
 
   if [[ "$DRY_RUN" == "0" ]]; then
     "$KIDS_PY" "$ASKPY" decide "$path" --state declined --by panel
+    write_kid_decision "$path"
     echo "omarchy-kids-ask: declined $id"
   else
     echo "  [dry-run] would mark $id declined (by=panel), no action performed"
@@ -594,6 +647,7 @@ main() {
     list) cmd_list "$@" ;;
     approve) cmd_approve "$@" ;;
     decline) cmd_decline "$@" ;;
+    watch) cmd_watch ;;
     *) die "unknown command: '$cmd' (see --help)" ;;
   esac
 }

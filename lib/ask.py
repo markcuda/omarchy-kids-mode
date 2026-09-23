@@ -49,6 +49,7 @@ BY = ("keyboard", "panel", "widget")
 # any slash outright, so no value reaching root can ever be a path
 # fragment ("../../../../etc/sudoers.d") or a hidden file.
 MAX_MINUTES = 1440  # one day; a grant is "more screen time", not a new policy
+REPLY_MAX = 80  # a parent's optional reply line; printable and bounded (Appendix D)
 
 RE_ACCOUNT = re.compile(r"\A[a-z_][a-z0-9_-]{0,31}\Z")
 RE_ID = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._+@-]{0,127}\Z")
@@ -203,17 +204,31 @@ def cmd_write(argv):
     print(os.path.basename(path))
 
 
+def valid_reply(value):
+    """True for a parent's optional reply line: None, or a string of at most
+    REPLY_MAX printable characters with no control characters (Appendix D;
+    validated at read time, so a reply that reaches a kid is safe to render)."""
+    if value is None:
+        return True
+    if not isinstance(value, str) or len(value) > REPLY_MAX:
+        return False
+    return all(ch.isprintable() for ch in value)
+
+
 def cmd_decide(argv):
-    opts, rest = parse_kv_args(argv, {"state", "by"})
+    opts, rest = parse_kv_args(argv, {"state", "by", "reply"})
     if len(rest) != 1:
         die("decide: needs PATH")
     path = rest[0]
     state = opts.get("state")
     by = opts.get("by")
+    reply = opts.get("reply")
     if state not in ("approved", "declined"):
         die("decide: --state must be 'approved' or 'declined'")
     if by not in BY:
         die(f"decide: --by must be one of {', '.join(BY)}")
+    if not valid_reply(reply):
+        die(f"decide: --reply must be at most {REPLY_MAX} printable characters")
 
     record = load_record(path)
     if record.get("state") != "open":
@@ -222,6 +237,8 @@ def cmd_decide(argv):
     record["state"] = state
     record["decided_at"] = int(time.time())
     record["by"] = by
+    if reply is not None:
+        record["reply"] = reply
     write_atomic(path, record)
 
 

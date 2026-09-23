@@ -11,6 +11,7 @@ LIB="$DIR/lib"
 # shellcheck source=lib/kids.sh
 source "$LIB/kids.sh"
 TIME_BIN="$(kids_bin time "$DIR")"
+ASK_BIN="$(kids_bin ask "$DIR")"
 SESSION_BIN="$DIR/bin/omarchy-kids-session"
 
 # Build-time constants: a kid may edit neither the manifest path nor the launcher code.
@@ -105,6 +106,12 @@ fi
 # Screen-time daemon (SPEC.md R-TIME-1..5), detached; never fatal. docs/time.md.
 log "starting omarchy-kids-time daemon for '$ACCOUNT'"
 "$TIME_BIN" daemon >/dev/null 2>&1 &
+disown 2>/dev/null || true
+
+# Ask-result watcher (SPEC.md R-NOTIFY-6): shows the decided card for a request
+# this kid has not seen yet. Detached; never fatal.
+log "starting omarchy-kids-ask watch for '$ACCOUNT'"
+"$ASK_BIN" watch >/dev/null 2>&1 &
 disown 2>/dev/null || true
 
 exec "${EXEC_LINE[@]}"

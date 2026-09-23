@@ -415,6 +415,19 @@ check_contains "$after_argv" "omarchy-kids-web install 6-8 --allow" "apply-grant
 check_contains "$after_argv" "--apply" "apply-grant: re-installs the web policy for real"
 check_contains "$(cat "$ETC/kids/kid-bo/allow.txt")" "roblox.com" "apply-grant: records the site in allow.txt"
 
+# R-NOTIFY-6: root drops the result where the kid's own session reads it.
+KID_DEC="$VARLIB_ROOT/var/lib/omarchy-kids/kid-ada/decisions"
+dfile="$(ls "$KID_DEC"/*.json 2>/dev/null | head -1)"
+[[ -n "$dfile" ]] && pass "apply-grant: writes a kid decision file (R-NOTIFY-6)" ||
+  fail "apply-grant: no kid decision file was written"
+if [[ -n "$dfile" ]]; then
+  check_eq "$(kids_file_mode "$dfile")" "640" "kid decision file is 0640 (R-NOTIFY-6)"
+  check_eq "$(kids_file_gid "$dfile")" "$(kids_file_gid "$KID_DEC")" \
+    "kid decision file takes the decisions directory's group"
+  check_contains "$(cat "$dfile")" '"state": "approved"' "kid decision file records the approval"
+fi
+check_eq "$(kids_file_mode "$KID_DEC")" "750" "kid decisions directory is 0750 (R-NOTIFY-6)"
+
 # Everything the allowlist refuses, refused again at the root entry point.
 for args in \
   "--kid ../../../../etc/sudoers.d --kind site --what evil.com" \
