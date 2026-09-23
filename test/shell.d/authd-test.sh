@@ -536,6 +536,31 @@ PY
       ok "PAIR: registered through omarchy-kids-devices (by pair, --apply)" ||
       bad "PAIR: did not register through the devices command"
     check "$(send_pair "$TMP/pair-frame.json")" "no unknown-pairing" "PAIR: the pairing record is single-use"
+    # A failing registration must keep the record for a retry.
+    python3 - "$DIR/lib/devices.py" "$TMP/pairing" "$TMP/pair-frame-2.json" <<'PY'
+import base64, importlib.util, json, sys, time
+devices_py, pdir, out = sys.argv[1], sys.argv[2], sys.argv[3]
+spec = importlib.util.spec_from_file_location("kids_devices", devices_py)
+devices = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(devices)
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+k = Ed25519PrivateKey.generate()
+pub = base64.b64encode(k.public_key().public_bytes_raw()).decode()
+rec = devices.write_pairing(pdir, "dY", "decide,act", int(time.time()))
+proof = devices.pairing_proof(rec["token"], "Phone", pub, pub)
+with open(out, "w") as f:
+    json.dump({"id": "dY", "name": "Phone", "platform": "android",
+               "sign_pub": pub, "box_pub": pub, "proof": proof}, f, separators=(",", ":"))
+PY
+    printf '#!/bin/bash\nexit 1\n' >"$TMP/fake-devices"
+    chmod +x "$TMP/fake-devices"
+    check "$(send_pair "$TMP/pair-frame-2.json")" "no apply failed" "PAIR: a failing registration keeps the record"
+    cat >"$TMP/fake-devices" <<EOF
+#!/bin/bash
+printf '%s\n' "\$*" >> "$DEV_APPLIED"
+EOF
+    chmod +x "$TMP/fake-devices"
+    check "$(send_pair "$TMP/pair-frame-2.json")" "ok" "PAIR: the kept record registers on a retry"
     start_daemon "$PARENT" nobody
     check "$(send_pair "$TMP/pair-frame.json")" "no not the relay" "PAIR: a resolved non-relay account is refused"
   else

@@ -298,7 +298,16 @@ cmd_pair_start() {
   # failing at `add` would eat the parent's whole pairing window (review).
   [[ ! -e "$(device_path "$id")" && ! -e "$(device_path "$id").revoked" ]] ||
     die "pair-start: '$id' is already paired"
-  [[ ! -e "$dir/$id" ]] || die "pair-start: a pairing for '$id' is already pending"
+  # An expired record is treated as absent: a parent who let one lapse must be
+  # able to start again with the same id (it is overwritten below).
+  if [[ -e "$dir/$id" ]]; then
+    local pending_exp now_s
+    now_s="$(date +%s)"
+    pending_exp="$(jq -r '.expires_at // 0' "$dir/$id" 2>/dev/null || echo 0)"
+    if [[ "$pending_exp" =~ ^[0-9]+$ ]] && ((pending_exp > now_s)); then
+      die "pair-start: a pairing for '$id' is already pending"
+    fi
+  fi
   if ((DRY_RUN)); then
     echo "  [dry-run] would write a pairing record for $id under $dir"
     return 0
