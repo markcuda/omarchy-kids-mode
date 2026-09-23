@@ -15,7 +15,7 @@ void main() {
         {'kid': 'kid-cy', 'minutes_left': 0, 'paused': true, 'live': false},
       ],
       'requests': [
-        {'id': 'r1', 'kid': 'kid-ada', 'kind': 'time', 'what': '15', 'minutes': 15, 'asked_at': 1},
+        {'id': 'r1', 'kid': 'kid-ada', 'kind': 'time', 'what': '15', 'minutes': 15, 'asked_at': 1000000009},
       ],
       'recent': [
         {'id': 'r0', 'kid': 'kid-cy', 'kind': 'app', 'what': 'gcompris', 'state': 'approved'},
@@ -28,24 +28,65 @@ void main() {
     expect(state.kids[1].paused, isTrue);
     expect(state.kids[1].live, isFalse);
     expect(state.liveKids.length, 1);
-    expect(state.requests.single.id, 'r1');
-    expect(state.requests.single.minutes, 15);
+    final request = state.requests.single;
+    expect(request.id, 'r1');
+    expect(request.kid, 'kid-ada');
+    expect(request.kind, 'time');
+    expect(request.what, '15');
+    expect(request.minutes, 15);
+    expect(request.askedAt, 1000000009);
     expect(state.recent.single.state, 'approved');
   });
 
-  test('odds fields read as safe defaults, not throws', () {
+  test('odd fields read as safe defaults, and an unusable row is dropped', () {
     final state = BoxState.fromJson({
       'generated_at': 42, // not a string
       'kids': 'nope', // not a list
-      'requests': [42, {'id': 1, 'minutes': 'lots'}], // a non-map row and odd scalars
+      'requests': [
+        42, // not a map
+        {'id': 1, 'minutes': 'lots'}, // no usable id
+        {'id': '../etc/passwd'}, // an id the app could not POST back
+        {'id': 'ok-1', 'minutes': 'lots'}, // usable id, odd minutes
+      ],
       'recent': null,
     });
     expect(state.generatedAt, isNull);
     expect(state.kids, isEmpty);
-    expect(state.requests.length, 1); // the 42 is dropped
-    expect(state.requests.single.id, '');
+    expect(state.requests.length, 1, reason: 'only the row with a usable id survives');
+    expect(state.requests.single.id, 'ok-1');
     expect(state.requests.single.minutes, isNull, reason: 'a non-numeric minutes is null, not a crash');
+    expect(state.requests.single.askedAt, isNull);
     expect(state.recent, isEmpty);
+  });
+
+  test('paused and live are strictly boolean (the box uses `is True`)', () {
+    final state = BoxState.fromJson({
+      'kids': [
+        {'kid': 'kid-ada', 'live': 1, 'paused': 'true'},
+        {'kid': 'kid-cy', 'live': true, 'paused': 0},
+      ],
+    });
+    expect(state.kids[0].live, isFalse, reason: '1 is not true');
+    expect(state.kids[0].paused, isFalse, reason: '"true" is not true');
+    expect(state.kids[1].live, isTrue);
+    expect(state.kids[1].paused, isFalse);
+  });
+
+  test('control characters are stripped and long values capped', () {
+    final state = BoxState.fromJson({
+      'requests': [
+        {'id': 'r1', 'kid': 'kid-ada\u0007', 'kind': 'app', 'what': 'a' * 500},
+      ],
+    });
+    final request = state.requests.single;
+    expect(request.kid, 'kid-ada', reason: 'the bell is dropped');
+    expect(request.what.length, 120, reason: 'the value is capped');
+  });
+
+  test('a huge list is bounded', () {
+    final rows = [for (var i = 0; i < 500; i++) {'id': 'r$i', 'kid': 'kid-ada', 'kind': 'app', 'what': 'x'}];
+    final state = BoxState.fromJson({'requests': rows});
+    expect(state.requests.length, 64);
   });
 
   test('an empty document parses to empty lists', () {

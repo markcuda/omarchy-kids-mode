@@ -14,29 +14,43 @@ class KidStatus {
   KidStatus({required this.kid, required this.minutesLeft, required this.paused, required this.live});
 
   factory KidStatus.fromJson(Map<String, dynamic> json) => KidStatus(
-        kid: _string(json['kid']),
+        kid: _clean(json['kid'], 32),
         minutesLeft: _int(json['minutes_left']),
         paused: json['paused'] == true,
         live: json['live'] == true,
       );
 }
 
-/// One open request. `minutes` is set only for a `time` request.
+/// One open request. `minutes` is set only for a `time` request, `askedAt` orders
+/// them (the box's `asked_at`).
 class OpenRequest {
   final String id;
   final String kid;
   final String kind;
   final String what;
   final int? minutes;
+  final int? askedAt;
 
-  OpenRequest({required this.id, required this.kid, required this.kind, required this.what, this.minutes});
+  OpenRequest({
+    required this.id,
+    required this.kid,
+    required this.kind,
+    required this.what,
+    this.minutes,
+    this.askedAt,
+  });
+
+  /// The box's own id shape (lib/devices.py's RE_REQUEST_ID); the app only
+  /// shows and acts on a request whose id it could POST back.
+  static final RegExp idPattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._+@-]{0,127}$');
 
   factory OpenRequest.fromJson(Map<String, dynamic> json) => OpenRequest(
-        id: _string(json['id']),
-        kid: _string(json['kid']),
-        kind: _string(json['kind']),
-        what: _string(json['what']),
+        id: _clean(json['id'], 128),
+        kid: _clean(json['kid'], 32),
+        kind: _clean(json['kind'], 32),
+        what: _clean(json['what'], 120),
         minutes: json['minutes'] is num ? (json['minutes'] as num).toInt() : null,
+        askedAt: json['asked_at'] is int ? json['asked_at'] as int : null,
       );
 }
 
@@ -50,6 +64,7 @@ class RecentDecision extends OpenRequest {
     required super.kind,
     required super.what,
     super.minutes,
+    super.askedAt,
     required this.state,
   });
 
@@ -61,7 +76,8 @@ class RecentDecision extends OpenRequest {
       kind: base.kind,
       what: base.what,
       minutes: base.minutes,
-      state: _string(json['state']),
+      askedAt: base.askedAt,
+      state: _clean(json['state'], 32),
     );
   }
 }
@@ -77,9 +93,15 @@ class BoxState {
 
   factory BoxState.fromJson(Map<String, dynamic> json) => BoxState(
         generatedAt: json['generated_at'] is String ? json['generated_at'] as String : null,
-        kids: _rows(json['kids']).map(KidStatus.fromJson).toList(),
-        requests: _rows(json['requests']).map(OpenRequest.fromJson).toList(),
-        recent: _rows(json['recent']).map(RecentDecision.fromJson).toList(),
+        kids: _bounded(_rows(json['kids'])).map(KidStatus.fromJson).toList(),
+        requests: _bounded(_rows(json['requests']))
+            .map(OpenRequest.fromJson)
+            .where((row) => OpenRequest.idPattern.hasMatch(row.id))
+            .toList(),
+        recent: _bounded(_rows(json['recent']))
+            .map(RecentDecision.fromJson)
+            .where((row) => OpenRequest.idPattern.hasMatch(row.id))
+            .toList(),
       );
 
   /// The kid rows that are live right now, in the order the box sent them.
@@ -96,11 +118,39 @@ String describeRequest(OpenRequest request, String kidName) {
   return '$who asked to use $what';
 }
 
-String _string(Object? value) => value is String ? value : '';
 int _int(Object? value) => value is num ? value.toInt() : 0;
+
+// A kid or a request value is display data from an unauthenticated source (the
+// away envelope), so it is stripped of control/format characters and capped, the
+// same cleaning the box's own notifier does (lib/notify_watch.py).
+String _clean(Object? value, int limit) {
+  if (value is! String) return '';
+  final out = StringBuffer();
+  for (final rune in value.runes) {
+    if (_printable(rune)) out.writeCharCode(rune);
+    if (out.length >= limit) break;
+  }
+  return out.toString();
+}
+
+bool _printable(int rune) {
+  if (rune == 0x20) return true;
+  if (rune < 0x21) return false;
+  if (rune == 0x7f || (rune >= 0x80 && rune <= 0x9f)) return false;
+  if (rune == 0x00a0) return false;
+  if (rune >= 0x2000 && rune <= 0x200f) return false;
+  if (rune >= 0x2028 && rune <= 0x202f) return false;
+  if (rune >= 0x2060 && rune <= 0x206f) return false;
+  if (rune == 0xfeff) return false;
+  return true;
+}
 
 /// A list of maps, ignoring anything else (the document is best-effort).
 List<Map<String, dynamic>> _rows(Object? value) {
   if (value is! List) return [];
   return value.whereType<Map>().map((row) => row.cast<String, dynamic>()).toList();
 }
+
+/// No list is unbounded: a hostile document cannot make the app build a huge UI.
+List<Map<String, dynamic>> _bounded(List<Map<String, dynamic>> rows) =>
+    rows.length > 64 ? rows.sublist(0, 64) : rows;
