@@ -112,10 +112,11 @@ it refuses until the widget is on, then `systemctl --user enable --now
 omarchy-kids-notify-watch.service` (the unit ships in `/usr/lib/systemd/user/`, so nothing is
 copied). `notify-disable` stops and disables it; `notify-status` prints `enabled`/`disabled`.
 
-DRY_RUN=1 is the default for `enable`/`disable` (AGENTS.md rule 8); `--apply` (or `DRY_RUN=0`)
-makes them real. `grant`/`end`/`approve`/`decline` run for real by default -- a parent clicked a
-button or a notification action, opening a terminal -- and `--dry-run` prints the plan instead and
-opens no terminal.
+DRY_RUN=1 is the default for `enable`/`disable`/`notify-enable`/`notify-disable` (AGENTS.md rule 8);
+`--apply` (or `DRY_RUN=0`) makes them real. `grant`/`end`/`approve`/`decline` run for real by default
+-- a parent clicked a button or a notification action, opening a terminal -- and `--dry-run` prints
+the plan instead and opens no terminal. Disabling the widget also disables its notifier (the same
+consent, both ways).
 
 ## `share/bar/KidsModule.qml`
 

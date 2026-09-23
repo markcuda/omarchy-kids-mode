@@ -180,8 +180,15 @@ check_contains "$(cat "$NOTIFY_CTL_LOG")" "systemctl --user disable --now omarch
 check "$(env2p "$BAR" notify-status)" "disabled" \
   "notify-status: disabled after notify-disable"
 
+# Same consent both ways: leave the notifier on, then the widget disable below
+# must turn it off too.
+env2p "$BAR" notify-enable --apply >/dev/null 2>&1
+: >"$NOTIFY_CTL_LOG"
+
 # --- disable: since enable created shell.json, disable removes it ---------
-env2 "$BAR" disable --apply >/dev/null
+env2p "$BAR" disable --apply >/dev/null
+check_contains "$(cat "$NOTIFY_CTL_LOG")" "systemctl --user disable --now omarchy-kids-notify-watch.service" \
+  "disabling the widget turns its notifier off too (same consent both ways)"
 check "$([[ -f "$SHELL_JSON2" ]] && echo yes || echo no)" "no" \
   "disable removes the shell.json it created (back to 'no file' = defaults)"
 check "$([[ -f "$HOME2/.config/omarchy/.omarchy-kids-bar-created-shell-json" ]] && echo yes || echo no)" "no" \
