@@ -40,6 +40,10 @@ Usage: omarchy-kids-bar enable [--apply]
        omarchy-kids-bar status
        omarchy-kids-bar grant <kid> <minutes>
        omarchy-kids-bar end <kid>
+       omarchy-kids-bar approve <id>
+       omarchy-kids-bar decline <id>
+
+Every subcommand also accepts --dry-run (print the plan, change nothing).
 
   enable          Add the Kids Mode widget to your bar (SPEC.md R-BAR-1).
   disable         Remove it; restores your bar to how it was.
