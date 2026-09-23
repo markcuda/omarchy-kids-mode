@@ -97,7 +97,8 @@ bytes exist each tick rather than trying to be exact against a line torn mid-wri
 
 `omarchy-kids-data mine`, run as the kid, prints what this file's "What's recorded" table says, in
 plain first-person words, plus "Since: <the earliest day on file>" and the kid's own last day's
-summary. It's wired into the Level 1 launcher's tile grid as **"What grown-ups see"**, but only for
+summary. It's wired into the Kids launcher's tile grid (Levels 1 and 2; both bands below default to
+Level 2) as **"What grown-ups see"**, but only for
 bands **9-12 and 13+** — the two bands the starter-pack table already gives a terminal to
 (R-BAND's own Terminal column), i.e. old enough to read the screen unsupervised. This is gated on
 **band**, not level: a 9-12/13+ kid moved to Level 1 by a `level` override still gets the tile in
