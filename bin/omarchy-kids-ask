@@ -81,7 +81,8 @@ collect       Root: moves every kid's outbox into the real queue
 
 list          Root: every undecided (open) request, all kids or one.
 
-approve       Root: performs the action, marks the record approved.
+approve       Root: decides the record approved, then performs the action.
+              A failed action still leaves the record approved (a warning).
 decline       Root: marks the record declined; never performs the action.
 
 DRY_RUN=1 is the default for collect/approve/decline (AGENTS.md rule 8):
