@@ -22,6 +22,9 @@ class FakeRelay implements RelayTransport {
   Stream<BoxState> boxEvents({required int ts, required String nonce}) => Stream.fromIterable(events);
 
   @override
+  Future<Map<String, dynamic>> pair(String frame) async => {'reply': 'ok'};
+
+  @override
   Future<Map<String, dynamic>> decide({
     required Map<String, Object?> record,
     required int ts,

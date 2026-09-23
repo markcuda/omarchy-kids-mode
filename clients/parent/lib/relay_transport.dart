@@ -11,4 +11,5 @@ abstract class RelayTransport {
     required int ts,
     required String nonce,
   });
+  Future<Map<String, dynamic>> pair(String frame);
 }

@@ -17,15 +17,33 @@ import 'state_model.dart';
 abstract class Keystore {
   Future<List<int>?> loadSignSeed();
   Future<void> saveSignSeed(List<int> seed);
+
+  /// The device's X25519 box key seed (the away envelope's recipient key).
+  Future<List<int>?> loadBoxSeed();
+  Future<void> saveBoxSeed(List<int> seed);
+
+  /// The pairing result, as JSON: {deviceId, pin, addresses}.
+  Future<String?> loadPaired();
+  Future<void> savePaired(String json);
 }
 
 class InMemoryKeystore implements Keystore {
-  List<int>? _seed;
-  InMemoryKeystore([this._seed]);
+  List<int>? _signSeed;
+  List<int>? _boxSeed;
+  String? _paired;
+  InMemoryKeystore([this._signSeed]);
   @override
-  Future<List<int>?> loadSignSeed() async => _seed;
+  Future<List<int>?> loadSignSeed() async => _signSeed;
   @override
-  Future<void> saveSignSeed(List<int> seed) async => _seed = seed;
+  Future<void> saveSignSeed(List<int> seed) async => _signSeed = seed;
+  @override
+  Future<List<int>?> loadBoxSeed() async => _boxSeed;
+  @override
+  Future<void> saveBoxSeed(List<int> seed) async => _boxSeed = seed;
+  @override
+  Future<String?> loadPaired() async => _paired;
+  @override
+  Future<void> savePaired(String json) async => _paired = json;
 }
 
 /// The parent's session: one device key, one pinned box, and the actions the UI

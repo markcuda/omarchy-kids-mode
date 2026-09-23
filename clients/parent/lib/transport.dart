@@ -282,6 +282,7 @@ class KidsRelayClient implements RelayTransport {
   }
 
   /// POST /v1/pair (pre-auth: the proof is the credential).
+  @override
   Future<Map<String, dynamic>> pair(String frame) async {
     final client = await _client();
     try {
