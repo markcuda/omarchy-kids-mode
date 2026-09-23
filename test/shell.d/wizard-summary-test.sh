@@ -114,7 +114,7 @@ grep -q 'Bedtime.*20:00 weekdays; 20:30 weekends' <<<"$current_card" || {
   echo 'FAIL current Ready card lost weekday/weekend bedtime summary'
   exit 1
 }
-grep -q 'Notifications.*Your phone can get .*requests' <<<"$current_card" || {
+grep -q 'Your phone can get .*requests.*pair it from the panel' <<<"$current_card" || {
   echo 'FAIL current Ready card lost the one-line notifications summary (N-6)'
   exit 1
 }

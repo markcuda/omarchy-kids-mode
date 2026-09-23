@@ -336,13 +336,14 @@ screen_summary() {
       "Wi-Fi|$(mark_if_changed wifi "$(friendly_wifi_mode "$WIFI_MODE")")"
       "Starter apps|$(mark_if_changed allowlist "$apps_desc")"
       "Password|$password_line"
-      "Notifications|Your phone can get $DISPLAY_NAME's requests — pair it from the panel, after this."
     )
     adv_summary_extra_rows rows # Advanced-only cells, shown once actually changed
     # One card: build the rows, then let the chooser draw them once. A separate
     # tui_screen_summary here would be cleared by the chooser before it is read.
     _tui_build_summary_lines rows
     TUI_SUMMARY_LINES=("Here's what happens next for $DISPLAY_NAME." "" "${TUI_SUMMARY_LINES[@]}")
+    # One line, not a row: a long label would widen every row's padding (N-6).
+    TUI_SUMMARY_LINES+=("" "Your phone can get $DISPLAY_NAME's requests — pair it from the panel, after this.")
 
     local choices=("apply|Apply|" "change|Change something|")
     tui_screen_choose "Ready?" 13 "$TOTAL_STEPS" 0 "" choices "apply" "$TUI_FOOTER_DEFAULT" TUI_SUMMARY_LINES
