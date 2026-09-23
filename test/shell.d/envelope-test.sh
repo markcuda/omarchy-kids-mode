@@ -74,12 +74,15 @@ try:
 except Exception:
     check(True, "a tampered ciphertext is refused")
 
-# The associated data binds the device id: another id cannot open it.
+# The associated data binds the device id: an envelope relabelled (and opened) as
+# another device still fails the AEAD, not just the string compare.
+relabelled = dict(env)
+relabelled["device_id"] = "d-other"
 try:
-    envelope.open_envelope("d-other", priv_raw, env)
-    check(False, "another device's id is refused")
+    envelope.open_envelope("d-other", priv_raw, relabelled)
+    check(False, "the device id is bound as associated data")
 except Exception:
-    check(True, "another device's id is refused")
+    check(True, "the device id is bound as associated data")
 
 # A fixed ephemeral key and nonce make the vectors reproducible.
 one = envelope.seal("d-vector", pub, b"x", eph_priv=bytes(range(32)), nonce=bytes(range(12)))
