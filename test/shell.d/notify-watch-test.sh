@@ -157,6 +157,16 @@ write_review
 GDBUS_ACTION=deny "$BIN" --once >/dev/null 2>&1
 check_contains "$(cat "$BAR_LOG")" "bar review-deny kid-ada minecraft" "Deny runs the review action"
 
+# The Check action decides nothing (N-12) and runs review-check.
+reset
+write_review
+out="$("$BIN" --once 2>&1)"
+check_contains "$(cat "$GDBUS_LOG")" "Check" "the review notification offers Check"
+reset
+write_review
+GDBUS_ACTION=check "$BIN" --once >/dev/null 2>&1
+check_contains "$(cat "$BAR_LOG")" "bar review-check kid-ada minecraft" "Check runs the review-check action"
+
 # A removed package reads as removed, not "changed".
 reset
 printf '{"kid":"kid-ada","id":"minecraft","was":"aaa","now":"missing","state":"open"}\n' \

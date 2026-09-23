@@ -40,7 +40,7 @@ NOTIFICATION_CLOSED = re.compile(r"NotificationClosed \(uint32 (\d+), uint32 \d+
 # --once is a test/debug mode: give the action signal a moment to arrive.
 ONCE_GRACE = 1.0
 REQUEST_ACTIONS = [("approve", "Approve"), ("decline", "Decline")]
-REVIEW_ACTIONS = [("approve", "Approve"), ("deny", "Deny")]
+REVIEW_ACTIONS = [("approve", "Approve"), ("deny", "Deny"), ("check", "Check")]
 
 
 def _clean(value, limit=120):
@@ -140,7 +140,11 @@ def review_item(row):
         "title": f"{row['kid']}'s {row['id']} {state}",
         "body": f"The app {state}. Approve to keep it, deny to hide it.",
         "actions": REVIEW_ACTIONS,
-        "callbacks": {"approve": ["review-approve", row["kid"], row["id"]], "deny": ["review-deny", row["kid"], row["id"]]},
+        "callbacks": {
+            "approve": ["review-approve", row["kid"], row["id"]],
+            "deny": ["review-deny", row["kid"], row["id"]],
+            "check": ["review-check", row["kid"], row["id"]],
+        },
     }
 
 
@@ -265,6 +269,10 @@ class GdbusNotifier:
                     action = match.group(2)
                     with self.lock:
                         callbacks = self.pending.pop(notification_id, None)
+                        # "Check" decides nothing, so its notification stays
+                        # answerable: put the id back for a later Approve/Deny.
+                        if callbacks and action == "check":
+                            self.pending[notification_id] = callbacks
                     argv = callbacks.get(action) if callbacks else None
                     if argv:
                         run_callback(self.bar_bin, argv)

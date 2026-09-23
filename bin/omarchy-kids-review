@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Re-review an approved add-on whose surface set or exec changed
-# omarchy:args=<scan|list|approve|deny> ...
+# omarchy:args=<scan|list|show|approve|deny> ...
 # R-NOTIFY-12: when a parent approves an app for a kid (apps.extra), that app's
 # desktop file -- the kid's launcher surface and the app's Exec -- is stamped.
 # `scan` re-reads it (a package update) and, when it changed, opens one review the
@@ -38,6 +38,7 @@ usage() {
   cat <<'EOF'
 Usage: omarchy-kids-review scan [--kid KID] [--apply]
        omarchy-kids-review list [--kid KID] [--json]
+       omarchy-kids-review show <kid> <id>
        omarchy-kids-review approve <kid> <id> [--apply]
        omarchy-kids-review deny <kid> <id> [--apply]
 
@@ -45,8 +46,10 @@ An "approved add-on" is an app this parent added to a kid (apps.extra). `scan`
 stamps any it has not seen before, and opens a review for one whose desktop file
 -- its launcher surface and its Exec -- changed since it was stamped (a package
 update). The parent then `approve`s the new surface, or `deny`s it, which hides
-the app again. `list` shows the open reviews. Root only; DRY_RUN=1 prints the
-plan (--apply makes it real).
+the app again. `list` shows the open reviews and `show` prints one in full -- what
+changed, and the desktop file's Exec now -- so a parent (or their own agent) can
+check it before deciding. Root only; DRY_RUN=1 prints the plan (--apply makes it
+real).
 EOF
 }
 
@@ -249,6 +252,32 @@ cmd_list() {
   done
 }
 
+cmd_show() {
+  require_jq
+  local kid="${1:-}" id="${2:-}"
+  [[ -n "$kid" && -n "$id" ]] || die "show: needs <kid> <id>"
+  local file
+  file="$(open_review_path "$kid" "$id")"
+  if [[ ! -f "$file" ]]; then
+    echo "omarchy-kids-review: no open review for $kid/$id"
+    return 0
+  fi
+  echo "Add-on review: $kid/$id"
+  printf '  detected:         %s\n' "$(jq -r '.detected_at' "$file")"
+  printf '  approved surface: %s\n' "$(jq -r '.was' "$file")"
+  printf '  now:              %s\n' "$(jq -r '.now' "$file")"
+  local path
+  if path="$(find_desktop_file "$id")"; then
+    printf '  desktop file:     %s\n' "$path"
+    echo "  Exec:"
+    grep -E '^Exec=' "$path" 2>/dev/null | sed 's/^/    /' || echo "    (no Exec line)"
+  else
+    echo "  desktop file:     (none resolves any more — the package may be gone)"
+  fi
+  echo
+  echo "Approve to accept this surface, or deny to hide the app."
+}
+
 cmd_approve() {
   require_jq
   local kid="${1:-}" id="${2:-}"
@@ -336,6 +365,7 @@ done
 case "$cmd" in
   scan) cmd_scan "$want_kid" ;;
   list) cmd_list "$want_kid" "$want_json" ;;
+  show) cmd_show "${args[@]+"${args[@]}"}" ;;
   approve) cmd_approve "${args[@]+"${args[@]}"}" ;;
   deny) cmd_deny "${args[@]+"${args[@]}"}" ;;
   *) die "unknown command: '$cmd' (see --help)" ;;

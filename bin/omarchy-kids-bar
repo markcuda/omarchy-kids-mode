@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Add or remove the parent's Kids Mode bar widget
-# omarchy:args=<enable|disable|status|grant <kid> <minutes>|end <kid>|approve <id>|decline <id>|review-approve <kid> <id>|review-deny <kid> <id>|notify-enable|notify-disable|notify-status> [--apply]
+# omarchy:args=<enable|disable|status|grant <kid> <minutes>|end <kid>|approve <id>|decline <id>|review-approve <kid> <id>|review-deny <kid> <id>|review-check <kid> <id>|notify-enable|notify-disable|notify-status> [--apply]
 # The parent's bar widget: per-kid minutes and requests from /run/omarchy-kids/status.json (SPEC.md R-BAR).
 # See docs/bar.md for the full design, every env var, and the terminal-fallback rationale.
 set -euo pipefail
@@ -45,6 +45,7 @@ Usage: omarchy-kids-bar enable [--apply]
        omarchy-kids-bar decline <id>
        omarchy-kids-bar review-approve <kid> <id>
        omarchy-kids-bar review-deny <kid> <id>
+       omarchy-kids-bar review-check <kid> <id>
        omarchy-kids-bar notify-enable [--apply]
        omarchy-kids-bar notify-disable [--apply]
        omarchy-kids-bar notify-status
@@ -71,6 +72,9 @@ Every subcommand also accepts --dry-run (print the plan, change nothing).
                   approve).
   review-deny <kid> <id>
                   The same for Deny: hide the app again.
+  review-check <kid> <id>
+                  Show a changed add-on in full -- what changed and its Exec now
+                  -- so you (or your own agent) can check it. Decides nothing.
   notify-enable   Turn on desktop notifications for a kid's requests (N-9).
                   Needs the widget on (omarchy-kids-bar enable) first; then it
                   enables omarchy-kids-notify-watch.service for this session.
@@ -80,7 +84,7 @@ Every subcommand also accepts --dry-run (print the plan, change nothing).
                   (default is DRY_RUN=1, prints the plan -- AGENTS.md rule 8).
   --dry-run       Print the plan instead of running it, for every
                   subcommand. grant/end/approve/decline/review-approve/
-                  review-deny run for real by
+                  review-deny/review-check run for real by
                   default (a parent clicked a button or a notification
                   action); --dry-run previews them and opens no terminal.
   -h, --help      Show this help and exit.
@@ -349,6 +353,21 @@ cmd_review_deny() {
     sudo "$REVIEW_BIN" deny "$kid" "$id" --apply
 }
 
+# cmd_review_check -- the notification's Check action (N-12, R-NOTIFY-12): show
+# what changed, deciding nothing, so the parent or their own agent can look.
+cmd_review_check() {
+  local kid="${1:-}" id="${2:-}"
+  [[ -n "$kid" && -n "$id" ]] || die "review-check: needs <kid> <id> (see --help)"
+  [[ "$kid" =~ ^[a-z_][a-z0-9_-]*$ ]] || die "review-check: bad kid '$kid'"
+  [[ "$id" =~ ^[a-z0-9_-]+$ ]] || die "review-check: bad app id '$id'"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $REVIEW_BIN show $kid $id"
+    return 0
+  fi
+  open_terminal_running "Done." "could not show the review" \
+    sudo "$REVIEW_BIN" show "$kid" "$id"
+}
+
 [[ $# -ge 1 ]] || {
   usage >&2
   exit 2
@@ -392,6 +411,7 @@ case "$cmd" in
   decline) cmd_decline "${args[@]+"${args[@]}"}" ;;
   review-approve) cmd_review_approve "${args[@]+"${args[@]}"}" ;;
   review-deny) cmd_review_deny "${args[@]+"${args[@]}"}" ;;
+  review-check) cmd_review_check "${args[@]+"${args[@]}"}" ;;
   notify-enable) cmd_notify_enable ;;
   notify-disable) cmd_notify_disable ;;
   notify-status) cmd_notify_status ;;

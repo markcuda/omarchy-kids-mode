@@ -48,8 +48,10 @@ record, not enforcement): hiding the app again is the only action, and a kid can
 
 ## What is not built yet
 
-- **The third answer, "ask your onboard agent to check it", is not built.** There is no
-  onboard-agent action; the parent approves or denies.
+- **"Check it" is a look, not an agent.** The notification's third action, **Check**, opens
+  `omarchy-kids-review show` in a terminal: what changed (the approved fingerprint against now) and
+  the desktop file's `Exec` today. It decides nothing — it is not an onboard agent that assesses the
+  change; the parent, or their own assistant reading that output, does.
 - **Surfacing: the desktop notifier shows a review, the panel does not yet.** With notifications on,
   `omarchy-kids-notify-watch` posts one notification per open review (a changed surface, or one that
   was removed), with **Approve** and **Deny**; those run `omarchy-kids-bar review-approve|review-deny`

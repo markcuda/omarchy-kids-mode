@@ -187,6 +187,17 @@ out="$("$BIN" scan --apply 2>&1)"
 check_contains "$out" "is unreadable; restamping its apps" "a corrupt baseline warns"
 check "$(jq -r 'has("minecraft")' "$BASELINE" 2>/dev/null)" "true" "a corrupt baseline is replaced"
 
+# --- show prints what changed ---------------------------------------------
+desktop "minecraft shown"
+"$BIN" approve kid-ada minecraft --apply >/dev/null 2>&1
+desktop "minecraft changed again"
+"$BIN" scan --apply >/dev/null 2>&1
+out="$("$BIN" show kid-ada minecraft)"
+check_contains "$out" "Add-on review: kid-ada/minecraft" "show names the review"
+check_contains "$out" "Exec=" "show prints the desktop Exec"
+out="$("$BIN" show kid-ada nonexistent)"
+check_contains "$out" "no open review" "show says when there is no review"
+
 # --- neither approve nor deny with a bad call -----------------------------
 "$BIN" approve kid-ada >/dev/null 2>&1
 check_status "$?" 2 "approve with no id is refused"

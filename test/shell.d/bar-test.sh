@@ -381,6 +381,14 @@ check_status "$?" 0 "review-deny exits 0 when the terminal/sudo chain succeeds"
 check_contains "$(cat "$LOGFILE7")" "REVIEW deny kid-ada minecraft --apply" \
   "sudo ran omarchy-kids-review deny <kid> <id> --apply"
 
+LOGFILE8="$TMP/review-check.log"
+: >"$LOGFILE8"
+out="$(PATH="$STUBS4:$BASE_PATH" LOGFILE="$LOGFILE8" \
+  "$BAR" review-check kid-ada minecraft </dev/null 2>&1)"
+check_status "$?" 0 "review-check exits 0"
+check_contains "$(cat "$LOGFILE8")" "REVIEW show kid-ada minecraft" \
+  "sudo ran omarchy-kids-review show <kid> <id>"
+
 out="$("$BAR" review-approve kid-ada 2>&1)"
 check_status "$?" 2 "review-approve with no id is refused"
 out="$("$BAR" review-deny 'bad id' minecraft 2>&1)"
