@@ -205,8 +205,11 @@ def cmd_write(argv):
     print(os.path.basename(path))
 
 
+MAX_REPLY = 80
+
+
 def cmd_decide(argv):
-    opts, rest = parse_kv_args(argv, {"state", "by", "device"})
+    opts, rest = parse_kv_args(argv, {"state", "by", "device", "reply"})
     if len(rest) != 1:
         die("decide: needs PATH")
     path = rest[0]
@@ -215,6 +218,11 @@ def cmd_decide(argv):
     device = opts.get("device")
     if state not in ("approved", "declined"):
         die("decide: --state must be 'approved' or 'declined'")
+    reply = opts.get("reply")
+    if reply is not None and (
+        not isinstance(reply, str) or len(reply) > MAX_REPLY or any(not c.isprintable() for c in reply)
+    ):
+        die("decide: --reply must be up to 80 printable characters")
     if by not in BY:
         die(f"decide: --by must be one of {', '.join(BY)}")
     if by == "device":
@@ -239,6 +247,8 @@ def cmd_decide(argv):
             record["by"] = by
             if device is not None:
                 record["device"] = device
+            if reply is not None:
+                record["reply"] = reply
             write_atomic(path, record)
         finally:
             fcntl.flock(lf, fcntl.LOCK_UN)

@@ -509,7 +509,7 @@ pub = base64.b64encode(key.public_key().public_bytes_raw()).decode()
 os.makedirs(os.path.join(etc, "devices"), exist_ok=True)
 with open(os.path.join(etc, "devices", "d1.conf"), "w") as f:
     f.write(f"id=d1\nname=Phone\nplatform=android\nsign_pub={pub}\nbox_pub={pub}\nscopes=decide,act\n")
-rec = {"device_id": "d1", "request_id": "req-1", "decision": "approve", "ts": int(time.time()), "nonce": "n1"}
+rec = {"device_id": "d1", "request_id": "req-1", "decision": "approve", "reply": "After dinner", "ts": int(time.time()), "nonce": "n1"}
 sig = base64.b64encode(key.sign(devices.canonical(rec))).decode()
 with open(os.path.join(tmp, "decide-frame.json"), "w") as f:
     json.dump({"record": rec, "signature": sig}, f, separators=(",", ":"))
@@ -524,6 +524,9 @@ PY
     grep -q 'approve req-1 --by device:d1 --apply' "$APPLIED" &&
       ok "DECIDE: applied through omarchy-kids-ask by device id" ||
       bad "DECIDE: did not apply through ask"
+    grep -q -- '--reply After dinner' "$APPLIED" &&
+      ok "DECIDE: the signed reply line reaches the queue record" ||
+      bad "DECIDE: the reply was dropped"
     check "$(send_decide "$TMP/decide-frame.json")" "no replayed-nonce" "DECIDE: a replay is refused"
     check "$(wc -l <"$APPLIED" | tr -d ' ')" "1" "DECIDE: a replay applied nothing"
     # A resolved but wrong relay account is a uid mismatch, not a missing one.

@@ -3,7 +3,7 @@ Description=Omarchy Kids Mode LAN notification relay (R-NOTIFY-1)
 Documentation=https://github.com/markcuda/omarchy-kids-mode/blob/main/docs/notify.md
 Wants=network-online.target
 After=network-online.target omarchy-kids-authd.socket
-# Started on demand (the time tick, or the panel) while Kids Mode is in use; it
+# Started on demand by the time tick's nudge_relay while Kids Mode is in use; it
 # stops itself once idle. Deliberately no [Install]: it is never enabled at boot.
 
 [Service]

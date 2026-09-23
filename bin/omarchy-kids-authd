@@ -487,6 +487,10 @@ def handle_decide(header: str, conn: socket.socket, cfg) -> bytes:
         f"device:{record.get('device_id', '')}",
         "--apply",
     ]
+    # The optional reply line the app signed (a decline reason) rides through to
+    # the queue record; devices.verify_decision has already validated it.
+    if isinstance(record.get("reply"), str) and record["reply"]:
+        argv += ["--reply", record["reply"]]
     try:
         proc = subprocess.run(argv, capture_output=True, timeout=30)
     except (OSError, subprocess.TimeoutExpired):

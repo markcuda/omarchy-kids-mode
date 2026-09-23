@@ -209,7 +209,8 @@ write_status_json() {
     return 0
   }
   if ! jq -s --argjson pair "$(pairing_open_until)" --argjson reviews "$(open_reviews_count)" \
-    '{generated_at: (now | todate), pairing_open_until: $pair, reviews: $reviews, kids: .}' "$rows" >"$tmp" 2>/dev/null ||
+    --argjson open_requests "$(open_requests_count)" \
+    '{generated_at: (now | todate), pairing_open_until: $pair, reviews: $reviews, open_requests: $open_requests, kids: .}' "$rows" >"$tmp" 2>/dev/null ||
     ! getent group omarchy-parents >/dev/null 2>&1 ||
     ! chown root "$tmp" 2>/dev/null ||
     ! chgrp omarchy-parents "$tmp" 2>/dev/null ||
@@ -246,6 +247,22 @@ pairing_open_until() {
 }
 
 pairing_pending() { [[ "$(pairing_open_until)" -gt 0 ]]; }
+
+# open_requests_count -- how many ask requests wait for the parent; published in
+# status.json next to the review count (R-BAR-3 as amended).
+open_requests_count() {
+  local dir="$QUEUE_DIR" f n=0 state
+  [[ -d "$dir" ]] || {
+    echo 0
+    return 0
+  }
+  for f in "$dir"/*.json; do
+    [[ -f "$f" ]] || continue
+    state="$(jq -r '.state // empty' "$f" 2>/dev/null || true)"
+    [[ "$state" == "open" ]] && n=$((n + 1))
+  done
+  echo "$n"
+}
 
 # open_reviews_count -- how many add-on reviews (R-NOTIFY-12) wait for the parent;
 # published in status.json so the bar and the notifier see the same number.

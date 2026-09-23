@@ -13,8 +13,9 @@ verified by root before it is applied, and the relay itself never decides (`docs
 | `/run/omarchy-kids/devices.json` | `0644`, the public copy the relay reads |
 
 A record is `key=value` lines: `id`, `name`, `platform`, `sign_pub` and `box_pub` (base64 public
-keys), `scopes`, plus who added it and when. `publish` writes the public copy (`id`, name, platform,
-scopes and the two **public** keys — never a private key) for the relay. Root only; `DRY_RUN=1` is
+keys), `scopes`, `label_for_kids`, plus `paired_at` and `paired_by` (who added it and when). `publish`
+writes the public copy — `id`, name, platform, scopes, `paired_at`, `paired_by` and the two **public**
+keys, never a private key — for the relay. Root only; `DRY_RUN=1` is
 the default and prints the plan (`AGENTS.md` rule 8).
 
 ## Commands
@@ -26,7 +27,7 @@ omarchy-kids-devices rename <id> <name> [--apply]
 omarchy-kids-devices scopes <id> decide[,act] [--apply]
 omarchy-kids-devices revoke <id> [--apply]
 omarchy-kids-devices publish [--apply]
-omarchy-kids-devices pair-start [--id ID] [--scopes decide,act] [--apply]
+omarchy-kids-devices pair-start [--id ID] [--scopes decide,act] [--address ADDR]... [--apply]
 ```
 
 - `add` is normally the PAIR frame's job (below); a parent rarely runs it by hand.

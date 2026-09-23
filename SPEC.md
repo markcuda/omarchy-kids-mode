@@ -116,7 +116,7 @@ malcontent; timekpr; machine-wide DNS or browser policy; localization (English f
 
 - R-BAR-1 An optional Quickshell bar widget in the parent's session (installed only on consent) shows live or paused kids and minutes left ("Ada · paused · 32 min").
 - R-BAR-2 Actions: give more time, end session, open Kids Mode. Each goes through a polkit-gated helper (parent password).
-- R-BAR-3 Reads `/run/omarchy-kids/status.json`, root-written, group `omarchy-parents` readable. It carries each live kid's minutes-left and paused state and the open-request count and list (R-NOTIFY-7); the widget's badge reads the count from it rather than running any command. It also carries the pairing window's expiry (`pairing_open_until`), never the token, so the relay can keep itself up while a phone pairs (R-NOTIFY-2/5), and the open add-on review count (`reviews`, R-NOTIFY-12).
+- R-BAR-3 Reads `/run/omarchy-kids/status.json`, root-written, group `omarchy-parents` readable. It carries each live kid's minutes-left and paused state (R-NOTIFY-7), the open-request count (`open_requests`) and the open-review count (`reviews`). The badge still runs `omarchy-kids-ask list` for its own count (`docs/bar.md`); reading it from the document is N-1's remaining work. It also carries the pairing window's expiry (`pairing_open_until`), never the token, so the relay can keep itself up while a phone pairs (R-NOTIFY-2/5), and the open add-on review count (`reviews`, R-NOTIFY-12).
 
 ### R-BAND Bands and defaults
 
@@ -168,7 +168,7 @@ malcontent; timekpr; machine-wide DNS or browser policy; localization (English f
 
 - R-NOTIFY-1 The only network listener is `omarchy-kids-relayd`, a root-owned system unit whose configuration fences it to loopback and the private LAN ranges. It runs only while Kids Mode is in use and notifications are enabled, and exits on its own when idle. No listener exists while notifications are off. The parent may opt in (N-10) to extend the fence to the CGNAT range their own VPN uses; off by default, one range only, and the relay's authentication remains the lock.
 - R-NOTIFY-2 The relay never decides. Every decision is authenticated and applied by root (`omarchy-kids-authd` / `omarchy-kids-ask`), through the same `apply_record` path the panel uses. A compromised relay can, at worst, stop delivering notifications.
-- R-NOTIFY-3 The device registry is root-owned under `/etc/omarchy-kids/devices/`. Each record holds a device's public keys, its scopes and its pairing provenance. Revocation is a root write and takes effect immediately.
+- R-NOTIFY-3 The device registry is root-owned under `/etc/omarchy-kids/devices/`. Each record holds a device's public keys, its scopes and its pairing provenance. Revocation is a root write and takes effect on the next request or decision (a held SSE stream is authenticated once at connect and stays until the relay stops).
 - R-NOTIFY-4 A decision is accepted only after root verifies a signature from a paired, unrevoked device over the exact decision, within a bounded clock skew and with a single-use nonce, against the write-once queue record. A seen nonce, a stale timestamp, an unknown device, or an already-decided record is refused.
 - R-NOTIFY-5 Pairing is gated by the parent password through the existing verifier. The pairing code is single-use and expires; no device key is established without it.
 - R-NOTIFY-6 A kid learns the outcome through a root-written file under their own directory. The kid session holds no credential to the relay and gains no new way to act.
@@ -176,8 +176,8 @@ malcontent; timekpr; machine-wide DNS or browser policy; localization (English f
 - R-NOTIFY-8 `omarchy-kids-relay-courier` is the only process that may reach beyond the LAN, and only to the one server the parent named. Everything it sends is end-to-end encrypted for one paired device; no content reaches this project, its authors, or a push vendor.
 - R-NOTIFY-9 Each device carries per-device scopes (`decide`, `act`). A decision or action without its scope is refused.
 - R-NOTIFY-10 Every parent-facing label states what is enforced and what is not: the fence ("home network only", or the CGNAT range when away-from-home is on), the relay's inability to decide, and the platform limit on background delivery.
-- R-NOTIFY-11 `omarchy-kids-assert` re-asserts the relay unit, its fence and the devices directory ownership on every update; `omarchy-kids-check` reports them.
-- R-NOTIFY-12 Update re-approval rides the same system: when an approved add-on's surface set or exec changes, the parent is notified and may approve, deny, or ask their onboard agent to check it.
+- R-NOTIFY-11 `omarchy-kids-assert` re-asserts the devices directory and conf modes and the units list (which now includes the courier timer) on every update. Re-asserting the relay's address fence and a `omarchy-kids-check` row for the relay/devices are not built on this branch.
+- R-NOTIFY-12 Update re-approval rides the same system: when an approved add-on's surface set or exec changes, the parent is notified and may approve, deny, or **check** it (Check shows what changed and decides nothing; it is not an onboard agent that assesses the change, `docs/review.md`).
 
 ### R-WIFI Wi-Fi
 
@@ -396,8 +396,8 @@ States: `idle` (no active session) → `counting` (Active=yes, unlocked) → `wa
 ```text
 POST /v1/pair                       {id, name, platform, sign_pub, box_pub, proof} -> {reply}
 GET  /v1/state                      -> {kids:[...], requests:[open...], recent:[decided<24h]}
-GET  /v1/events                     SSE: state, request.opened, request.decided, kid.live, kid.paused, kid.timeup
-POST /v1/requests/<id>/decision     {decision: approve|decline, reply?, signed:{...}}
+GET  /v1/events                     SSE: one `state` event per change, plus a heartbeat
+POST /v1/requests/<id>/decision     {record:{...}, signature}
 POST /v1/kids/<account>/grant       {minutes, signed:{...}}      scope act
 POST /v1/kids/<account>/end         {signed:{...}}               scope act
 GET  /v1/avatars/<id>.svg
@@ -407,4 +407,4 @@ Authenticated requests carry `X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>
 
 Away envelopes (R-NOTIFY-8, N-11: the box-side courier that seals and carries them is built, `docs/courier.md`; the app that opens them is not) are `{v, device_id, eph_pub, nonce, ct}`: a fresh ephemeral X25519 key does ECDH with the device's `box_pub`, HKDF-SHA256 (salt `omarchy-kids-envelope-v1`, info `x25519-chacha20poly1305`) derives the key, and ChaCha20-Poly1305 seals the document with a 12-byte nonce and the device id as associated data. `lib/envelope.py` seals; the device opens with its private box key; `clients/parent/test-vectors/notify-vectors.json` carries the vectors the app must reproduce. The envelope is confidential, not authenticated: anyone holding the device's public key can seal one, so the app must treat a sealed state document as untrusted display data and never act on it -- the decisions it sends the other way are signed by the device and verified by root. A box identity key (or a timestamp) is a later version's job.
 
-Files: `/etc/omarchy-kids/devices/<id>.conf` (root `0600`: name, platform, both public keys, `paired_at`, `paired_by`, scopes, `label_for_kids`); `/run/omarchy-kids/pairing/<id>` (root `0600`, single-use, expiring); `/var/lib/omarchy-kids/<kid>/decisions/<id>.json` (`0640 root:kid`, the result the kid's session reads).
+Files: `/etc/omarchy-kids/devices/<id>.conf` (root `0600`: name, platform, both public keys, `paired_at`, `paired_by`, scopes, `label_for_kids`); `/run/omarchy-kids/pairing/<id>` (root `0600`, single-use, expiring); `/var/lib/omarchy-kids/<kid>/decisions/<id>.json` (`0640 root:kid`; **not built on this branch** -- the kid's result is shown by the ask overlay, not this file).

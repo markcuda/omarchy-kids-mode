@@ -8,7 +8,7 @@ holds no decision power, and is off by default.
 ## Turning it on
 
 `omarchy-kids-notify mailbox <off|ntfy|gotify> --url <https://…> --topic <name> [--reply-topic
-<name>]` writes `/etc/omarchy-kids/courier.conf` (root `0600`); `mailbox off` removes it and
+<name>] [--apply]` writes `/etc/omarchy-kids/courier.conf` (root `0600`); `mailbox off` removes it and
 `mailbox-status` prints `off`, `ntfy` or `gotify`. `--reply-topic` (ntfy only — Gotify's `GET /message`
 needs a client token this config does not hold) names the topic the app posts its signed decisions
 to. The URL must be `https`, and for Gotify the token is typed on **stdin**

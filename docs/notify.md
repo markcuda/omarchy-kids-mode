@@ -15,6 +15,10 @@ omarchy-kids-notify scopes <id> decide[,act] [--apply]
 omarchy-kids-notify revoke <id> [--apply]
 omarchy-kids-notify away <off|tailnet> [--apply]
 omarchy-kids-notify away-status
+omarchy-kids-notify mailbox <off|ntfy|gotify> [--url U --topic T [--reply-topic R]] [--apply]
+omarchy-kids-notify mailbox-status
+omarchy-kids-notify list [--json]              # a pass-through to omarchy-kids-devices
+omarchy-kids-notify pair-start [--apply]       # a pass-through to omarchy-kids-devices
 ```
 
 Root only. `DRY_RUN=1` is the default for every writing subcommand (AGENTS.md rule 8), so a run
@@ -47,7 +51,8 @@ Revokes every paired device, removes the certificate and key, and stops
 ## `status`
 
 Prints whether notifications are on (the certificate is present), the relay port, and the paired
-devices. The bar widget and the panel read the same state.
+devices. The panel reads this for its Notifications screen; the bar widget does not read
+notification state (`share/bar/KidsModule.qml` reads the kids in status.json and the request count).
 
 ## `pair`
 
@@ -151,6 +156,9 @@ revoke per device. The panel runs unprivileged, so each call goes through its ow
 | `/etc/omarchy-kids/relay/cert.pem` | `0644 root:omarchy-parents` |
 | `/etc/omarchy-kids/relay/key.pem` | `0640 root:omarchy-parents` |
 | `/etc/omarchy-kids/devices/*.conf` | root-owned device records (`docs/devices.md`) |
+| `/etc/omarchy-kids/courier.conf` | `0600 root`, the away courier's one server (`docs/courier.md`) |
+| `/etc/systemd/system/omarchy-kids-relayd.service.d/away.conf` | `0644`, the away-from-home fence drop-in (N-10) |
+| `/run/omarchy-kids/pairing/<id>` | `0600 root`, the single-use pairing record (`lib/devices.py`) |
 
 ## Tests
 

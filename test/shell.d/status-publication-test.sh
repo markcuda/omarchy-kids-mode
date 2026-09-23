@@ -97,6 +97,7 @@ RUN_DIR="$ROOT/run/omarchy-kids"
 STATUS_JSON="$RUN_DIR/status.json"
 PAIRING_DIR="$RUN_DIR/pairing"
 REVIEW_DIR="$RUN_DIR/reviews/open"
+QUEUE_DIR="$ROOT/var/lib/omarchy-kids/queue"
 printf '%s\n' '{"generated_at":"old","kids":[]}' >"$STATUS_JSON"
 OLD_HASH="$(file_hash "$STATUS_JSON")"
 
@@ -131,6 +132,16 @@ check "$(jq -r '.reviews' "$STATUS_JSON")" "1" "publishes the open-review count"
 rm -rf "$REVIEW_DIR"
 write_status_json
 check "$(jq -r '.reviews' "$STATUS_JSON")" "0" "no open review publishes 0"
+
+# The open-request count (R-BAR-3 as amended) rides the same document.
+mkdir -p "$QUEUE_DIR"
+printf '{"kid": "kid-ada", "kind": "time", "what": "10", "minutes": 10, "asked_at": 1, "state": "open"}\n' \
+  >"$QUEUE_DIR/1-kid-ada-time.json"
+write_status_json
+check "$(jq -r '.open_requests' "$STATUS_JSON")" "1" "publishes the open-request count"
+rm -rf "$QUEUE_DIR"
+write_status_json
+check "$(jq -r '.open_requests' "$STATUS_JSON")" "0" "no open request publishes 0"
 
 for failure in jq-row jq-final chown chgrp chmod mv getent; do
   rm -f "$RUN_DIR"/status.json.* "$STATUS_MV_BOUNDARY"

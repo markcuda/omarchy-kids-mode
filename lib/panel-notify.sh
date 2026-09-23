@@ -121,7 +121,7 @@ screen_notify() {
     else
       [[ "$status_out" == *"notifications: on"* ]] && on=1
       if ((on)); then
-        facts+=("Notifications are on. A paired device can approve or decline, over your home network (or your own tailnet if away-from-home is on).")
+        facts+=("Notifications are on. A paired device can approve or decline, over your home network (or your own tailnet if away-from-home is on). A phone with the app closed on iOS gets nothing until it opens.")
       else
         facts+=("Notifications are off. Nothing leaves this machine.")
       fi

@@ -529,6 +529,20 @@ check_contains "$(cat "$QUEUE_DIR/1000000005-kid-ada-site.json")" '"state": "dec
 check_contains "$(cat "$QUEUE_DIR/1000000005-kid-ada-site.json")" '"by": "panel"' \
   "decline --apply: by=panel"
 
+# The optional reply line (Appendix D): recorded when given, validated.
+cat >"$QUEUE_DIR/1000000008-kid-ada-site.json" <<'EOF'
+{"kid": "kid-ada", "kind": "site", "what": "example.org", "asked_at": 1000000008, "state": "open"}
+EOF
+"$BIN" decline "1000000008-kid-ada-site" --by panel --reply "After dinner" --apply >/dev/null
+check_contains "$(cat "$QUEUE_DIR/1000000008-kid-ada-site.json")" '"reply": "After dinner"' \
+  "decide --reply: the reply is written to the record"
+
+cat >"$QUEUE_DIR/1000000010-kid-ada-site.json" <<'EOF'
+{"kid": "kid-ada", "kind": "site", "what": "example.net", "asked_at": 1000000010, "state": "open"}
+EOF
+"$BIN" decline "1000000010-kid-ada-site" --by panel --reply "$(printf 'x%.0s' $(seq 1 81))" --apply >/dev/null 2>&1
+check_eq "$?" 2 "decide --reply: a reply longer than 80 characters is refused"
+
 # =====================================================================
 # static: systemd/omarchy-kids-ask-collect.{service,timer}
 # =====================================================================
