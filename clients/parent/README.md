@@ -3,30 +3,36 @@
 A phone or desktop app that pairs with the box, shows a kid's requests with **Approve** and
 **Decline**, and signs the decision back.
 
-**The app is a first slice.** `clients/parent` is the logic (a pure-Dart
-package — `lib/notify_crypto.dart` (the box's signing, pairing and envelope code, byte for byte) and
-`lib/relay_client.dart` (the frames and headers the relay expects: the pairing body, the
-`X-Kids-Device`/`X-Kids-Sig` headers, the decision body, the reply chips and the pairing URI) and
-`lib/transport.dart` (the trust anchor and the client: the certificate's SPKI SHA-256 — the value
-the parent reads off the pairing screen and the app pins — and a `KidsRelayClient` that speaks TLS
-to the relay with the signed headers, streams the `/v1/events` SSE feed (a stream that goes three heartbeats quiet ends with an error, so a half-open connection cannot hang), and posts decisions and
-pairings) and `lib/state_model.dart` (the relay's document as typed kids, requests and recent
-decisions, parsed defensively), `lib/session.dart` (the controller: the device key from the
-keystore, refresh/watch, and approve/decline with a reply -- over an injectable transport, so its
-flow is unit-tested without a box) and `lib/pairing.dart` (the pairing flow: generate the device's
-sign and box keys once, show the proof and never the token, and remember the paired box). The
-crypto and the wire frames are proven against the shared vectors, byte for byte; the reply chips and
+**The app is a first slice.** `clients/parent` is the logic — a pure-Dart package whose files are:
+
+- `lib/notify_crypto.dart`: the box's signing, pairing and envelope code, byte for byte.
+- `lib/relay_client.dart`: the frames and headers the relay expects (the pairing body, the
+  `X-Kids-Device`/`X-Kids-Sig` headers, the decision body, the reply chips, the pairing URI).
+- `lib/transport.dart`: the trust anchor and the client — the certificate's SPKI pin, and a
+  `KidsRelayClient` that speaks TLS to the relay, streams `/v1/events` (a stream that goes three
+  heartbeats quiet ends with an error, so a half-open connection cannot hang), and posts decisions
+  and pairings.
+- `lib/state_model.dart`: the relay's document as typed kids, requests and recent decisions, parsed
+  defensively.
+- `lib/session.dart`: the controller (the device key from the keystore, refresh/watch,
+  approve/decline with a reply) over an injectable transport.
+- `lib/pairing.dart`: the pairing flow (generate the device's sign and box keys once, send the proof
+  and never the token, remember the paired box).
+
+`clients/parent/app` is the Flutter UI over it: the request list and a request screen with Approve,
+Decline and the reply chips, widget-tested against a fake relay. Pairing from the UI, the device
+list, the platform notification plumbing, the keystore and the store builds are still to come —
+there is nothing to install on a phone yet.
+
+The crypto and the wire frames are proven against the shared vectors byte for byte; the reply chips,
 the pairing-URI parser and the SPKI pin are pinned by the package's own tests (the pin fixture,
 `test/fixtures/relay-cert.pem`, is a throwaway public certificate minted by `lib/cert.py`;
-`test/shell.d/parent-app-test.sh` also checks the Dart constant equals what `lib/cert.py` prints),
-and the client is proven end to end against the box's own relay
-(`test/relay_integration_test.dart` starts `bin/omarchy-kids-relayd`, pins it, makes a signed read,
-streams a state event, and shows a decision POST and a pairing POST reach the relay's
-authd-forwarding step; the SSE parser's edge cases are unit-tested). and `clients/parent/app` is the Flutter UI over it: the request list and a request screen with
-**Approve**, **Decline** and the reply chips, widget-tested against a fake relay. Pairing from the
-UI, the device list, the platform notification plumbing, the keystore and the store builds are still
-to come — there is nothing to install on a phone yet. `AGENTS.md` rule 6 is why this file says so
-plainly. The box side is complete (`docs/notify.md`, `docs/relayd.md`, `docs/devices.md`).
+`test/shell.d/parent-app-test.sh` also checks the Dart constant equals what `lib/cert.py` prints);
+and the client is proven end to end against the box's own relay (`test/relay_integration_test.dart`
+starts `bin/omarchy-kids-relayd`, pins it, makes a signed read, streams a state event, and shows a
+decision POST and a pairing POST reach the relay's authd-forwarding step; the SSE parser's edge
+cases are unit-tested). The box side is complete (`docs/notify.md`, `docs/relayd.md`,
+`docs/devices.md`).
 
 ```
 cd clients/parent && dart pub get && dart test      # the crypto tests, against the vectors
@@ -106,5 +112,5 @@ app reproduces every signature. Run the generator after changing the scheme and 
 
 ## What this does not decide
 
-The UI, the keystore, the platform notification plumbing, and the store builds are the app's own
-work (N-8/N-12); none of it can be built without a Flutter toolchain, so none of it is claimed.
+The UI beyond the request list, the platform keystore, the platform notification plumbing, and the
+store builds are the app's own work (N-8/N-12) and are not claimed.

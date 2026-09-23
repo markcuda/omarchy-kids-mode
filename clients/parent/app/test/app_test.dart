@@ -40,6 +40,13 @@ Future<Session> sessionWith(FakeRelay relay) => Session.load(
       newNonce: () => 'n-1',
     );
 
+class ThrowingRelay extends FakeRelay {
+  ThrowingRelay() : super(stateWith([]));
+  @override
+  Future<BoxState> boxState({required int ts, required String nonce}) async =>
+      throw StateError('relay unreachable');
+}
+
 BoxState stateWith(List<Map<String, Object?>> requests) => BoxState.fromJson({
       'kids': [
         {'kid': 'kid-ada', 'minutes_left': 12, 'live': true},
@@ -94,9 +101,16 @@ void main() {
     expect(relay.decided.single['reply'], 'After dinner');
   });
 
-  testWidgets('an unreachable box is an honest message', (tester) async {
+  testWidgets('an unpaired app says to pair', (tester) async {
     await tester.pumpWidget(KidsApp(session: null));
     await tester.pumpAndSettle();
     expect(find.textContaining('Pair with the computer'), findsOneWidget);
+  });
+
+  testWidgets('an unreachable box is an honest message, not a crash or a fake state', (tester) async {
+    final relay = ThrowingRelay();
+    await tester.pumpWidget(KidsApp(session: await sessionWith(relay)));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("Can't reach the computer"), findsOneWidget);
   });
 }
