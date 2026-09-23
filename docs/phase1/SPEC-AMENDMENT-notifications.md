@@ -24,7 +24,10 @@ After:
 > the parent named, and only after the parent turned notifications on.** No telemetry. No accounts.
 > No cloud that is not the parent's own. The only network listener is `omarchy-kids-relayd`, fenced
 > to the home network by its root-owned unit, running only while Kids Mode is in use and
-> notifications are on. The only outbound connections are to the one address the parent typed, and
+> notifications are on. The parent may extend that fence, off by default and only by their own
+> action, to the CGNAT range their own VPN uses (N-10); it stays one range and the relay's
+> authentication, not the fence alone, is the lock. The only outbound connections are to the one
+> address the parent typed, and
 > everything sent there is end-to-end encrypted for one paired device. Nothing about a child ever
 > reaches this project, the package's authors, or any push vendor. A platform push service may carry
 > at most an opaque wake with no content, and only after the parent has enabled it and read what it
@@ -37,7 +40,8 @@ After:
 - R-NOTIFY-1 The only network listener is `omarchy-kids-relayd`, a root-owned system unit whose
   configuration fences it to loopback and the private LAN ranges. It runs only while Kids Mode is in
   use and notifications are enabled, and exits on its own when idle. No listener exists while
-  notifications are off.
+  notifications are off. The parent may opt in (N-10) to extend the fence to the CGNAT range their
+  own VPN uses; off by default, one range only, and the relay's authentication remains the lock.
 - R-NOTIFY-2 The relay never decides. Every decision is authenticated and applied by root
   (`omarchy-kids-authd` / `omarchy-kids-ask`), through the same `apply_record` path the panel uses.
   A compromised relay can, at worst, stop delivering notifications.

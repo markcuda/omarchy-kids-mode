@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Turn the parent's device notifications on or off, and manage the paired devices
-# omarchy:args=<enable|disable|status|pair|devices|rename|scopes|revoke> ...
+# omarchy:args=<enable|disable|status|pair|devices|rename|scopes|revoke|away> ...
 # omarchy:hidden=true
 # The parent's side of the notification system (R-NOTIFY-1/3/5): the relay's
 # certificate, and the paired devices. Root only; DRY_RUN=1 prints the plan.
@@ -59,8 +59,10 @@ omarchy-kids-devices. Root only; DRY_RUN=1 prints the plan.
 
 `away tailnet` is the opt-in "Away from home: my own VPN" fence (N-10): it writes
 a systemd drop-in adding the CGNAT range Tailscale uses to the relay's allow
-list, so a device on the parent's own tailnet can reach the relay; `away off`
-removes it. The relay otherwise stays fenced to the LAN.
+list, so a device on the parent's tailnet can reach the relay; `away off` removes
+it. That range is the tailnet, but also any CGNAT network the box sits behind
+directly, so the relay's own authentication remains the lock. The relay otherwise
+stays fenced to the LAN.
 
 Run it as root -- from a terminal, or through a tool that elevates like sudo;
 that elevation is the parent's own authentication, so `pair` adds no second
@@ -87,8 +89,10 @@ revoke_all() { # apply -- revoke every paired device, or print what would be rev
 }
 
 cmd_status() {
+  local fence="the LAN only"
+  away_enabled && fence="the LAN and the CGNAT range (away-from-home is on)"
   if enabled; then
-    echo "notifications: on (relay port $PORT, home network only)"
+    echo "notifications: on (relay port $PORT, fenced to $fence)"
     echo "certificate: $CERT"
   else
     echo "notifications: off (run 'omarchy-kids-notify enable' on the parent's account)"
@@ -182,13 +186,28 @@ notify_addresses() {
   local a
   if command -v ip >/dev/null 2>&1; then
     while IFS= read -r a; do
-      [[ -n "$a" ]] && printf '%s\n' "$a"
+      [[ -n "$a" ]] || continue
+      # The CGNAT range is the tailnet when away is on, but also a CGNAT network
+      # the box may sit behind; the fence drops it unless away is on, so only
+      # offer it then.
+      if is_cgnat "$a" && ! away_enabled; then continue; fi
+      printf '%s\n' "$a"
     done < <(ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
   fi
   if away_enabled && command -v tailscale >/dev/null 2>&1; then
     a="$(tailscale ip -4 2>/dev/null | head -n1)"
     [[ -n "$a" ]] && printf '%s\n' "$a"
   fi
+}
+
+# is_cgnat ADDR -- in 100.64.0.0/10 (where Tailscale lives, and where some ISPs
+# put the box's own WAN address).
+is_cgnat() {
+  local ip="$1" second
+  [[ "$ip" == 100.* ]] || return 1
+  second="${ip#100.}"
+  second="${second%%.*}"
+  [[ "$second" =~ ^[0-9]+$ ]] && ((10#$second >= 64 && 10#$second <= 127))
 }
 
 # pair -- start a single-use pairing window and show the parent what the device

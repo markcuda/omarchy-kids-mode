@@ -5,7 +5,8 @@
 """omarchy-kids-relayd -- the LAN relay (R-NOTIFY-1/2).
 
 The one network listener this project ships. It runs as its own account, on the
-home network only (the unit fences it with IPAddressDeny), only while Kids Mode
+home network only, or the CGNAT range when the parent turns on away-from-home (the unit fences it
+with IPAddressDeny and the allow list), only while Kids Mode
 is in use, and it decides nothing: it serves the root-written status and the
 open requests to a paired device after verifying that device's signature, and
 forwards a signed decision to authd, which root verifies and applies. A missing

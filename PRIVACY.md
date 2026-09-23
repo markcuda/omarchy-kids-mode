@@ -57,8 +57,9 @@ If a parent turns notifications on (`docs/notify.md`), Kids Mode may tell **the 
 devices** about a kid's requests and decisions (I-2 as amended). That is the only thing that leaves
 the machine, and only then.
 
-- The listener, `omarchy-kids-relayd`, is local and fenced to the home network
-  (`docs/relayd.md`); it holds no decision power. A device may answer a request only if the parent
+- The listener, `omarchy-kids-relayd`, is local and fenced to the home network (and to the CGNAT
+  range only if the parent turns on away-from-home, `docs/notify.md`); it holds no decision power. A
+  device may answer a request only if the parent
   paired it and root verifies its signature (`docs/devices.md`).
 - What is sent is a kid's live state (whether they are logged in and paused, minutes left), their
   requests ("Ada asked for 15 more minutes"), and the outcomes — nothing else, and never a

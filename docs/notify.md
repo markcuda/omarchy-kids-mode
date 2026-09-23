@@ -68,8 +68,10 @@ also ride the single-use record; each is validated before it reaches the URI.
 
 Off by default: the relay is fenced to the LAN (`docs/relayd.md`). `away tailnet` writes a systemd
 drop-in adding the CGNAT range Tailscale uses (`100.64.0.0/10`) to the relay's allow list, so a
-device on the parent's own tailnet can reach it; `away off` removes the drop-in. It changes nothing
-else about the fence, and it is the parent's own VPN, not a third party.
+device on the parent's own tailnet can reach it; `away off` removes the drop-in. That range is the
+parent's tailnet, but it is also where some ISPs put the box's WAN address, so the relay's own
+authentication — the pinned certificate and signed decisions — is the lock, not the fence alone. It
+changes nothing else about the fence, and it is the parent's own VPN, not a third party.
 
 ## The device subcommands
 
@@ -112,8 +114,9 @@ logic and `test/shell.d/notify-watch-test.sh` drives it with stubs.
 
 ## The fence, stated plainly (R-NOTIFY-10, I-6)
 
-- The relay listens on the box's own address, home network only; `systemd/omarchy-kids-relayd.service`
-  denies every address but the LAN ranges. Nothing here opens a connection outward.
+- The relay listens on the box's own address, home network only — plus the CGNAT range when the
+  parent turns on away-from-home (N-10); `systemd/omarchy-kids-relayd.service` denies every address
+  but those. Nothing here opens a connection outward.
 - The relay never decides; a decision is authenticated and applied by root (R-NOTIFY-2/4).
 - Turning notifications off stops the listener and revokes the devices; a kid cannot reach any of
   this (root-owned, outside every home, `bin/omarchy-kids-notify` resolves its siblings from its own

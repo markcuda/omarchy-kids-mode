@@ -49,8 +49,12 @@ carries decisions only.
 `systemd/omarchy-kids-relayd.service` allows only `localhost link-local multicast` and the private
 v4/v6 ranges, with `IPAddressDeny=any` after them, and sets `ProtectSystem=strict`, `ProtectHome=yes`,
 `NoNewPrivileges=yes`, `PrivateTmp=yes`, `ReadOnlyPaths=/var/lib/omarchy-kids` and the other
-hardening `systemd/omarchy-kids-wifid.service` uses. Because the relay can never approve anything,
-its whole attack surface is "notifications stop" (`docs/phase1/SPEC-AMENDMENT-notifications.md`).
+hardening `systemd/omarchy-kids-wifid.service` uses. The parent may opt in to "away from home"
+(N-10, `docs/notify.md`): a drop-in adds the CGNAT range `100.64.0.0/10` to the allow list, which is
+the parent's tailnet but also any CGNAT network the box sits behind directly — the relay's own auth
+the pinned certificate and signed decisions, is the lock, not the fence alone). The drop-in never
+widens the range. Because the relay can never approve anything, its whole attack surface is
+"notifications stop" (`docs/phase1/SPEC-AMENDMENT-notifications.md`).
 
 ## Files and flags
 

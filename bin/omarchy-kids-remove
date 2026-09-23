@@ -460,6 +460,21 @@ units_remove() {
     "${KIDS_UNITS[@]}" "${KIDS_SOCKETS[@]}" "${KIDS_TIMERS[@]}" "${KIDS_EXTRA_UNITS[@]}"
 }
 
+# away (N-10): the "away from home" drop-in widens the relay's fence to the
+# parent's VPN range. Removing Kids Mode must take that back, or a left-behind
+# drop-in would keep a listener reachable off-LAN.
+away_dropin() { printf '%s/etc/systemd/system/omarchy-kids-relayd.service.d/away.conf' "$(posture_root)"; }
+away_present() { [[ -e "$(away_dropin)" ]]; }
+away_remove() {
+  file_remove "$(away_dropin)" || return 1
+  rmdir "$(dirname "$(away_dropin)")" 2>/dev/null || true
+  if [[ -n "$(posture_root)" ]]; then
+    systemctl --root="$(posture_root)" daemon-reload >/dev/null 2>&1 || true
+  else
+    systemctl daemon-reload >/dev/null 2>&1 || true
+  fi
+}
+
 # parent-group (issue #45 item 3): the parent stays a member of
 # omarchy-parents by default once every kid-level lock is gone, unless
 # --keep-parent-group is given. current_groups/has_group are duplicated
@@ -634,6 +649,7 @@ run_body() {
   fi
   plan_one "sddm-autologin" autologin_present autologin_remove
   plan_one "units" units_present units_remove
+  plan_one "away" away_present away_remove
   plan_one "parent-group" parent_group_present parent_group_remove
   plan_one "etc-and-varlib" purge_present purge_remove
 }
@@ -647,7 +663,7 @@ main() {
     die "LUKS options are not available in portal mode"
   fi
 
-  if ((PARENT_PW_STDIN)) && ((!REAL_DRY_RUN)); then
+  if ((PARENT_PW_STDIN)) && ((! REAL_DRY_RUN)); then
     IFS= read -r PARENT_PASSWORD || die "--parent-password-stdin needs a line on stdin"
   fi
 

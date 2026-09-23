@@ -121,7 +121,7 @@ screen_notify() {
     else
       [[ "$status_out" == *"notifications: on"* ]] && on=1
       if ((on)); then
-        facts+=("Notifications are on. A paired device can approve or decline, over your home network only.")
+        facts+=("Notifications are on. A paired device can approve or decline, over your home network (or your own tailnet if away-from-home is on).")
       else
         facts+=("Notifications are off. Nothing leaves this machine.")
       fi
