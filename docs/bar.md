@@ -210,10 +210,10 @@ this issue's two spec-vs-ticket comments.
 | `OMARCHY_PATH` | `/usr/share/omarchy` | Omarchy's own install root (a real Omarchy session var, confirmed against `etc/profile.d/omarchy.sh` / `default/bash/env-bootstrap` upstream -- not one of ours) |
 | `DRY_RUN` | `1` | gates `enable`/`disable` |
 
-`share/bar/KidsModule.qml` reads its own env at runtime (`Quickshell.env(...)`, not a shell var):
-`OMARCHY_KIDS_STATUS_JSON` (default `/run/omarchy-kids/status.json`), `OMARCHY_KIDS_ASK_BIN`
-(default `omarchy-kids-ask`), `OMARCHY_KIDS_BAR_BIN` (default `omarchy-kids-bar`),
-`OMARCHY_KIDS_BIN` (default `omarchy-kids`).
+`share/bar/KidsModule.qml` reads one env value at runtime (`Quickshell.env(...)`):
+`OMARCHY_KIDS_STATUS_JSON` (default `/run/omarchy-kids/status.json`). The commands it runs are
+absolute and hardcoded, not from the environment (AGENTS.md rule 9): `/usr/bin/omarchy-kids-ask`,
+`/usr/bin/omarchy-kids-bar`, `/usr/bin/omarchy-kids`.
 
 ## What's unverified -- check in the VM
 
