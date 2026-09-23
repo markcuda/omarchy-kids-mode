@@ -4,8 +4,10 @@ A phone or desktop app that pairs with the box, shows a kid's requests with **Ap
 **Decline**, and signs the decision back.
 
 **The UI is not built.** This directory holds the half that can be pinned down before it: a pure-Dart
-package (`lib/notify_crypto.dart`) that reproduces the box's **signing, pairing and envelope** code
-byte for byte, proven against the shared vectors. There is no Flutter project and nothing to install
+package — `lib/notify_crypto.dart` (the box's signing, pairing and envelope code, byte for byte) and
+`lib/relay_client.dart` (the frames and headers the relay expects: the pairing body, the
+`X-Kids-Device`/`X-Kids-Sig` headers, the decision body, the reply chips and the pairing URI) — proven
+against the shared vectors. There is no Flutter project and nothing to install
 on a phone yet, so there is nothing to scan a pairing QR with — `AGENTS.md` rule 6 is why this file
 says so plainly. The box side is complete (`docs/notify.md`, `docs/relayd.md`, `docs/devices.md`).
 
