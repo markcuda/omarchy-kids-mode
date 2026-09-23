@@ -40,8 +40,9 @@ class OpenRequest {
     this.askedAt,
   });
 
-  /// The box's own id shape (lib/devices.py's RE_REQUEST_ID); the app only
-  /// shows and acts on a request whose id it could POST back.
+  /// The box's own request-id shape (lib/ask.py's RE_ID, which
+  /// lib/notify_watch.py also uses); the app only shows and acts on a request
+  /// whose id it could POST back.
   static final RegExp idPattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._+@-]{0,127}$');
 
   factory OpenRequest.fromJson(Map<String, dynamic> json) => OpenRequest(
