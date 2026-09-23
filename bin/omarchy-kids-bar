@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Add or remove the parent's Kids Mode bar widget
-# omarchy:args=<enable|disable|status|grant <kid> <minutes>|end <kid>|approve <id>|decline <id>> [--apply]
+# omarchy:args=<enable|disable|status|grant <kid> <minutes>|end <kid>|approve <id>|decline <id>|notify-enable|notify-disable|notify-status> [--apply]
 # The parent's bar widget: per-kid minutes and requests from /run/omarchy-kids/status.json (SPEC.md R-BAR).
 # See docs/bar.md for the full design, every env var, and the terminal-fallback rationale.
 set -euo pipefail
@@ -42,6 +42,9 @@ Usage: omarchy-kids-bar enable [--apply]
        omarchy-kids-bar end <kid>
        omarchy-kids-bar approve <id>
        omarchy-kids-bar decline <id>
+       omarchy-kids-bar notify-enable [--apply]
+       omarchy-kids-bar notify-disable [--apply]
+       omarchy-kids-bar notify-status
 
 Every subcommand also accepts --dry-run (print the plan, change nothing).
 
@@ -59,6 +62,11 @@ Every subcommand also accepts --dry-run (print the plan, change nothing).
                   login password) -- what a desktop notification's Approve
                   action runs (N-9, R-NOTIFY).
   decline <id>    The same for a notification's Decline action.
+  notify-enable   Turn on desktop notifications for a kid's requests (N-9).
+                  Needs the widget on (omarchy-kids-bar enable) first; then it
+                  enables omarchy-kids-notify-watch.service for this session.
+  notify-disable  Stop and disable it.
+  notify-status   Print "enabled" or "disabled".
   --apply         Make enable/disable real (default is DRY_RUN=1, prints
                   the plan -- AGENTS.md rule 8).
   --dry-run       Print the plan instead of running it, for every
@@ -179,6 +187,33 @@ cmd_status() {
   else
     echo "disabled"
   fi
+}
+
+# --- the desktop notifier (N-9): the same consent as the bar widget ---------
+#
+# The unit ships in /usr/lib/systemd/user/ (PKGBUILD); enabling it is per-session
+# state, so it goes through `systemctl --user` and needs no file copy. A parent
+# asked for notifications only where they already asked for the widget, so this
+# refuses until the widget is on.
+NOTIFY_UNIT="omarchy-kids-notify-watch.service"
+
+cmd_notify_status() {
+  if command -v systemctl >/dev/null 2>&1 &&
+    systemctl --user is-enabled "$NOTIFY_UNIT" >/dev/null 2>&1; then
+    echo "enabled"
+  else
+    echo "disabled"
+  fi
+}
+
+cmd_notify_enable() {
+  widget_present "$SHELL_JSON" ||
+    die "notify-enable: enable the bar widget first (omarchy-kids-bar enable)"
+  run systemctl --user enable --now "$NOTIFY_UNIT"
+}
+
+cmd_notify_disable() {
+  run systemctl --user disable --now "$NOTIFY_UNIT"
 }
 
 # open_terminal_running CMD_ARGV... — runs a whole real terminal in the
@@ -309,5 +344,8 @@ case "$cmd" in
   end) cmd_end "${args[@]+"${args[@]}"}" ;;
   approve) cmd_approve "${args[@]+"${args[@]}"}" ;;
   decline) cmd_decline "${args[@]+"${args[@]}"}" ;;
+  notify-enable) cmd_notify_enable ;;
+  notify-disable) cmd_notify_disable ;;
+  notify-status) cmd_notify_status ;;
   *) die "unknown command: '$cmd' (see --help)" ;;
 esac

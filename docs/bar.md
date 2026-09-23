@@ -74,6 +74,9 @@ omarchy-kids-bar grant <kid> <minutes>
 omarchy-kids-bar end <kid>
 omarchy-kids-bar approve <id>
 omarchy-kids-bar decline <id>
+omarchy-kids-bar notify-enable [--apply]
+omarchy-kids-bar notify-disable [--apply]
+omarchy-kids-bar notify-status
 ```
 
 `enable`:
@@ -103,6 +106,11 @@ available to add again"). Idempotent: disabling an already-disabled bar is a no-
 <id>` and `decline <id>` are the same shape for the widget's "end session" row and for the
 desktop notification's Approve/Decline actions (N-9, R-NOTIFY): a floating terminal running
 `sudo omarchy-kids-<time|exit|ask>` with the parent's own password.
+
+`notify-enable` turns on the desktop notifier (`docs/notify.md`) on the same consent as the widget:
+it refuses until the widget is on, then `systemctl --user enable --now
+omarchy-kids-notify-watch.service` (the unit ships in `/usr/lib/systemd/user/`, so nothing is
+copied). `notify-disable` stops and disables it; `notify-status` prints `enabled`/`disabled`.
 
 DRY_RUN=1 is the default for `enable`/`disable` (AGENTS.md rule 8); `--apply` (or `DRY_RUN=0`)
 makes them real. `grant`/`end`/`approve`/`decline` run for real by default -- a parent clicked a

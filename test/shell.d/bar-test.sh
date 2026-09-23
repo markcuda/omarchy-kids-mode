@@ -102,6 +102,7 @@ cat >"$DEFAULTS2" <<'EOF'
 EOF
 
 env2() { OMARCHY_KIDS_HOME="$HOME2" OMARCHY_PATH="$TMP/defaults2" "$@"; }
+env2p() { OMARCHY_KIDS_HOME="$HOME2" OMARCHY_PATH="$TMP/defaults2" PATH="$STUBSN:$PATH" "$@"; }
 
 out="$(env2 "$BAR" status)"
 check "$out" "disabled" "status: disabled before enable"
@@ -137,6 +138,47 @@ check "$out" "omarchy-kids-bar: already enabled" "a second enable --apply says a
 check "$before" "$after" "a second enable --apply leaves shell.json byte-for-byte the same"
 check "$(jq -r "[.bar.layout.right[] | select(.id == \"$plugin_id\")] | length" "$SHELL_JSON2")" "1" \
   "still exactly one widget entry after a second enable"
+
+# --- the desktop notifier consent (N-9): same consent as the widget --------
+STUBSN="$TMP/stubs-notify"
+mkdir -p "$STUBSN"
+NOTIFY_CTL_LOG="$TMP/notify-ctl.log"
+cat >"$STUBSN/systemctl" <<EOF
+#!/bin/bash
+printf 'systemctl %s\n' "\$*" >>"$NOTIFY_CTL_LOG"
+case "\$*" in
+  *is-enabled*) [[ -f "$TMP/notify-on" ]] && exit 0 || exit 1 ;;
+  *enable*) : >"$TMP/notify-on" ;;
+  *disable*) rm -f "$TMP/notify-on" ;;
+esac
+exit 0
+EOF
+chmod +x "$STUBSN/systemctl"
+rm -f "$TMP/notify-on"
+: >"$NOTIFY_CTL_LOG"
+
+# The widget is off in HOME1: the consent is refused, and nothing is touched.
+out="$(OMARCHY_KIDS_HOME="$HOME1" OMARCHY_PATH="$TMP/no-such-omarchy" PATH="$STUBSN:$PATH" \
+  "$BAR" notify-enable --apply 2>&1)"
+check_status "$?" 2 "notify-enable refuses before the bar widget is on"
+check "$(grep -c . "$NOTIFY_CTL_LOG")" "0" "no unit is touched when the widget is off"
+
+# The widget is on in HOME2 (from the enable above).
+check "$(env2p "$BAR" notify-status)" "disabled" \
+  "notify-status: disabled before notify-enable"
+out="$(env2p "$BAR" notify-enable --apply 2>&1)"
+check_status "$?" 0 "notify-enable --apply exits 0 with the widget on"
+check_contains "$(cat "$NOTIFY_CTL_LOG")" "systemctl --user enable --now omarchy-kids-notify-watch.service" \
+  "notify-enable enables the user unit"
+check "$(env2p "$BAR" notify-status)" "enabled" \
+  "notify-status: enabled after notify-enable"
+
+: >"$NOTIFY_CTL_LOG"
+env2p "$BAR" notify-disable --apply >/dev/null 2>&1
+check_contains "$(cat "$NOTIFY_CTL_LOG")" "systemctl --user disable --now omarchy-kids-notify-watch.service" \
+  "notify-disable disables the user unit"
+check "$(env2p "$BAR" notify-status)" "disabled" \
+  "notify-status: disabled after notify-disable"
 
 # --- disable: since enable created shell.json, disable removes it ---------
 env2 "$BAR" disable --apply >/dev/null
