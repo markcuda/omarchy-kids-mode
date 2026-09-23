@@ -21,7 +21,8 @@ A phone or desktop app that pairs with the box, shows a kid's requests with **Ap
 
 `clients/parent/app` is the Flutter UI over it: the request list and a request screen with Approve,
 Decline and the reply chips, widget-tested against a fake relay. Pairing from the UI, the device
-list, the platform notification plumbing, the keystore and the store builds are still to come —
+list, the platform keystore (the package ships the interface and an in-memory one; the platform
+implementation does not exist yet), the platform notification plumbing and the store builds remain —
 there is nothing to install on a phone yet.
 
 The crypto and the wire frames are proven against the shared vectors byte for byte; the reply chips,
