@@ -99,6 +99,14 @@ can build without asking again.
   commands, distribution and re-approval as the survey's recorded decisions say, and **all
   surfaces** (tiles, sites, themes, kid screen, panel). Parents get **one native Quickshell
   management UI and full terminal parity** for everything. A spec is drafted before code.
+  - **Q2 (re-approval scope) — answered.** Re-approve only when a surface or exec changes, and drive
+    it through the **notification system**: when an update exists the parent is notified and can
+    **approve, deny, or ask their onboard agent to "check it"** for anything worrisome for their
+    child. (The same relay/app that carries ask requests carries update approvals.)
+  - **Q4 (distribution) — answered: the package-manager route (a).** Add-ons resolve to packages the
+    parent installs with a simple command (`omarchy-kids-install <id>`), through their normal
+    package manager; nothing is bundled. A small curated MIT set may also ship as `optdepends`.
+    GPL stays separate.
 - **Item 4 — approved, revised.** Parent-pinned **Favorites** row at the top, automatic **Recents**
   row at the bottom of the launcher (presentation only; the root-owned manifest stays authoritative).
   This reverses the earlier "not adopted" note.
