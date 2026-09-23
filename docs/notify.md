@@ -82,6 +82,21 @@ refresh plus the grace plus the 5-second poll, about 95 seconds), and the tick b
 tick; a start that races the relay's own exit is harmless, since the next tick starts it again if it
 is still needed.
 
+## The desktop notifier (N-9)
+
+On the Omarchy box the parent is told through their own desktop, not a device: `bin/omarchy-kids-notify-watch`
+is a user-side process that polls the request queue through the `omarchy-parents` group and posts one
+libnotify notification per open request, with **Approve** and **Decline** actions. An action runs
+`omarchy-kids-bar approve|decline <id>` (`docs/bar.md`), so it ends at the parent's own floating
+terminal and sudo prompt. Nothing here is privileged and nothing here decides: with the watcher
+stopped, a kid is affected in no way and the panel still works.
+
+The action buttons come from `org.freedesktop.Notifications` over the session bus (`gdbus`); where
+that is unavailable the fallback is a plain `notify-send` with no buttons and a body that points at
+the panel. The watcher remembers which ids it has shown, in a user-owned state file, so a poll does
+not re-notify; a request that is decided or withdrawn is forgotten. `lib/notify_watch.py` holds the
+logic and `test/shell.d/notify-watch-test.sh` drives it with stubs.
+
 ## The fence, stated plainly (R-NOTIFY-10, I-6)
 
 - The relay listens on the box's own address, home network only; `systemd/omarchy-kids-relayd.service`
