@@ -11,6 +11,7 @@ Usage: python3 clients/parent/test-vectors/generate.py [OUT]
 """
 
 import base64
+import hashlib
 import json
 import os
 import sys
@@ -42,7 +43,9 @@ def build():
         "device_id": "d-vector",
         "request_id": "1000000001-kid-ada-time",
         "decision": "approve",
-        "reply": "After dinner",
+        # Non-ASCII on purpose: the canonical form escapes it (\uXXXX), which is
+        # the trap a raw-UTF-8 encoder falls into.
+        "reply": "Après dîner",
         "ts": 1758530400,
         "nonce": "nonce-decision-1",
     }
@@ -54,6 +57,7 @@ def build():
         "nonce": "nonce-request-1",
         "method": "POST",
         "path": "/v1/requests/1000000001-kid-ada-time/decision",
+        "body_sha256": hashlib.sha256(body).hexdigest(),
         "body_b64": b64(body),
     }
 
@@ -77,11 +81,23 @@ def build():
             "request": b64(devices.REQUEST_CONTEXT),
         },
         "sign_seed_hex": bytes(range(32)).hex(),
+        "sign_seed_note": "a test key only: not a secret, and not registered on any box",
         "sign_pub_b64": sign_pub,
         "box_pub_b64": box_pub,
         "decision": decision,
+        "decision_message_b64": b64(devices.canonical(decision)),
         "decision_signature_b64": b64(key.sign(devices.canonical(decision))),
         "request": request,
+        "request_message_b64": b64(
+            devices.request_message(
+                request["device_id"],
+                request["ts"],
+                request["nonce"],
+                request["method"],
+                request["path"],
+                body,
+            )
+        ),
         "request_signature_b64": b64(
             key.sign(
                 devices.request_message(

@@ -9,11 +9,12 @@
     "decision": "approve",
     "device_id": "d-vector",
     "nonce": "nonce-decision-1",
-    "reply": "After dinner",
+    "reply": "Apr\u00e8s d\u00eener",
     "request_id": "1000000001-kid-ada-time",
     "ts": 1758530400
   },
-  "decision_signature_b64": "simncFszfjjm9KN8pNaKKlBz1Xsm0rrB9svtwH290AxyTK7I0VqG5yLTuw7Qkzwy0FiBpSY0fFdNSGj7YvQHCQ==",
+  "decision_message_b64": "b21hcmNoeS1raWRzLWRlY2lzaW9uLXYxCnsiZGVjaXNpb24iOiJhcHByb3ZlIiwiZGV2aWNlX2lkIjoiZC12ZWN0b3IiLCJub25jZSI6Im5vbmNlLWRlY2lzaW9uLTEiLCJyZXBseSI6IkFwclx1MDBlOHMgZFx1MDBlZW5lciIsInJlcXVlc3RfaWQiOiIxMDAwMDAwMDAxLWtpZC1hZGEtdGltZSIsInRzIjoxNzU4NTMwNDAwfQ==",
+  "decision_signature_b64": "+9tEJ5mwUaDZNAz6EaKmNaxHe5hVGYSrb+mlY0X2e3lVWFMIRwWhut50+jAVI5mjEOvPwBwZmWGZ2k1Ig0CHAg==",
   "pairing": {
     "box_pub": "QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl8=",
     "name": "Ada's phone",
@@ -23,13 +24,16 @@
   },
   "request": {
     "body_b64": "eyJyZWNvcmQiOnt9fQ==",
+    "body_sha256": "93a60b6f9aed8b3a2955a8fd4ec7ef574793dd6b323a638c2180f60c88f10dcd",
     "device_id": "d-vector",
     "method": "POST",
     "nonce": "nonce-request-1",
     "path": "/v1/requests/1000000001-kid-ada-time/decision",
     "ts": 1758530400
   },
+  "request_message_b64": "b21hcmNoeS1raWRzLXJlcXVlc3QtdjEKeyJib2R5X3NoYTI1NiI6IjkzYTYwYjZmOWFlZDhiM2EyOTU1YThmZDRlYzdlZjU3NDc5M2RkNmIzMjNhNjM4YzIxODBmNjBjODhmMTBkY2QiLCJkZXZpY2VfaWQiOiJkLXZlY3RvciIsIm1ldGhvZCI6IlBPU1QiLCJub25jZSI6Im5vbmNlLXJlcXVlc3QtMSIsInBhdGgiOiIvdjEvcmVxdWVzdHMvMTAwMDAwMDAwMS1raWQtYWRhLXRpbWUvZGVjaXNpb24iLCJ0cyI6MTc1ODUzMDQwMH0=",
   "request_signature_b64": "yIIzCXkrRW4L8hDr0chdGi9STYssJcdPKtOBN5SLW8G0yasqLYeuYzFOqdKtNnw2G6sFi2IWUi83oYjcIG9MAA==",
   "sign_pub_b64": "A6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=",
-  "sign_seed_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+  "sign_seed_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "sign_seed_note": "a test key only: not a secret, and not registered on any box"
 }

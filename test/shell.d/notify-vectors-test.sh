@@ -94,6 +94,10 @@ try:
 except Exception:
     dec_ok = False
 check(dec_ok, "the decision signature verifies over the canonical record")
+check(
+    doc["decision_message_b64"] == base64.b64encode(devices.canonical(doc["decision"])).decode(),
+    "the recorded decision message is the canonical record the box signs",
+)
 
 req = doc["request"]
 req_ok = True
@@ -107,6 +111,15 @@ try:
 except Exception:
     req_ok = False
 check(req_ok, "the request signature verifies over the request message")
+check(
+    doc["request_message_b64"]
+    == base64.b64encode(
+        devices.request_message(
+            req["device_id"], req["ts"], req["nonce"], req["method"], req["path"], base64.b64decode(req["body_b64"])
+        )
+    ).decode(),
+    "the recorded request message is what the box signs",
+)
 
 pair = doc["pairing"]
 check(
