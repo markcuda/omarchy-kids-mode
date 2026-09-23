@@ -44,6 +44,8 @@ PUB="$SYSROOT/run/omarchy-kids/devices.json"
 # --- root only -------------------------------------------------------------
 KIDS_TEST_UID=1000 "$BIN" list >/dev/null 2>&1
 check_eq "$?" "2" "a non-root caller is refused (registry is root-owned)"
+KIDS_TEST_UID=1000 "$BIN" --help >/dev/null 2>&1
+check_eq "$?" "0" "--help works for a non-root caller (AGENTS.md)"
 export KIDS_TEST_UID=0
 
 # --- DRY_RUN is the default ------------------------------------------------
@@ -76,6 +78,15 @@ for bad in \
   "$BIN" add $bad --apply >/dev/null 2>&1
   check_eq "$?" "2" "add refuses: $bad"
 done
+# A newline in --scopes must not inject a second field; a trailing comma must
+# not publish an empty scope; a control character in the name must not land.
+"$BIN" add --id d3 --name X --platform ios --sign-pub "$KEY" --box-pub "$KEY" \
+  --scopes "$(printf 'decide\nsign_pub=EVIL')" --apply >/dev/null 2>&1
+check_eq "$?" "2" "add refuses scopes with an embedded newline"
+"$BIN" add --id d3 --name X --platform ios --sign-pub "$KEY" --box-pub "$KEY" --scopes "decide," --apply >/dev/null 2>&1
+check_eq "$?" "2" "add refuses a trailing-comma scope list"
+"$BIN" add --id d3 --name "$(printf 'Phone\033[2J')" --platform ios --sign-pub "$KEY" --box-pub "$KEY" --apply >/dev/null 2>&1
+check_eq "$?" "2" "add refuses a control character in the name"
 
 # --- list ------------------------------------------------------------------
 check_contains "$("$BIN" list)" "d1" "list shows the device"

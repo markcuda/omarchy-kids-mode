@@ -16,7 +16,7 @@ source "$LIB/kids.sh"
 ETC=/etc/omarchy-kids
 DEVICES_DIR="$ETC/devices"
 SYSROOT=""
-DRY_RUN=1
+DRY_RUN="${DRY_RUN:-1}" # repo convention: 1 prints the plan, 0/--apply performs
 VALID_SCOPES=(decide act)
 
 die() {
@@ -43,14 +43,17 @@ EOF
 
 device_path() { printf '%s/%s.conf' "$DEVICES_DIR" "$1"; }
 valid_id() { [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$ ]]; }
-valid_text() { [[ -n "$1" && ${#1} -le 64 && "$1" != *$'\n'* && "$1" != *$'\r'* ]]; }
+valid_text() { [[ -n "$1" && ${#1} -le 64 && "$1" != *[[:cntrl:]]* ]]; }
 valid_key() { [[ "$1" =~ ^[A-Za-z0-9+/]{40,64}={0,2}$ ]]; }
 valid_scopes() {
-  local one
-  [[ -n "$1" ]] || return 1
-  local -a parts
-  IFS=',' read -ra parts <<<"$1"
-  for one in "${parts[@]}"; do is_in "$one" "${VALID_SCOPES[@]}" || return 1; done
+  # One anchored match of the whole string: `read -ra` stops at a newline and
+  # would accept `decide\nsign_pub=EVIL`, injecting a field into the record.
+  local alt
+  alt="$(
+    IFS='|'
+    printf '%s' "${VALID_SCOPES[*]}"
+  )"
+  [[ "$1" =~ ^($alt)(,($alt))*$ ]]
 }
 dget() { sed -n "s/^$2=//p" "$1" | head -1; }
 
@@ -110,8 +113,9 @@ rewrite_field() {
   mv -f "$tmp" "$path"
 }
 
-# publish -- the public record the relay reads: ids, names, platforms and
-# public keys only. Best-effort on a box with no relay, like write_status_json.
+# publish -- the public record the relay reads: ids, names, platforms, public
+# keys, scopes and pairing provenance only. Best-effort on a box with no relay,
+# like write_status_json.
 publish() {
   local dir="$SYSROOT/run/omarchy-kids" rows tmp
   command -v jq >/dev/null 2>&1 || return 0
@@ -262,6 +266,14 @@ cmd_publish() {
   usage >&2
   exit 2
 }
+# --help works for anyone, before the root check (AGENTS.md: every command
+# supports --help).
+case "$1" in
+  -h | --help)
+    usage
+    exit 0
+    ;;
+esac
 is_root || die "root only (it owns the device registry)"
 cmd="$1"
 shift
@@ -272,9 +284,5 @@ case "$cmd" in
   scopes) cmd_scopes "$@" ;;
   revoke) cmd_revoke "$@" ;;
   publish) cmd_publish "$@" ;;
-  -h | --help)
-    usage
-    exit 0
-    ;;
   *) die "unknown command: '$cmd' (see --help)" ;;
 esac
