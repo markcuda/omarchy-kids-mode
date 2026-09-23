@@ -13,11 +13,14 @@
 // to actually decide.
 
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:asn1lib/asn1lib.dart';
+import 'package:cryptography/cryptography.dart';
 
 import 'notify_crypto.dart';
+import 'relay_client.dart';
 
 /// The SubjectPublicKeyInfo of a certificate's tbsCertificate.
 ASN1Sequence _subjectPublicKeyInfo(ASN1Sequence tbs) {
@@ -79,4 +82,121 @@ bool spkiMatches(List<int> der, String pinnedHex) {
     diff |= actual.codeUnitAt(i) ^ want.codeUnitAt(i);
   }
   return diff == 0;
+}
+
+// --- the client ------------------------------------------------------------
+
+/// The relay client: a TLS connection whose certificate must match the pinned
+/// SPKI, and requests signed with the device's Ed25519 key. No retries, no
+/// redirects: one box, one pinned certificate.
+class KidsRelayClient {
+  final String host;
+  final int port;
+  final String pinnedSpki;
+  final String deviceId;
+  final SimpleKeyPair keyPair;
+  final Duration timeout;
+
+  KidsRelayClient({
+    required this.host,
+    required this.port,
+    required this.pinnedSpki,
+    required this.deviceId,
+    required this.keyPair,
+    this.timeout = const Duration(seconds: 10),
+  });
+
+  Future<HttpClient> _client() async {
+    // No trusted roots: a self-signed certificate always reaches the callback,
+    // where the pin decides. A platform-trusted certificate would otherwise
+    // bypass the pin for a public hostname.
+    final context = SecurityContext(withTrustedRoots: false);
+    final client = HttpClient(context: context);
+    client.badCertificateCallback = (cert, _, __) => spkiMatches(cert.der, pinnedSpki);
+    client.connectionTimeout = timeout;
+    return client;
+  }
+
+  Future<_Reply> _send({
+    required String method,
+    required String path,
+    required List<int> body,
+    required int ts,
+    required String nonce,
+  }) async {
+    final client = await _client();
+    try {
+      final uri = Uri(scheme: 'https', host: host, port: port, path: path);
+      final request = await client.openUrl(method, uri).timeout(timeout);
+      final headers = await signedHeaders(
+        keyPair: keyPair,
+        deviceId: deviceId,
+        ts: ts,
+        nonce: nonce,
+        method: method,
+        path: path,
+        body: body,
+      );
+      headers.forEach(request.headers.set);
+      if (body.isNotEmpty) {
+        request.headers.contentType = ContentType.json;
+        request.add(body);
+      }
+      final response = await request.close().timeout(timeout);
+      final text = await utf8.decoder.bind(response).join();
+      return _Reply(response.statusCode, text);
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  /// GET /v1/state as a signed read.
+  Future<Map<String, dynamic>> state({required int ts, required String nonce}) async {
+    final reply = await _send(method: 'GET', path: '/v1/state', body: const [], ts: ts, nonce: nonce);
+    if (reply.status != 200) {
+      throw HttpException('state: ${reply.status} ${reply.body}');
+    }
+    return jsonDecode(reply.body) as Map<String, dynamic>;
+  }
+
+  /// POST /v1/requests/<id>/decision with the signed record.
+  Future<Map<String, dynamic>> decide({
+    required Map<String, Object?> record,
+    required int ts,
+    required String nonce,
+  }) async {
+    final requestId = record['request_id'] as String;
+    final path = '/v1/requests/$requestId/decision';
+    final body = utf8.encode(await buildDecisionBody(keyPair: keyPair, record: record));
+    final reply = await _send(method: 'POST', path: path, body: body, ts: ts, nonce: nonce);
+    if (reply.status != 200) {
+      throw HttpException('decide: ${reply.status} ${reply.body}');
+    }
+    return jsonDecode(reply.body) as Map<String, dynamic>;
+  }
+
+  /// POST /v1/pair (pre-auth: the proof is the credential).
+  Future<Map<String, dynamic>> pair(String frame) async {
+    final client = await _client();
+    try {
+      final uri = Uri(scheme: 'https', host: host, port: port, path: '/v1/pair');
+      final request = await client.postUrl(uri).timeout(timeout);
+      request.headers.contentType = ContentType.json;
+      request.add(utf8.encode(frame));
+      final response = await request.close().timeout(timeout);
+      final text = await utf8.decoder.bind(response).join();
+      if (response.statusCode != 200) {
+        throw HttpException('pair: ${response.statusCode} $text');
+      }
+      return jsonDecode(text) as Map<String, dynamic>;
+    } finally {
+      client.close(force: true);
+    }
+  }
+}
+
+class _Reply {
+  final int status;
+  final String body;
+  _Reply(this.status, this.body);
 }
