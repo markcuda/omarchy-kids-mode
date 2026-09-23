@@ -77,6 +77,15 @@ void main() {
       () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u0007b'),
       throwsArgumentError,
     );
+    // A no-break space or a zero-width joiner is refused too (the box would).
+    expect(
+      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u00a0b'),
+      throwsArgumentError,
+    );
+    expect(
+      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u200db'),
+      throwsArgumentError,
+    );
     final record = decisionRecord(
       deviceId: 'd1',
       requestId: 'r1',

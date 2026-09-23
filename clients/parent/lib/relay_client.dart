@@ -87,21 +87,31 @@ Future<String> buildDecisionBody({
   return jsonEncode({'record': record, 'signature': signature});
 }
 
-// Python's str.isprintable(), which the box uses (lib/devices.py's MAX_REPLY
-// check): everything but the control and separator categories. Approximated here
-// to the ranges that matter for a typed reply.
+// An approximation of Python's str.isprintable(), which the box applies
+// (lib/devices.py's MAX_REPLY check). It refuses the control categories and the
+// common format/space characters an accented or emoji reply can carry (a
+// zero-width joiner, a no-break space); the box is the authority and fails
+// closed, so this can only be a subset of the box's refusals, never wider.
 bool _printable(int rune) {
   if (rune == 0x20) return true;
   if (rune < 0x21) return false; // C0 controls
   if (rune == 0x7f || (rune >= 0x80 && rune <= 0x9f)) return false; // DEL and C1
-  if (rune == 0x2028 || rune == 0x2029) return false; // line/paragraph separators
+  if (rune == 0x00a0) return false; // no-break space (iOS inserts it before ? ! :)
+  if (rune >= 0x2000 && rune <= 0x200f) return false; // spaces, ZWSP, ZWNJ, ZWJ, marks
+  if (rune >= 0x2028 && rune <= 0x202f) return false; // separators, bidi marks, narrow nbsp
+  if (rune >= 0x2060 && rune <= 0x206f) return false; // word joiner and format controls
+  if (rune == 0xfeff) return false; // BOM / zero-width no-break space
+  if (rune >= 0xfe00 && rune <= 0xfe0f) return false; // variation selectors
+  if (rune >= 0xe0000 && rune <= 0xe007f) return false; // tag characters
   return true;
 }
 
 /// A decision record with a fresh ts and nonce. `reply` is optional and, when
-/// given, must be printable Unicode of at most 80 code points, the same rule the
-/// box applies (`lib/devices.py`'s MAX_REPLY and isprintable); an accented reply
-/// is accepted, as the shared vector's own reply shows.
+/// given, must be printable Unicode of at most 80 code points. This matches the
+/// box's `max_reply`/`isprintable` for everything a person types (an accented
+/// reply is fine, as the shared vector's own reply shows); it is a subset of the
+/// box's rule, which additionally refuses the Unicode categories below, and the
+/// box is the authority -- it fails closed on anything it would not accept.
 Map<String, Object?> decisionRecord({
   required String deviceId,
   required String requestId,
