@@ -106,8 +106,10 @@ baseline_set() {
   _chgrp_parents "$BASELINE_DIR"
   tmp="$(mktemp "$BASELINE_DIR/.$kid.XXXXXX")"
   if [[ -s "$file" ]]; then
-    jq --arg id "$id" --arg fp "$fp" '.[$id] = $fp' "$file" >"$tmp" 2>/dev/null ||
-      die "could not read $file"
+    # A corrupt baseline is not worth failing the scan over: start it fresh.
+    if ! jq --arg id "$id" --arg fp "$fp" '.[$id] = $fp' "$file" >"$tmp" 2>/dev/null; then
+      jq -n --arg id "$id" --arg fp "$fp" '{($id): $fp}' >"$tmp"
+    fi
   else
     jq -n --arg id "$id" --arg fp "$fp" '{($id): $fp}' >"$tmp"
   fi
@@ -127,6 +129,7 @@ baseline_drop() {
     return 0
   }
   chmod 0640 "$tmp"
+  _chgrp_parents "$tmp"
   mv -f "$tmp" "$file"
 }
 
