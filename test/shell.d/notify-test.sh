@@ -47,6 +47,15 @@ EOF
 chmod +x "$STUBS/systemctl"
 export SYSTEMCTL_LOG
 
+# A qrencode stub so pair's QR is owned by the test.
+QR_LOG="$TMP/qrencode.log"
+cat >"$STUBS/qrencode" <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" >>"$QR_LOG"
+EOF
+chmod +x "$STUBS/qrencode"
+export QR_LOG
+
 export PATH="$STUBS:$PATH"
 kids_set_const "$BIN" ETC "$ETC"
 kids_set_const "$DEV" ETC "$ETC"
@@ -77,6 +86,10 @@ check_contains "$out" "[dry-run]" "enable prints the plan"
 "$BIN" devices --json >/dev/null 2>&1
 check_eq "$?" "0" "devices delegates to omarchy-kids-devices"
 
+PAIR_DIR="$SYSROOT/run/omarchy-kids/pairing"
+"$BIN" pair --apply >/dev/null 2>&1
+check_eq "$?" "2" "pair refuses while notifications are off"
+
 # --- enable / status / rekey / disable (needs cryptography) -----------------
 if python3 -c "import cryptography" >/dev/null 2>&1; then
   "$DEV" add --id d1 --name Phone --platform android --sign-pub "$KEY" --box-pub "$KEY" --apply >/dev/null
@@ -106,6 +119,17 @@ print(hashlib.sha256(spki).hexdigest())
 PY
   )"
   check_eq "$printed" "$recomputed" "the printed fingerprint is the certificate's SPKI hash"
+
+  # pair: previews, then writes a single-use record, shows the URI+QR and the fingerprint.
+  check_contains "$("$BIN" pair 2>&1)" "would write a pairing record" "pair previews without --apply"
+  : >"$QR_LOG"
+  out3="$("$BIN" pair --apply 2>&1)"
+  check_eq "$?" "0" "pair --apply starts a pairing window"
+  check_contains "$out3" "omarchy-kids://pair" "pair prints the URI the device scans"
+  check_contains "$out3" "fingerprint: $recomputed" "pair prints the SPKI fingerprint to check on the device"
+  check_contains "$(cat "$QR_LOG")" "omarchy-kids://pair" "pair renders the URI as a QR (qrencode)"
+  ls "$PAIR_DIR"/* >/dev/null 2>&1 && pass "pair wrote a single-use pairing record" ||
+    fail "pair wrote no pairing record"
 
   # enable is idempotent: the key does not change, and the fingerprint is printed.
   before="$(cksum <"$RKEY")"

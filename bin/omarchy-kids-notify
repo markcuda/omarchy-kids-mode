@@ -31,6 +31,7 @@ usage() {
 Usage: omarchy-kids-notify enable [--host NAME] [--rekey] [--apply]
        omarchy-kids-notify disable [--apply]
        omarchy-kids-notify status
+       omarchy-kids-notify pair [--scopes decide,act] [--apply]
        omarchy-kids-notify devices [--json]
        omarchy-kids-notify rename <id> <name> [--apply]
        omarchy-kids-notify scopes <id> decide[,act] [--apply]
@@ -40,8 +41,13 @@ Turns the parent's device notifications on or off (R-NOTIFY-1): `enable` mints
 the relay's self-signed certificate (the parent's devices pin its SPKI
 fingerprint at pairing; running it again just prints that fingerprint),
 `enable --rekey` mints a new one and unpairs every device, and `disable` revokes
-every device and removes the certificate. The device commands delegate to
+every device and removes the certificate. `pair` starts a single-use pairing
+window and prints the URI (as a QR where qrencode is installed) plus the
+fingerprint to check on the device. The device commands delegate to
 omarchy-kids-devices. Root only; DRY_RUN=1 prints the plan.
+
+Pair a device from the panel, where the warmed sudo prompt is the parent's own
+authentication; there is no second password prompt here.
 EOF
 }
 
@@ -151,6 +157,43 @@ cmd_disable() {
   fi
 }
 
+# pair -- start a single-use pairing window and show the parent what the device
+# scans (R-NOTIFY-5). The caller's own authentication (the panel's warmed sudo)
+# is the gate, so there is no password prompt here.
+cmd_pair() {
+  local scopes="decide,act" apply=0
+  while (($#)); do
+    case "$1" in
+      --scopes)
+        scopes="${2:?}"
+        shift 2
+        ;;
+      --apply)
+        apply=1
+        shift
+        ;;
+      *) die "pair: unknown argument '$1'" ;;
+    esac
+  done
+  enabled || die "pair: notifications are off (run 'omarchy-kids-notify enable' first)"
+  local args=(pair-start --scopes "$scopes")
+  ((apply)) && args+=(--apply)
+  local out uri
+  out="$("$DEVICES_BIN" "${args[@]}")" || exit $?
+  printf '%s\n' "$out"
+  uri="$(printf '%s\n' "$out" | awk '/omarchy-kids:\/\/pair/{print $NF}')"
+  local fp
+  fp="$("$KIDS_PY" "$LIB/cert.py" spki "$CERT" 2>/dev/null || true)"
+  [[ -n "$fp" ]] && echo "  fingerprint: $fp"
+  if [[ -n "$uri" ]] && ((apply)); then
+    if command -v qrencode >/dev/null 2>&1; then
+      qrencode -t ANSIUTF8 "$uri" || true
+    else
+      echo "  (install qrencode to show a QR; the device can open the URI above)"
+    fi
+  fi
+}
+
 delegate() { # SUBCOMMAND... -- straight through to omarchy-kids-devices
   "$DEVICES_BIN" "$@"
 }
@@ -172,6 +215,7 @@ case "$cmd" in
   enable) cmd_enable "$@" ;;
   disable) cmd_disable "$@" ;;
   status) cmd_status ;;
+  pair) cmd_pair "$@" ;;
   devices) delegate list "$@" ;;
   list) delegate list "$@" ;;
   rename) delegate rename "$@" ;;
