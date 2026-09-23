@@ -100,6 +100,25 @@ check(not relay.idle_expired(100, 100 + 599, 600), "it stays up inside the windo
 check(not relay.idle_expired(0, 10_000, 600, connected_clients=1),
       "a connected device keeps the relay up")
 
+# --- is_needed / the not-needed exit rule (R-NOTIFY-1) --------------------
+check(relay.is_needed(status, queue), "needed: a live kid and an open request")
+
+s2 = os.path.join(tmp, "status-idle.json")
+with open(s2, "w") as f:
+    json.dump({"kids": [{"kid": "kid-ada", "live": False}]}, f)
+q2 = os.path.join(tmp, "queue-idle")
+os.makedirs(q2, exist_ok=True)
+check(not relay.is_needed(s2, q2), "not needed: no live kid, no open request")
+with open(os.path.join(q2, "open.json"), "w") as f:
+    json.dump({"state": "open"}, f)
+check(relay.is_needed(s2, q2), "needed: an open request alone")
+q3 = os.path.join(tmp, "queue-none")
+os.makedirs(q3, exist_ok=True)
+check(not relay.is_needed(os.path.join(tmp, "missing.json"), q3),
+      "not needed when the status is unreadable (fail-closed: stops sooner, the tick restarts it)")
+check(not relay.idle_expired(0, 100_000, 600, 0, True),
+      "a live kid or open request keeps it up however idle the clock says")
+
 sys.exit(1 if fails else 0)
 PY
 st=$?

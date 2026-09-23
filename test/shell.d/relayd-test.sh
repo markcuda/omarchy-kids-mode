@@ -206,6 +206,30 @@ finally:
     except subprocess.TimeoutExpired:
         proc.kill()
 
+# --- lifecycle: it stops itself once Kids Mode is no longer in use ---------
+idle_status = os.path.join(tmp, "status-idle.json")
+with open(idle_status, "w") as f:
+    json.dump({"kids": [{"kid": "kid-ada", "live": False}]}, f)
+idle_queue = os.path.join(tmp, "queue-idle")
+os.makedirs(idle_queue, exist_ok=True)
+probe2 = socket.socket()
+probe2.bind(("127.0.0.1", 0))
+port2 = probe2.getsockname()[1]
+probe2.close()
+proc2 = subprocess.Popen([sys.executable, os.path.join(root, "bin", "omarchy-kids-relayd"),
+                          "--bind", "127.0.0.1", "--port", str(port2), "--cert", cert_path, "--key", key_path,
+                          "--devices-json", devices_json, "--status", idle_status, "--queue", idle_queue,
+                          "--auth-sock", auth_sock, "--nonce-ledger", os.path.join(tmp, "nonces2.json"),
+                          "--share", os.path.join(root, "share"), "--lib", os.path.join(root, "lib"),
+                          "--needless-seconds", "1"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+try:
+    stderr = proc2.communicate(timeout=25)[1].decode()
+    check("not in use" in stderr, "the relay stops itself once Kids Mode is no longer in use (R-NOTIFY-1)")
+except subprocess.TimeoutExpired:
+    proc2.kill()
+    check(False, "the relay stops itself once Kids Mode is no longer in use (R-NOTIFY-1)")
+
 sys.exit(1 if fails else 0)
 PY
 st=$?

@@ -236,10 +236,25 @@ class Relay:
 
     # --- lifecycle ------------------------------------------------------
     async def expire_when_idle(self):
+        needless_since = None
         while True:
             await asyncio.sleep(5)
-            if self.relay.idle_expired(self.last_activity, time.monotonic(), self.args.idle_seconds, self.connected):
+            needed = self.relay.is_needed(self.args.status, self.args.queue)
+            if needed or self.connected > 0:
+                needless_since = None
+                continue
+            now = time.monotonic()
+            if needless_since is None:
+                needless_since = now
+            if self.relay.idle_expired(self.last_activity, now, self.args.idle_seconds, self.connected, needed):
                 print("omarchy-kids-relayd: idle; stopping", file=sys.stderr)
+                self.server.close()
+                return
+            # Not idle (a device is polling) but Kids Mode is not in use: stop
+            # anyway after the grace. The tick starts it again within 30s of a
+            # kid logging in or a request arriving (R-NOTIFY-1).
+            if now - needless_since >= self.args.needless_seconds:
+                print("omarchy-kids-relayd: Kids Mode is not in use; stopping", file=sys.stderr)
                 self.server.close()
                 return
 
@@ -258,6 +273,7 @@ def parse_args(argv):
     parser.add_argument("--share", default="/usr/share/omarchy-kids")
     parser.add_argument("--lib", default="/usr/lib/omarchy-kids")
     parser.add_argument("--idle-seconds", type=int, default=600)
+    parser.add_argument("--needless-seconds", type=int, default=60)
     return parser.parse_args(argv)
 
 

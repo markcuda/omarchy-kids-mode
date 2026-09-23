@@ -95,12 +95,34 @@ def forward_decide(auth_sock, frame_json, timeout=30.0):
     return reply.decode("utf-8", "replace").strip()
 
 
-def idle_expired(last_activity, now, idle_seconds, connected_clients=0):
+def is_needed(status_path, queue_dir):
+    """True while Kids Mode is in use: a kid is live or a request is open.
+
+    R-NOTIFY-1: the relay runs only while Kids Mode is in use and notifications
+    are enabled, so this gates its exit as well as its start. Best-effort -- an
+    unreadable source reads as not needed, which only lets the relay stop sooner
+    (the ledger tick starts it again within 30 seconds if it is wanted).
+    """
+    status = _read_json(status_path) or {}
+    kids = status.get("kids")
+    if isinstance(kids, list):
+        for kid in kids:
+            if isinstance(kid, dict) and kid.get("live") is True:
+                return True
+    if queue_dir:
+        for path in sorted(glob.glob(os.path.join(queue_dir, "*" + QUEUE_SUFFIX))):
+            record = _read_json(path)
+            if record is not None and record.get("state") == "open":
+                return True
+    return False
+
+
+def idle_expired(last_activity, now, idle_seconds, connected_clients=0, needed=False):
     """True once the relay has been quiet long enough to stop.
 
-    Running only while Kids Mode is in use is R-NOTIFY-1; a connected device
-    keeps it up whatever the clock says.
+    A connected device keeps it up whatever the clock says, and so does a live
+    kid or an open request (R-NOTIFY-1: it runs only while Kids Mode is in use).
     """
-    if connected_clients > 0:
+    if connected_clients > 0 or needed:
         return False
     return now - last_activity >= idle_seconds
