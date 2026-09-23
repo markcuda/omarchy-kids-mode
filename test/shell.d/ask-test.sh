@@ -587,7 +587,6 @@ fi
 
 [[ -f "$ROOT_DIR/share/ask/shell.qml" ]] && pass "share/ask/shell.qml exists" || fail "share/ask/shell.qml missing"
 
-
 # --- grant time <n>: the minutes travel in <what> (seen live: rejected before it was sent) ---
 out="$(printf 'pw\n' | "$BIN" grant time 7 2>&1)"
 st=$?
@@ -598,6 +597,24 @@ check_not_contains "$out" "rejected before it was sent" "grant time 7 carries mi
 # (live review, 2026-09-21 -- same fix as the exit modal).
 check_contains "$(cat "$ROOT_DIR/share/ask/shell.qml")" '"Your password"' \
   "the ask modal's empty field says whose password is wanted"
+
+# --- --by device:<id> attributes a decision to a paired device (R-NOTIFY-9) --
+python3 "$ROOT_DIR/lib/ask.py" write "$QUEUE_DIR" --kid kid-ada --kind time --what 5 --minutes 5 >/dev/null
+dev_rec="$(ls -t "$QUEUE_DIR"/*.json | head -1)"
+dev_id="$(basename "$dev_rec" .json)"
+"$BIN" approve "$dev_id" --by device:d1 --apply >/dev/null 2>&1
+check_eq "$?" "0" "approve --by device:<id> succeeds for root"
+check_contains "$(cat "$dev_rec")" '"by": "device"' "the decision records by=device"
+check_contains "$(cat "$dev_rec")" '"device": "d1"' "the decision records the device id"
+
+python3 "$ROOT_DIR/lib/ask.py" write "$QUEUE_DIR" --kid kid-ada --kind time --what 5 --minutes 5 >/dev/null
+dev_rec2="$(ls -t "$QUEUE_DIR"/*.json | head -1)"
+dev_id2="$(basename "$dev_rec2" .json)"
+"$BIN" approve "$dev_id2" --by device:../x --apply >/dev/null 2>&1
+check_eq "$?" "2" "approve --by device:../x is refused"
+check_contains "$(cat "$dev_rec2")" '"state": "open"' "a refused decision leaves the record open"
+python3 "$ROOT_DIR/lib/ask.py" decide "$dev_rec2" --state approved --by device >/dev/null 2>&1
+check_eq "$?" "2" "decide --by device without --device is refused"
 
 echo "ask-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc

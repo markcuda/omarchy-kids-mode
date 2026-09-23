@@ -476,16 +476,22 @@ PY
   if [[ "$(uname -s)" == "Linux" ]]; then
     # SO_PEERCRED is what makes the relay check real; it is Linux-only.
     check "$r" "ok" "DECIDE: a device's signed decision is applied"
+    check "$(wc -l <"$APPLIED" | tr -d ' ')" "1" "DECIDE: exactly one apply ran"
     grep -q 'approve req-1 --by device:d1 --apply' "$APPLIED" &&
       ok "DECIDE: applied through omarchy-kids-ask by device id" ||
       bad "DECIDE: did not apply through ask"
     check "$(send_decide "$TMP/decide-frame.json")" "no replayed-nonce" "DECIDE: a replay is refused"
+    check "$(wc -l <"$APPLIED" | tr -d ' ')" "1" "DECIDE: a replay applied nothing"
+    # A resolved but wrong relay account is a uid mismatch, not a missing one.
+    start_daemon "$PARENT" nobody
+    check "$(send_decide "$TMP/decide-frame.json")" "no not the relay" "DECIDE: a resolved non-relay account is refused"
+    check "$(wc -l <"$APPLIED" | tr -d ' ')" "1" "DECIDE: a non-relay caller applied nothing"
   else
     # Elsewhere peer_uid is unknown, so the relay check fails closed.
     check "$r" "no not the relay" "DECIDE: without SO_PEERCRED it fails closed (the gate runs the accept path)"
   fi
   start_daemon "$PARENT" "no-such-relay-account"
-  check "$(send_decide "$TMP/decide-frame.json")" "no not the relay" "DECIDE: a non-relay caller is refused"
+  check "$(send_decide "$TMP/decide-frame.json")" "no not the relay" "DECIDE: an unresolved relay account is refused"
 else
   echo "SKIP authd-test.sh: DECIDE checks need python-cryptography"
 fi

@@ -534,12 +534,12 @@ cmd_approve() {
   state="$("$KIDS_PY" "$ASKPY" show "$path" --field state)"
   [[ "$state" == "open" ]] || die "request '$id' is already decided ($state)"
 
-  # A failed apply (root required, the target not installed yet) is
-  # never a reason to leave the request stuck "open" -- same
-  # graceful-degradation apply_time's own comment documents.
-  apply_record "$path" || echo "omarchy-kids-ask: could not apply $id (see above) -- approving it anyway" >&2
+  # Decide first (atomic, write-once): a racing second decision is refused
+  # before it can perform the action again. A failed apply still leaves the
+  # request decided, the same graceful degradation as before.
   if [[ "$DRY_RUN" == "0" ]]; then
     "$KIDS_PY" "$ASKPY" decide "$path" --state approved "${byargs[@]}"
+    apply_record "$path" || echo "omarchy-kids-ask: could not apply $id (see above) -- approving it anyway" >&2
     echo "omarchy-kids-ask: approved $id"
   else
     echo "  [dry-run] would mark $id approved (by ${byargs[*]})"

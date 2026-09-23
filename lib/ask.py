@@ -33,6 +33,7 @@ Exit 0 on success. Exit 2 for a bad argument or unreadable file, exit 3
 for "already decided" (decide only) -- never a Python traceback.
 """
 import glob
+import fcntl
 import json
 import os
 import re
@@ -222,16 +223,25 @@ def cmd_decide(argv):
     else:
         device = None
 
-    record = load_record(path)
-    if record.get("state") != "open":
-        die(f"already decided ({record.get('state')}) -- {path}", code=3)
+    # The check-and-set is atomic: an fcntl lock on a sibling file makes a
+    # second decision (a double-tap, a re-signed retry) wait, then see the
+    # record already decided and refuse -- so the action is never performed
+    # twice (R-NOTIFY-4, checklist item 4).
+    with open(path + ".lock", "w", encoding="utf-8") as lf:
+        fcntl.flock(lf, fcntl.LOCK_EX)
+        try:
+            record = load_record(path)
+            if record.get("state") != "open":
+                die(f"already decided ({record.get('state')}) -- {path}", code=3)
 
-    record["state"] = state
-    record["decided_at"] = int(time.time())
-    record["by"] = by
-    if device is not None:
-        record["device"] = device
-    write_atomic(path, record)
+            record["state"] = state
+            record["decided_at"] = int(time.time())
+            record["by"] = by
+            if device is not None:
+                record["device"] = device
+            write_atomic(path, record)
+        finally:
+            fcntl.flock(lf, fcntl.LOCK_UN)
 
 
 def cmd_show(argv):

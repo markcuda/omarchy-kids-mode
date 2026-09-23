@@ -58,9 +58,11 @@ GRANT_PREFIX = "GRANT "
 BOOTSTRAP_PREFIX = "BOOTSTRAP"
 VERIFY_PREFIX = "VERIFY"
 # A device's signed decision (R-NOTIFY-4). One line: DECIDE <json>\n, where the
-# json is {"record": {...}, "signature": "b64", "scope": "decide"}. Only the
-# relay account may send it, and only root verifies and applies it.
+# json is {"record": {...}, "signature": "b64"}. Only the relay account may send
+# it, and only root verifies and applies it. The decision always needs the
+# "decide" scope; the scope is never taken from the (unsigned) frame.
 DECIDE_PREFIX = "DECIDE "
+MAX_DECIDE_LINE = 2048  # a max-shape decision with an escaped reply still fits
 RELAY_USER = "omarchy-kids-relay"
 DEFAULT_NONCE_LEDGER = "/var/lib/omarchy-kids/devices/nonces.json"
 
@@ -389,11 +391,12 @@ def handle_decide(header: str, conn: socket.socket, cfg) -> bytes:
         frame = json.loads(header[len(DECIDE_PREFIX):])
         record = frame["record"]
         signature = frame["signature"]
-        scope = frame.get("scope", "decide")
     except (ValueError, KeyError, TypeError):
         return b"no malformed\n"
+    # A DECIDE always needs the "decide" scope. It is not read from the frame:
+    # an unsigned scope would let a decide-less device pick its own check.
     ok, reason = cfg.devices.verify_decision(
-        cfg.etc, cfg.ledger, record, signature, int(time.time()), scope
+        cfg.etc, cfg.ledger, record, signature, int(time.time()), "decide"
     )
     if not ok:
         return b"no " + reason.encode("utf-8", "replace") + b"\n"
@@ -407,7 +410,7 @@ def handle_decide(header: str, conn: socket.socket, cfg) -> bytes:
         "--apply",
     ]
     try:
-        proc = subprocess.run(argv, capture_output=True, timeout=10)
+        proc = subprocess.run(argv, capture_output=True, timeout=30)
     except (OSError, subprocess.TimeoutExpired):
         return b"no apply failed\n"
     if proc.returncode != 0:
@@ -415,7 +418,9 @@ def handle_decide(header: str, conn: socket.socket, cfg) -> bytes:
     return b"ok\n"
 
 
-def read_candidate_line(conn: socket.socket, buf: bytearray) -> "tuple[bytes | None, bool]":
+def read_candidate_line(
+    conn: socket.socket, buf: bytearray, max_line: int = MAX_LINE
+) -> "tuple[bytes | None, bool]":
     """Read one line and flag malformed frames separately from missing lines."""
     while b"\n" not in buf:
         try:
@@ -423,13 +428,13 @@ def read_candidate_line(conn: socket.socket, buf: bytearray) -> "tuple[bytes | N
         except (socket.timeout, OSError):
             return None, False
         if not chunk:
-            return None, len(buf) > MAX_LINE  # closed before sending a full line
+            return None, len(buf) > max_line  # closed before sending a full line
         buf += chunk
-        if len(buf) > MAX_LINE * 2:
+        if len(buf) > max_line * 2:
             return None, True
     line, _, rest = bytes(buf).partition(b"\n")
     buf[:] = rest
-    if len(line) > MAX_LINE:
+    if len(line) > max_line:
         return None, True
     return line, False
 
@@ -438,7 +443,7 @@ def handle_client(conn: socket.socket, cfg, limiter: RateLimiter, slot=None):
     conn.settimeout(CLIENT_TIMEOUT)
     buf = bytearray()
     try:
-        first, _first_malformed = read_candidate_line(conn, buf)
+        first, _first_malformed = read_candidate_line(conn, buf, MAX_DECIDE_LINE)
         if first is None:
             reply = b"no\n"
         else:
