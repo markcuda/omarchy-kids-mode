@@ -358,6 +358,34 @@ check_status "$?" 2 "approve with no id is refused"
 out="$("$BAR" decline 2>&1)"
 check_status "$?" 2 "decline with no id is refused"
 
+# --- review-approve / review-deny: N-12's add-on actions, same shape ------
+kids_stub "$TMP/tree" omarchy-kids-review <<'EOF'
+#!/bin/bash
+echo "REVIEW $*" >>"$LOGFILE"
+exit 0
+EOF
+LOGFILE6="$TMP/review.log"
+: >"$LOGFILE6"
+out="$(PATH="$STUBS4:$BASE_PATH" LOGFILE="$LOGFILE6" \
+  "$BAR" review-approve kid-ada minecraft </dev/null 2>&1)"
+check_status "$?" 0 "review-approve exits 0 when the terminal/sudo chain succeeds"
+check_contains "$(cat "$LOGFILE6")" "SUDO " "review-approve ran the command through sudo"
+check_contains "$(cat "$LOGFILE6")" "REVIEW approve kid-ada minecraft --apply" \
+  "sudo ran omarchy-kids-review approve <kid> <id> --apply"
+
+LOGFILE7="$TMP/review-deny.log"
+: >"$LOGFILE7"
+out="$(PATH="$STUBS4:$BASE_PATH" LOGFILE="$LOGFILE7" \
+  "$BAR" review-deny kid-ada minecraft </dev/null 2>&1)"
+check_status "$?" 0 "review-deny exits 0 when the terminal/sudo chain succeeds"
+check_contains "$(cat "$LOGFILE7")" "REVIEW deny kid-ada minecraft --apply" \
+  "sudo ran omarchy-kids-review deny <kid> <id> --apply"
+
+out="$("$BAR" review-approve kid-ada 2>&1)"
+check_status "$?" 2 "review-approve with no id is refused"
+out="$("$BAR" review-deny 'bad id' minecraft 2>&1)"
+check_status "$?" 2 "review-deny with a bad kid is refused"
+
 # --dry-run forces the preview for an action and opens no terminal (rule 8).
 LOGFILE6="$TMP/approve-preview.log"
 : >"$LOGFILE6"

@@ -33,6 +33,7 @@ RELAY_CERT="$ETC/relay/cert.pem"
 RELAY_KEY="$ETC/relay/key.pem"
 QUEUE_DIR="$SYSROOT/var/lib/omarchy-kids/queue"
 PAIRING_DIR="$SYSROOT/run/omarchy-kids/pairing"
+REVIEW_DIR="$SYSROOT/var/lib/omarchy-kids/reviews/open"
 ASK_PY="$LIB/ask.py"
 
 # How long a lock request gets to appear as LockedHint=yes before this tick
@@ -207,8 +208,8 @@ write_status_json() {
     rm -f "$rows"
     return 0
   }
-  if ! jq -s --argjson pair "$(pairing_open_until)" \
-    '{generated_at: (now | todate), pairing_open_until: $pair, kids: .}' "$rows" >"$tmp" 2>/dev/null ||
+  if ! jq -s --argjson pair "$(pairing_open_until)" --argjson reviews "$(open_reviews_count)" \
+    '{generated_at: (now | todate), pairing_open_until: $pair, reviews: $reviews, kids: .}' "$rows" >"$tmp" 2>/dev/null ||
     ! getent group omarchy-parents >/dev/null 2>&1 ||
     ! chown root "$tmp" 2>/dev/null ||
     ! chgrp omarchy-parents "$tmp" 2>/dev/null ||
@@ -245,6 +246,20 @@ pairing_open_until() {
 }
 
 pairing_pending() { [[ "$(pairing_open_until)" -gt 0 ]]; }
+
+# open_reviews_count -- how many add-on reviews (R-NOTIFY-12) wait for the parent;
+# published in status.json so the bar and the notifier see the same number.
+open_reviews_count() {
+  local dir="$REVIEW_DIR" f n=0
+  [[ -d "$dir" ]] || {
+    echo 0
+    return 0
+  }
+  for f in "$dir"/*.json; do
+    [[ -f "$f" ]] && n=$((n + 1))
+  done
+  echo "$n"
+}
 
 # nudge_relay — start the relay on demand. It runs only while a kid is live, a
 # request is open, or a pairing window is open, and exits on its own once none

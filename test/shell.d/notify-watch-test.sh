@@ -136,6 +136,45 @@ check "$(cat "$TMP/watch.state")" "[]" "a send that failed everywhere is not rem
 "$BIN" --once >/dev/null 2>&1
 check_contains "$(cat "$TMP/watch.state")" "$ID" "the next poll shows and remembers it"
 
+# --- an add-on review is shown with Approve/Deny (N-12) --------------------
+REVIEW_DIR="$ROOT/var/lib/omarchy-kids/reviews/open"
+mkdir -p "$REVIEW_DIR"
+write_review() {
+  printf '{"kid":"kid-ada","id":"minecraft","was":"aaa","now":"bbb","state":"open"}\n' \
+    >"$REVIEW_DIR/kid-ada.abc123.json"
+}
+rm -f "$QUEUE_DIR"/*.json
+reset
+write_review
+out="$("$BIN" --once 2>&1)"
+check_status "$?" 0 "review: --once exits 0"
+check_contains "$(cat "$GDBUS_LOG")" "changed since you approved it" "a changed add-on is shown"
+check_contains "$(cat "$BAR_LOG")" "bar review-approve kid-ada minecraft" \
+  "Approve runs the review action"
+
+reset
+write_review
+GDBUS_ACTION=deny "$BIN" --once >/dev/null 2>&1
+check_contains "$(cat "$BAR_LOG")" "bar review-deny kid-ada minecraft" "Deny runs the review action"
+
+# A removed package reads as removed, not "changed".
+reset
+printf '{"kid":"kid-ada","id":"minecraft","was":"aaa","now":"missing","state":"open"}\n' \
+  >"$REVIEW_DIR/kid-ada.abc123.json"
+"$BIN" --once >/dev/null 2>&1
+check_contains "$(cat "$GDBUS_LOG")" "was removed" "a missing package is phrased as removed"
+
+# An already-shown review is not shown twice, and a closed one is forgotten.
+reset
+write_review
+"$BIN" --once >/dev/null 2>&1
+: >"$GDBUS_LOG"
+"$BIN" --once >/dev/null 2>&1
+check "$(grep -c Notify "$GDBUS_LOG")" "0" "an already-shown review is not shown twice"
+rm -f "$REVIEW_DIR"/*.json
+"$BIN" --once >/dev/null 2>&1
+check "$(cat "$TMP/watch.state")" "[]" "a closed review is dropped from the state"
+
 # --- no /tmp fallback: an unset XDG_RUNTIME_DIR is refused (rule 9/privacy) --
 kids_tree "$TMP/tree-plain" "$DIR"
 BIN_PLAIN="$TMP/tree-plain/bin/omarchy-kids-notify-watch"

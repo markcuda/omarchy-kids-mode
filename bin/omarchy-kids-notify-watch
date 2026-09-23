@@ -16,6 +16,7 @@ source "$LIB/kids.sh"
 
 SYSROOT=""
 QUEUE_DIR="$SYSROOT/var/lib/omarchy-kids/queue"
+REVIEW_DIR="$SYSROOT/var/lib/omarchy-kids/reviews/open"
 STATE_FILE=""
 BAR_BIN="$(kids_bin bar "$DIR")"
 
@@ -50,4 +51,4 @@ if [[ -z "$STATE_FILE" ]]; then
 fi
 
 exec "$KIDS_PY" "$LIB/notify_watch.py" \
-  --queue "$QUEUE_DIR" --state "$STATE_FILE" --bar "$BAR_BIN" "$@"
+  --queue "$QUEUE_DIR" --reviews "$REVIEW_DIR" --state "$STATE_FILE" --bar "$BAR_BIN" "$@"

@@ -96,6 +96,7 @@ KIDS_DIR="$ROOT/etc/omarchy-kids/kids"
 RUN_DIR="$ROOT/run/omarchy-kids"
 STATUS_JSON="$RUN_DIR/status.json"
 PAIRING_DIR="$RUN_DIR/pairing"
+REVIEW_DIR="$RUN_DIR/reviews/open"
 printf '%s\n' '{"generated_at":"old","kids":[]}' >"$STATUS_JSON"
 OLD_HASH="$(file_hash "$STATUS_JSON")"
 
@@ -120,6 +121,16 @@ check "$(jq -r '.pairing_open_until' "$STATUS_JSON")" "4102444800" "publishes th
 rm -rf "$PAIRING_DIR"
 write_status_json
 check "$(jq -r '.pairing_open_until' "$STATUS_JSON")" "0" "no pairing window publishes 0"
+
+# An open add-on review (R-NOTIFY-12) is published as a count, so the bar and the
+# notifier see the same number.
+mkdir -p "$REVIEW_DIR"
+printf '{"kid": "kid-ada", "id": "minecraft", "state": "open"}\n' >"$REVIEW_DIR/kid-ada.abc123.json"
+write_status_json
+check "$(jq -r '.reviews' "$STATUS_JSON")" "1" "publishes the open-review count"
+rm -rf "$REVIEW_DIR"
+write_status_json
+check "$(jq -r '.reviews' "$STATUS_JSON")" "0" "no open review publishes 0"
 
 for failure in jq-row jq-final chown chgrp chmod mv getent; do
   rm -f "$RUN_DIR"/status.json.* "$STATUS_MV_BOUNDARY"

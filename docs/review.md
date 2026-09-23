@@ -50,10 +50,12 @@ record, not enforcement): hiding the app again is the only action, and a kid can
 
 - **The third answer, "ask your onboard agent to check it", is not built.** There is no
   onboard-agent action; the parent approves or denies.
-- **Open reviews are not yet surfaced** in the panel or the desktop notifier. The records are
-  written and `omarchy-kids-review list` shows them, but the Notifications/Requests screens do not
-  read them yet — the next slice wires reviews into the same path requests use. Until then, R-NOTIFY-12
-  is detected and answerable from the command line only.
+- **Surfacing: the desktop notifier shows a review, the panel does not yet.** With notifications on,
+  `omarchy-kids-notify-watch` posts one notification per open review (a changed surface, or one that
+  was removed), with **Approve** and **Deny**; those run `omarchy-kids-bar review-approve|review-deny`
+  (`docs/notify.md`). The count rides `status.json` as `reviews`. The panel's Requests screen does
+  not list reviews yet — the next slice adds that — and `omarchy-kids-review list` is the command
+  line view.
 - The scan is not on a timer yet; run `omarchy-kids-review scan --apply` after updates (or by hand),
   until the ledger tick or a timer drives it.
 

@@ -35,7 +35,7 @@ change it.
 | --- | --- |
 | `lib/time.sh` | Shared bash helpers: the clock, day-boundary/weekend, budget/lights-out resolution, ledger/grant reads and (root-only) writes |
 | `lib/time.py` | The one place this needs real calendar math — day rollover and weekday, portable across the dev machine's BSD `date` and the target's GNU `date` (same reasoning as `lib/conf.py`) |
-| `bin/omarchy-kids-time-ledger` | Root: `tick` accounts monotonic active seconds, writes each kid's runtime state, and refreshes `/run/omarchy-kids/status.json` (R-BAR-3; it also publishes the pending pairing window's expiry, `pairing_open_until`) |
+| `bin/omarchy-kids-time-ledger` | Root: `tick` accounts monotonic active seconds, writes each kid's runtime state, and refreshes `/run/omarchy-kids/status.json` (R-BAR-3; it also publishes the pending pairing window's expiry, `pairing_open_until`, and the open-review count, `reviews`) |
 | `systemd/omarchy-kids-time.timer` + `omarchy-kids-time-ledger.service` | Runs `tick` every 30 seconds |
 | `bin/omarchy-kids-time` | The kid-side daemon, plus `status`/`grant` |
 | `share/time/toast.qml` | The small "N minutes left" warning (R-TIME-3) |

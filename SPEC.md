@@ -116,7 +116,7 @@ malcontent; timekpr; machine-wide DNS or browser policy; localization (English f
 
 - R-BAR-1 An optional Quickshell bar widget in the parent's session (installed only on consent) shows live or paused kids and minutes left ("Ada · paused · 32 min").
 - R-BAR-2 Actions: give more time, end session, open Kids Mode. Each goes through a polkit-gated helper (parent password).
-- R-BAR-3 Reads `/run/omarchy-kids/status.json`, root-written, group `omarchy-parents` readable. It carries each live kid's minutes-left and paused state and the open-request count and list (R-NOTIFY-7); the widget's badge reads the count from it rather than running any command. It also carries the pairing window's expiry (`pairing_open_until`), never the token, so the relay can keep itself up while a phone pairs (R-NOTIFY-2/5).
+- R-BAR-3 Reads `/run/omarchy-kids/status.json`, root-written, group `omarchy-parents` readable. It carries each live kid's minutes-left and paused state and the open-request count and list (R-NOTIFY-7); the widget's badge reads the count from it rather than running any command. It also carries the pairing window's expiry (`pairing_open_until`), never the token, so the relay can keep itself up while a phone pairs (R-NOTIFY-2/5), and the open add-on review count (`reviews`, R-NOTIFY-12).
 
 ### R-BAND Bands and defaults
 

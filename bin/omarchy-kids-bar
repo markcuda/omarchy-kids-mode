@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Add or remove the parent's Kids Mode bar widget
-# omarchy:args=<enable|disable|status|grant <kid> <minutes>|end <kid>|approve <id>|decline <id>|notify-enable|notify-disable|notify-status> [--apply]
+# omarchy:args=<enable|disable|status|grant <kid> <minutes>|end <kid>|approve <id>|decline <id>|review-approve <kid> <id>|review-deny <kid> <id>|notify-enable|notify-disable|notify-status> [--apply]
 # The parent's bar widget: per-kid minutes and requests from /run/omarchy-kids/status.json (SPEC.md R-BAR).
 # See docs/bar.md for the full design, every env var, and the terminal-fallback rationale.
 set -euo pipefail
@@ -18,6 +18,7 @@ DEFAULTS_SHELL_JSON="$OMARCHY_PATH/config/omarchy/shell.json"
 TIME_BIN="$(kids_bin time "$DIR")"
 EXIT_BIN="$(kids_bin exit "$DIR")"
 ASK_BIN="$(kids_bin ask "$DIR")"
+REVIEW_BIN="$(kids_bin review "$DIR")"
 
 PLUGIN_ID="omarchy-kids.bar"
 CONFIG_DIR="$HOME_DIR/.config/omarchy"
@@ -42,6 +43,8 @@ Usage: omarchy-kids-bar enable [--apply]
        omarchy-kids-bar end <kid>
        omarchy-kids-bar approve <id>
        omarchy-kids-bar decline <id>
+       omarchy-kids-bar review-approve <kid> <id>
+       omarchy-kids-bar review-deny <kid> <id>
        omarchy-kids-bar notify-enable [--apply]
        omarchy-kids-bar notify-disable [--apply]
        omarchy-kids-bar notify-status
@@ -62,6 +65,12 @@ Every subcommand also accepts --dry-run (print the plan, change nothing).
                   login password) -- what a desktop notification's Approve
                   action runs (N-9, R-NOTIFY).
   decline <id>    The same for a notification's Decline action.
+  review-approve <kid> <id>
+                  Accept a changed add-on (N-12, R-NOTIFY-12) -- what a review
+                  notification's Approve action runs (omarchy-kids-review
+                  approve).
+  review-deny <kid> <id>
+                  The same for Deny: hide the app again.
   notify-enable   Turn on desktop notifications for a kid's requests (N-9).
                   Needs the widget on (omarchy-kids-bar enable) first; then it
                   enables omarchy-kids-notify-watch.service for this session.
@@ -309,6 +318,36 @@ cmd_decline() {
     sudo "$ASK_BIN" decline "$id" --apply
 }
 
+# cmd_review_approve / cmd_review_deny — the desktop notification's actions for
+# a changed add-on (N-12, R-NOTIFY-12): a parent accepts or rejects the new
+# surface through omarchy-kids-review, again a floating terminal and their own
+# sudo prompt. The id is a launcher id (docs/apps.md), checked here too.
+cmd_review_approve() {
+  local kid="${1:-}" id="${2:-}"
+  [[ -n "$kid" && -n "$id" ]] || die "review-approve: needs <kid> <id> (see --help)"
+  [[ "$kid" =~ ^[a-z_][a-z0-9_-]*$ ]] || die "review-approve: bad kid '$kid'"
+  [[ "$id" =~ ^[a-z0-9_-]+$ ]] || die "review-approve: bad app id '$id'"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $REVIEW_BIN approve $kid $id --apply"
+    return 0
+  fi
+  open_terminal_running "Approved the change." "approving the change failed" \
+    sudo "$REVIEW_BIN" approve "$kid" "$id" --apply
+}
+
+cmd_review_deny() {
+  local kid="${1:-}" id="${2:-}"
+  [[ -n "$kid" && -n "$id" ]] || die "review-deny: needs <kid> <id> (see --help)"
+  [[ "$kid" =~ ^[a-z_][a-z0-9_-]*$ ]] || die "review-deny: bad kid '$kid'"
+  [[ "$id" =~ ^[a-z0-9_-]+$ ]] || die "review-deny: bad app id '$id'"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $REVIEW_BIN deny $kid $id --apply"
+    return 0
+  fi
+  open_terminal_running "Denied; the app is hidden." "denying the change failed" \
+    sudo "$REVIEW_BIN" deny "$kid" "$id" --apply
+}
+
 [[ $# -ge 1 ]] || {
   usage >&2
   exit 2
@@ -350,6 +389,8 @@ case "$cmd" in
   end) cmd_end "${args[@]+"${args[@]}"}" ;;
   approve) cmd_approve "${args[@]+"${args[@]}"}" ;;
   decline) cmd_decline "${args[@]+"${args[@]}"}" ;;
+  review-approve) cmd_review_approve "${args[@]+"${args[@]}"}" ;;
+  review-deny) cmd_review_deny "${args[@]+"${args[@]}"}" ;;
   notify-enable) cmd_notify_enable ;;
   notify-disable) cmd_notify_disable ;;
   notify-status) cmd_notify_status ;;

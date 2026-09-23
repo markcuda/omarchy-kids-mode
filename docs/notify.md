@@ -106,9 +106,11 @@ is still needed.
 
 On the Omarchy box the parent is told through their own desktop, not a device: `bin/omarchy-kids-notify-watch`
 is a user-side process that polls the request queue (world-readable today; R-NOTIFY-7 tightens it to
-`0750 root:omarchy-parents`, which the parent's group also reads) and posts one
-libnotify notification per open request, with **Approve** and **Decline** actions. An action runs
-`omarchy-kids-bar approve|decline <id>` (`docs/bar.md`), so it ends at the parent's own floating
+`0750 root:omarchy-parents`, which the parent's group also reads) and the open add-on reviews
+(`docs/review.md`), and posts one
+libnotify notification per item, with **Approve** and **Decline** on a request, and **Approve** and
+**Deny** on a changed add-on. An action runs `omarchy-kids-bar approve|decline <id>` or
+`omarchy-kids-bar review-approve|review-deny <kid> <id>` (`docs/bar.md`), so it ends at the parent's own floating
 terminal and sudo prompt. Nothing here is privileged and nothing here decides: with the watcher
 stopped, a kid is affected in no way and the panel still works.
 

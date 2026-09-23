@@ -1,17 +1,20 @@
-"""lib/notify_watch.py -- the parent's desktop notifier (N-9, R-NOTIFY).
+"""lib/notify_watch.py -- the parent's desktop notifier (N-9, N-12, R-NOTIFY).
 
-The user-side half of the on-box path: it polls the ask queue and posts one
-libnotify notification per open request it has not already shown, with Approve
-and Decline actions. Choosing an action runs `omarchy-kids-bar approve|decline
-<id>`, which opens the parent's own floating terminal and sudo prompt (N-9 part
-1); this watcher never decides anything itself and holds no privilege.
+The user-side half of the on-box path: it polls the ask queue and the open
+add-on reviews, and posts one libnotify notification per item it has not already
+shown, with Approve and Decline (or Deny) actions. Choosing an action runs
+`omarchy-kids-bar ...`, which opens the parent's own floating terminal and sudo
+prompt (N-9 part 1); this watcher never decides anything itself and holds no
+privilege.
 
-Action buttons come from `org.freedesktop.Notifications` over the session bus
-(`gdbus`): a single background monitor watches for `ActionInvoked`, and the
-notification id we sent tells us which request the parent answered -- never a
-blocking wait, and never another app's notification. Where the session bus is
-unavailable the fallback is a plain `notify-send` with no buttons and a body
-that points at the panel.
+A request is approved or declined; an add-on review (R-NOTIFY-12, when an
+approved app's surface or exec changed) is approved or denied. Action buttons
+come from `org.freedesktop.Notifications` over the session bus (`gdbus`): a
+single background monitor watches for `ActionInvoked`, and the notification id
+we sent tells us which item the parent answered -- never a blocking wait, and
+never another app's notification. Where the session bus is unavailable the
+fallback is a plain `notify-send` with no buttons and a body that points at the
+panel.
 
 Not an enforcement path: stopped, or notifications off, a kid is affected in no
 way. Stdlib only. CLI and `--once` (used by the tests) live at the bottom.
@@ -36,6 +39,8 @@ ACTION_INVOKED = re.compile(r"ActionInvoked \(uint32 (\d+), '([^']*)'\)")
 NOTIFICATION_CLOSED = re.compile(r"NotificationClosed \(uint32 (\d+), uint32 \d+\)")
 # --once is a test/debug mode: give the action signal a moment to arrive.
 ONCE_GRACE = 1.0
+REQUEST_ACTIONS = [("approve", "Approve"), ("decline", "Decline")]
+REVIEW_ACTIONS = [("approve", "Approve"), ("deny", "Deny")]
 
 
 def _clean(value, limit=120):
@@ -84,7 +89,7 @@ def read_open(queue_dir):
 
 
 def summary_body(row):
-    """The notification's title and body, in plain words a parent reads."""
+    """A request's title and body, in plain words a parent reads."""
     kid = row["kid"] or "Your kid"
     if row["kind"] == "time" and row["minutes"]:
         return f"{kid} wants more time", f"{kid} asked for {row['minutes']} more minutes."
@@ -92,11 +97,58 @@ def summary_body(row):
     return f"{kid} asked to use {what}", f"{kid} asked for {what}."
 
 
-# --- state: which ids have already been shown, so a poll does not spam -------
+def read_reviews(reviews_dir):
+    """Every open add-on review: {kid, id, now} (R-NOTIFY-12)."""
+    rows = []
+    try:
+        names = sorted(os.listdir(reviews_dir))
+    except OSError:
+        return rows
+    for name in names:
+        if name.startswith(".") or not name.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(reviews_dir, name), "r", encoding="utf-8") as f:
+                record = json.load(f)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(record, dict) or record.get("state") != "open":
+            continue
+        kid, app_id = record.get("kid"), record.get("id")
+        if not isinstance(kid, str) or not isinstance(app_id, str):
+            continue
+        rows.append({"kid": _clean(kid, 32), "id": _clean(app_id, 64), "now": _clean(record.get("now"), 64)})
+    return rows
+
+
+def request_item(row):
+    title, body = summary_body(row)
+    return {
+        "key": "req:" + row["id"],
+        "title": title,
+        "body": body,
+        "actions": REQUEST_ACTIONS,
+        "callbacks": {"approve": ["approve", row["id"]], "decline": ["decline", row["id"]]},
+    }
+
+
+def review_item(row):
+    gone = row["now"] == "missing"
+    state = "was removed" if gone else "changed since you approved it"
+    return {
+        "key": f"rev:{row['kid']}:{row['id']}",
+        "title": f"{row['kid']}'s {row['id']} {state}",
+        "body": f"The app {state}. Approve to keep it, deny to hide it.",
+        "actions": REVIEW_ACTIONS,
+        "callbacks": {"approve": ["review-approve", row["kid"], row["id"]], "deny": ["review-deny", row["kid"], row["id"]]},
+    }
+
+
+# --- state: which keys have already been shown, so a poll does not spam ------
 
 
 def load_state(path):
-    """The ids already shown; any read failure is treated as an empty state."""
+    """The keys already shown; any read failure is treated as an empty state."""
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -165,10 +217,10 @@ def notify_send(title, body):
     return out.returncode == 0
 
 
-def run_action(bar_bin, action, request_id):
+def run_callback(bar_bin, argv):
     """Hand the decision to the bar command, which opens the parent's terminal."""
     try:
-        subprocess.run([bar_bin, action, request_id], check=False)
+        subprocess.run([bar_bin] + list(argv), check=False)
     except OSError:
         pass
 
@@ -181,11 +233,9 @@ class GdbusNotifier:
     the daemon reports it. Only ids this watcher sent are acted on.
     """
 
-    ACTIONS = [("approve", "Approve"), ("decline", "Decline")]
-
     def __init__(self, bar_bin):
         self.bar_bin = bar_bin
-        self.ids = {}  # notification id -> request id
+        self.pending = {}  # notification id -> {action: bar argv}
         self.lock = threading.Lock()
 
     def start(self):
@@ -206,7 +256,7 @@ class GdbusNotifier:
                     if closed:
                         # Dismissed without an answer: forget its id.
                         with self.lock:
-                            self.ids.pop(int(closed.group(1)), None)
+                            self.pending.pop(int(closed.group(1)), None)
                         continue
                     match = ACTION_INVOKED.search(line)
                     if not match:
@@ -214,52 +264,60 @@ class GdbusNotifier:
                     notification_id = int(match.group(1))
                     action = match.group(2)
                     with self.lock:
-                        request_id = self.ids.pop(notification_id, None)
-                    if request_id and action in ("approve", "decline"):
-                        run_action(self.bar_bin, action, request_id)
+                        callbacks = self.pending.pop(notification_id, None)
+                    argv = callbacks.get(action) if callbacks else None
+                    if argv:
+                        run_callback(self.bar_bin, argv)
             proc.wait()
             time.sleep(1)  # a monitor that exits at once must not spin us
 
-    def send(self, row):
-        """Show one request; True when the session bus took it.
+    def send(self, title, body, actions, callbacks):
+        """Show one item; True when the session bus took it.
 
         The lock is held across the notify call and the id record, so the
-        monitor can never see the action before we know which request it is.
+        monitor can never see the action before we know which item it is.
         """
-        title, body = summary_body(row)
         with self.lock:
-            notification_id = gdbus_notify(title, body, self.ACTIONS)
+            notification_id = gdbus_notify(title, body, actions)
             if notification_id is None:
                 return False
-            self.ids[notification_id] = row["id"]
+            self.pending[notification_id] = callbacks
         return True
 
 
 # --- the loop ---------------------------------------------------------------
 
 
-def watch(queue_dir, state_path, bar_bin, interval, once, use_gdbus=True):
+def items(queue_dir, reviews_dir):
+    """Every item to show: open requests first, then open reviews."""
+    result = [request_item(row) for row in read_open(queue_dir)]
+    if reviews_dir:
+        result += [review_item(row) for row in read_reviews(reviews_dir)]
+    return result
+
+
+def watch(queue_dir, reviews_dir, state_path, bar_bin, interval, once, use_gdbus=True):
     notified = load_state(state_path)
     notifier = None
     if use_gdbus and shutil.which("gdbus") is not None:
         notifier = GdbusNotifier(bar_bin)
         notifier.start()
     while True:
-        rows = read_open(queue_dir)
-        current = {row["id"] for row in rows}
-        notified &= current  # forget what has been decided or withdrawn
-        for row in rows:
-            if row["id"] in notified:
+        current = items(queue_dir, reviews_dir)
+        keys = {item["key"] for item in current}
+        notified &= keys  # forget what has been decided, withdrawn or denied
+        for item in current:
+            if item["key"] in notified:
                 continue
-            shown = notifier is not None and notifier.send(row)
+            shown = notifier is not None and notifier.send(
+                item["title"], item["body"], item["actions"], item["callbacks"]
+            )
             if not shown:
-                title, body = summary_body(row)
-                shown = notify_send(title, body)
+                shown = notify_send(item["title"], item["body"])
             # Remember it only once something showed it: at login the daemon may
-            # not be up yet, and marking a failed send would lose the request
-            # until it is decided.
+            # not be up yet, and marking a failed send would lose the item.
             if shown:
-                notified.add(row["id"])
+                notified.add(item["key"])
         save_state(state_path, notified)
         if once:
             time.sleep(ONCE_GRACE)  # let a stubbed or real action signal arrive
@@ -270,13 +328,16 @@ def watch(queue_dir, state_path, bar_bin, interval, once, use_gdbus=True):
 def main(argv):
     parser = argparse.ArgumentParser(prog="notify_watch.py")
     parser.add_argument("--queue", required=True)
+    parser.add_argument("--reviews", default="")
     parser.add_argument("--state", required=True)
     parser.add_argument("--bar", required=True)
     parser.add_argument("--interval", type=int, default=15)
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--no-actions", action="store_true", help="force the notify-send fallback")
     args = parser.parse_args(argv)
-    return watch(args.queue, args.state, args.bar, args.interval, args.once, not args.no_actions)
+    return watch(
+        args.queue, args.reviews, args.state, args.bar, args.interval, args.once, not args.no_actions
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover
