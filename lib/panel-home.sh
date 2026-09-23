@@ -49,6 +49,7 @@ screen_home() {
     choices+=(
       "add|Add a kid|"
       "requests|Requests ($total_open)|"
+      "notifications|Notifications|Pair your phone to approve or decline (R-NOTIFY)"
       "machine|Machine safety|The read-only safety report (R-TRUST-2)"
       "remove_kids_mode|Remove Kids Mode|"
       "quit|Quit|"
@@ -75,6 +76,11 @@ screen_home() {
         ;;
       machine)
         screen_machine
+        rc=$?
+        ((rc == 130)) && return 130
+        ;;
+      notifications)
+        screen_notify
         rc=$?
         ((rc == 130)) && return 130
         ;;

@@ -192,6 +192,7 @@ check_status "$PANEL_STATUS" 0 "Home alone: 'quit' exits 0"
 check_contains "$out" "Ada · 6-8" "Home lists the one provisioned kid"
 check_contains "$out" "Add a kid" "Home offers Add a kid"
 check_contains "$out" "Machine safety" "Home offers the Machine safety row"
+check_contains "$out" "Notifications" "Home offers the Notifications row"
 check_contains "$out" "Requests (0)" "Home shows the open-request count"
 check_contains "$out" "Remove Kids Mode" "Home offers the Remove Kids Mode row"
 
@@ -538,8 +539,68 @@ check_status "$PANEL_STATUS" 0 "the refresh loop exits 0"
 check "$(grep -c 'Safety: every check passed.' <<<"$out")" 2 \
   "Check again runs the report a second time"
 
-# --- --help works with no terminal and no answers file needed ----------
+# --- Notifications (P6, R-NOTIFY-1/3/5) ---------------------------------
+#
+# The notify command is stubbed here (AGENTS.md shape 1): the panel's job is
+# its own wiring -- the exact command it asks sudo to run, and the state it
+# draws. A file switches the stub's status between off and on.
+cat >"$TMP/tree/bin/omarchy-kids-notify" <<EOF
+#!/bin/bash
+{ printf '%s' "omarchy-kids-notify"; printf ' %s' "\$@"; printf '\n'; } >> "$ARGV_LOG"
+case "\${1:-}" in
+  status)
+    if [[ -f "$TMP/notify.on" ]]; then echo "notifications: on"; else echo "notifications: off"; fi
+    echo "no devices paired"
+    ;;
+  devices) echo "[]" ;;
+  enable) echo "omarchy-kids-notify: notifications on (relay port 8447)" ;;
+  disable) echo "omarchy-kids-notify: notifications off; certificate removed" ;;
+  pair)
+    echo "omarchy-kids-devices: pairing started for d-1"
+    echo "  pair:  omarchy-kids://pair?v=1&id=d-1&token=abc"
+    echo "  fingerprint: deadbeef"
+    ;;
+  revoke) echo "omarchy-kids-devices: revoked \$2" ;;
+esac
+exit 0
+EOF
+chmod +x "$TMP/tree/bin/omarchy-kids-notify"
 
+rm -f "$TMP/notify.on"
+: >"$ARGV_LOG"
+answers="$(answers_file notifications enable back quit)"
+run_panel "$answers" --dry-run
+check_contains "$out" "Notifications are off" "notifications off: the screen says so"
+check_contains "$out" "Turn on notifications" "notifications off: the screen offers to turn them on"
+check_contains "$out" "[dry-run] sudo $TREE_BIN/omarchy-kids-notify enable --apply" \
+  "dry-run: enable prints the exact command"
+check_contains "$(cat "$ARGV_LOG")" "omarchy-kids-notify status" \
+  "the screen reads the status through sudo (root owns the certificate)"
+
+touch "$TMP/notify.on"
+answers="$(answers_file notifications pair back quit)"
+run_panel "$answers" --dry-run
+check_contains "$out" "Notifications are on" "notifications on: the screen says so"
+check_contains "$out" "Turn off notifications" "notifications on: the screen offers to turn them off"
+check_contains "$out" "[dry-run] sudo $TREE_BIN/omarchy-kids-notify pair --apply" \
+  "dry-run: pair prints the exact command"
+
+: >"$ARGV_LOG"
+answers="$(answers_file notifications disable no back quit)"
+run_panel "$answers" --dry-run
+check_not_contains "$out" "omarchy-kids-notify disable" \
+  "declining the disable confirm prints no disable command"
+
+answers="$(answers_file notifications disable yes back quit)"
+run_panel "$answers" --dry-run
+check_contains "$out" "[dry-run] sudo $TREE_BIN/omarchy-kids-notify disable --apply" \
+  "confirming prints the exact disable command"
+
+answers="$(answers_file notifications devices back back quit)"
+run_panel "$answers" --dry-run
+check_contains "$out" "No devices are paired" "devices: an empty list says so"
+
+# --- --help works with no terminal and no answers file needed ----------
 help_out="$("$BIN" --help 2>&1)"
 help_status=$?
 check_status "$help_status" 0 "--help exits 0"
