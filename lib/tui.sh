@@ -184,9 +184,15 @@ _tui_style() {
   if ((TUI_HAVE_GUM)); then
     # Text goes to gum on stdin, never as an argument: a card body can carry a
     # secret (the pairing code in P6), and any argument is readable from
-    # /proc/<pid>/cmdline by another local session while gum runs.
-    if ((${#text[@]})); then
+    # /proc/<pid>/cmdline by another local session while gum runs. An all-blank
+    # body would make gum print its own "provide text" error, so that one case
+    # is printed here instead.
+    local joined=""
+    if ((${#text[@]})); then joined="$(printf '%s' "${text[@]}")"; fi
+    if [[ -n "$joined" ]]; then
       printf '%s\n' "${text[@]}" | gum style "${flags[@]+"${flags[@]}"}"
+    elif ((${#text[@]})); then
+      printf '%s\n' "${text[@]}"
     else
       gum style "${flags[@]+"${flags[@]}"}" </dev/null
     fi
