@@ -84,8 +84,13 @@ build-time seam for deterministic tests. No inherited value selects the root clo
 6. At the monotonic grace deadline, calls the resolved sibling `omarchy-kids-exit --finish --kid
    <account>`. A failed call remains `finishing` and is retried on the next tick. A successful call
    is recorded and is not repeated for the same enforcing state.
-7. Refreshes `/run/omarchy-kids/status.json` and folds launch logs. Those auxiliary writes remain
-   best-effort; a runtime-state or ledger write failure does not become `allowed`.
+ 7. Refreshes `/run/omarchy-kids/status.json` and folds launch logs. Those auxiliary writes remain
+    best-effort; a runtime-state or ledger write failure does not become `allowed`.
+ 8. Asks the notification relay to start when a kid is live or a request is open
+    (`nudge_relay`, R-NOTIFY-1). The relay is not a daemon this tick keeps alive: it exits on its
+    own once neither holds, and the next tick starts it again if it is needed. Best effort, and it
+    does nothing while notifications are off (no certificate). The line it prints goes to the
+    journal.
 
 Tickets 1 and 2 moved accounting, decisions, locking, and finishing into the root tick. Ticket 3
 leaves the kid-side path as a compatibility display adapter; killing it no longer prevents root

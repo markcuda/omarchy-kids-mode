@@ -26,6 +26,13 @@ TIME_VARLIB="$SYSROOT/var/lib/omarchy-kids"
 TIME_NOW_FILE="$SYSROOT/run/omarchy-kids/time/now"
 TIME_CLOCK_FILE="$SYSROOT/run/omarchy-kids/time/monotonic"
 EXIT_BIN="$(kids_bin exit "$DIR")"
+# The notification relay exists only while a kid is live or a request is open
+# (R-NOTIFY-1, N-7): this tick starts it, and the relay exits on its own.
+RELAY_UNIT=omarchy-kids-relayd.service
+RELAY_CERT="$ETC/relay/cert.pem"
+RELAY_KEY="$ETC/relay/key.pem"
+QUEUE_DIR="$SYSROOT/var/lib/omarchy-kids/queue"
+ASK_PY="$LIB/ask.py"
 
 # How long a lock request gets to appear as LockedHint=yes before this tick
 # records it failed. Tests substitute both (test/shell.d/tree.sh).
@@ -236,7 +243,28 @@ cmd_tick() {
   done < <(kids_list "$KIDS_DIR")
   write_status_json
   fold_all_launches
+  nudge_relay
   return "$tick_status"
+}
+
+# relay_enabled — notifications are on: the parent has minted the certificate
+# (omarchy-kids-notify enable). No certificate, no relay to start.
+relay_enabled() { [[ -f "$RELAY_CERT" && -f "$RELAY_KEY" ]]; }
+
+# nudge_relay — start the relay on demand. It runs only while a kid is live or a
+# request is open, and exits on its own once neither holds (R-NOTIFY-1, N-7), so
+# root starts it and never keeps it alive. Best effort: a missing unit or a
+# disabled certificate is not a tick failure, and a start that races the relay's
+# own idle exit is harmless -- the next tick starts it again if it is still
+# needed.
+nudge_relay() {
+  relay_enabled || return 0
+  local active="" open=0
+  active="$(active_kid_sessions 2>/dev/null)" || active=""
+  open="$("$KIDS_PY" "$ASK_PY" list-open "$QUEUE_DIR" 2>/dev/null | grep -c . || true)"
+  [[ -n "$active" || "${open:-0}" -gt 0 ]] || return 0
+  systemctl start --no-block "$RELAY_UNIT" >/dev/null 2>&1 || return 0
+  echo "omarchy-kids-time-ledger: asked $RELAY_UNIT to start (a kid is live or a request is open)"
 }
 
 # kid_active_state ACCOUNT — yes/no when the account's sessions are known;

@@ -65,6 +65,15 @@ that presents the token and expires on its own; `pair` refuses while notificatio
 (`docs/devices.md`); this command adds nothing to them beyond the shared root check and the plan
 printing.
 
+## Lifecycle: the relay exists only while it is needed (N-7)
+
+There is no always-on listener. `omarchy-kids-time-ledger tick` (every 30 seconds, root) asks
+`omarchy-kids-relayd.service` to start when a kid is live or a request is open, and does nothing
+while notifications are off. The relay itself exits after an idle period (`lib/relay.py`'s
+`idle_expired`) once no kid is live and no request is open, so the port is closed again. Starting it
+is best effort and never fails a tick; a start that races the relay's own exit is harmless, since
+the next tick starts it again if it is still needed.
+
 ## The fence, stated plainly (R-NOTIFY-10, I-6)
 
 - The relay listens on the box's own address, home network only; `systemd/omarchy-kids-relayd.service`
