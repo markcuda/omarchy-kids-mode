@@ -138,7 +138,7 @@ cmd_enable() {
   echo "omarchy-kids-notify: notifications on (relay port $PORT)"
   echo "  host:        $host"
   echo "  fingerprint: $fingerprint"
-  echo "Pair a device from the panel, or run 'omarchy-kids-devices pair-start'."
+  echo "Pair a device with 'omarchy-kids-notify pair' (shows the QR and fingerprint)."
 }
 
 cmd_disable() {
@@ -159,8 +159,8 @@ cmd_disable() {
 }
 
 # pair -- start a single-use pairing window and show the parent what the device
-# scans (R-NOTIFY-5). The caller's own authentication (the panel's warmed sudo)
-# is the gate, so there is no password prompt here.
+# scans (R-NOTIFY-5). Running as root (the caller's own elevation, e.g. the sudo
+# prompt) is the gate, so there is no password prompt here.
 cmd_pair() {
   local scopes="decide,act" apply=0
   while (($#)); do
