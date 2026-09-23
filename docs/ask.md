@@ -41,9 +41,10 @@ Decisions (both root paths) also drop the result where the kid's own session rea
 kid-side reader: per session (`omarchy-kids-session-start` starts it detached) it shows
 `share/ask/decided.qml` for any decision the kid has not seen, marks it seen, and skips a decision
 older than a day (the markers live in the kid's `/run` tmpfs, so without that a login would replay
-old cards). `--once` scans a single time and exits, for tests. An optional `reply` on
-`approve`/`decline` is stored and rendered on the card; `lib/ask.py decide --reply` validates it
-(printable, at most 80 characters) at write time.
+old cards). `--once` scans a single time and exits, for tests. An optional
+`reply` — accepted by `lib/ask.py decide --reply` (printable, at most 80 characters), which the
+panel and the paired devices pass once they land — is stored and rendered on the card; the CLI
+`approve`/`decline` do not take `--reply` yet.
 
 ### Kid-side: `time` / `app` / `plugin` / `site`
 

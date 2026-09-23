@@ -104,8 +104,17 @@ kids_set_const "$SESSION_BIN" RUN_DIR "$RUN"
 
 ENV_FILE="$TMP/session-start.env"
 ARGS_FILE="$TMP/session-start.args"
+ASK_LOG="$TMP/session-start.ask"
+: >"$ASK_LOG"
 cat >"$TMP/tree/bin/omarchy-kids-time" <<'EOF'
 #!/bin/bash
+exit 0
+EOF
+# session-start now also starts `omarchy-kids-ask watch` detached; stub it, or
+# every invocation leaks a real, never-exiting watcher (AGENTS.md shape 1).
+cat >"$TMP/tree/bin/omarchy-kids-ask" <<'EOF'
+#!/bin/bash
+printf '%s\n' "$@" >>"$SESSION_START_ASK_LOG"
 exit 0
 EOF
 cat >"$STUBS/quickshell" <<'EOF'
@@ -113,9 +122,9 @@ cat >"$STUBS/quickshell" <<'EOF'
 env | grep '^OMARCHY_KIDS_' >"$SESSION_START_ENV_FILE"
 printf '%s\n' "$@" >"$SESSION_START_ARGS_FILE"
 EOF
-chmod +x "$TMP/tree/bin/omarchy-kids-time" "$STUBS/quickshell"
+chmod +x "$TMP/tree/bin/omarchy-kids-time" "$TMP/tree/bin/omarchy-kids-ask" "$STUBS/quickshell"
 kids_set_const "$SESSION_START" QUICKSHELL_BIN "$STUBS/quickshell"
-export SESSION_START_ENV_FILE="$ENV_FILE" SESSION_START_ARGS_FILE="$ARGS_FILE"
+export SESSION_START_ENV_FILE="$ENV_FILE" SESSION_START_ARGS_FILE="$ARGS_FILE" SESSION_START_ASK_LOG="$ASK_LOG"
 
 source_text="$(cat "$SESSION_START")"
 check_not_contains "$source_text" "CONF_BIN" "session-start does not read profile settings"
@@ -127,6 +136,7 @@ check "$(grep -c 'JQ_BIN' "$SESSION_START")" "2" "session-start parses the manif
 
 "$SESSION_START" >/dev/null
 check "$?" "0" "session-start starts successfully from the manifest"
+check "$(grep -c '^watch$' "$ASK_LOG")" "1" "session-start starts omarchy-kids-ask watch (R-NOTIFY-6)"
 check "$(cat "$ARGS_FILE")" "-p
 $SHARE/launcher/shell.qml" "Level 1 launches the fixed QML argv"
 check "$(grep '^OMARCHY_KIDS_ACCOUNT=' "$ENV_FILE")" "OMARCHY_KIDS_ACCOUNT=$ACCOUNT" \

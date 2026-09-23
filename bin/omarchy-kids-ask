@@ -60,7 +60,7 @@ Usage: omarchy-kids-ask time <minutes>
        omarchy-kids-ask list [<kid>]
        omarchy-kids-ask approve <id> [--apply]
        omarchy-kids-ask decline <id> [--apply]
-       omarchy-kids-ask watch
+       omarchy-kids-ask watch [--once]
        omarchy-kids-ask --help
 
 time/app/plugin/site   Kid-side: opens share/ask/shell.qml, the "Ask a
@@ -68,7 +68,8 @@ time/app/plugin/site   Kid-side: opens share/ask/shell.qml, the "Ask a
 
 watch         Kid-side: watches for a decision on this kid's requests and
               shows the result card (share/ask/decided.qml). Started once per
-              kid session by omarchy-kids-session-start; never exits.
+              kid session by omarchy-kids-session-start; never exits unless
+              --once is given (tests).
 
 submit        Internal: what the modal calls for "Ask later". Writes one
               Appendix D record, always state=open, into the kid's own
