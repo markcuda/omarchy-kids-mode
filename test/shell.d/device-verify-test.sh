@@ -9,24 +9,20 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$DIR/test/shell.d/lib.sh"
 
 if ! python3 -c "import cryptography" >/dev/null 2>&1; then
-  echo "SKIP device-verify-test.sh: python-cryptography not installed — the dry-run/refusal checks did not run"
+  echo "SKIP device-verify-test.sh: python-cryptography not installed — the accept/refusal checks did not run"
   exit 0
 fi
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-DEVICES_PY="$DIR/lib/devices.py"
-
-python3 - "$DEVICES_PY" "$TMP" <<'PY'
-import base64, importlib.util, json, os, sys, time
+python3 - "$DIR/lib/devices.py" "$TMP" <<'PY'
+import base64, importlib.util, json, os, sys
 
 devices_py, tmp = sys.argv[1], sys.argv[2]
-
 spec = importlib.util.spec_from_file_location("kids_devices", devices_py)
 devices = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(devices)
-
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 fails = []
@@ -37,65 +33,124 @@ def check(cond, label):
 
 etc = os.path.join(tmp, "etc")
 os.makedirs(os.path.join(etc, "devices"), exist_ok=True)
-ledger_path = os.path.join(tmp, "nonces.json")
-
-key = Ed25519PrivateKey.generate()
-pub_b64 = base64.b64encode(key.public_key().public_bytes_raw()).decode()
-with open(os.path.join(etc, "devices", "d1.conf"), "w") as f:
-    f.write(f"id=d1\nname=Phone\nplatform=android\nsign_pub={pub_b64}\nbox_pub={pub_b64}\nscopes=decide,act\n")
-
 now = 1_800_000_000
+key = Ed25519PrivateKey.generate()
+pub = base64.b64encode(key.public_key().public_bytes_raw()).decode()
+conf = os.path.join(etc, "devices", "d1.conf")
+
+def write_conf(scopes="decide,act"):
+    with open(conf, "w") as f:
+        f.write(f"id=d1\nname=Phone\nplatform=android\nsign_pub={pub}\nbox_pub={pub}\nscopes={scopes}\n")
+
 def signed(**over):
     rec = {"device_id": "d1", "request_id": "req-1", "decision": "approve", "ts": now, "nonce": "n1"}
     rec.update(over)
-    sig = base64.b64encode(key.sign(devices.canonical(rec))).decode()
-    return rec, sig
+    return rec, base64.b64encode(key.sign(devices.canonical(rec))).decode()
+
+def verify(rec, sig, ledger="l.json", scope="decide", now_=now):
+    return devices.verify_decision(etc, devices.NonceLedger(os.path.join(tmp, ledger)), rec, sig, now_, scope)
+
+write_conf()
 
 # accept
 rec, sig = signed()
-ok, reason = devices.verify_decision(etc, devices.NonceLedger(ledger_path), rec, sig, now)
+ok, reason = verify(rec, sig)
 check(ok and reason == "ok", "a device's signed decision verifies (R-NOTIFY-4)")
 
-# replay: the same nonce again is refused
-ok, reason = devices.verify_decision(etc, devices.NonceLedger(ledger_path), rec, sig, now)
+# a bad signature must not consume the nonce (a DoS otherwise)
+rec2, _ = signed(nonce="n-dos")
+bad = base64.b64encode(b"x" * 64).decode()
+ok, reason = verify(rec2, bad, ledger="dos.json")
+check(not ok and reason == "bad-signature", "a bad signature is refused")
+ok, reason = verify(rec2, base64.b64encode(key.sign(devices.canonical(rec2))).decode(), ledger="dos.json")
+check(ok and reason == "ok", "a bad-signature attempt does not burn the nonce")
+
+# replay
+ok, reason = verify(rec, sig)
 check(not ok and reason == "replayed-nonce", "a replayed nonce is refused")
 
-# tampered decision is refused
-rec2, sig2 = signed(nonce="n2")
-rec2["decision"] = "decline"
-ok, reason = devices.verify_decision(etc, devices.NonceLedger(ledger_path), rec2, sig2, now)
+# per-device nonce: d2 may reuse the same nonce string
+with open(os.path.join(etc, "devices", "d2.conf"), "w") as f:
+    f.write(f"id=d2\nname=Tablet\nplatform=ios\nsign_pub={pub}\nbox_pub={pub}\nscopes=decide\n")
+rec_d2, sig_d2 = signed(device_id="d2", nonce="n1")
+ok, reason = verify(rec_d2, sig_d2)
+check(ok and reason == "ok", "two devices may use the same nonce string")
+
+# malformed shapes
+for over, label in [
+    ({"decision": "banana"}, "an unknown decision"),
+    ({"request_id": ""}, "an empty request_id"),
+    ({"ts": "1800000000"}, "a non-int ts"),
+    ({"nonce": ""}, "an empty nonce"),
+    ({"reply": "x" * (devices.MAX_REPLY + 1)}, "an over-long reply"),
+    ({"extra": "x"}, "an unexpected key"),
+]:
+    rec3, sig3 = signed(**over)
+    ok, reason = verify(rec3, sig3)
+    check(not ok and reason == "malformed", f"a record with {label} is malformed")
+
+# tampered decision
+rec4, sig4 = signed(nonce="n4")
+rec4["decision"] = "decline"
+ok, reason = verify(rec4, sig4)
 check(not ok and reason == "bad-signature", "a tampered decision is refused")
 
 # stale timestamp
-rec3, sig3 = signed(nonce="n3", ts=now - devices.SKEW_SECONDS - 1)
-ok, reason = devices.verify_decision(etc, devices.NonceLedger(ledger_path), rec3, sig3, now)
+rec5, sig5 = signed(nonce="n5", ts=now - devices.SKEW_SECONDS - 1)
+ok, reason = verify(rec5, sig5)
 check(not ok and reason == "stale-timestamp", "a stale decision is refused")
 
-# unknown device
-rec4, sig4 = signed(nonce="n4", device_id="nope")
-ok, reason = devices.verify_decision(etc, devices.NonceLedger(ledger_path), rec4, sig4, now)
+# unknown device and a path-like id (malformed before any path is built)
+rec6, sig6 = signed(nonce="n6", device_id="nope")
+ok, reason = verify(rec6, sig6)
 check(not ok and reason == "unknown-device", "an unknown device is refused")
+rec7, sig7 = signed(nonce="n7", device_id="../../etc/shadow")
+ok, reason = verify(rec7, sig7)
+check(not ok and reason == "malformed", "a path-like device id is malformed, never a path")
 
-# path-like device id is refused before any path is built
-rec5, sig5 = signed(nonce="n5", device_id="../../etc/shadow")
-ok, reason = devices.verify_decision(etc, devices.NonceLedger(ledger_path), rec5, sig5, now)
-check(not ok and reason == "unknown-device", "a path-like device id is refused")
-
-# scope: act allowed because the device has it, then removed and refused
-rec6, sig6 = signed(nonce="n6")
-ok, reason = devices.verify_decision(etc, devices.NonceLedger(ledger_path), rec6, sig6, now, scope="act")
-check(ok and reason == "ok", "a device with scope act may act")
-with open(os.path.join(etc, "devices", "d1.conf"), "w") as f:
-    f.write(f"id=d1\nname=Phone\nplatform=android\nsign_pub={pub_b64}\nbox_pub={pub_b64}\nscopes=decide\n")
-rec7, sig7 = signed(nonce="n7")
-ok, reason = devices.verify_decision(etc, devices.NonceLedger(ledger_path), rec7, sig7, now, scope="act")
+# scope
+rec8, sig8 = signed(device_id="d2", nonce="n8")
+ok, reason = verify(rec8, sig8, scope="act")
 check(not ok and reason == "scope-missing", "a device without the scope is refused")
+write_conf("decide,act")
+rec9, sig9 = signed(nonce="n9")
+ok, reason = verify(rec9, sig9, scope="act")
+check(ok and reason == "ok", "a device with scope act may act")
+
+# a symlinked conf is never followed
+os.symlink(conf, os.path.join(etc, "devices", "d3.conf"))
+rec10, sig10 = signed(nonce="n10", device_id="d3")
+ok, reason = verify(rec10, sig10)
+check(not ok and reason == "unknown-device", "a symlinked device conf is refused")
+
+# a damaged ledger fails closed
+with open(os.path.join(tmp, "broken.json"), "w") as f:
+    f.write("{not json")
+rec11, sig11 = signed(nonce="n11")
+ok, reason = verify(rec11, sig11, ledger="broken.json")
+check(not ok and reason == "ledger-unreadable", "a damaged ledger fails closed")
+
+# crypto absent fails closed
+devices.HAVE_CRYPTO = False
+ok, reason = verify(rec11, sig11)
+check(not ok and reason == "crypto-unavailable", "without python-cryptography it fails closed")
+devices.HAVE_CRYPTO = True
 
 # revoked
-os.rename(os.path.join(etc, "devices", "d1.conf"), os.path.join(etc, "devices", "d1.conf.revoked"))
-rec8, sig8 = signed(nonce="n8")
-ok, reason = devices.verify_decision(etc, devices.NonceLedger(ledger_path), rec8, sig8, now)
+os.rename(conf, conf + ".revoked")
+rec12, sig12 = signed(nonce="n12")
+ok, reason = verify(rec12, sig12)
 check(not ok and reason == "unknown-device", "a revoked device is refused")
+
+# CLI works
+os.rename(conf + ".revoked", conf)
+import subprocess
+rec13, sig13 = signed(nonce="n13")
+out = subprocess.run(
+    [sys.executable, devices_py, "--etc", etc, "--ledger", os.path.join(tmp, "cli.json"),
+     "--now", str(now), "--signature", sig13, json.dumps(rec13)],
+    capture_output=True, text=True)
+check(out.returncode == 0 and out.stdout.strip() == "ok", "the CLI verifies a decision")
 
 sys.exit(1 if fails else 0)
 PY
