@@ -53,8 +53,10 @@ devices. The bar widget and the panel read the same state.
 
 Starts a single-use pairing window (`omarchy-kids-devices pair-start`, R-NOTIFY-5) and prints the
 `omarchy-kids://pair` URI plus the relay's fingerprint. Where `qrencode` is installed the URI is also
-drawn as a QR; otherwise the URI is there as the code. The parent app that would consume it is not
-built on this branch, so the window is ready for it with nothing on the device side to scan yet. The
+drawn as a QR; otherwise the URI is there as the code. The app presents the token to the relay's
+`POST /v1/pair` (an unsigned route — there is no device yet), which carries the frame to `authd`; root
+verifies the single-use proof and registers the device. The app that would do that is not built on
+this branch, so the window is ready for it with nothing on the device side to scan yet. The
 URI carries the single-use token, so it is piped to `qrencode` on **stdin**, never passed as an
 argument a local session could read out of `/proc`.
 

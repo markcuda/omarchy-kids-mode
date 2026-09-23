@@ -26,14 +26,16 @@ HTTP response.
 
 ## The API (Appendix H)
 
-Every request except the TLS handshake must be signed by a paired, unrevoked device: the headers
-`X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<base64 Ed25519 signature>` cover the method,
-path, timestamp, nonce and body. The relay refuses an unsigned request, a bad signature, an unknown
-device, a stale timestamp (over five minutes) and a replayed nonce (a nonce seen in the last ten
-minutes is in `--nonce-ledger`).
+Every request except the TLS handshake and `/v1/pair` must be signed by a paired, unrevoked device:
+the headers `X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<base64 Ed25519 signature>` cover the
+method, path, timestamp, nonce and body. The relay refuses an unsigned request, a bad signature, an
+unknown device, a stale timestamp (over five minutes) and a replayed nonce (a nonce seen in the last
+ten minutes is in `--nonce-ledger`). `/v1/pair` is pre-auth: there is no device yet, and the
+single-use token in its frame is the credential, verified by root (`docs/notify.md`).
 
 | Method and path | What it does |
 | --- | --- |
+| `POST /v1/pair` | Carries a pairing frame (`id`, `name`, `platform`, `sign_pub`, `box_pub`, `proof`) to `authd`'s PAIR frame, which verifies the single-use proof and registers the device (R-NOTIFY-5). The relay never reads the root-only pairing record (R-NOTIFY-2). |
 | `GET /v1/state` | The state document (`lib/relay.py`'s `build_state`: kids, open requests, recent decisions) from the root-written `status.json` and the queue. |
 | `GET /v1/events` | The same document as a Server-Sent Events stream, a `state` event per change and a heartbeat when nothing changes. |
 | `GET /v1/avatars/<name>` | One kid avatar from `--share`; a traversal is a 404. |

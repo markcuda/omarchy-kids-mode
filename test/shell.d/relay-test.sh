@@ -93,6 +93,18 @@ reply = relay.forward_decide(sock_path, '{"record":{}}')
 t.join(10)
 check(reply == "no replayed-nonce", "forward_decide passes a refusal back verbatim")
 
+# --- forward_pair: pairing is pre-auth and carried to authd ----------------
+os.unlink(sock_path)
+ready = threading.Event()
+t = threading.Thread(target=fake_authd, args=(b"ok\n", ready))
+t.start()
+if not ready.wait(10):
+    raise RuntimeError("authd stub did not start in time")
+reply = relay.forward_pair(sock_path, '{"id":"d2","proof":"p"}')
+t.join(10)
+check(reply == "ok", "forward_pair returns authd's reply")
+check(seen and seen[-1].startswith("PAIR "), "forward_pair sends the PAIR frame")
+
 check(relay.forward_decide(os.path.join(tmp, "none.sock"), "{}") is None,
       "forward_decide is None when authd is unreachable")
 

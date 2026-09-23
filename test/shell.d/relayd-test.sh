@@ -171,6 +171,23 @@ try:
     code, _ = request("POST", "/v1/requests/req-1/decision", {}, frame.encode())
     check(code == 403, "an unsigned decision POST is refused at the relay (P1)")
 
+    # Pairing is pre-auth and carried to authd (R-NOTIFY-5): the single-use token
+    # in the frame is the credential, verified by root.
+    try:
+        os.unlink(auth_sock)
+    except OSError:
+        pass
+    ready2 = threading.Event()
+    threading.Thread(target=fake_authd, args=(ready2,), daemon=True).start()
+    if not ready2.wait(10):
+        raise RuntimeError("the second authd stub did not start")
+    pair_frame = json.dumps({"id": "d2", "name": "Phone", "platform": "android",
+                             "sign_pub": "x", "box_pub": "y", "proof": "p"})
+    code, body = request("POST", "/v1/pair", {}, pair_frame.encode())
+    check(code == 200 and json.loads(body)["reply"] == "ok", "a pair POST is forwarded to authd")
+    code, _ = request("POST", "/v1/pair", {}, b'{"id":"d2"}')
+    check(code == 400, "a malformed pair POST is refused before authd")
+
     # SSE: a signed /v1/events streams a state event
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
     ss = ctx.wrap_socket(socket.create_connection(("127.0.0.1", port), timeout=10), server_hostname="127.0.0.1")

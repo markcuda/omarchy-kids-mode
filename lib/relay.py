@@ -75,18 +75,13 @@ def build_state(status_path, queue_dir, now=None):
     }
 
 
-def forward_decide(auth_sock, frame_json, timeout=30.0):
-    """Send `DECIDE <json>\\n` to authd and return its reply line.
-
-    None on any transport error (the app shows "can't reach the computer");
-    authd verifies the frame itself, so the relay only carries it.
-    """
+def _forward(auth_sock, prefix, frame_json, timeout):
     payload = frame_json if isinstance(frame_json, bytes) else frame_json.encode("utf-8")
     conn = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     conn.settimeout(timeout)
     try:
         conn.connect(auth_sock)
-        conn.sendall(b"DECIDE " + payload + b"\n")
+        conn.sendall(prefix + payload + b"\n")
         conn.shutdown(socket.SHUT_WR)
         reply = conn.recv(4096)
     except OSError:
@@ -94,6 +89,26 @@ def forward_decide(auth_sock, frame_json, timeout=30.0):
     finally:
         conn.close()
     return reply.decode("utf-8", "replace").strip()
+
+
+def forward_decide(auth_sock, frame_json, timeout=30.0):
+    """Send `DECIDE <json>\\n` to authd and return its reply line.
+
+    None on any transport error (the app shows "can't reach the computer");
+    authd verifies the frame itself, so the relay only carries it.
+    """
+    return _forward(auth_sock, b"DECIDE ", frame_json, timeout)
+
+
+def forward_pair(auth_sock, frame_json, timeout=30.0):
+    """Send `PAIR <json>\\n` to authd and return its reply line.
+
+    Pairing is pre-auth and the single-use token in the frame is the credential
+    (R-NOTIFY-5): the relay never reads the root-only pairing record (R-NOTIFY-2),
+    it just carries the frame to authd, which verifies the proof and registers
+    the device.
+    """
+    return _forward(auth_sock, b"PAIR ", frame_json, timeout)
 
 
 def is_needed(status_path, queue_dir):
