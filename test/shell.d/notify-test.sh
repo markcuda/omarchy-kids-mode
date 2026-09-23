@@ -221,5 +221,30 @@ check_eq "$("$BIN" away-status)" "off" "away-status: off after away off"
 out="$("$BIN" away bogus --apply 2>&1)"
 check_eq "$?" 2 "an unknown away mode is refused"
 
+# --- the away mailbox: the courier's one server (N-11) ---------------------
+COURIER_CONF="$ETC/courier.conf"
+check_eq "$("$BIN" mailbox-status)" "off" "mailbox-status: off by default"
+out="$("$BIN" mailbox ntfy --url https://ntfy.example --topic kid 2>&1)"
+check_eq "$?" 0 "mailbox ntfy previews without --apply"
+check_contains "$out" "[dry-run]" "mailbox prints the plan"
+[[ -e "$COURIER_CONF" ]] && fail "mailbox preview must not write the config" ||
+  pass "mailbox preview writes nothing"
+
+out="$("$BIN" mailbox ntfy --url https://ntfy.example --topic kid --apply 2>&1)"
+check_eq "$?" 0 "mailbox ntfy --apply succeeds"
+check_contains "$(cat "$COURIER_CONF")" "transport=ntfy" "the config names the transport"
+check_contains "$(cat "$COURIER_CONF")" "url=https://ntfy.example" "the config names the server"
+check_eq "$("$BIN" mailbox-status)" "ntfy" "mailbox-status: ntfy after apply"
+
+"$BIN" mailbox ntfy --url http://insecure.example --topic kid --apply >/dev/null 2>&1
+check_eq "$?" 2 "mailbox refuses a non-https url"
+"$BIN" mailbox gotify --url https://gotify.example --topic kid --apply >/dev/null 2>&1
+check_eq "$?" 2 "gotify needs a token"
+
+out="$("$BIN" mailbox off --apply 2>&1)"
+check_eq "$?" 0 "mailbox off succeeds"
+[[ ! -e "$COURIER_CONF" ]] && pass "mailbox off removes the config" || fail "mailbox off left the config"
+check_eq "$("$BIN" mailbox-status)" "off" "mailbox-status: off after mailbox off"
+
 echo "notify-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc

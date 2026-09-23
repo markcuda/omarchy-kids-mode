@@ -1,0 +1,71 @@
+#!/bin/bash
+# omarchy:summary=Send the state to the one server the parent named (the only off-LAN process)
+# omarchy:hidden=true
+# R-NOTIFY-8: the courier is the only process that may reach beyond the LAN. It
+# seals the state for each paired device (lib/envelope.py) and posts it to the
+# parent's own ntfy or Gotify topic. Off by default: with no config, or with
+# notifications off, it sends nothing. Root only; DRY_RUN=1 prints the plan.
+# See docs/courier.md.
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+LIB="$DIR/lib"
+[[ -f "$LIB/kids.sh" ]] || LIB=/usr/lib/omarchy-kids
+# shellcheck source=lib/kids.sh
+source "$LIB/kids.sh"
+
+ETC=/etc/omarchy-kids
+SYSROOT=""
+CONFIG="$ETC/courier.conf"
+RELAY_CERT="$ETC/relay/cert.pem"
+DEVICES_JSON="$SYSROOT/run/omarchy-kids/devices.json"
+STATUS_JSON="$SYSROOT/run/omarchy-kids/status.json"
+QUEUE_DIR="$SYSROOT/var/lib/omarchy-kids/queue"
+DRY_RUN=1
+
+die() {
+  echo "omarchy-kids-relay-courier: $1" >&2
+  exit "${2:-2}"
+}
+
+usage() {
+  cat <<'EOF'
+Usage: omarchy-kids-relay-courier [--apply] [--dry-run]
+
+Seals the current state for every paired device and posts it to the ntfy or
+Gotify topic the parent configured (omarchy-kids-notify mailbox). It is the only
+Kids Mode process that may reach beyond the LAN (R-NOTIFY-8).
+
+Nothing is sent while notifications are off or no server is configured, and
+DRY_RUN=1 is the default: without --apply it prints the plan.
+
+  --apply     Really post.
+  --dry-run   Print the plan (the default).
+  -h, --help  Show this help and exit.
+EOF
+}
+
+while (($#)); do
+  case "$1" in
+    --apply) DRY_RUN=0 ;;
+    --dry-run) DRY_RUN=1 ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *) die "unknown argument '$1' (see --help)" ;;
+  esac
+  shift
+done
+
+is_root || die "root only (it reads the root-owned state and the device registry)"
+
+if [[ ! -f "$RELAY_CERT" ]]; then
+  echo "omarchy-kids-relay-courier: notifications are off; nothing to send"
+  exit 0
+fi
+
+args=(--config "$CONFIG" --devices "$DEVICES_JSON" --status "$STATUS_JSON" --queue "$QUEUE_DIR")
+((DRY_RUN)) || args+=(--apply)
+
+exec "$KIDS_PY" "$LIB/courier.py" "${args[@]}"

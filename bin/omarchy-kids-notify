@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Turn the parent's device notifications on or off, and manage the paired devices
-# omarchy:args=<enable|disable|status|pair|devices|rename|scopes|revoke|away> ...
+# omarchy:args=<enable|disable|status|pair|devices|rename|scopes|revoke|away|mailbox> ...
 # omarchy:hidden=true
 # The parent's side of the notification system (R-NOTIFY-1/3/5): the relay's
 # certificate, and the paired devices. Root only; DRY_RUN=1 prints the plan.
@@ -15,6 +15,7 @@ source "$LIB/kids.sh"
 
 ETC=/etc/omarchy-kids
 RELAY_DIR="$ETC/relay"
+COURIER_CONF="$ETC/courier.conf"
 CERT="$RELAY_DIR/cert.pem"
 KEY="$RELAY_DIR/key.pem"
 PORT=8447
@@ -43,6 +44,8 @@ Usage: omarchy-kids-notify enable [--host NAME] [--rekey] [--apply]
        omarchy-kids-notify pair [--scopes decide,act] [--apply]
        omarchy-kids-notify away <off|tailnet> [--apply]
        omarchy-kids-notify away-status
+       omarchy-kids-notify mailbox <off|ntfy|gotify> [--url U --topic T [--token K]] [--apply]
+       omarchy-kids-notify mailbox-status
        omarchy-kids-notify devices [--json]
        omarchy-kids-notify rename <id> <name> [--apply]
        omarchy-kids-notify scopes <id> decide[,act] [--apply]
@@ -56,6 +59,10 @@ every device and removes the certificate. `pair` starts a single-use pairing
 window and prints the URI (as a QR where qrencode is installed) plus the
 fingerprint to check on the device. The device commands delegate to
 omarchy-kids-devices. Root only; DRY_RUN=1 prints the plan.
+
+`mailbox` configures the away courier (N-11, R-NOTIFY-8): the one ntfy or Gotify
+topic of the parent's own that the box may post to, or `off`. Nothing is sent
+while notifications are off, and the config is root-only.
 
 `away tailnet` is the opt-in "Away from home: my own VPN" fence (N-10): it writes
 a systemd drop-in adding the CGNAT range Tailscale uses to the relay's allow
@@ -318,6 +325,82 @@ cmd_away_status() {
   if away_enabled; then echo "tailnet"; else echo "off"; fi
 }
 
+# mailbox -- the away courier's one server (N-11, R-NOTIFY-8). Off by default;
+# the parent names an https ntfy or Gotify topic, written root-only 0600.
+cmd_mailbox() {
+  local mode="${1:-}"
+  [[ -n "$mode" ]] || die "mailbox: needs <off|ntfy|gotify> (see --help)"
+  shift
+  local url="" topic="" token=""
+  while (($#)); do
+    case "$1" in
+      --url)
+        url="${2:?}"
+        shift 2
+        ;;
+      --topic)
+        topic="${2:?}"
+        shift 2
+        ;;
+      --token)
+        token="${2:?}"
+        shift 2
+        ;;
+      --apply)
+        DRY_RUN=0
+        shift
+        ;;
+      --dry-run)
+        DRY_RUN=1
+        shift
+        ;;
+      *) die "mailbox: unknown argument '$1'" ;;
+    esac
+  done
+  case "$mode" in
+    off)
+      if ((DRY_RUN)); then
+        echo "  [dry-run] would remove $COURIER_CONF"
+        return 0
+      fi
+      rm -f "$COURIER_CONF"
+      echo "omarchy-kids-notify: the away mailbox is off"
+      ;;
+    ntfy | gotify)
+      [[ -n "$url" && -n "$topic" ]] || die "mailbox $mode: needs --url and --topic"
+      [[ "$url" == https://* ]] || die "mailbox: --url must be https"
+      [[ "$topic" =~ ^[A-Za-z0-9._-]+$ ]] || die "mailbox: --topic must be letters, digits, dot, dash or underscore"
+      if [[ "$mode" == gotify && -z "$token" ]]; then
+        die "mailbox gotify: needs --token"
+      fi
+      if ((DRY_RUN)); then
+        echo "  [dry-run] would write $COURIER_CONF (transport=$mode url=$url topic=$topic)"
+        return 0
+      fi
+      install -d -m 0755 "$ETC"
+      local tmp="$COURIER_CONF.$$"
+      {
+        echo "transport=$mode"
+        echo "url=$url"
+        echo "topic=$topic"
+        [[ -n "$token" ]] && echo "token=$token"
+      } >"$tmp"
+      chmod 0600 "$tmp"
+      mv -f "$tmp" "$COURIER_CONF"
+      echo "omarchy-kids-notify: away mailbox configured for $mode"
+      ;;
+    *) die "mailbox: mode must be off, ntfy or gotify, got '$mode'" ;;
+  esac
+}
+
+cmd_mailbox_status() {
+  if [[ -s "$COURIER_CONF" ]]; then
+    sed -n 's/^transport=//p' "$COURIER_CONF"
+  else
+    echo "off"
+  fi
+}
+
 delegate() { # SUBCOMMAND... -- straight through to omarchy-kids-devices
   "$DEVICES_BIN" "$@"
 }
@@ -342,6 +425,8 @@ case "$cmd" in
   pair) cmd_pair "$@" ;;
   away) cmd_away "$@" ;;
   away-status) cmd_away_status ;;
+  mailbox) cmd_mailbox "$@" ;;
+  mailbox-status) cmd_mailbox_status ;;
   devices) delegate list "$@" ;;
   list) delegate list "$@" ;;
   rename) delegate rename "$@" ;;
