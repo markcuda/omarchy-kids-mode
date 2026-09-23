@@ -72,9 +72,10 @@ There is no always-on listener. `omarchy-kids-time-ledger tick` (every 30 second
 pairing window open — and does nothing while notifications are off. The relay stops itself on the
 same condition (`lib/relay.py`'s `is_needed` and `needs_stopping`): after a 60-second grace with
 Kids Mode not in use, it closes — dropping any device that was holding a stream open, because a
-subscriber must not become the always-on listener R-NOTIFY-1 forbids. It reads the pairing records
-through its `omarchy-parents` group, so a window keeps it up; a pairing directory it cannot read
-reads as no window and never stops the exit loop. So the port is closed soon
+subscriber must not become the always-on listener R-NOTIFY-1 forbids. Root publishes only the
+pairing window's expiry in `status.json` (`pairing_open_until`), which the relay reads through
+`omarchy-parents`; the pairing record itself stays root-only, so the relay never sees the token
+(R-NOTIFY-2). So the port is closed soon
 after the last kid leaves and the last request is decided (the bound is the tick's 30-second status
 refresh plus the grace plus the 5-second poll, about 95 seconds), and the tick brings it back within
 30 seconds of the next login, request, or pairing. Starting it is best effort and never fails a

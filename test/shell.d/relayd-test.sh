@@ -221,7 +221,7 @@ proc2 = subprocess.Popen([sys.executable, os.path.join(root, "bin", "omarchy-kid
                           "--devices-json", devices_json, "--status", idle_status, "--queue", idle_queue,
                           "--auth-sock", auth_sock, "--nonce-ledger", os.path.join(tmp, "nonces2.json"),
                           "--share", os.path.join(root, "share"), "--lib", os.path.join(root, "lib"),
-                          "--pairing-dir", os.path.join(tmp, "pairing-idle"), "--needless-seconds", "1"],
+                          "--needless-seconds", "1"],
                          stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 # Hold a device event-stream open: the relay must still stop -- an SSE
 # subscriber is not an always-on listener (R-NOTIFY-1).

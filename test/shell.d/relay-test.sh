@@ -117,27 +117,20 @@ os.makedirs(q3, exist_ok=True)
 check(not relay.is_needed(os.path.join(tmp, "missing.json"), q3),
       "not needed when the status is unreadable (fail-closed: stops sooner, the tick restarts it)")
 
-# A pairing window is Kids Mode in use too (R-NOTIFY-5).
-pair_dir = os.path.join(tmp, "pairing")
-os.makedirs(pair_dir, exist_ok=True)
-with open(os.path.join(pair_dir, ".lock"), "w") as f:
-    f.write("")
-check(not relay.is_needed(s2, q3, pair_dir), "not needed: a pairing dir holding only its lock file")
-with open(os.path.join(pair_dir, "d-1"), "w") as f:
-    json.dump({"expires_at": 1 << 40}, f)
-check(relay.is_needed(s2, q3, pair_dir), "needed: an open pairing window")
-with open(os.path.join(pair_dir, "d-1"), "w") as f:
-    json.dump({"expires_at": 0}, f)
-check(not relay.is_needed(s2, q3, pair_dir), "not needed: an expired pairing record")
+# A pairing window is Kids Mode in use too. Root publishes only its expiry in
+# status.json (the record stays root-only, so the relay never sees the token).
+import time as _time
 
-# The pairing dir is root-owned; the relay may not be able to read it. It must
-# read as "no window" and never raise -- an exception here kills the exit loop
-# and leaves the always-on listener R-NOTIFY-1 forbids.
-denied = os.path.join(tmp, "pairing-denied")
-os.makedirs(denied, exist_ok=True)
-os.chmod(denied, 0)
-check(not relay.pairing_pending(denied), "an unreadable pairing dir is not a window and never raises")
-os.chmod(denied, 0o755)
+s_pair = os.path.join(tmp, "status-pair.json")
+with open(s_pair, "w") as f:
+    json.dump({"pairing_open_until": int(_time.time()) + 300, "kids": []}, f)
+check(relay.is_needed(s_pair, q3), "needed: a pairing window published in status.json")
+with open(s_pair, "w") as f:
+    json.dump({"pairing_open_until": int(_time.time()) - 1, "kids": []}, f)
+check(not relay.is_needed(s_pair, q3), "not needed: an expired pairing window")
+with open(s_pair, "w") as f:
+    json.dump({"pairing_open_until": "soon", "kids": []}, f)
+check(not relay.is_needed(s_pair, q3), "a malformed pairing_open_until reads as no window, and never raises")
 
 check(not relay.needs_stopping(True, 0, 100_000, 60),
       "a live kid or open request keeps it up however idle the clock says")

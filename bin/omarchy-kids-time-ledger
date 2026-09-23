@@ -207,7 +207,8 @@ write_status_json() {
     rm -f "$rows"
     return 0
   }
-  if ! jq -s '{generated_at: (now | todate), kids: .}' "$rows" >"$tmp" 2>/dev/null ||
+  if ! jq -s --argjson pair "$(pairing_open_until)" \
+    '{generated_at: (now | todate), pairing_open_until: $pair, kids: .}' "$rows" >"$tmp" 2>/dev/null ||
     ! getent group omarchy-parents >/dev/null 2>&1 ||
     ! chown root "$tmp" 2>/dev/null ||
     ! chgrp omarchy-parents "$tmp" 2>/dev/null ||
@@ -252,20 +253,27 @@ cmd_tick() {
 # (omarchy-kids-notify enable). No certificate, no relay to start.
 relay_enabled() { [[ -f "$RELAY_CERT" && -f "$RELAY_KEY" ]]; }
 
-# pairing_pending — an unexpired pairing record exists: a phone is pairing right
-# now, so the relay is needed even with no kid live and no request open
-# (R-NOTIFY-5).
-pairing_pending() {
-  local dir="$PAIRING_DIR" f exp now
-  [[ -d "$dir" ]] || return 1
+# pairing_open_until — the latest expiry among the pending pairing records, else
+# 0. Root publishes only this (never the token) into status.json, so the relay
+# can keep itself up while a phone pairs without ever reading the record
+# (R-NOTIFY-2/5).
+pairing_open_until() {
+  local dir="$PAIRING_DIR" f exp now max=0
+  [[ -d "$dir" ]] || {
+    echo 0
+    return 0
+  }
   now="$(date +%s)"
   for f in "$dir"/*; do
     [[ -f "$f" ]] || continue
     exp="$(jq -r '.expires_at // 0' "$f" 2>/dev/null || echo 0)"
-    [[ "$exp" =~ ^[0-9]+$ ]] && ((exp > now)) && return 0
+    [[ "$exp" =~ ^[0-9]+$ ]] || continue
+    ((exp > now && exp > max)) && max="$exp"
   done
-  return 1
+  echo "$max"
 }
+
+pairing_pending() { [[ "$(pairing_open_until)" -gt 0 ]]; }
 
 # nudge_relay — start the relay on demand. It runs only while a kid is live, a
 # request is open, or a pairing window is open, and exits on its own once none

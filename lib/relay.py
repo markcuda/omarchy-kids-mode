@@ -96,46 +96,21 @@ def forward_decide(auth_sock, frame_json, timeout=30.0):
     return reply.decode("utf-8", "replace").strip()
 
 
-def pairing_pending(pairing_dir, now=None):
-    """True while a paired-device pairing window is open (R-NOTIFY-5).
-
-    A pairing window is Kids Mode in use: the relay must stay up while the phone
-    is pairing even though no kid is live and no request is open yet.
-    """
-    if not pairing_dir or not os.path.isdir(pairing_dir):
-        return False
-    now = time.time() if now is None else now
-    try:
-        names = os.listdir(pairing_dir)
-    except OSError:
-        # Not readable: treat as no window. Never raise -- this runs in the
-        # relay's exit loop, and an exception there would leave it running
-        # forever (the always-on listener R-NOTIFY-1 forbids).
-        return False
-    for name in names:
-        if name.startswith("."):  # .lock and the atomic-write temp files
-            continue
-        record = _read_json(os.path.join(pairing_dir, name))
-        if record is None:
-            continue
-        expires = record.get("expires_at")
-        if isinstance(expires, int) and not isinstance(expires, bool) and expires > now:
-            return True
-    return False
-
-
-def is_needed(status_path, queue_dir, pairing_dir=None):
+def is_needed(status_path, queue_dir):
     """True while Kids Mode is in use: a kid is live, a request is open, or a
     device is pairing.
 
     R-NOTIFY-1: the relay runs only while Kids Mode is in use and notifications
-    are enabled, so this gates its exit as well as its start. Best-effort -- an
-    unreadable source reads as not needed, which only lets the relay stop sooner
-    (the ledger tick starts it again within 30 seconds if it is wanted).
+    are enabled, so this gates its exit as well as its start. Root publishes the
+    pairing window's expiry in status.json (`pairing_open_until`); the pairing
+    record itself stays root-only, so the relay never sees the token (R-NOTIFY-2).
+    Best-effort -- an unreadable source reads as not needed, which only lets the
+    relay stop sooner (the ledger tick starts it again within 30 seconds).
     """
-    if pairing_pending(pairing_dir):
-        return True
     status = _read_json(status_path) or {}
+    until = status.get("pairing_open_until")
+    if isinstance(until, int) and not isinstance(until, bool) and until > time.time():
+        return True
     kids = status.get("kids")
     if isinstance(kids, list):
         for kid in kids:

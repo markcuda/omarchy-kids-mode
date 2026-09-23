@@ -246,7 +246,7 @@ class Relay:
             # R-NOTIFY-1 forbids. Any read failure counts as "in use" for this
             # pass, which only delays the stop.
             try:
-                needed = self.relay.is_needed(self.args.status, self.args.queue, self.args.pairing_dir)
+                needed = self.relay.is_needed(self.args.status, self.args.queue)
             except Exception:  # noqa: BLE001
                 needed = True
             now = time.monotonic()
@@ -279,7 +279,6 @@ def parse_args(argv):
     parser.add_argument("--share", default="/usr/share/omarchy-kids")
     parser.add_argument("--lib", default="/usr/lib/omarchy-kids")
     parser.add_argument("--needless-seconds", type=int, default=60)
-    parser.add_argument("--pairing-dir", default="/run/omarchy-kids/pairing")
     return parser.parse_args(argv)
 
 
