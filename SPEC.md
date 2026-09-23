@@ -405,4 +405,6 @@ GET  /v1/avatars/<id>.svg
 
 Authenticated requests carry `X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<sig>`; state changes carry an inner `signed` object that root re-verifies (R-NOTIFY-4). `proof` on `/v1/pair` is `HMAC-SHA256(token, sign_pub|box_pub|name)`, so the pairing token never travels; the `grant`/`end` routes are the ACT frame's and are not built yet.
 
+Away envelopes (R-NOTIFY-8, N-11; not built on this branch) are `{v, device_id, eph_pub, nonce, ct}`: a fresh ephemeral X25519 key does ECDH with the device's `box_pub`, HKDF-SHA256 (salt `omarchy-kids-envelope-v1`, info `x25519-chacha20poly1305`) derives the key, and ChaCha20-Poly1305 seals the document with a 12-byte nonce and the device id as associated data. `lib/envelope.py` seals; the device opens with its private box key; `clients/parent/test-vectors/notify-vectors.json` carries the vectors the app must reproduce.
+
 Files: `/etc/omarchy-kids/devices/<id>.conf` (root `0600`: name, platform, both public keys, `paired_at`, `paired_by`, scopes, `label_for_kids`); `/run/omarchy-kids/pairing/<id>` (root `0600`, single-use, expiring); `/var/lib/omarchy-kids/<kid>/decisions/<id>.json` (`0640 root:kid`, the result the kid's session reads).

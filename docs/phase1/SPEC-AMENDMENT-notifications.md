@@ -124,6 +124,8 @@ credential) never travels, only a proof that the device holds it. The `grant`/`e
 the ACT frame's and are not built on this branch; a device learns its scopes and the kids from
 `GET /v1/state`.
 
+Away envelopes (R-NOTIFY-8, N-11; not built on this branch) are `{v, device_id, eph_pub, nonce, ct}`: a fresh ephemeral X25519 key does ECDH with the device's `box_pub`, HKDF-SHA256 (salt `omarchy-kids-envelope-v1`, info `x25519-chacha20poly1305`) derives the key, and ChaCha20-Poly1305 seals the document with a 12-byte nonce and the device id as associated data. `lib/envelope.py` seals; the device opens with its private box key; `clients/parent/test-vectors/notify-vectors.json` carries the vectors the app must reproduce.
+
 File formats: `/etc/omarchy-kids/devices/<id>.conf` (root 0600: name, platform, both public keys,
 `paired_at`, `paired_by`, scopes, `label_for_kids`); `/run/omarchy-kids/pairing/<id>` (root 0600, the
 single-use pairing record); `/var/lib/omarchy-kids/<kid>/decisions/<id>.json` (0640 root:kid, the

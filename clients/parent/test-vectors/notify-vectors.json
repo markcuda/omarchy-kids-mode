@@ -15,6 +15,21 @@
   },
   "decision_message_b64": "b21hcmNoeS1raWRzLWRlY2lzaW9uLXYxCnsiZGVjaXNpb24iOiJhcHByb3ZlIiwiZGV2aWNlX2lkIjoiZC12ZWN0b3IiLCJub25jZSI6Im5vbmNlLWRlY2lzaW9uLTEiLCJyZXBseSI6IkFwclx1MDBlOHMgZFx1MDBlZW5lciIsInJlcXVlc3RfaWQiOiIxMDAwMDAwMDAxLWtpZC1hZGEtdGltZSIsInRzIjoxNzU4NTMwNDAwfQ==",
   "decision_signature_b64": "+9tEJ5mwUaDZNAz6EaKmNaxHe5hVGYSrb+mlY0X2e3lVWFMIRwWhut50+jAVI5mjEOvPwBwZmWGZ2k1Ig0CHAg==",
+  "envelope": {
+    "box_priv_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+    "box_pub_b64": "NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ=",
+    "envelope": {
+      "ct": "b+P8xGKeudb7pAmaYR2ZI+kw7+/ya51JAZIKQa+GlnRmZVdJv1pej1a5+QRI5JsNEGtxQpS4iHb71BUD",
+      "device_id": "d-vector",
+      "eph_pub": "eaYx7t4b+cmPEgMs3q3Q56B5OY/HhriMyEbsia+FpRo=",
+      "nonce": "yMnKy8zNzs/Q0dLT",
+      "v": 1
+    },
+    "eph_hex": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+    "nonce_hex": "c8c9cacbcccdcecfd0d1d2d3",
+    "plaintext_b64": "eyJraWRzIjogW3sia2lkIjogImtpZC1hZGEiLCAibGl2ZSI6IHRydWV9XX0=",
+    "scheme": "x25519-hkdf-sha256-chacha20poly1305-aad-device-id"
+  },
   "pairing": {
     "box_pub": "QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl8=",
     "name": "Ada's phone",

@@ -44,6 +44,7 @@ fi
 # defines.
 python3 - "$DIR" <<'PY'
 import base64
+import importlib.util
 import json
 import os
 import sys
@@ -66,6 +67,10 @@ def check(cond, label):
 
 with open(os.path.join(root, "clients/parent/test-vectors/notify-vectors.json"), encoding="utf-8") as f:
     doc = json.load(f)
+
+_env_spec = importlib.util.spec_from_file_location("kids_envelope", os.path.join(root, "lib", "envelope.py"))
+envelope = importlib.util.module_from_spec(_env_spec)
+_env_spec.loader.exec_module(envelope)
 
 check(
     doc["contexts_b64"]["decision"] == base64.b64encode(devices.SIGN_CONTEXT).decode(),
@@ -125,6 +130,21 @@ pair = doc["pairing"]
 check(
     devices.pairing_proof(pair["token"], pair["name"], pair["sign_pub"], pair["box_pub"]) == pair["proof"],
     "the pairing proof recomputes from the token in the file",
+)
+
+env = doc["envelope"]
+plaintext = base64.b64decode(env["plaintext_b64"])
+check(
+    envelope.open_envelope("d-vector", bytes.fromhex(env["box_priv_hex"]), env["envelope"]) == plaintext,
+    "the away envelope (N-11) opens with the box private key",
+)
+check(
+    envelope.seal(
+        "d-vector", env["box_pub_b64"], plaintext,
+        eph_priv=bytes.fromhex(env["eph_hex"]), nonce=bytes.fromhex(env["nonce_hex"]),
+    )
+    == env["envelope"],
+    "the envelope reseals to the same bytes",
 )
 
 sys.exit(1 if fails else 0)
