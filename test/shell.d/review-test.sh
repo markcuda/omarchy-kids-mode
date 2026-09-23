@@ -59,6 +59,15 @@ REVIEW_HASH="$(python3 -c 'import hashlib; print(hashlib.sha256(b"minecraft").he
 OPEN_REVIEW="$ROOT/var/lib/omarchy-kids/reviews/open/kid-ada.$REVIEW_HASH.json"
 
 # apps is stubbed: deny must ask it to hide, and nothing else may run.
+cat >"$STUBS/flock" <<'EOF'
+#!/bin/bash
+printf 'flock %s\n' "$*" >>"${FLOCK_LOG:?}"
+exit 0
+EOF
+chmod +x "$STUBS/flock"
+export FLOCK_LOG="$TMP/flock.log"
+: >"$FLOCK_LOG"
+
 kids_stub "$TMP/tree" omarchy-kids-apps <<EOF
 #!/bin/bash
 printf 'apps %s\n' "\$*" >>"$TMP/apps.log"
@@ -137,6 +146,26 @@ rm -f "$APPDIR/minecraft.desktop"
 out="$("$BIN" scan --apply 2>&1)"
 check_contains "$out" "review opened for kid-ada/minecraft" "a removed desktop opens a review"
 check "$(jq -r '.now' "$OPEN_REVIEW")" "missing" "the review says the surface is missing"
+
+# --- a re-stamp or a removed id closes a stale review ---------------------
+desktop "minecraft final"
+"$BIN" scan --apply >/dev/null 2>&1
+[[ -f "$OPEN_REVIEW" ]] || fail "setup: expected a review before the re-stamp case"
+jq 'del(.["minecraft"])' "$BASELINE" >"$BASELINE.tmp" && mv -f "$BASELINE.tmp" "$BASELINE"
+"$BIN" scan --apply >/dev/null 2>&1
+[[ -f "$OPEN_REVIEW" ]] && fail "a re-stamp left the stale review open" ||
+  pass "a re-stamp closes a stale review"
+
+desktop "minecraft again"
+"$BIN" approve kid-ada minecraft --apply >/dev/null 2>&1
+desktop "minecraft changed"
+"$BIN" scan --apply >/dev/null 2>&1
+[[ -f "$OPEN_REVIEW" ]] || fail "setup: expected a review before the sweep case"
+printf 'name=Ada\nband=6-8\n' >"$KIDS/kid-ada.conf" # the parent removed the app
+"$BIN" scan --apply >/dev/null 2>&1
+[[ -f "$OPEN_REVIEW" ]] && fail "a review for an id gone from apps.extra was not swept" ||
+  pass "a review for a removed id is swept"
+check_contains "$(cat "$FLOCK_LOG")" "-x 9" "the command takes the lock"
 
 # --- neither approve nor deny with a bad call -----------------------------
 "$BIN" approve kid-ada >/dev/null 2>&1

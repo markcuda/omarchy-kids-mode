@@ -287,17 +287,15 @@ case "$cmd" in
 esac
 is_root || die "root only (the stamps and the app's surface are root-owned)"
 # One writer at a time: scan's compare-and-stamp must not interleave with an
-# approve or deny (rule 4). A mkdir mutex, released when the command exits.
+# approve or deny (rule 4). An flock the kernel releases, like the repo's other
+# bash locks (lib/kids.sh's luks lock); a concurrent run waits, never fails.
 install -d -m 0750 "$REVIEW_DIR"
 _chgrp_parents "$REVIEW_DIR"
-LOCK_DIR="$REVIEW_DIR/.lock.d"
-lock_tries=0
-while ! mkdir "$LOCK_DIR" 2>/dev/null; do
-  lock_tries=$((lock_tries + 1))
-  ((lock_tries > 100)) && die "another omarchy-kids-review is running" 1
-  sleep 0.05
-done
-trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
+exec 9>"$REVIEW_DIR/.lock" || die "could not open the review lock" 1
+chmod 0640 "$REVIEW_DIR/.lock"
+_chgrp_parents "$REVIEW_DIR/.lock"
+flock -x 9 || die "could not lock the review directory" 1
+trap 'flock -u 9 2>/dev/null || true; exec 9>&-' EXIT
 want_kid=""
 want_json=""
 args=()

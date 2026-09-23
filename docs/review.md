@@ -36,7 +36,7 @@ lands in the kid's launcher at the next sign-in, like every `hide` (`docs/apps.m
 | Path | Mode / owner |
 | --- | --- |
 | `/var/lib/omarchy-kids/reviews/baseline/<kid>.json` | `0640 root:omarchy-parents`, one id → fingerprint map |
-| `/var/lib/omarchy-kids/reviews/open/<kid>-<id>.json` | `0640 root:omarchy-parents`, `{kid, id, was, now, detected_at, state}` |
+| `/var/lib/omarchy-kids/reviews/open/<kid>.<hash of id>.json` | `0640 root:omarchy-parents`, `{kid, id, was, now, detected_at, state}` |
 
 One writer at a time: the command takes a mutex under the review directory, so a `scan` cannot
 interleave with an `approve` or `deny` and resurrect a review the parent just answered. An `open`
