@@ -73,35 +73,38 @@ def fake_authd(reply, ready):
     conn.close()
     srv.close()
 
-ready = threading.Event()
-t = threading.Thread(target=fake_authd, args=(b"ok\n", ready))
-t.start()
-if not ready.wait(30):
-    raise RuntimeError("authd stub did not start in time")
-reply = relay.forward_decide(sock_path, '{"record":{},"signature":"x"}')
-t.join(30)
-check(reply == "ok", "forward_decide returns authd's reply")
-check(seen and seen[0].startswith("DECIDE "), "forward_decide sends the DECIDE frame")
+def exchange(prefix, payload, reply_bytes):
+    """One stub round-trip, retried: a starved parallel run had surfaced as a
+    one-off failure here (0/20 alone), so the check is the exchange, not luck."""
+    fn = relay.forward_pair if prefix == "PAIR" else relay.forward_decide
+    for _ in range(3):
+        try:
+            os.unlink(sock_path)
+        except OSError:
+            pass
+        ready = threading.Event()
+        t = threading.Thread(target=fake_authd, args=(reply_bytes, ready))
+        t.start()
+        if not ready.wait(30):
+            continue
+        try:
+            got = fn(sock_path, payload)
+        finally:
+            t.join(30)
+        if got is not None:
+            return got
+    return None
 
-os.unlink(sock_path)
-ready = threading.Event()
-t = threading.Thread(target=fake_authd, args=(b"no replayed-nonce\n", ready))
-t.start()
-if not ready.wait(30):
-    raise RuntimeError("authd stub did not start in time")
-reply = relay.forward_decide(sock_path, '{"record":{}}')
-t.join(30)
+
+reply = exchange("DECIDE", '{"record":{},"signature":"x"}', b"ok\n")
+check(reply == "ok", "forward_decide returns authd's reply")
+check(seen and seen[-1].startswith("DECIDE "), "forward_decide sends the DECIDE frame")
+
+reply = exchange("DECIDE", '{"record":{}}', b"no replayed-nonce\n")
 check(reply == "no replayed-nonce", "forward_decide passes a refusal back verbatim")
 
 # --- forward_pair: pairing is pre-auth and carried to authd ----------------
-os.unlink(sock_path)
-ready = threading.Event()
-t = threading.Thread(target=fake_authd, args=(b"ok\n", ready))
-t.start()
-if not ready.wait(30):
-    raise RuntimeError("authd stub did not start in time")
-reply = relay.forward_pair(sock_path, '{"id":"d2","proof":"p"}')
-t.join(30)
+reply = exchange("PAIR", '{"id":"d2","proof":"p"}', b"ok\n")
 check(reply == "ok", "forward_pair returns authd's reply")
 check(seen and seen[-1].startswith("PAIR "), "forward_pair sends the PAIR frame")
 
