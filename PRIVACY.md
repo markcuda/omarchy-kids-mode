@@ -35,10 +35,11 @@ enforces or could tamper with (I-3). The only people who can read it:
   screens) — the same numbers the ledger recorded, nothing added.
 - **The kid themselves**, on their own "What my grown-ups can see" screen at every login
   (R-DATA-3) — see "In kid words" below.
-- **Nobody else**, with one optional exception the parent controls: parental notifications (below).
-  Nothing here is uploaded, synced, or reachable over the network unless the parent turns that on.
-  I-2 as amended: nothing about a child leaves the machine except to a device the parent paired or a
-  server the parent named, and only when notifications are on.
+- **Nobody else.** Nothing here is uploaded, synced, or reachable over the network. The amended I-2
+  permits one future exception that is **not present in this build**: if a parent later turns on
+  notifications (the "Parental notifications" section below, not yet shipped), a "Ask a parent"
+  request may reach a device the parent paired or a server the parent named. Until that ships, the
+  rule is absolute.
 
 ## Parental notifications (optional, off by default)
 

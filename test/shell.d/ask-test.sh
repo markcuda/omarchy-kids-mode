@@ -627,5 +627,41 @@ check_not_contains "$out" "rejected before it was sent" "grant time 7 carries mi
 check_contains "$(cat "$ROOT_DIR/share/ask/shell.qml")" '"Your password"' \
   "the ask modal's empty field says whose password is wanted"
 
+# --- R-NOTIFY-7: a record takes the queue directory's group, not the writer's --
+# The N-1 blocking fix. Observable: point the queue at a *secondary* group of
+# the test user, collect, and check the record took that group -- a record that
+# kept the writer's primary group (the bug) would show it. /usr/bin/id, not the
+# stubbed PATH id.
+if [[ "${EUID:-0}" -ne 0 ]]; then
+  real_id=/usr/bin/id
+  pgid="$("$real_id" -g 2>/dev/null || true)"
+  sgid=""
+  for g in $("$real_id" -G 2>/dev/null || true); do
+    [[ "$g" == "$pgid" ]] || {
+      sgid="$g"
+      break
+    }
+  done
+else
+  sgid=""
+fi
+if [[ -n "$sgid" ]]; then
+  rm -f "$QUEUE_DIR"/*.json 2>/dev/null || true
+  chgrp "$sgid" "$QUEUE_DIR" 2>/dev/null || true
+  cat >"$RUN_USER_ROOT/1000/omarchy-kids/ask-outbox/1000000099-kid-ada-time.json" <<'EOF'
+{"kid": "kid-ada", "kind": "time", "what": "5", "minutes": 5, "asked_at": 1000000099, "state": "open"}
+EOF
+  "$BIN" collect --apply >/dev/null 2>&1
+  f="$(ls "$QUEUE_DIR"/1000000099-*.json 2>/dev/null | head -1)"
+  if [[ -n "$f" ]]; then
+    check_eq "$(kids_file_gid "$f")" "$sgid" \
+      "queue record takes the directory's secondary group (R-NOTIFY-7)"
+  else
+    fail "queue group test: collect wrote no record"
+  fi
+else
+  pass "queue group: no secondary group (or run as root); skipping the observable-group assertion"
+fi
+
 echo "ask-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc
