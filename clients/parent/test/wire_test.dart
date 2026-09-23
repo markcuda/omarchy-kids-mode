@@ -77,6 +77,12 @@ void main() {
       () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u0007b'),
       throwsArgumentError,
     );
+    // A variation selector (Mn, which the box accepts) must NOT be refused:
+    // the emoji keyboard appends U+FE0F to ❤️ and the like.
+    expect(
+      decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'ok \u2764\ufe0f')['reply'],
+      equals('ok \u2764\ufe0f'),
+    );
     // A no-break space or a zero-width joiner is refused too (the box would).
     expect(
       () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u00a0b'),

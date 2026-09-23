@@ -101,7 +101,6 @@ bool _printable(int rune) {
   if (rune >= 0x2028 && rune <= 0x202f) return false; // separators, bidi marks, narrow nbsp
   if (rune >= 0x2060 && rune <= 0x206f) return false; // word joiner and format controls
   if (rune == 0xfeff) return false; // BOM / zero-width no-break space
-  if (rune >= 0xfe00 && rune <= 0xfe0f) return false; // variation selectors
   if (rune >= 0xe0000 && rune <= 0xe007f) return false; // tag characters
   return true;
 }
