@@ -22,6 +22,9 @@ class FakeRelay implements RelayTransport {
   Stream<BoxState> boxEvents({required int ts, required String nonce}) => Stream.fromIterable(events);
 
   @override
+  String get pinnedFingerprint => 'ab' * 32;
+
+  @override
   Future<Map<String, dynamic>> pair(String frame) async => {'reply': 'ok'};
 
   @override

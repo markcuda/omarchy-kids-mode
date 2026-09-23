@@ -4,6 +4,9 @@
 import 'state_model.dart';
 
 abstract class RelayTransport {
+  /// The SPKI fingerprint this transport pins — the value the parent compared.
+  String get pinnedFingerprint;
+
   Future<BoxState> boxState({required int ts, required String nonce});
   Stream<BoxState> boxEvents({required int ts, required String nonce});
   Future<Map<String, dynamic>> decide({

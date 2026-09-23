@@ -145,6 +145,9 @@ Stream<String> withLiveness(Stream<String> lines, Duration quiet) => lines.timeo
 /// SPKI, and requests signed with the device's Ed25519 key. No retries, no
 /// redirects: one box, one pinned certificate.
 class KidsRelayClient implements RelayTransport {
+  @override
+  String get pinnedFingerprint => pinnedSpki;
+
   final String host;
   final int port;
   final String pinnedSpki;

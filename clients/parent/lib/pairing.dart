@@ -22,32 +22,43 @@ class PairingResult {
   Map<String, Object?> toJson() => {'deviceId': deviceId, 'pin': pin, 'addresses': addresses};
 
   factory PairingResult.fromJson(Map<String, dynamic> json) => PairingResult(
-        deviceId: json['deviceId'] as String? ?? '',
-        pin: json['pin'] as String? ?? '',
-        addresses: (json['addresses'] as List?)?.whereType<String>().toList() ?? const [],
+        deviceId: json['deviceId'] is String ? json['deviceId'] as String : '',
+        pin: json['pin'] is String ? json['pin'] as String : '',
+        addresses:
+            json['addresses'] is List ? (json['addresses'] as List).whereType<String>().toList() : const [],
       );
 
   static PairingResult? decode(String? stored) {
     if (stored == null) return null;
     try {
-      return PairingResult.fromJson(jsonDecode(stored) as Map<String, dynamic>);
+      final json = jsonDecode(stored);
+      if (json is! Map<String, dynamic>) return null; // junk that parses as JSON
+      return PairingResult.fromJson(json);
     } on FormatException {
+      return null;
+    } on TypeError {
       return null;
     }
   }
 }
 
-/// Pair this device with the box the URI names. `pin` is the SPKI fingerprint the
-/// parent compared against the box's screen; `uri.token` is the single-use token,
-/// which never travels -- the frame carries only the proof over the device's keys.
+final RegExp _fingerprint = RegExp(r'^[0-9a-fA-F]{64}$');
+
+/// Pair this device with the box the URI names. The stored pin is the fingerprint
+/// the transport actually pins (the value the parent compared against the box's
+/// screen), so the app cannot remember one it never used. `uri.token` is the
+/// single-use token, which never travels -- the frame carries only the proof.
 Future<PairingResult> pairWithBox({
   required PairingUri uri,
-  required String pin,
   required String name,
   required String platform,
   required Keystore keystore,
   required RelayTransport relay,
 }) async {
+  final pin = relay.pinnedFingerprint;
+  if (!_fingerprint.hasMatch(pin)) {
+    throw ArgumentError('not an SPKI fingerprint: $pin');
+  }
   final signSeed = await _seed(keystore.loadSignSeed, keystore.saveSignSeed);
   final boxSeed = await _seed(keystore.loadBoxSeed, keystore.saveBoxSeed);
   final signPub = base64.encode(

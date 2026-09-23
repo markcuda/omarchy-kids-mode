@@ -11,7 +11,7 @@ package — `lib/notify_crypto.dart` (the box's signing, pairing and envelope co
 the parent reads off the pairing screen and the app pins — and a `KidsRelayClient` that speaks TLS
 to the relay with the signed headers, streams the `/v1/events` SSE feed (a stream that goes three heartbeats quiet ends with an error, so a half-open connection cannot hang), and posts decisions and
 pairings) and `lib/state_model.dart` (the relay's document as typed kids, requests and recent
-decisions, parsed defensively) `lib/session.dart` (the controller: the device key from the
+decisions, parsed defensively), `lib/session.dart` (the controller: the device key from the
 keystore, refresh/watch, and approve/decline with a reply -- over an injectable transport, so its
 flow is unit-tested without a box) and `lib/pairing.dart` (the pairing flow: generate the device's
 sign and box keys once, show the proof and never the token, and remember the paired box). The
