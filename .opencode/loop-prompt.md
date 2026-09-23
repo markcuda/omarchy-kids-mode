@@ -61,6 +61,42 @@ integration copies -- that mistake invalidated a Level 3 check on 2026-09-21), a
 live before closing the iteration. Leave the kid able to log in; the parent's session is never
 touched (I-1). The backlog below is what to do when the live pass finds nothing.
 
+## Owner-directed workstreams (2026-09-22) — these are the priority
+
+The owner reviewed every open decision on 2026-09-22 and directed these. Read `AGENTS.md`'s new
+"Build philosophy" first: UX reigns supreme, "it just works" always, and lean into the most robust,
+full-featured build, no holds barred. They supersede the older backlog below where they overlap.
+
+1. **Parental notifications (N-0..N-13).** Spec source:
+   `docs/research/2026-09-22-parental-notifications.md` — the owner-directed fable-5.1 design (local
+   `relayd`, a Flutter app for mobile/macOS/Windows, an on-box Omarchy notifier, LAN-first with
+   opt-in tailnet and mailbox transports, root verifying device signatures). N-0 is the SPEC
+   amendment adding I-2's amendment and `R-NOTIFY-*`; its exact text is in that document. Build the
+   tickets in order. N-3, N-4, N-5 and N-6 touch the trust boundary: get independent review before
+   commit. This resolves `DECISIONS-NEEDED` item 8 as **option 3** (queue dir `0750
+   root:omarchy-parents`, records `0640`, `list` reads for that group, the ledger publishes the
+   count, the bar badge reads `status.json`).
+2. **Level 3: block commands, not keybinds.** Owner: do **not** unbind the terminal at Level 3. Keep
+   the terminal and the file manager, scoped to the kid's own files; instead block the commands a
+   parent does not want a kid running (`bash`, `sudo`, and the like). This is a **setup** choice per
+   kid, enforced by root, not by hiding a key. Draft the spec first.
+3. **The parent's management surface.** One native Quickshell UI (panel/wizard) **and** full terminal
+   parity: every UI action has a command and every command has a UI path. Draft the spec first.
+4. **The add-on catalog.** Parents subscribe to a feed (RSS-like) of Kids-Mode apps/plugins and
+   install with simple commands; distribution/re-approval as the survey decided; surfaces: **all of
+   them** (tiles, sites, themes, the kid screen, the panel). Draft the spec first.
+5. **Levels renamed in the UI** to **"Simple Computer"** (grid) and **"Full Desktop"** (desktop) in
+   every parent-facing label. (Item 1 approved.)
+6. **Favorites and recents.** A parent-pinned **Favorites** row at the top and an automatic
+   **Recents** row at the bottom of the launcher; ordering is presentation only (the root-owned
+   manifest stays authoritative). (Item 4.)
+7. **`dns` and `sites` are wired** band-level only, with the docs saying so. (Item 7.)
+8. **W2: the time tick fails closed on an unreadable policy value** (`grace`, reason
+   `policy-invalid`) instead of failing open. (Item 5.)
+
+For items 2, 3 and 4: draft and review the spec before any code, then implement ticket by ticket.
+Items 5-8 are small enough to draft and implement in one branch each.
+
 ## Backlog, in order (pick the first that is actionable and unblocked)
 
 Read `docs/dogfood-2026-09-21.md` first — it is the live pass report and the source for items 1-3.
