@@ -120,10 +120,14 @@ out="$("$BIN" pair-start --id d9 --apply 2>&1)"
 check_eq "$?" "0" "pair-start --apply succeeds"
 [[ -f "$PAIR_DIR/d9" ]] && pass "pair-start writes the pairing record" || fail "pair-start: no record"
 check_eq "$(kids_file_mode "$PAIR_DIR/d9")" "600" "pairing record is 0600 (R-NOTIFY-5)"
-check_contains "$out" "code:  " "pair-start prints the code"
-check_contains "$out" "omarchy-kids://pair" "pair-start prints the pair URI"
+check_contains "$out" "pair:  omarchy-kids://pair" "pair-start prints the pair URI"
+[[ "$out" != *"code:"* ]] && pass "pair-start prints no code nothing accepts (I-6)" ||
+  fail "pair-start still prints a code with no code path"
 "$BIN" pair-start --id 'bad:id' --apply >/dev/null 2>&1
 check_eq "$?" "2" "pair-start refuses a bad id"
+"$BIN" add --id d10 --name D --platform ios --sign-pub "$KEY" --box-pub "$KEY" --apply >/dev/null 2>&1
+"$BIN" pair-start --id d10 --apply >/dev/null 2>&1
+check_eq "$?" "2" "pair-start refuses an already-paired id"
 
 echo "devices-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc

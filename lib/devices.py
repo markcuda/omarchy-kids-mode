@@ -32,6 +32,7 @@ import os
 import re
 import secrets
 import stat
+from contextlib import contextmanager
 
 try:
     from cryptography.exceptions import InvalidSignature
@@ -43,8 +44,7 @@ except ImportError:  # pragma: no cover - the skip path
 
 SIGN_CONTEXT = b"omarchy-kids-decision-v1\n"
 REQUEST_CONTEXT = b"omarchy-kids-request-v1\n"
-PAIRING_TTL_SECONDS = 300  # the pairing code is single-use and expires
-PAIRING_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no I/O/0/1
+PAIRING_TTL_SECONDS = 300  # the pairing record is single-use and expires
 SKEW_SECONDS = 300
 # Twice the skew: a nonce is remembered strictly longer than a timestamp is
 # accepted, so a replay of a still-in-skew record can never find it pruned.
@@ -319,13 +319,15 @@ def pairing_proof(token_hex, name, sign_pub, box_pub):
 
 
 def write_pairing(pairing_dir, pair_id, scopes, now, ttl=PAIRING_TTL_SECONDS):
-    """Root writes one single-use pairing record and returns it."""
+    """Root writes one single-use pairing record and returns it.
+
+    No code: the token (in the QR) is the only credential, so there is no
+    printed secret nothing accepts (I-6).
+    """
     token = secrets.token_hex(20)
-    code = "".join(secrets.choice(PAIRING_CODE_ALPHABET) for _ in range(8))
     record = {
         "id": pair_id,
         "token": token,
-        "code": code,
         "scopes": scopes,
         "created_at": now,
         "expires_at": now + ttl,
@@ -339,43 +341,76 @@ def write_pairing(pairing_dir, pair_id, scopes, now, ttl=PAIRING_TTL_SECONDS):
     return record
 
 
-def validate_pairing(pairing_dir, pair_id, proof, name, sign_pub, box_pub, now):
-    """(scopes, "ok") if the proof is right and unexpired, else (None, reason).
-
-    The record is single-use: a good pairing deletes it, and the read-check-
-    delete runs under an flock so two connections cannot both consume it.
-    """
-    if not isinstance(pair_id, str) or not RE_DEVICE_ID.match(pair_id):
-        return None, "malformed"
-    if not all(isinstance(v, str) for v in (proof, name, sign_pub, box_pub)):
-        return None, "malformed"
+@contextmanager
+def pairing_lock(pairing_dir):
+    """One directory-wide lock: pairing is rare, and a per-id lock file would
+    be created for any id a frame names (unbounded tmpfs growth)."""
     os.makedirs(pairing_dir, mode=0o700, exist_ok=True)
-    path = os.path.join(pairing_dir, pair_id)
-    with open(path + ".lock", "w", encoding="utf-8") as lock:
+    with open(os.path.join(pairing_dir, ".lock"), "w", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         try:
-            text = _open_regular(path)
-            if text is None:
-                return None, "unknown-pairing"
-            try:
-                record = json.loads(text)
-            except ValueError:
-                return None, "malformed"
-            if not isinstance(record, dict):
-                return None, "malformed"
-            expires = record.get("expires_at")
-            if not isinstance(expires, int) or isinstance(expires, bool) or now > expires:
-                return None, "expired"
-            token = record.get("token")
-            if not isinstance(token, str) or not re.fullmatch(r"[0-9a-f]{40}", token):
-                return None, "malformed"
-            if not hmac.compare_digest(pairing_proof(token, name, sign_pub, box_pub), proof):
-                return None, "bad-proof"
-            os.unlink(path)
-            scopes = record.get("scopes")
-            return (scopes if isinstance(scopes, str) and scopes else "decide,act"), "ok"
+            yield
         finally:
             fcntl.flock(lock, fcntl.LOCK_UN)
+
+
+def read_pairing(pairing_dir, pair_id, now):
+    """(record, "ok") or (None, reason). Does not consume the record."""
+    if not isinstance(pair_id, str) or not RE_DEVICE_ID.match(pair_id):
+        return None, "malformed"
+    text = _open_regular(os.path.join(pairing_dir, pair_id))
+    if text is None:
+        return None, "unknown-pairing"
+    try:
+        record = json.loads(text)
+    except ValueError:
+        return None, "malformed"
+    if not isinstance(record, dict):
+        return None, "malformed"
+    expires = record.get("expires_at")
+    if not isinstance(expires, int) or isinstance(expires, bool) or now > expires:
+        return None, "expired"
+    token = record.get("token")
+    if not isinstance(token, str) or not re.fullmatch(r"[0-9a-f]{40}", token):
+        return None, "malformed"
+    return record, "ok"
+
+
+def check_pairing_proof(record, proof, name, sign_pub, box_pub):
+    """True iff the proof matches, for exactly these keys and this name."""
+    if not all(isinstance(v, str) for v in (proof, name, sign_pub, box_pub)):
+        return False
+    token = record.get("token")
+    if not isinstance(token, str):
+        return False
+    try:
+        return hmac.compare_digest(pairing_proof(token, name, sign_pub, box_pub), proof)
+    except (TypeError, ValueError):
+        return False
+
+
+def consume_pairing(pairing_dir, pair_id):
+    """Delete the single-use record. Call only after registration succeeded."""
+    try:
+        os.unlink(os.path.join(pairing_dir, pair_id))
+    except OSError:
+        pass
+
+
+def validate_pairing(pairing_dir, pair_id, proof, name, sign_pub, box_pub, now):
+    """(scopes, "ok") reads, verifies and consumes in one locked step -- the
+    whole check for a caller that has nothing to do between check and consume
+    (the CLI and tests). authd registers the device between read and consume,
+    so it uses the pieces above under one lock instead."""
+    with pairing_lock(pairing_dir):
+        record, reason = read_pairing(pairing_dir, pair_id, now)
+        if record is None:
+            return None, reason
+        if not check_pairing_proof(record, proof, name, sign_pub, box_pub):
+            return None, "bad-proof"
+        consume_pairing(pairing_dir, pair_id)
+        scopes = record.get("scopes")
+        return (scopes if isinstance(scopes, str) and scopes else "decide,act"), "ok"
 
 
 def _main(argv):  # pragma: no cover - a thin CLI for tests and the panel card

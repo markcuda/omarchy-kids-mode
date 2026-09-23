@@ -145,7 +145,7 @@ bash test/shell.d/authd-test.sh
 or as part of the full suite with `test/all`.
 ## The GRANT request type (2026-09-03)
 
-The daemon answers four request shapes, one per connection. Ordinary verification uses the
+The daemon answers five request shapes, one per connection. Ordinary verification uses the
 explicit `VERIFY` frame. The wizard's `BOOTSTRAP` frame adds the caller-identity check. The third
 is `GRANT <json-request-line>\n<password>\n`, and it exists because an "Ask a grown-up" approval
 cannot be an exit code from a process the kid owns (review S1). Root does all of it here: it
@@ -158,7 +158,14 @@ the "do the thing" code has exactly one home. The fourth is `DECIDE <json-frame>
 device's signed decision (R-NOTIFY-4): only the relay account (`--relay-user`) may send it,
 `lib/devices.py` verifies the Ed25519 signature, skew, nonce and the fixed `decide` scope as root,
 and on success root runs `<--ask-bin> approve|decline <id> --by device:<id> --apply`, which refuses
-an already-decided record. A missing module, ledger or relay account makes every DECIDE fail
+an already-decided record. The fifth is `PAIR <json-frame>\n` (R-NOTIFY-5): again only the relay may
+send it, `lib/devices.py` reads the single-use pairing record (`--pairing-dir`), checks the
+HMAC-SHA256 proof over the device's keys and name against the expiry, then registers the device
+through `<--devices-bin> add` and consumes the record -- and only then, so a failure to register
+does not burn the parent's pairing window. Its `no` reasons are `malformed`, `unknown-pairing`,
+`expired`, `bad-proof`, `apply failed`, `devices unavailable` and `not the relay`. The parent
+password gate is the caller's: the panel verifies first, then runs `omarchy-kids-devices
+pair-start`. A missing module, ledger or relay account makes every DECIDE fail
 closed. Two other changes came from the same review: the
 rate limiter is keyed per peer uid and decays after a quiet window, so a kid looping wrong
 guesses at the world-connectable socket can no longer lock the parent out of their own exit

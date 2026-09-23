@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Manage the parent's paired notification devices (root)
-# omarchy:args=<list|add|rename|scopes|revoke|publish> ...
+# omarchy:args=<list|add|rename|scopes|revoke|publish|pair-start> ...
 # omarchy:hidden=true
 # The root-owned device registry behind R-NOTIFY-3..4: one <id>.conf per paired
 # device under /etc/omarchy-kids/devices/, and the public /run copy the relay
@@ -33,11 +33,17 @@ Usage: omarchy-kids-devices list [--json]
        omarchy-kids-devices scopes <id> decide[,act] [--apply]
        omarchy-kids-devices revoke <id> [--apply]
        omarchy-kids-devices publish [--apply]
+       omarchy-kids-devices pair-start [--id ID] [--scopes decide,act] [--apply]
 
 The parent's paired notification devices (R-NOTIFY-3): each is a root-owned
 <id>.conf under /etc/omarchy-kids/devices/; `publish` writes the public copy the
 relay reads to /run/omarchy-kids/devices.json. Root only; DRY_RUN=1 prints the
 plan, --apply performs it.
+
+pair-start writes one single-use pairing record (R-NOTIFY-5) and prints the
+omarchy-kids://pair URI (which carries the token) for the parent to show the
+device; the device's PAIR frame is verified and consumed by omarchy-kids-authd.
+Root only; the parent password gate is the caller's (it VERIFYs first).
 EOF
 }
 
@@ -288,19 +294,22 @@ cmd_pair_start() {
   [[ -n "$id" ]] || id="$("$KIDS_PY" -c 'import secrets; print("d-" + secrets.token_hex(4))')"
   valid_id "$id" || die "pair-start: bad id '$id'"
   local dir="$SYSROOT/run/omarchy-kids/pairing"
+  # Refuse an id that is already paired: burning the record and only then
+  # failing at `add` would eat the parent's whole pairing window (review).
+  [[ ! -e "$(device_path "$id")" && ! -e "$(device_path "$id").revoked" ]] ||
+    die "pair-start: '$id' is already paired"
+  [[ ! -e "$dir/$id" ]] || die "pair-start: a pairing for '$id' is already pending"
   if ((DRY_RUN)); then
     echo "  [dry-run] would write a pairing record for $id under $dir"
     return 0
   fi
   command -v jq >/dev/null 2>&1 || die "pair-start: jq is required"
-  local now rec code token
+  local now rec token
   now="$(date +%s)"
   rec="$("$KIDS_PY" "$LIB/devices.py" pair-start "$dir" "$id" --scopes "$scopes" --now "$now")" ||
     die "pair-start: could not write the pairing record"
-  code="$(printf '%s' "$rec" | jq -r .code)"
   token="$(printf '%s' "$rec" | jq -r .token)"
   echo "omarchy-kids-devices: pairing started for $id"
-  echo "  code:  $code"
   echo "  pair:  omarchy-kids://pair?v=1&id=$id&token=$token"
 }
 

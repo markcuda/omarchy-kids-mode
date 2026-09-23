@@ -3,12 +3,13 @@
 # omarchy:hidden=true
 """omarchy-kids-authd -- the parent-password verifier (R-SEC-1, R-SEC-2).
 
-A root, socket-activated oracle. Four request shapes, one per connection:
+A root, socket-activated oracle. Five request shapes, one per connection:
 
     VERIFY\n<password>\n               -> "ok" / "no"   (verify, R-SEC-2)
     BOOTSTRAP\n<password>\n           -> "ok" / "no"   (wizard bootstrap)
     GRANT <json-request>\n<password>\n -> "ok" / "no <reason>"
     DECIDE <json-frame>\n              -> "ok" / "no <reason>"  (a paired device, R-NOTIFY-4)
+    PAIR <json-frame>\n                -> "ok" / "no <reason>"  (pair a device, R-NOTIFY-5)
 
 The second is the *only* way an "Ask a grown-up" request is ever granted
 on the spot (review S1): root verifies the parent's password here, checks
@@ -400,36 +401,48 @@ def handle_pair(header: str, conn: socket.socket, cfg) -> bytes:
         proof = frame["proof"]
     except (ValueError, KeyError, TypeError):
         return b"no malformed\n"
-    scopes, reason = cfg.devices.validate_pairing(
-        cfg.pairing_dir, pair_id, proof, name, sign_pub, box_pub, int(time.time())
-    )
-    if not scopes:
-        return b"no " + reason.encode("utf-8", "replace") + b"\n"
-    argv = [
-        cfg.devices_bin,
-        "add",
-        "--id",
-        pair_id,
-        "--name",
-        name,
-        "--platform",
-        platform,
-        "--sign-pub",
-        sign_pub,
-        "--box-pub",
-        box_pub,
-        "--scopes",
-        scopes,
-        "--by",
-        "pair",
-        "--apply",
-    ]
-    try:
-        proc = subprocess.run(argv, capture_output=True, timeout=30)
-    except (OSError, subprocess.TimeoutExpired):
-        return b"no apply failed\n"
-    if proc.returncode != 0:
-        return b"no apply failed\n"
+    values = (pair_id, name, platform, sign_pub, box_pub, proof)
+    if not all(isinstance(value, str) for value in values):
+        return b"no malformed\n"
+    now = int(time.time())
+    # Read, register and consume under one lock: the record is burned only once
+    # the device is really registered (review -- a failure at add must not eat
+    # the parent's pairing window), and a second connection cannot slip in.
+    with cfg.devices.pairing_lock(cfg.pairing_dir):
+        record, reason = cfg.devices.read_pairing(cfg.pairing_dir, pair_id, now)
+        if record is None:
+            return b"no " + reason.encode("utf-8", "replace") + b"\n"
+        if not cfg.devices.check_pairing_proof(record, proof, name, sign_pub, box_pub):
+            return b"no bad-proof\n"
+        scopes = record.get("scopes")
+        if not isinstance(scopes, str) or not scopes:
+            scopes = "decide,act"
+        argv = [
+            cfg.devices_bin,
+            "add",
+            "--id",
+            pair_id,
+            "--name",
+            name,
+            "--platform",
+            platform,
+            "--sign-pub",
+            sign_pub,
+            "--box-pub",
+            box_pub,
+            "--scopes",
+            scopes,
+            "--by",
+            "pair",
+            "--apply",
+        ]
+        try:
+            proc = subprocess.run(argv, capture_output=True, timeout=30)
+        except (OSError, subprocess.TimeoutExpired):
+            return b"no apply failed\n"
+        if proc.returncode != 0:
+            return b"no apply failed\n"
+        cfg.devices.consume_pairing(cfg.pairing_dir, pair_id)
     return b"ok\n"
 
 

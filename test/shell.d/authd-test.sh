@@ -532,10 +532,12 @@ PY
   r="$(send_pair "$TMP/pair-frame.json")"
   if [[ "$(uname -s)" == "Linux" ]]; then
     check "$r" "ok" "PAIR: a valid pairing proof registers the device (R-NOTIFY-5)"
-    grep -q 'add --id dX' "$DEV_APPLIED" &&
-      ok "PAIR: registered through omarchy-kids-devices" ||
+    grep -q 'add --id dX .*--by pair --apply' "$DEV_APPLIED" &&
+      ok "PAIR: registered through omarchy-kids-devices (by pair, --apply)" ||
       bad "PAIR: did not register through the devices command"
     check "$(send_pair "$TMP/pair-frame.json")" "no unknown-pairing" "PAIR: the pairing record is single-use"
+    start_daemon "$PARENT" nobody
+    check "$(send_pair "$TMP/pair-frame.json")" "no not the relay" "PAIR: a resolved non-relay account is refused"
   else
     check "$r" "no not the relay" "PAIR: without SO_PEERCRED it fails closed"
   fi
