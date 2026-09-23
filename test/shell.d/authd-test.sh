@@ -391,6 +391,16 @@ sys.stdout.write(s.recv(4096).decode(errors="replace").strip())
 PY
 }
 
+send_pair() { # frame-file -> reply, trimmed
+  python3 - "$SOCK" "$1" <<'PY'
+import socket, sys
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); s.settimeout(5)
+s.connect(sys.argv[1])
+s.sendall(b"PAIR " + open(sys.argv[2], "rb").read() + b"\n")
+sys.stdout.write(s.recv(4096).decode(errors="replace").strip())
+PY
+}
+
 # A record of every apply-grant the daemon asks for, so we can prove it
 # asked for none of the ones it should have refused.
 APPLIED="$TMP/applied.log"
@@ -400,6 +410,13 @@ printf '%s\n' "\$*" >> "$APPLIED"
 EOF
 chmod +x "$TMP/fake-ask"
 : >"$APPLIED"
+DEV_APPLIED="$TMP/dev-applied.log"
+cat >"$TMP/fake-devices" <<EOF
+#!/bin/bash
+printf '%s\n' "\$*" >> "$DEV_APPLIED"
+EOF
+chmod +x "$TMP/fake-devices"
+: >"$DEV_APPLIED"
 
 start_daemon() {
   local parent="${1:-$PARENT}" relay="${2:-$(id -un)}"
@@ -408,6 +425,7 @@ start_daemon() {
   rm -f "$SOCK"
   python3 "$AUTHD" --socket "$SOCK" --shadow "$SHADOW" --parent "$parent" \
     --etc "$ETC" --lib "$DIR/lib" --ask-bin "$TMP/fake-ask" \
+    --devices-bin "$TMP/fake-devices" --pairing-dir "$TMP/pairing" \
     --nonce-ledger "$TMP/nonces.json" --relay-user "$relay" &
   DAEMON_PID=$!
   for _ in $(seq 1 50); do
@@ -492,8 +510,37 @@ PY
   fi
   start_daemon "$PARENT" "no-such-relay-account"
   check "$(send_decide "$TMP/decide-frame.json")" "no not the relay" "DECIDE: an unresolved relay account is refused"
+
+  # PAIR: a single-use proof registers a device (R-NOTIFY-5)
+  python3 - "$DIR/lib/devices.py" "$TMP/pairing" "$TMP/pair-frame.json" <<'PY'
+import base64, importlib.util, json, sys, time
+devices_py, pdir, out = sys.argv[1], sys.argv[2], sys.argv[3]
+spec = importlib.util.spec_from_file_location("kids_devices", devices_py)
+devices = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(devices)
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+k = Ed25519PrivateKey.generate()
+pub = base64.b64encode(k.public_key().public_bytes_raw()).decode()
+rec = devices.write_pairing(pdir, "dX", "decide,act", int(time.time()))
+proof = devices.pairing_proof(rec["token"], "Phone", pub, pub)
+with open(out, "w") as f:
+    json.dump({"id": "dX", "name": "Phone", "platform": "android",
+               "sign_pub": pub, "box_pub": pub, "proof": proof}, f, separators=(",", ":"))
+PY
+  start_daemon
+  : >"$DEV_APPLIED"
+  r="$(send_pair "$TMP/pair-frame.json")"
+  if [[ "$(uname -s)" == "Linux" ]]; then
+    check "$r" "ok" "PAIR: a valid pairing proof registers the device (R-NOTIFY-5)"
+    grep -q 'add --id dX' "$DEV_APPLIED" &&
+      ok "PAIR: registered through omarchy-kids-devices" ||
+      bad "PAIR: did not register through the devices command"
+    check "$(send_pair "$TMP/pair-frame.json")" "no unknown-pairing" "PAIR: the pairing record is single-use"
+  else
+    check "$r" "no not the relay" "PAIR: without SO_PEERCRED it fails closed"
+  fi
 else
-  echo "SKIP authd-test.sh: DECIDE checks need python-cryptography"
+  echo "SKIP authd-test.sh: DECIDE/PAIR checks need python-cryptography"
 fi
 
 # =====================================================================

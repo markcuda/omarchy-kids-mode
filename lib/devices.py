@@ -26,9 +26,11 @@ import base64
 import binascii
 import fcntl
 import hashlib
+import hmac
 import json
 import os
 import re
+import secrets
 import stat
 
 try:
@@ -41,6 +43,8 @@ except ImportError:  # pragma: no cover - the skip path
 
 SIGN_CONTEXT = b"omarchy-kids-decision-v1\n"
 REQUEST_CONTEXT = b"omarchy-kids-request-v1\n"
+PAIRING_TTL_SECONDS = 300  # the pairing code is single-use and expires
+PAIRING_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no I/O/0/1
 SKEW_SECONDS = 300
 # Twice the skew: a nonce is remembered strictly longer than a timestamp is
 # accepted, so a replay of a still-in-skew record can never find it pruned.
@@ -308,9 +312,100 @@ def verify_request(devices_json, ledger, device_id, ts, nonce, method, path, bod
     return True, "ok"
 
 
+def pairing_proof(token_hex, name, sign_pub, box_pub):
+    """The HMAC a device proves it holds the pairing token with (R-NOTIFY-5)."""
+    message = "|".join([sign_pub, box_pub, name]).encode("utf-8")
+    return hmac.new(bytes.fromhex(token_hex), message, hashlib.sha256).hexdigest()
+
+
+def write_pairing(pairing_dir, pair_id, scopes, now, ttl=PAIRING_TTL_SECONDS):
+    """Root writes one single-use pairing record and returns it."""
+    token = secrets.token_hex(20)
+    code = "".join(secrets.choice(PAIRING_CODE_ALPHABET) for _ in range(8))
+    record = {
+        "id": pair_id,
+        "token": token,
+        "code": code,
+        "scopes": scopes,
+        "created_at": now,
+        "expires_at": now + ttl,
+    }
+    os.makedirs(pairing_dir, mode=0o700, exist_ok=True)
+    tmp = os.path.join(pairing_dir, f".{pair_id}.{os.getpid()}.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(record, f, sort_keys=True)
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, os.path.join(pairing_dir, pair_id))
+    return record
+
+
+def validate_pairing(pairing_dir, pair_id, proof, name, sign_pub, box_pub, now):
+    """(scopes, "ok") if the proof is right and unexpired, else (None, reason).
+
+    The record is single-use: a good pairing deletes it, and the read-check-
+    delete runs under an flock so two connections cannot both consume it.
+    """
+    if not isinstance(pair_id, str) or not RE_DEVICE_ID.match(pair_id):
+        return None, "malformed"
+    if not all(isinstance(v, str) for v in (proof, name, sign_pub, box_pub)):
+        return None, "malformed"
+    os.makedirs(pairing_dir, mode=0o700, exist_ok=True)
+    path = os.path.join(pairing_dir, pair_id)
+    with open(path + ".lock", "w", encoding="utf-8") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            text = _open_regular(path)
+            if text is None:
+                return None, "unknown-pairing"
+            try:
+                record = json.loads(text)
+            except ValueError:
+                return None, "malformed"
+            if not isinstance(record, dict):
+                return None, "malformed"
+            expires = record.get("expires_at")
+            if not isinstance(expires, int) or isinstance(expires, bool) or now > expires:
+                return None, "expired"
+            token = record.get("token")
+            if not isinstance(token, str) or not re.fullmatch(r"[0-9a-f]{40}", token):
+                return None, "malformed"
+            if not hmac.compare_digest(pairing_proof(token, name, sign_pub, box_pub), proof):
+                return None, "bad-proof"
+            os.unlink(path)
+            scopes = record.get("scopes")
+            return (scopes if isinstance(scopes, str) and scopes else "decide,act"), "ok"
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+
+
 def _main(argv):  # pragma: no cover - a thin CLI for tests and the panel card
     import argparse
 
+    if argv and argv[0] == "pair-start":
+        parser = argparse.ArgumentParser(prog="devices.py pair-start")
+        parser.add_argument("directory")
+        parser.add_argument("pair_id")
+        parser.add_argument("--scopes", default="decide,act")
+        parser.add_argument("--now", type=int, required=True)
+        args = parser.parse_args(argv[1:])
+        json.dump(write_pairing(args.directory, args.pair_id, args.scopes, args.now), sys.stdout, sort_keys=True)
+        print()
+        return 0
+    if argv and argv[0] == "pair-check":
+        parser = argparse.ArgumentParser(prog="devices.py pair-check")
+        parser.add_argument("directory")
+        parser.add_argument("pair_id")
+        parser.add_argument("proof")
+        parser.add_argument("name")
+        parser.add_argument("sign_pub")
+        parser.add_argument("box_pub")
+        parser.add_argument("--now", type=int, required=True)
+        args = parser.parse_args(argv[1:])
+        scopes, reason = validate_pairing(
+            args.directory, args.pair_id, args.proof, args.name, args.sign_pub, args.box_pub, args.now
+        )
+        print("ok " + scopes if scopes else reason)
+        return 0 if scopes else 1
     parser = argparse.ArgumentParser(prog="devices.py")
     parser.add_argument("--etc", default="/etc/omarchy-kids")
     parser.add_argument("--ledger", default="/var/lib/omarchy-kids/devices/nonces.json")

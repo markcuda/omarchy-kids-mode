@@ -162,6 +162,24 @@ out = subprocess.run(
     capture_output=True, text=True)
 check(out.returncode == 0 and out.stdout.strip() == "ok", "the CLI verifies a decision")
 
+# --- pairing: proof and single-use (R-NOTIFY-5) ---------------------------
+pdir = os.path.join(tmp, "pairing")
+k = Ed25519PrivateKey.generate()
+p = base64.b64encode(k.public_key().public_bytes_raw()).decode()
+pr = devices.write_pairing(pdir, "d9", "decide,act", now)
+proof = devices.pairing_proof(pr["token"], "Phone", p, p)
+scopes, reason = devices.validate_pairing(pdir, "d9", proof, "Phone", p, p, now)
+check(scopes == "decide,act" and reason == "ok", "a valid pairing proof is accepted")
+scopes, reason = devices.validate_pairing(pdir, "d9", proof, "Phone", p, p, now)
+check(scopes is None and reason == "unknown-pairing", "a pairing record is single-use")
+pr = devices.write_pairing(pdir, "d10", "decide,act", now - 10_000)
+proof = devices.pairing_proof(pr["token"], "Phone", p, p)
+scopes, reason = devices.validate_pairing(pdir, "d10", proof, "Phone", p, p, now)
+check(reason == "expired", "an expired pairing is refused")
+devices.write_pairing(pdir, "d11", "decide,act", now)
+scopes, reason = devices.validate_pairing(pdir, "d11", "deadbeef", "Phone", p, p, now)
+check(reason == "bad-proof", "a wrong pairing proof is refused")
+
 sys.exit(1 if fails else 0)
 PY
 st=$?

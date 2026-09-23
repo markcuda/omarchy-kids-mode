@@ -109,5 +109,21 @@ check_contains "$("$BIN" list)" "no devices paired" "revoked device is not liste
 check_eq "$?" "0" "publish succeeds with no live devices"
 check_eq "$(cat "$PUB")" "[]" "publish writes an empty array when nothing is paired"
 
+# --- pair-start: the single-use pairing record (R-NOTIFY-5) ----------------
+PAIR_DIR="$SYSROOT/run/omarchy-kids/pairing"
+out="$("$BIN" pair-start --id d9 2>&1)"
+check_eq "$?" "0" "pair-start previews without --apply"
+check_contains "$out" "[dry-run]" "pair-start prints the plan"
+[[ -e "$PAIR_DIR/d9" ]] && fail "pair-start (dry-run): must not write the record" ||
+  pass "pair-start (dry-run): writes nothing"
+out="$("$BIN" pair-start --id d9 --apply 2>&1)"
+check_eq "$?" "0" "pair-start --apply succeeds"
+[[ -f "$PAIR_DIR/d9" ]] && pass "pair-start writes the pairing record" || fail "pair-start: no record"
+check_eq "$(kids_file_mode "$PAIR_DIR/d9")" "600" "pairing record is 0600 (R-NOTIFY-5)"
+check_contains "$out" "code:  " "pair-start prints the code"
+check_contains "$out" "omarchy-kids://pair" "pair-start prints the pair URI"
+"$BIN" pair-start --id 'bad:id' --apply >/dev/null 2>&1
+check_eq "$?" "2" "pair-start refuses a bad id"
+
 echo "devices-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc

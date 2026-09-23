@@ -62,9 +62,15 @@ VERIFY_PREFIX = "VERIFY"
 # it, and only root verifies and applies it. The decision always needs the
 # "decide" scope; the scope is never taken from the (unsigned) frame.
 DECIDE_PREFIX = "DECIDE "
+# A parent pairs a device (R-NOTIFY-5). One line: PAIR <json>\n, where the json
+# is {id, name, platform, sign_pub, box_pub, proof}. Only the relay may send it;
+# root verifies the single-use pairing proof and registers the device.
+PAIR_PREFIX = "PAIR "
 MAX_DECIDE_LINE = 2048  # a max-shape decision with an escaped reply still fits
 RELAY_USER = "omarchy-kids-relay"
 DEFAULT_NONCE_LEDGER = "/var/lib/omarchy-kids/devices/nonces.json"
+DEFAULT_DEVICES_BIN = "/usr/bin/omarchy-kids-devices"
+DEFAULT_PAIRING_DIR = "/run/omarchy-kids/pairing"
 
 _LIBCRYPT = None
 
@@ -375,6 +381,58 @@ def handle_verify(password: bytes, conn: socket.socket, cfg, limiter: RateLimite
     return b"no\n"
 
 
+def handle_pair(header: str, conn: socket.socket, cfg) -> bytes:
+    """A parent pairs a device (R-NOTIFY-5): the relay presents the frame, root
+    verifies the single-use proof against the pairing record, and registers the
+    device through omarchy-kids-devices. A missing record, an expired one, a
+    wrong proof or a non-relay caller is refused."""
+    if cfg.devices is None:
+        return b"no devices unavailable\n"
+    if cfg.relay_uid is None or peer_uid(conn) != cfg.relay_uid:
+        return b"no not the relay\n"
+    try:
+        frame = json.loads(header[len(PAIR_PREFIX):])
+        pair_id = frame["id"]
+        name = frame["name"]
+        platform = frame["platform"]
+        sign_pub = frame["sign_pub"]
+        box_pub = frame["box_pub"]
+        proof = frame["proof"]
+    except (ValueError, KeyError, TypeError):
+        return b"no malformed\n"
+    scopes, reason = cfg.devices.validate_pairing(
+        cfg.pairing_dir, pair_id, proof, name, sign_pub, box_pub, int(time.time())
+    )
+    if not scopes:
+        return b"no " + reason.encode("utf-8", "replace") + b"\n"
+    argv = [
+        cfg.devices_bin,
+        "add",
+        "--id",
+        pair_id,
+        "--name",
+        name,
+        "--platform",
+        platform,
+        "--sign-pub",
+        sign_pub,
+        "--box-pub",
+        box_pub,
+        "--scopes",
+        scopes,
+        "--by",
+        "pair",
+        "--apply",
+    ]
+    try:
+        proc = subprocess.run(argv, capture_output=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return b"no apply failed\n"
+    if proc.returncode != 0:
+        return b"no apply failed\n"
+    return b"ok\n"
+
+
 def handle_decide(header: str, conn: socket.socket, cfg) -> bytes:
     """A paired device's signed decision, verified and applied as root.
 
@@ -468,6 +526,9 @@ def handle_client(conn: socket.socket, cfg, limiter: RateLimiter, slot=None):
             elif header.startswith(DECIDE_PREFIX):
                 # One line: the signed decision carries its own signature.
                 reply = handle_decide(header, conn, cfg)
+            elif header.startswith(PAIR_PREFIX):
+                # One line: the pairing proof carries its own secret.
+                reply = handle_pair(header, conn, cfg)
             else:
                 reply = b"no\n"
         try:
@@ -532,6 +593,16 @@ def parse_args(argv):
     parser.add_argument("--lib", default=DEFAULT_LIB, help="Directory holding ask.py (GRANT: the request allowlist)")
     parser.add_argument("--ask-bin", default=DEFAULT_ASK_BIN, help="Path to omarchy-kids-ask (GRANT: applies the request)")
     parser.add_argument(
+        "--devices-bin",
+        default=DEFAULT_DEVICES_BIN,
+        help="Path to omarchy-kids-devices (PAIR: registers the device)",
+    )
+    parser.add_argument(
+        "--pairing-dir",
+        default=DEFAULT_PAIRING_DIR,
+        help="Path to the single-use pairing records (PAIR)",
+    )
+    parser.add_argument(
         "--nonce-ledger",
         default=DEFAULT_NONCE_LEDGER,
         help="Path to the device-decision nonce ledger (DECIDE: replay refusal)",
@@ -554,6 +625,8 @@ class Config:
         self.etc = args.etc
         self.lib = args.lib
         self.ask_bin = args.ask_bin
+        self.devices_bin = args.devices_bin
+        self.pairing_dir = args.pairing_dir
         self.nonce_ledger = args.nonce_ledger
         # Filled in by main() for the DECIDE path; None means fail closed.
         self.devices = None

@@ -262,6 +262,48 @@ cmd_publish() {
   publish
 }
 
+# pair-start -- write one single-use pairing record and print what the parent
+# shows the device (R-NOTIFY-5). The token goes in the QR; the code is the
+# fallback. The record expires and is consumed by the PAIR frame.
+cmd_pair_start() {
+  local id="" scopes="decide,act"
+  while (($#)); do
+    case "$1" in
+      --id)
+        id="${2:?}"
+        shift 2
+        ;;
+      --scopes)
+        scopes="${2:?}"
+        shift 2
+        ;;
+      --apply)
+        DRY_RUN=0
+        shift
+        ;;
+      *) die "pair-start: unknown argument '$1'" ;;
+    esac
+  done
+  valid_scopes "$scopes" || die "pair-start: --scopes must be a comma list of ${VALID_SCOPES[*]}"
+  [[ -n "$id" ]] || id="$("$KIDS_PY" -c 'import secrets; print("d-" + secrets.token_hex(4))')"
+  valid_id "$id" || die "pair-start: bad id '$id'"
+  local dir="$SYSROOT/run/omarchy-kids/pairing"
+  if ((DRY_RUN)); then
+    echo "  [dry-run] would write a pairing record for $id under $dir"
+    return 0
+  fi
+  command -v jq >/dev/null 2>&1 || die "pair-start: jq is required"
+  local now rec code token
+  now="$(date +%s)"
+  rec="$("$KIDS_PY" "$LIB/devices.py" pair-start "$dir" "$id" --scopes "$scopes" --now "$now")" ||
+    die "pair-start: could not write the pairing record"
+  code="$(printf '%s' "$rec" | jq -r .code)"
+  token="$(printf '%s' "$rec" | jq -r .token)"
+  echo "omarchy-kids-devices: pairing started for $id"
+  echo "  code:  $code"
+  echo "  pair:  omarchy-kids://pair?v=1&id=$id&token=$token"
+}
+
 [[ $# -ge 1 ]] || {
   usage >&2
   exit 2
@@ -284,5 +326,6 @@ case "$cmd" in
   scopes) cmd_scopes "$@" ;;
   revoke) cmd_revoke "$@" ;;
   publish) cmd_publish "$@" ;;
+  pair-start) cmd_pair_start "$@" ;;
   *) die "unknown command: '$cmd' (see --help)" ;;
 esac
