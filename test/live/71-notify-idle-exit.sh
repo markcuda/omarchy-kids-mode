@@ -20,12 +20,16 @@ portal_reset 30 && ok "greeter is up" || fail "greeter never appeared"
 
 # Kids Mode must not be in use: no kid session, no open request. (If a kid is still logged in from
 # an earlier scenario, this scenario cannot test the exit -- say so rather than pass.)
-kids_live="$(state 2>/dev/null | grep -c " $LIVE_KID1_ACCOUNT " || true)"
-open_requests="$(vmroot "ls /var/lib/omarchy-kids/queue 2>/dev/null | wc -l" | tr -d '[:space:]')"
-[[ "$kids_live" == "0" ]] && ok "no kid session is live" ||
+assert_no_session "$LIVE_KID1_ACCOUNT" 0 && ok "no kid session is live" ||
   fail "a kid session is live; log out before running 71"
-[[ "${open_requests:-0}" == "0" ]] && ok "no request is open" ||
-  fail "the queue is not empty ($open_requests files); decide or clear them before running 71"
+# A missing or unreadable queue reads as zero here; the relay only counts state==open records, so
+# decided records and lock files left by earlier scenarios do not keep it up.
+list_out="$(vmroot "omarchy-kids-ask list 2>/dev/null")"
+if [[ -z "$list_out" || "$list_out" == *"no open requests"* ]]; then
+  ok "no open request"
+else
+  fail "there are open requests; decide them before running 71"
+fi
 
 vmroot "omarchy-kids-notify enable --apply" >/dev/null 2>&1 &&
   ok "notifications enabled (the certificate exists, so the tick may start the relay)" ||

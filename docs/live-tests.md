@@ -152,7 +152,9 @@ installed, so it boots the VM itself only if it finds it down.
 
 Not covered yet: §8 items 4 (browser walled garden / DoH), 7 (`omarchy update` + a kernel update),
 and 9 (changing the parent's login password) — each needs its own scenario and its own care about
-what state it leaves the VM in; left for a follow-on issue rather than guessed at here.
+what state it leaves the VM in; left for a follow-on issue rather than guessed at here. Scenarios
+70 and 71 are **new drafts no gate has run yet** (AGENTS.md rule 11): review them on the first VM
+run before trusting their PASS.
 
 Scenario 05 also runs `shfmt -i 2 -ci -l` over every bash file when the VM has `shfmt` (the Mac
 does not), and fails on any file the formatter would change.

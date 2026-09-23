@@ -13,7 +13,6 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DIR/lib.sh"
 
 CLIENT="$DIR/clients/notify-client.py"
-DEVICE_ID="live-$(date +%s)"
 KEY=/root/live-device.key
 REQ_ID="live-$(date +%s)-$LIVE_KID1_ACCOUNT-time"
 
@@ -40,18 +39,21 @@ vmroot "systemctl start omarchy-kids-relayd.service" >/dev/null 2>&1 &&
 pair_out="$(vmroot "omarchy-kids-notify pair --apply" 2>&1)"
 uri="$(printf '%s\n' "$pair_out" | grep -o 'omarchy-kids://pair[^ ]*' | head -1)"
 token="$(printf '%s' "$uri" | sed -n 's/.*[?&]token=\([^&]*\).*/\1/p')"
-[[ -n "$token" ]] && ok "pairing window opened (token captured)" ||
-  fail "pair-start printed no token: $pair_out"
+# The pairing record's own id (d-xxxxxxxx) is the one authd looks up; the scenario must pair under
+# that, not one of its own.
+DEVICE_ID="$(printf '%s' "$uri" | sed -n 's/.*[?&]id=\([^&]*\).*/\1/p')"
+[[ -n "$token" && -n "$DEVICE_ID" ]] && ok "pairing window opened for $DEVICE_ID" ||
+  fail "pair-start printed no id/token: $pair_out"
 
 # The client is copied in, never run from the runner: it must reach the relay on the VM's own
-# localhost, which the unit's fence allows.
-if vm_write_file /root/notify-client.py <"$CLIENT"; then
+# localhost, which the unit's fence allows. vm_write_file runs as the owner, so /tmp, not /root.
+if vm_write_file /tmp/notify-client.py <"$CLIENT"; then
   ok "client copied to the vm"
 else
   fail "could not copy the client to the vm"
 fi
 
-pair_reply="$(vmroot "python3 /root/notify-client.py pair --key $KEY --id $DEVICE_ID --token $token" 2>&1)"
+pair_reply="$(vmroot "python3 /tmp/notify-client.py pair --key $KEY --id $DEVICE_ID --token $token" 2>&1)"
 if [[ "$pair_reply" == *"pair 200"* ]]; then
   ok "the client paired through /v1/pair ($pair_reply)"
 else
@@ -69,7 +71,7 @@ vmroot "printf '%s\\n' '$record' > /var/lib/omarchy-kids/queue/$REQ_ID.json; chm
 
 before="$(vmroot "omarchy-kids-time status $LIVE_KID1_ACCOUNT | head -1")"
 
-decide_reply="$(vmroot "python3 /root/notify-client.py decide --key $KEY --id $DEVICE_ID --request $REQ_ID --decision approve" 2>&1)"
+decide_reply="$(vmroot "python3 /tmp/notify-client.py decide --key $KEY --id $DEVICE_ID --request $REQ_ID --decision approve" 2>&1)"
 if [[ "$decide_reply" == *"decide 200"* ]]; then
   ok "the client's signed decision was accepted ($decide_reply)"
 else
@@ -100,7 +102,10 @@ state="$(vmroot "jq -r '.state' /var/lib/omarchy-kids/queue/$REQ_ID.json 2>/dev/
 
 shot 70-notify-approve || fail "screenshot failed"
 
-# Leave the box as it was: revoke the device and remove the certificate.
+# Leave the box as it was: revoke the device and remove the certificate. What stays: the request
+# record (decided, harmless) and its .lock, /root/live-device.key, /tmp/notify-client.py, and
+# <id>.conf.revoked (by design -- a revoked id stays revoked).
+vmroot "rm -f /var/lib/omarchy-kids/queue/$REQ_ID.json /var/lib/omarchy-kids/queue/$REQ_ID.json.lock" >/dev/null 2>&1
 vmroot "omarchy-kids-notify disable --apply" >/dev/null 2>&1 &&
   ok "notifications disabled and the device revoked" || fail "disable failed"
 kid_budget_restore "$LIVE_KID1_ACCOUNT" && ok "budget headroom restored" || fail "could not restore budget headroom"
