@@ -31,10 +31,12 @@ DATA_BIN="$(kids_bin data "$DIR")"
 REMOVE_BIN="$(kids_bin remove "$DIR")"
 CHECK_BIN="$(kids_bin check "$DIR")"
 NOTIFY_BIN="$(kids_bin notify "$DIR")"
+REVIEW_BIN="$(kids_bin review "$DIR")"
 
 ETC="${OMARCHY_KIDS_ETC:-/etc/omarchy-kids}"
 SYSROOT="${OMARCHY_KIDS_ROOT:-}"
 QUEUE_DIR="$SYSROOT/var/lib/omarchy-kids/queue"
+REVIEW_DIR="$SYSROOT/var/lib/omarchy-kids/reviews/open"
 
 # Interactive: a human's button press is the confirmation, so the default
 # is a real run (review §1.5, docs/panel.md; AGENTS.md rule 8 still holds
@@ -287,6 +289,8 @@ source "$LIB/panel-machine.sh"
 source "$LIB/panel-home.sh"
 # shellcheck source=lib/panel-notify.sh
 source "$LIB/panel-notify.sh"
+# shellcheck source=lib/panel-reviews.sh
+source "$LIB/panel-reviews.sh"
 
 # --- main --------------------------------------------------------------------
 

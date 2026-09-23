@@ -16,14 +16,15 @@ omarchy-kids-panel [--dry-run] [--apply] [--help]
 command a write would run is printed instead of run. Pass `--apply` (or set `DRY_RUN=0`) for a real
 run.
 
-## Screens (Appendix A's P1-P6; P5 is not built here — see "Not built here" below)
+## Screens (Appendix A's P1-P7; P5 is not built here — see "Not built here" below)
 
 | Screen | What's on it |
 | --- | --- |
-| **P1 Home** | One row per kid — name, band, minutes used/left today, `paused` if a kid's time isn't counting right now, and their open-request count (`kid_home_line`) — then **Add a kid**, **Requests (N)**, **Notifications**, **Machine safety**, **Remove Kids Mode**, **Quit**. |
+| **P1 Home** | One row per kid — name, band, minutes used/left today, `paused` if a kid's time isn't counting right now, and their open-request count (`kid_home_line`) — then **Add a kid**, **Requests (N)**, **Notifications**, **Reviews (N)**, **Machine safety**, **Remove Kids Mode**, **Quit**. |
 | **P2 Kid** | **Screen time** (today's status, "give more minutes" via `omarchy-kids-time grant`, weekday and weekend daily budgets and lights-out, all validated), **Web** (the band's mode; a walled-garden kid also gets an allow-list editor), **Wi-Fi** (Ask me first / On their own, safely), **Apps** (hide/show the band's pack), **Data**, **Desktop** (level, theme — issue #53), **Password**, **Reset to band defaults**, **Remove this kid**, **Back**. |
 | **P3 Requests** | Every open "Ask a parent" request, each shown as `<name> — <what> (<age>)`; Enter opens the reason line and **Approve**/**Decline**. A request card names the kid by their display name and keeps the account name beside it. |
 | **P4 Machine** | The read-only safety report (R-TRUST-2, `docs/check.md`): runs `omarchy-kids-check --json` on every draw, shows the verdict, every FAIL and WARN with the check's own detail in full, and the passed/skipped counts. **Check again** reruns it; nothing here writes or fixes. The panel runs unprivileged, so checks needing root report as warnings, and the card says so. Appendix A's firmware card is one of the report's checks, not a separate screen. |
+| **P7 Reviews** | An approved app whose surface (`docs/review.md`, R-NOTIFY-12) changed since the parent approved it: one row per review ("changed since you approved it" or "was removed"), then Enter for a detail card with **Approve**, **Deny** (hides the app) and **Check** (shows what changed and decides nothing). The records are root-owned and group-readable, so the screen lists them with no privilege; only the actions go through `run_priv`. |
 | **P6 Notifications** | The parent's switch for device notifications (R-NOTIFY-1/3/5, `docs/notify.md`): the on/off state, **Turn on notifications** / **Turn off notifications** (with a confirm), **Pair a device** (starts a single-use window and shows the code and the relay's fingerprint), and **Paired devices** (each row can be revoked, with a confirm). Every call goes through `run_priv`/`read_priv`; the warmed sudo prompt is the parent's own authentication, so there is no second password prompt. |
 
 Every screen is keyboard-complete (I-5): Esc or a **Back**/**Quit** row goes back or leaves; Ctrl+C
@@ -163,6 +164,7 @@ exact command a write would run, panel-wide, not just for Apply.
 | `bands.toml`, `packs/` | `/usr/share/omarchy-kids/` | `OMARCHY_KIDS_SHARE` (read by the helper commands, not the panel itself) |
 | The ask queue | `/var/lib/omarchy-kids/queue/` | `OMARCHY_KIDS_ROOT` (scratch-tree prefix) |
 | `lib/ask.py` (read directly for Requests, see above) | `lib/` beside `bin/`, else `/usr/lib/omarchy-kids` | resolved beside the command; no override |
+| `lib/panel-reviews.sh` (P7; reads the reviews under `OMARCHY_KIDS_ROOT`, drives `omarchy-kids-review`) | `lib/` beside `bin/`, else `/usr/lib/omarchy-kids` | resolved beside the command; no override |
 | `lib/panel-notify.sh` (P6; drives `omarchy-kids-notify`, `docs/notify.md`) | `lib/` beside `bin/`, else `/usr/lib/omarchy-kids` | resolved beside the command; no override |
 | Each helper binary (`omarchy-kids-conf`/`-time`/`-ask`/`-apps`/`-web`/`-provision`/`-wizard`/`-data`) | resolved beside this script (`kids_bin`); no fallback, no override | the `OMARCHY_KIDS_*_BIN`/`OMARCHY_KIDS_LIB` escapes were removed, `CHANGELOG.md` |
 

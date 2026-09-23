@@ -58,9 +58,8 @@ record, not enforcement): hiding the app again is the only action, and a kid can
 - **Surfacing: the desktop notifier shows a review, the panel does not yet.** With notifications on,
   `omarchy-kids-notify-watch` posts one notification per open review (a changed surface, or one that
   was removed), with **Approve**, **Deny** and **Check**; those run `omarchy-kids-bar
-  review-approve|review-deny|review-check` (`docs/notify.md`). The count rides `status.json` as `reviews`. The panel's Requests screen does
-  not list reviews yet — the next slice adds that — and `omarchy-kids-review list` is the command
-  line view.
+  review-approve|review-deny|review-check` (`docs/notify.md`). The count rides `status.json` as `reviews`. The panel has its own **Reviews** screen (`docs/panel.md`, P7): one row per review with
+  **Approve**, **Deny** and **Check**. `omarchy-kids-review list` is the command-line view.
 - **The scan runs on a timer** (`systemd/omarchy-kids-review.timer`, hourly and five minutes after
   boot, driving `omarchy-kids-review scan --apply`), so an update is detected without the parent
   doing anything. `omarchy-kids-review scan --apply` still runs it by hand.

@@ -636,6 +636,49 @@ answers="$(answers_file notifications devices back back quit)"
 run_panel "$answers" --dry-run
 check_contains "$out" "No devices are paired" "devices: an empty list says so"
 
+# --- add-on reviews (P7, R-NOTIFY-12) --------------------------------------
+REVIEW_DIR="$ROOT/var/lib/omarchy-kids/reviews/open"
+mkdir -p "$REVIEW_DIR"
+REVIEW_CONF="$REVIEW_DIR/kid-ada.abc123.json"
+printf '{"kid":"kid-ada","id":"minecraft","was":"aaa","now":"bbb","state":"open"}\n' >"$REVIEW_CONF"
+cat >"$TMP/tree/bin/omarchy-kids-review" <<EOF
+#!/bin/bash
+{ printf 'review'; printf ' %s' "\$@"; printf '\n'; } >> "$ARGV_LOG"
+case "\${1:-}" in
+  show)
+    echo "Add-on review: \$2/\$3"
+    echo "Exec:"
+    echo "  Exec=minecraft"
+    ;;
+esac
+exit 0
+EOF
+chmod +x "$TMP/tree/bin/omarchy-kids-review"
+
+answers="$(answers_file reviews "kid-ada:minecraft" approve back back quit)"
+run_panel "$answers" --dry-run
+check_contains "$out" "Reviews (1)" "Home shows the open-review count"
+check_contains "$out" "changed since you approved it" "the review row describes the change"
+check_contains "$out" "[dry-run] sudo $TREE_BIN/omarchy-kids-review approve kid-ada minecraft --apply" \
+  "dry-run: a review's Approve prints the exact command"
+
+answers="$(answers_file reviews "kid-ada:minecraft" deny back back quit)"
+run_panel "$answers" --dry-run
+check_contains "$out" "[dry-run] sudo $TREE_BIN/omarchy-kids-review deny kid-ada minecraft --apply" \
+  "dry-run: a review's Deny prints the exact command"
+
+: >"$ARGV_LOG"
+answers="$(answers_file reviews "kid-ada:minecraft" check back back quit)"
+run_panel "$answers" --apply
+check_contains "$(cat "$ARGV_LOG")" "review show kid-ada minecraft" \
+  "Check reads the review through sudo"
+check_contains "$out" "Exec=minecraft" "Check shows the desktop Exec"
+
+rm -f "$REVIEW_CONF"
+answers="$(answers_file reviews back quit)"
+run_panel "$answers" --dry-run
+check_contains "$out" "No add-on needs re-review" "an empty review list says so"
+
 # --- --help works with no terminal and no answers file needed ----------
 help_out="$("$BIN" --help 2>&1)"
 help_status=$?
