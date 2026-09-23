@@ -27,7 +27,7 @@ APPLICATIONS_DIRS="/usr/share/applications:/usr/local/share/applications"
 CONF_BIN="$(kids_bin conf "$DIR")"
 APPS_BIN="$(kids_bin apps "$DIR")"
 DRY_RUN=1
-BASELINE_WARNED=0
+BASELINE_WARNED=""
 
 die() {
   echo "omarchy-kids-review: $1" >&2

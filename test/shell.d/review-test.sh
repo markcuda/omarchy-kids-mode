@@ -180,6 +180,13 @@ printf 'name=Ada\nband=6-8\n' >"$KIDS/kid-ada.conf" # the parent removed the app
   pass "a review for a removed id is swept"
 check_contains "$(cat "$FLOCK_LOG")" "-x 9" "the command takes the lock"
 
+# --- an unreadable baseline is replaced with a warning --------------------
+printf 'name=Ada\nband=6-8\napps.extra=minecraft\n' >"$KIDS/kid-ada.conf"
+printf 'not json\n' >"$BASELINE"
+out="$("$BIN" scan --apply 2>&1)"
+check_contains "$out" "is unreadable; restamping its apps" "a corrupt baseline warns"
+check "$(jq -r 'has("minecraft")' "$BASELINE" 2>/dev/null)" "true" "a corrupt baseline is replaced"
+
 # --- neither approve nor deny with a bad call -----------------------------
 "$BIN" approve kid-ada >/dev/null 2>&1
 check_status "$?" 2 "approve with no id is refused"
