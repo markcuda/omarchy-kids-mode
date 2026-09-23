@@ -628,7 +628,6 @@ fi
 
 [[ -f "$ROOT_DIR/share/ask/shell.qml" ]] && pass "share/ask/shell.qml exists" || fail "share/ask/shell.qml missing"
 
-
 # --- grant time <n>: the minutes travel in <what> (seen live: rejected before it was sent) ---
 out="$(printf 'pw\n' | "$BIN" grant time 7 2>&1)"
 st=$?
@@ -698,6 +697,30 @@ EOF
 else
   pass "queue group: no secondary group (or run as root); skipping the observable-group assertion"
 fi
+
+# --- R-NOTIFY-6: watch --once shows the decided card for an unseen decision ---
+DEC_DIR="$VARLIB_ROOT/var/lib/omarchy-kids/kid-ada/decisions"
+install -d -m 0750 "$DEC_DIR"
+rm -f "$DEC_DIR"/*.json
+printf '{"kid":"kid-ada","kind":"time","what":"15","minutes":15,"state":"approved","asked_at":1,"decided_at":%s,"by":"panel"}\n' \
+  "$(date +%s)" >"$DEC_DIR/1-kid-ada-time.json"
+WATCH_LOG="$TMP/watch.log"
+: >"$WATCH_LOG"
+cat >"$STUBS/quickshell" <<'EOF'
+#!/bin/bash
+printf '%s %s\n' "$OMARCHY_KIDS_ACCOUNT" "$OMARCHY_KIDS_ASK_DECISION" >>"$OMARCHY_KIDS_TEST_WATCH_LOG"
+exit 0
+EOF
+chmod +x "$STUBS/quickshell"
+OMARCHY_KIDS_TEST_WATCH_LOG="$WATCH_LOG" "$BIN" watch --once >/dev/null 2>&1
+check_eq "$(wc -l <"$WATCH_LOG" | tr -d ' ')" "1" "watch --once shows the one unseen decision (R-NOTIFY-6)"
+check_contains "$(cat "$WATCH_LOG")" "1-kid-ada-time" "watch: names the decision file for the card"
+[[ -e "$RUN_USER_ROOT/1000/omarchy-kids/ask-seen/1-kid-ada-time" ]] &&
+  pass "watch: marks the decision seen" ||
+  fail "watch: did not mark the decision seen"
+OMARCHY_KIDS_TEST_WATCH_LOG="$WATCH_LOG" "$BIN" watch --once >/dev/null 2>&1
+check_eq "$(wc -l <"$WATCH_LOG" | tr -d ' ')" "1" "watch --once shows nothing on the second run"
+stub quickshell
 
 echo "ask-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc

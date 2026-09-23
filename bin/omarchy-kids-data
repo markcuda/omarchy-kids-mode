@@ -41,8 +41,8 @@ Usage: omarchy-kids-data <command> [args]
   mine                           "What my grown-ups can see" (K5), run as
                                   the kid the data belongs to.
   retention [--apply]            Prune everything past SPEC.md R-DATA-1's
-                                  retention (usage 1 year, launches and
-                                  requests 90 days; browsing history is
+                                  retention (usage 1 year, launches, decisions
+                                  and requests 90 days; browsing history is
                                   never pruned here — the browser's own).
                                   DRY_RUN by default: prints what it would
                                   remove.
@@ -362,6 +362,23 @@ prune_queue() { # CUTOFF_EPOCH APPLY
   done
 }
 
+# prune_decisions KID CUTOFF_EPOCH APPLY -- the per-kid result cards root wrote
+# for this kid (R-NOTIFY-6), pruned with the queue's own 90-day cutoff.
+prune_decisions() { # KID CUTOFF_EPOCH APPLY
+  local kid="$1" cutoff="$2" apply="$3" dir f base ts
+  dir="$DATA_VARLIB/$kid/decisions"
+  [[ -d "$dir" ]] || return 0
+  for f in "$dir"/*.json; do
+    [[ -e "$f" ]] || continue
+    base="$(basename "$f")"
+    ts="${base%%-*}"
+    [[ "$ts" =~ ^[0-9]+$ ]] || continue
+    if ((ts < cutoff)); then
+      if ((apply)); then rm -f "$f"; else echo "[dry-run] rm $f"; fi
+    fi
+  done
+}
+
 cmd_retention() {
   local apply=0
   while [[ $# -gt 0 ]]; do
@@ -389,6 +406,7 @@ cmd_retention() {
     [[ -n "$kid" ]] || continue
     prune_usage "$kid" "$usage_cutoff" "$apply"
     prune_launches "$kid" "$launches_cutoff" "$apply"
+    prune_decisions "$kid" "$queue_cutoff" "$apply"
   done < <(kids_list "$KIDS_DIR")
   prune_queue "$queue_cutoff" "$apply"
 }

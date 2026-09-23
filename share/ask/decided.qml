@@ -40,6 +40,9 @@ PanelWindow {
         watchChanges: false
         printErrors: false
         onLoaded: root.read()
+        // A file we cannot read must never wedge the watcher: quit and let
+        // `watch` mark it seen and move on.
+        onLoadFailed: Qt.quit()
     }
 
     function read() {
@@ -65,6 +68,7 @@ PanelWindow {
     function hide() {
         root.visible = false
         dismiss.stop()
+        Qt.quit()
     }
 
     function headline() {
@@ -87,6 +91,14 @@ PanelWindow {
         id: dismiss
         interval: 10000
         running: false
+        onTriggered: Qt.quit()
+    }
+
+    // Backstop: however the card got here, the process is gone within 15s, so
+    // `watch`'s synchronous launch can never stall on it.
+    Timer {
+        interval: 15000
+        running: true
         onTriggered: Qt.quit()
     }
 
@@ -132,6 +144,7 @@ PanelWindow {
                     Text {
                         font.family: theme.fontFamily
                         width: parent.width
+                        textFormat: Text.PlainText
                         text: root.body()
                         color: theme.foreground
                         font.pixelSize: 18

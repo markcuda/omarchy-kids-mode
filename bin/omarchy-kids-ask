@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Ask a grown-up for more time, an app, a plugin, or a site
-# omarchy:args=<time|app|plugin|site|submit|collect|list|approve|decline> ...
+# omarchy:args=<time|app|plugin|site|submit|grant|apply-grant|collect|list|approve|decline|watch> ...
 # The kid asks (time/app/plugin/site); root collects, verifies, and applies (SPEC.md R-ASK-1..3, Appendix D).
 # See docs/ask.md for the outbox/queue design and every judgment call.
 set -euo pipefail
@@ -268,41 +268,61 @@ apply_record() {
 # the kid's own session can read it: <varlib>/<kid>/decisions/<id>.json, 0640
 # root:<kid> (R-NOTIFY-6). Best-effort: a failure here never fails the decision.
 write_kid_decision() {
-  local path="$1" kid id dir tmp
+  local path="$1" kid id dir tmp group
   kid="$("$KIDS_PY" "$ASKPY" show "$path" --field kid 2>/dev/null)" || return 0
   [[ -n "$kid" ]] || return 0
+  # The kid's primary group, asked of the system rather than assumed from the
+  # account name; without it the result would be unreadable by the kid, so skip.
+  group="$(id -gn "$kid" 2>/dev/null)" || return 0
+  [[ -n "$group" ]] || return 0
   id="$(basename "$path" .json)"
   dir="$VARLIB/$kid/decisions"
   install -d -m 0750 "$dir" 2>/dev/null || return 0
-  chgrp "$kid" "$dir" 2>/dev/null || true
+  chgrp "$group" "$dir" 2>/dev/null || true
   tmp="$(mktemp "$dir/.$id.XXXXXX")" || return 0
   if ! "$KIDS_PY" "$ASKPY" show "$path" >"$tmp" 2>/dev/null; then
     rm -f "$tmp"
     return 0
   fi
   chmod 0640 "$tmp" 2>/dev/null || true
-  chgrp "$kid" "$tmp" 2>/dev/null || true
+  chgrp "$group" "$tmp" 2>/dev/null || true
   mv -f "$tmp" "$dir/$id.json" 2>/dev/null || rm -f "$tmp"
 }
 
-# cmd_watch -- kid-side (R-NOTIFY-6): show the decided card for any decision the
-# kid has not seen yet, then mark it seen in the kid's own runtime dir. Started
-# per session by omarchy-kids-session-start; never exits.
+# cmd_watch [--once] -- kid-side (R-NOTIFY-6): show the decided card for any
+# decision the kid has not seen yet, then mark it seen in the kid's own runtime
+# dir. Started per session by omarchy-kids-session-start; never exits unless
+# --once is given (tests). A malformed or older-than-a-day decision is marked
+# seen without showing: the markers live in a tmpfs and die at logout, so
+# without that a kid would replay every historical card at each login.
 cmd_watch() {
-  local kid decisions seen_dir f id
+  local once=0
+  case "${1:-}" in
+    --once) once=1 ;;
+    "") ;;
+    *) die "watch: unknown argument '$1'" ;;
+  esac
+  local kid decisions seen_dir f id decided now
   kid="$(id -un)"
   decisions="$VARLIB/$kid/decisions"
   seen_dir="$RUN/ask-seen"
   install -d -m 0700 "$seen_dir" 2>/dev/null || true
   while true; do
+    now="$(date +%s)"
     for f in "$decisions"/*.json; do
       [[ -e "$f" ]] || continue
       id="$(basename "$f" .json)"
       [[ -e "$seen_dir/$id" ]] && continue
+      decided="$("$KIDS_PY" "$ASKPY" show "$f" --field decided_at 2>/dev/null || true)"
+      if [[ ! "$decided" =~ ^[0-9]+$ ]] || ((now - decided > 86400)); then
+        : >"$seen_dir/$id" 2>/dev/null || true
+        continue
+      fi
       OMARCHY_KIDS_ACCOUNT="$kid" OMARCHY_KIDS_ASK_DECISION="$f" \
         "$QUICKSHELL_BIN" -p "$DECIDED_QML" >/dev/null 2>&1 || true
       : >"$seen_dir/$id" 2>/dev/null || true
     done
+    ((once)) && return 0
     sleep 2
   done
 }
@@ -664,7 +684,7 @@ main() {
     list) cmd_list "$@" ;;
     approve) cmd_approve "$@" ;;
     decline) cmd_decline "$@" ;;
-    watch) cmd_watch ;;
+    watch) cmd_watch "$@" ;;
     *) die "unknown command: '$cmd' (see --help)" ;;
   esac
 }

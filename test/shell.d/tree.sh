@@ -56,6 +56,10 @@ case "\${1:-}" in
       echo "\${KIDS_TEST_UID:-$uid}"
     fi
     ;;
+  -gn | -g)
+    # The account's primary group (the decision-result store needs it).
+    echo "\${KIDS_TEST_GROUP:-$(id -gn)}"
+    ;;
   *) exit 1 ;;
 esac
 EOF

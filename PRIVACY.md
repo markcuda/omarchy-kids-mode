@@ -10,6 +10,7 @@ doesn't record it.
 | --- | --- | --- |
 | Active minutes per day | `/var/lib/omarchy-kids/<account>/usage/<day>` | One year |
 | App launches and "Ask a parent" requests | `/var/lib/omarchy-kids/<account>/launches.log` and `/var/lib/omarchy-kids/queue/` | Ninety days |
+| "Ask a parent" decisions shown back to the kid | `/var/lib/omarchy-kids/<account>/decisions/` | Ninety days (only decisions from the last day are shown at login) |
 | Browsing history | The kid's own Chromium profile, same as any browser | Whatever Chromium itself keeps — Kids Mode adds nothing and locks it against being cleared (see "History" below) |
 
 "Active minutes" means the kid's session was logged in, unlocked, and not paused — a root

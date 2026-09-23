@@ -33,7 +33,17 @@ omarchy-kids-ask collect [--apply]
 omarchy-kids-ask list [<kid>]
 omarchy-kids-ask approve <id> [--apply]
 omarchy-kids-ask decline <id> [--apply]
+omarchy-kids-ask watch [--once]
 ```text
+
+Decisions (both root paths) also drop the result where the kid's own session reads it:
+`/var/lib/omarchy-kids/<kid>/decisions/<id>.json`, mode `0640 root:<kid>` (R-NOTIFY-6). `watch` is the
+kid-side reader: per session (`omarchy-kids-session-start` starts it detached) it shows
+`share/ask/decided.qml` for any decision the kid has not seen, marks it seen, and skips a decision
+older than a day (the markers live in the kid's `/run` tmpfs, so without that a login would replay
+old cards). `--once` scans a single time and exits, for tests. An optional `reply` on
+`approve`/`decline` is stored and rendered on the card; `lib/ask.py decide --reply` validates it
+(printable, at most 80 characters) at write time.
 
 ### Kid-side: `time` / `app` / `plugin` / `site`
 

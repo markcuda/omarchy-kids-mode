@@ -33,7 +33,8 @@ creates only `/run/user/<uid>/omarchy-kids/launcher-control` for the existing ke
 path. It does not read the profile, scan desktop files, or write launcher or allowlist JSON in the
 kid's runtime directory.
 
-It starts the detached `omarchy-kids-time daemon`, then executes the level surface directly from
+It starts the detached `omarchy-kids-time daemon` and `omarchy-kids-ask watch` (the decided-result
+card, R-NOTIFY-6), then executes the level surface directly from
 an argv array: Levels 1 and 2 run `/usr/bin/quickshell -p
 /usr/share/omarchy-kids/launcher/shell.qml`; Level 3 runs
 `/usr/bin/omarchy-launch-shell`. Missing or invalid manifest output fails closed with one plain
