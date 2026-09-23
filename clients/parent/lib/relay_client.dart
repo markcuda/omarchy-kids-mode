@@ -109,8 +109,9 @@ bool _printable(int rune) {
 /// given, must be printable Unicode of at most 80 code points. This matches the
 /// box's `max_reply`/`isprintable` for everything a person types (an accented
 /// reply is fine, as the shared vector's own reply shows); it is a subset of the
-/// box's rule, which additionally refuses the Unicode categories below, and the
-/// box is the authority -- it fails closed on anything it would not accept.
+/// box's rule, which also refuses the Unicode format and separator categories the
+/// app cannot enumerate, and the box is the authority -- it fails closed on
+/// anything it would not accept.
 Map<String, Object?> decisionRecord({
   required String deviceId,
   required String requestId,
