@@ -25,6 +25,7 @@ client (N-8) must canonicalize the same way.
 import base64
 import binascii
 import fcntl
+import hashlib
 import json
 import os
 import re
@@ -39,6 +40,7 @@ except ImportError:  # pragma: no cover - the skip path
     HAVE_CRYPTO = False
 
 SIGN_CONTEXT = b"omarchy-kids-decision-v1\n"
+REQUEST_CONTEXT = b"omarchy-kids-request-v1\n"
 SKEW_SECONDS = 300
 # Twice the skew: a nonce is remembered strictly longer than a timestamp is
 # accepted, so a replay of a still-in-skew record can never find it pruned.
@@ -230,6 +232,48 @@ def verify_decision(etc_dir, ledger, record, signature_b64, now, scope="decide")
     # devices may use the same nonce string.
     try:
         fresh = ledger.check_and_add(f"{device['id']}:{record['nonce']}", now)
+    except LedgerError:
+        return False, "ledger-unreadable"
+    if not fresh:
+        return False, "replayed-nonce"
+    return True, "ok"
+
+
+def request_message(device_id, ts, nonce, method, path, body):
+    """The exact bytes a paired device signs for a relay read (R-NOTIFY-4's
+    shared secret, used for GETs as well as decisions)."""
+    raw = body if isinstance(body, bytes) else (body or "").encode("utf-8")
+    obj = {
+        "device_id": device_id,
+        "ts": ts,
+        "nonce": nonce,
+        "method": method,
+        "path": path,
+        "body_sha256": hashlib.sha256(raw).hexdigest(),
+    }
+    return REQUEST_CONTEXT + json.dumps(obj, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def verify_request(etc_dir, ledger, device_id, ts, nonce, method, path, body, signature_b64, now):
+    """(ok, reason) for a signed relay request. Any paired device may read; the
+    signature and a fresh, single-use nonce are required, and it fails closed."""
+    if not HAVE_CRYPTO:
+        return False, "crypto-unavailable"
+    device = load_device(etc_dir, device_id)
+    if device is None:
+        return False, "unknown-device"
+    if not isinstance(ts, int) or isinstance(ts, bool) or abs(now - ts) > SKEW_SECONDS:
+        return False, "stale-timestamp"
+    if not isinstance(nonce, str) or not nonce or len(nonce) > MAX_NONCE:
+        return False, "malformed"
+    try:
+        public = Ed25519PublicKey.from_public_bytes(base64.b64decode(device["sign_pub"], validate=True))
+        signature = base64.b64decode(signature_b64, validate=True)
+        public.verify(signature, request_message(device_id, ts, nonce, method, path, body))
+    except (InvalidSignature, ValueError, TypeError, binascii.Error):
+        return False, "bad-signature"
+    try:
+        fresh = ledger.check_and_add(f"{device['id']}:{nonce}", now)
     except LedgerError:
         return False, "ledger-unreadable"
     if not fresh:

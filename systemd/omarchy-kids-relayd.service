@@ -1,0 +1,33 @@
+[Unit]
+Description=Omarchy Kids Mode LAN notification relay (R-NOTIFY-1)
+Documentation=https://github.com/markcuda/omarchy-kids-mode/blob/main/docs/notify.md
+Wants=network-online.target
+After=network-online.target omarchy-kids-authd.socket
+# Started on demand (the time tick, or the panel) while Kids Mode is in use; it
+# stops itself once idle. Deliberately no [Install]: it is never enabled at boot.
+
+[Service]
+Type=simple
+User=omarchy-kids-relay
+Group=omarchy-parents
+RuntimeDirectory=omarchy-kids/relay
+RuntimeDirectoryMode=0750
+ExecStart=/usr/bin/omarchy-kids-relayd --cert /etc/omarchy-kids/relay/cert.pem --key /etc/omarchy-kids/relay/key.pem
+# The one network listener this project ships. It is fenced to the home network
+# here, in the kernel, not in a label: every address outside loopback, link-local
+# and multicast, and the private ranges, is dropped (R-NOTIFY-1). Read-only
+# access is exactly the root-written sources and the device registry.
+IPAddressAllow=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 fc00::/7 fe80::/10
+IPAddressDeny=any
+ReadOnlyPaths=/etc/omarchy-kids /var/lib/omarchy-kids
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+# The relay is not a lock: it may stop at any time, and a failure just stops
+# notifications. Restart while Kids Mode is up, but not forever.
+Restart=on-failure
