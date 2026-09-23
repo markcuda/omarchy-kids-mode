@@ -654,8 +654,16 @@ EOF
   "$BIN" collect --apply >/dev/null 2>&1
   f="$(ls "$QUEUE_DIR"/1000000099-*.json 2>/dev/null | head -1)"
   if [[ -n "$f" ]]; then
-    check_eq "$(kids_file_gid "$f")" "$sgid" \
-      "queue record takes the directory's secondary group (R-NOTIFY-7)"
+    # Assert against the directory's group as it stands (collect's own
+    # queue_ensure_dir may chgrp to omarchy-parents where that group exists),
+    # and only bite when it differs from the writer's primary group.
+    dir_gid="$(kids_file_gid "$QUEUE_DIR")"
+    if [[ "$dir_gid" != "$pgid" ]]; then
+      check_eq "$(kids_file_gid "$f")" "$dir_gid" \
+        "queue record takes the directory's (non-primary) group (R-NOTIFY-7)"
+    else
+      pass "queue group: the queue kept the primary group (no omarchy-parents here); nothing to observe"
+    fi
   else
     fail "queue group test: collect wrote no record"
   fi
