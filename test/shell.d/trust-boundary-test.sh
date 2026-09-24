@@ -130,6 +130,43 @@ for name in "${read_names[@]}"; do
 done
 ((unlisted == 0)) && ok "trust boundary: every OMARCHY_KIDS_* read in bin/ and lib/ is allowlisted (${#read_names[@]} names)"
 
+# The OMARCHY_KIDS_* scan above also matches python (os.environ.get / getenv).
+# A non-namespaced environment read is the same hazard under a plain name, and
+# the only ones this package may make are systemd's socket-activation contract,
+# read once and then popped (bin/omarchy-kids-authd). A new one fails here.
+PY_ALLOWED=(
+  LISTEN_PID # sd_listen_fds: this process is the systemd-activated one
+  LISTEN_FDS # how many sockets systemd passed
+  LISTEN_FDNAMES
+  # lib/conf.py's desktop-argv resolves a .desktop Exec on the session PATH. That
+  # path is refenced by the caller: lib/launcher-map.sh refuses anything not
+  # root-owned and not group/other-writable, so a kid's PATH can only make a tile
+  # absent, never choose the binary (see docs/apps.md).
+  PATH
+)
+PY_FILES=(lib/*.py bin/omarchy-kids-authd bin/omarchy-kids-relayd bin/omarchy-kids-relay-courier)
+py_env_reads=()
+while IFS= read -r name; do
+  [[ -n "$name" ]] || continue
+  py_env_reads+=("$name")
+done < <(
+  grep -rhoE 'os\.environ(\.get)?\("?\[?"[A-Za-z_][A-Za-z0-9_]*"|getenv\("[A-Za-z_][A-Za-z0-9_]*"' "${PY_FILES[@]}" 2>/dev/null |
+    grep -oE '"[A-Za-z_][A-Za-z0-9_]*"' | tr -d '"' | sort -u
+)
+py_unlisted=0
+for name in "${py_env_reads[@]}"; do
+  [[ "$name" == OMARCHY_KIDS_* ]] && continue # covered and allowed above
+  listed=0
+  for a in "${PY_ALLOWED[@]}"; do [[ "$a" == "$name" ]] && listed=1; done
+  if ((listed == 0)); then
+    bad "trust boundary: the python side reads \$$name from the environment, which is not in PY_ALLOWED.
+     If it cannot select code, a path a check reads, or a root check, add it
+     above with a one-line why. Otherwise: delete it."
+    py_unlisted=1
+  fi
+done
+((py_unlisted == 0)) && ok "trust boundary: the python side's only environment reads are allowlisted (${#py_env_reads[@]} names)"
+
 # Kid-facing commands have a stricter boundary: scratch path variables are
 # root/test seams only, never safe inputs to a command a kid can run.
 KID_COMMANDS=(

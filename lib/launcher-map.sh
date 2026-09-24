@@ -37,9 +37,13 @@ launcher_map_mode_writable_by_others() {
 launcher_map_executable_ok() {
   local file="$1"
   [[ "$file" == /* && -f "$file" && ! -L "$file" && -x "$file" ]] || return 1
+  # The writable-mode refusal is not root's alone: a group/other-writable binary
+  # must not be trusted by any builder, and it is what keeps a PATH a kid can set
+  # from putting a binary they can rewrite into the map (AGENTS.md rule 9). The
+  # owner check needs root to read the uid field.
+  ! launcher_map_mode_writable_by_others "$(file_stat a "$file")" || return 1
   is_root || return 0
-  [[ "$(file_stat u "$file")" == 0 ]] || return 1
-  ! launcher_map_mode_writable_by_others "$(file_stat a "$file")"
+  [[ "$(file_stat u "$file")" == 0 ]]
 }
 
 # launcher_map_exec_json FILE — fixed absolute argv from a trusted desktop entry.
@@ -54,6 +58,10 @@ launcher_map_exec_json() {
 # launcher_map_bare_json ID — resolves a pack fallback while root owns the map.
 launcher_map_bare_json() {
   local executable
+  # A pack fallback is looked up on the session's PATH (it names an installed
+  # program), and the ownership check below is the fence: whatever it resolves is
+  # refused unless it is root-owned and not group/other-writable, so a PATH a kid
+  # can set can make a fallback absent, never point the map at a kid's binary.
   executable="$(command -v "$1" 2>/dev/null || true)"
   [[ "$executable" == /* && -x "$executable" ]] || return 1
   launcher_map_executable_ok "$executable" || return 2

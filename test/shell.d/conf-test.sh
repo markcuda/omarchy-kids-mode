@@ -779,4 +779,64 @@ printf 'level=1\r\n' >"$imp"
 check "$("$CONF" get kid-ada level)" "1" "import: a CRLF line is accepted"
 "$CONF" unset kid-ada level >/dev/null
 
+# --- desktop-argv: the launcher's fixed Exec resolution (R-DESK-2) ----------
+#
+# A root-side validator (lib/launcher-map.sh calls it while a kid's launcher map
+# is built), and the only thing that turns a .desktop Exec into the fixed argv
+# the map carries. It resolves programs against the system path, never the
+# caller's PATH: a PATH a kid can set must not choose which binary lands in
+# their map (AGENTS.md rule 9).
+
+DESKTOP="$TMP/exec.desktop"
+
+mkdir -p "$TMP/bin"
+printf '#!/bin/sh\nexit 0\n' >"$TMP/bin/stockprog"
+chmod 0755 "$TMP/bin/stockprog"
+cat >"$DESKTOP" <<'EOF'
+[Desktop Entry]
+Name=Thing
+Exec=stockprog %u --flag
+EOF
+out="$(PATH="$TMP/bin:$PATH" python3 "$DIR/lib/conf.py" desktop-argv "$DESKTOP" 2>&1)"
+check "$?" "0" "desktop-argv: a program on the session PATH resolves"
+check "$(printf '%s' "$out" | python3 -c 'import json,sys; a=json.load(sys.stdin); print(a[0].rsplit("/",1)[-1], a[1:])')" \
+  "stockprog ['--flag']" "desktop-argv: the field code is stripped and the program is absolute"
+check_contains "$out" "$TMP/bin/stockprog" "desktop-argv: the resolved path is absolute"
+
+# The resolved program is refused when it is not on the PATH at all.
+cat >"$DESKTOP" <<'EOF'
+[Desktop Entry]
+Exec=stockprog %u
+EOF
+out="$(python3 "$DIR/lib/conf.py" desktop-argv "$DESKTOP" 2>&1)"
+check "$?" "2" "desktop-argv: a program not on the PATH at all is refused"
+check_contains "$out" "executable not found" "desktop-argv: the refusal names the missing executable"
+
+# env with assignments is allowed; a shell -c is not.
+cat >"$DESKTOP" <<'EOF'
+[Desktop Entry]
+Exec=env FOO=bar true %u
+EOF
+PATH="$(dirname "$(command -v python3)"):/usr/bin:/bin:$PATH" python3 "$DIR/lib/conf.py" desktop-argv "$DESKTOP" >/dev/null 2>&1
+check "$?" "0" "desktop-argv: env with an assignment resolves the real program"
+
+cat >"$DESKTOP" <<'EOF'
+[Desktop Entry]
+Exec=bash -c "echo hi"
+EOF
+out="$(python3 "$DIR/lib/conf.py" desktop-argv "$DESKTOP" 2>&1)"
+check "$?" "2" "desktop-argv: a shell -c is refused"
+check_contains "$out" "shell evaluation" "desktop-argv: the refusal names shell evaluation"
+
+# no Exec, and an unsupported field code.
+printf '[Desktop Entry]\nName=X\n' >"$DESKTOP"
+out="$(python3 "$DIR/lib/conf.py" desktop-argv "$DESKTOP" 2>&1)"
+check "$?" "2" "desktop-argv: a file with no Exec= is refused"
+check_contains "$out" "no Exec=" "desktop-argv: the refusal says there is no Exec="
+
+printf '[Desktop Entry]\nExec=true %%x\n' >"$DESKTOP"
+out="$(python3 "$DIR/lib/conf.py" desktop-argv "$DESKTOP" 2>&1)"
+check "$?" "2" "desktop-argv: an unsupported field code is refused"
+check_contains "$out" "unsupported field code" "desktop-argv: the refusal names the field code"
+
 exit $fail

@@ -492,6 +492,17 @@ echo '{}' >"$CHROMIUM_FILE"
 chmod 0640 "$CHROMIUM_FILE"
 launcher_map_fix kid-ada
 
+# The ownership fence (AGENTS.md rule 9): an executable that is group/other-
+# writable is refused, so a PATH a kid can set can make a tile absent, never point
+# it at the kid's own binary.
+tuxpaint_bin="$(command -v tuxpaint)"
+chmod 0777 "$tuxpaint_bin"
+launcher_map_fix kid-ada 2>/dev/null
+check_eq "$?" "1" "launcher-map: a world-writable executable is refused"
+chmod 0755 "$tuxpaint_bin"
+launcher_map_fix kid-ada ||
+  fail "launcher-map: the map builds again once the executable is closed"
+
 # The baseline is fully provisioned, including the session input assert owns.
 session_manifest_build kid-ada
 MANIFEST_FILE="$ETC/sessions/kid-ada.json"
