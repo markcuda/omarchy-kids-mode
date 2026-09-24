@@ -69,13 +69,13 @@ package() {
 	grep -q '^KIDS_PY=/usr/bin/python3$' "$pkgdir/usr/lib/omarchy-kids/kids.sh" \
 		|| { echo "PKGBUILD: KIDS_PY substitution failed" >&2; return 1; }
 
-	# The same seam for the two python commands' own shebangs. Their repo copy
+	# The same seam for the python commands' own shebangs. Their repo copy
 	# says `#!/usr/bin/env python3` so a dev checkout runs; a direct exec of the
 	# packaged copy must not resolve its interpreter through $PATH either (the
 	# same reason as KIDS_PY above -- AGENTS.md rule 9). This list is the one
 	# table: test/shell.d/trust-boundary-test.sh fails if a command has that
 	# shebang and is not named here.
-	for py in "$pkgdir/usr/bin/omarchy-kids-authd" "$pkgdir/usr/bin/omarchy-kids-wifid"; do
+	for py in "$pkgdir/usr/bin/omarchy-kids-authd" "$pkgdir/usr/bin/omarchy-kids-wifid" "$pkgdir/usr/bin/omarchy-kids-relayd"; do
 		sed -i 's|^#!/usr/bin/env python3$|#!/usr/bin/python3|' "$py"
 		grep -q '^#!/usr/bin/python3$' "$py" \
 			|| { echo "PKGBUILD: python shebang substitution failed for $py" >&2; return 1; }
