@@ -206,9 +206,11 @@ void main() {
     expect(await keystore.loadPaired(), isNotNull);
   });
 
-  testWidgets('Forget clears the pairing and returns to pairing', (tester) async {
+  testWidgets('Forget clears the pairing, stops the feed, and returns to pairing', (tester) async {
     final keystore = await pairedKeystore();
-    await pumpPairing(tester, connect: FakeConnect(), keystore: keystore);
+    final connect = FakeConnect();
+    await pumpPairing(tester, connect: connect, keystore: keystore);
+    expect(connect.relays.first.opened.first.hasListener, isTrue, reason: 'the feed runs while paired');
     await tester.tap(find.byTooltip('More'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Forget this computer…'));
@@ -217,6 +219,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Pair with the computer'), findsOneWidget);
     expect(await keystore.loadPaired(), isNull);
+    expect(connect.relays.first.opened.first.hasListener, isFalse,
+        reason: 'forgetting drops the old feed, not just the pin');
   });
 
   testWidgets('a slow read does not overwrite a newer event', (tester) async {
