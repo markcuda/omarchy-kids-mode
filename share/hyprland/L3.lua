@@ -38,6 +38,13 @@ require("default.hypr.input")
 require("default.hypr.windows")
 require_optional.module("omarchy.current.theme.hyprland")
 
+-- Hyprland's own update-news and donation popups are upstream notices about
+-- Omarchy, not a kid's; the news dialog carries an outbound link that xdg-open
+-- would open in the browser outside the kids launcher (R-DESK-1, I-6).
+hl.config({
+  ecosystem = { no_update_news = true, no_donation_nag = true },
+})
+
 -- --- Unbind: terminal-launching binds (menu=trimmed) --------------------
 --
 -- Verified on the VM (2026-09-21) with a `menu = trimmed` kid at Level 3:

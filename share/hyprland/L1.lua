@@ -68,6 +68,13 @@ hl.env("XDG_SESSION_TYPE", "wayland")
 hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
 hl.env("XDG_SESSION_DESKTOP", "Hyprland")
 
+-- Hyprland's own update-news and donation popups are upstream notices about
+-- Omarchy, not a kid's; the news dialog carries an outbound link that xdg-open
+-- would open in the browser outside the kids launcher (R-DESK-1, I-6).
+hl.config({
+  ecosystem = { no_update_news = true, no_donation_nag = true },
+})
+
 -- Kiosk look: no gaps/border/animation chrome since every window is
 -- forced fullscreen below anyway (hl.config after a require overrides
 -- the keys it sets, same as hyprctl reload semantics).

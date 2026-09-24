@@ -18,6 +18,11 @@ the picker. Escape returns to the desktop; reopening clears the search. Detached
 allow two apps to remain open; Super+arrows focuses them and Super+Q closes the focused app.
 Level 1 keeps its existing visible grid and fullscreen apps.
 
+Every level also turns off Hyprland's own update-news and donation popups
+(`ecosystem.no_update_news` and `ecosystem.no_donation_nag`): the news dialog carries an outbound
+link, and `xdg-open` would open it in the browser outside the kids launcher (R-DESK-1, I-6). A
+kid's session never shows either.
+
 The desktop layer and picker are sibling windows under the existing launcher's ShellRoot;
 the background takes no keyboard focus. `launcher-ctl show` writes the existing control
 file as well as focusing the grid, so a hidden picker can become visible again. Runtime

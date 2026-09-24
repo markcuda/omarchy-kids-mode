@@ -44,6 +44,13 @@ hl.env("XDG_SESSION_DESKTOP", "Hyprland")
 -- keyboard-first surface.
 hl.config({ cursor = { inactive_timeout = 1 } })
 
+-- Hyprland's own update-news and donation popups are upstream notices about
+-- Omarchy, not a kid's; the news dialog carries an outbound link that xdg-open
+-- would open in the browser outside the kids launcher (R-DESK-1, I-6).
+hl.config({
+  ecosystem = { no_update_news = true, no_donation_nag = true },
+})
+
 -- Unlike L1, Level 2 actually tiles (50/50 dwindle split, below), so
 -- keep default.hypr.looknfeel's normal gaps/border/animation instead of
 -- L1's flattened kiosk look. The "50/50 dwindle split" Appendix E asks

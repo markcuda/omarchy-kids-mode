@@ -109,6 +109,17 @@ check "$(grep -vE '^[[:space:]]*--' "$HYPR/L1.lua" | grep -c 'cursor = { inactiv
 check "$(grep -vE '^[[:space:]]*--' "$HYPR/L2.lua" | grep -c 'cursor = { inactive_timeout = 1 }')" "1" \
   "L2.lua sets the idle-pointer rule exactly once"
 
+# Every kid level turns off Hyprland's own update-news and donation popups: the
+# news dialog carries an outbound link, and xdg-open opens it in the browser
+# outside the kids launcher (R-DESK-1, I-6). Omarchy's owner config may keep
+# them on; a kid's does not. Each level must carry both keys.
+for lvl in L1 L2 L3; do
+  check_contains "$(grep -vE '^[[:space:]]*--' "$HYPR/$lvl.lua")" 'no_update_news = true' \
+    "$lvl.lua turns off Hyprland's update-news popup"
+  check_contains "$(grep -vE '^[[:space:]]*--' "$HYPR/$lvl.lua")" 'no_donation_nag = true' \
+    "$lvl.lua turns off Hyprland's donation nag"
+done
+
 # --- L2: the L1 set plus Appendix E's Level 2 additions ------------------
 
 L2_WANT=$(sorted \
