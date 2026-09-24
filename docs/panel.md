@@ -74,8 +74,9 @@ dry-run posture is passed through as `--dry-run`.
 - **Apps** lists the band's starter pack (`omarchy-kids-apps list <kid> --json`, parsed with `jq`
   — review 2.6, no more column-offset `cut` on the human table) against the kid's effective
   allowlist (`omarchy-kids-apps allowlist <kid>`); Enter on an app toggles it via `omarchy-kids-apps
-  hide`/`show`. Its **Plugins shelf** row reads `omarchy-kids-plugins shelf --band <band> --json`
-  the same way.
+  hide`/`show`. A row whose app isn't installed says ", not installed", because with the default
+  `apps.show_missing=no` the launcher omits it whatever the toggle says (I-6). Its **Plugins shelf**
+  row reads `omarchy-kids-plugins shelf --band <band> --json` the same way.
 - **Data** (R-DATA-1..5, issue #27): read-only. Prints `omarchy-kids-data summary <kid>` (today) and
   `summary <kid> --week` (last 7 days) — minutes, launches, top apps, and top sites, in that order.
   Minutes and launches are unprivileged reads, same as the rest of this panel; sites need root (a

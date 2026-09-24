@@ -1984,3 +1984,15 @@ files green; fable review MERGE. Live-verified from the branch: `mine` now print
 2026-09-21 / Your last day's summary (2026-09-21): minutes used: 338", and the summary line reads
 "budget 60 + 375 granted, 97 left". No other glob loop in `omarchy-kids-data`/`lib/data.sh` has the
 same last-iteration-status shape (the review checked each).
+### 2026-09-21, loop iteration: the Apps screen named a tile the kid never sees (live)
+
+Dogfooded the parent panel live on the VM: main menu, kid screen, Web, and Apps all render with
+real data. The Apps screen listed "Tux Paint (shown)" though the launcher omits Tux Paint (not
+installed, and `apps.show_missing=no` is the default) -- the panel dropped the `state` field from
+`omarchy-kids-apps list --json`, so "(shown)" only meant "not hidden from the allowlist" while a
+parent reads it as a visible tile (I-6). Fixed on `fix/panel-apps-not-installed` (`3b66d3a`): a
+missing app's row now reads "(shown, not installed)" / "(hidden, not installed)"; the toggle and
+its write are unchanged, and docs/panel.md records the suffix. `panel-test.sh` stubs `pacman` (only
+gcompris-qt installed) so the state is deterministic and asserts both labels; the fable review
+MERGE'd with no findings. Full Mac suite 52 files green. Live-verified from the branch:
+"Tux Paint (shown, not installed)" and the installed pack apps plain "(shown)".

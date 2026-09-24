@@ -250,15 +250,20 @@ screen_kid_apps() { # ACCOUNT NAME
     allow="$("$APPS_BIN" allowlist "$account" 2>/dev/null)"
 
     local -a choices=()
-    local id label
-    while IFS=$'\t' read -r id label; do
+    local id label state suffix
+    while IFS=$'\t' read -r id label state; do
       [[ -n "$id" ]] || continue
+      # Say when the app isn't installed: with apps.show_missing=no (the
+      # default) the launcher omits it whatever this toggle says, so "(shown)"
+      # alone would name a tile the kid never sees (I-6).
+      suffix=""
+      [[ "$state" == missing ]] && suffix=", not installed"
       if is_in_csv "$id" "$allow"; then
-        choices+=("$id|$label (shown)|")
+        choices+=("$id|$label (shown$suffix)|")
       else
-        choices+=("$id|$label (hidden)|")
+        choices+=("$id|$label (hidden$suffix)|")
       fi
-    done < <(jq -r '.[] | [.id, .label] | @tsv' <<<"$list_out" 2>/dev/null)
+    done < <(jq -r '.[] | [.id, .label, .state] | @tsv' <<<"$list_out" 2>/dev/null)
     choices+=("plugins|Plugins shelf|Marketplace plugins, category Kids, verified only")
     choices+=("back|Back|")
 
