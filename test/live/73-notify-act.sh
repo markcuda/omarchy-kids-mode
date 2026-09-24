@@ -22,9 +22,9 @@ boot_with "$LIVE_OWNER_PASSWORD" "$LIVE_OWNER_ACCOUNT" &&
 
 portal_reset 30 && ok "greeter is up" || fail "greeter never appeared"
 
-# The day's grant ledger, before. The logical day rolls at 04:00, so ask the box for it rather than
-# computing it here.
-day="$(vmroot "date +%Y-%m-%d" | tr -d '[:space:]')"
+# The day's grant ledger, before. The logical day rolls at 04:00 (SPEC.md Appendix F), so ask the
+# box's own time.py for it -- a local date would read the wrong file between midnight and 04:00.
+day="$(vmroot "python3 /usr/lib/omarchy-kids/time.py logical-day \"\$(date '+%F %T')\" | head -1" | tr -d '[:space:]')"
 grant_file="/var/lib/omarchy-kids/$LIVE_KID1_ACCOUNT/usage/$day.grant"
 before="$(vmroot "cat $grant_file 2>/dev/null || echo 0" | tr -d '[:space:]')"
 

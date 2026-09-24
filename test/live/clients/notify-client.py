@@ -2,7 +2,8 @@
 """A scripted notification client for the live acceptance run (N-6/N-9/N-10).
 
 It stands in for the not-yet-built parent app: it pairs with a pairing token and
-signs a decision, exactly as `clients/parent/README.md` specifies. Stdlib plus
+signs a decision, a review decision or an ACT (grant/end), exactly as
+`clients/parent/README.md` specifies. Stdlib plus
 python-cryptography only (both package dependencies); it is a test helper, not
 shipped in the package.
 

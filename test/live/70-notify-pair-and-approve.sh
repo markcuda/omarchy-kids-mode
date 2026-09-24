@@ -41,11 +41,16 @@ vmroot "printf '%s\\n' '$record' > /var/lib/omarchy-kids/queue/$REQ_ID.json; chm
 
 before="$(vmroot "omarchy-kids-time status $LIVE_KID1_ACCOUNT | head -1")"
 
-decide_reply="$(vmroot "python3 /tmp/notify-client.py decide --key $KEY --id $NOTIFY_DEVICE_ID --request $REQ_ID --decision approve" 2>&1)"
-if [[ "$decide_reply" == *"decide 200"* ]]; then
-  ok "the client's signed decision was accepted ($decide_reply)"
-else
-  fail "decide failed: $decide_reply"
+# notify_pair_client returned non-zero if anything above failed, and fail() does not exit (it just
+# marks the scenario FAIL), so every step that needs the device is guarded: an unguarded use of an
+# unset NOTIFY_DEVICE_ID would abort under set -u before scenario_result and skip the cleanup.
+if [[ -n "${NOTIFY_DEVICE_ID:-}" ]]; then
+  decide_reply="$(vmroot "python3 /tmp/notify-client.py decide --key $KEY --id $NOTIFY_DEVICE_ID --request $REQ_ID --decision approve" 2>&1)"
+  if [[ "$decide_reply" == *"decide 200"* ]]; then
+    ok "the client's signed decision was accepted ($decide_reply)"
+  else
+    fail "decide failed: $decide_reply"
+  fi
 fi
 
 waited=0
