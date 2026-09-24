@@ -3,8 +3,8 @@
 The relay is the **only network listener** Kids Mode ships. It is a root-owned system unit
 (`systemd/omarchy-kids-relayd.service`) that runs as `omarchy-kids-relay:omarchy-parents`, fenced to
 loopback and the private LAN ranges, and it **never decides anything** (R-NOTIFY-2): it serves the
-root-written state to the parent's paired devices and forwards a signed decision to
-`omarchy-kids-authd`, which verifies and applies it.
+root-written state to the parent's paired devices and forwards a signed decision, review decision or
+action to `omarchy-kids-authd`, which verifies and applies it.
 
 ## Lifecycle: it runs only while it is needed (N-7)
 
@@ -58,8 +58,8 @@ v4/v6 ranges, with `IPAddressDeny=any` after them, and sets `ProtectSystem=stric
 hardening `systemd/omarchy-kids-wifid.service` uses. The parent may opt in to "away from home"
 (N-10, `docs/notify.md`): a drop-in adds the CGNAT range `100.64.0.0/10` to the allow list, which is
 the parent's tailnet but also any CGNAT network the box sits behind directly — the relay's own auth
-(the pinned certificate and signed decisions) is the lock, not the fence alone). The drop-in never
-widens the range. Because the relay can never approve anything, its whole attack surface is
+(the pinned certificate and signed decisions) is the lock, not the fence alone). The drop-in adds
+that one range and nothing else. Because the relay can never approve anything, its whole attack surface is
 "notifications stop" (`docs/phase1/SPEC-AMENDMENT-notifications.md`).
 
 ## Files and flags
@@ -69,12 +69,13 @@ widens the range. Because the relay can never approve anything, its whole attack
 | `/etc/omarchy-kids/relay/{cert,key}.pem` | `0644` and `0640 root:omarchy-parents` (`docs/notify.md`) |
 | `/run/omarchy-kids/devices.json` | the public device copy the relay reads, `0644` (`docs/devices.md`) |
 | `/run/omarchy-kids/status.json` | `0640 root:omarchy-parents` |
-| `/var/lib/omarchy-kids/queue/` | the ask queue |
+| `/var/lib/omarchy-kids/queue/` | the ask queue, `0750 root:omarchy-parents`, records `0640` (R-NOTIFY-7, `docs/ask.md`) |
+| `/var/lib/omarchy-kids/reviews/open/` | the open add-on reviews, `0750 root:omarchy-parents`, records `0640` (R-NOTIFY-12, `docs/review.md`) |
 | `<nonce ledger>` | `--nonce-ledger`, default `/run/omarchy-kids/relay/nonces.json` |
 
 The unit passes `--cert` and `--key`; every other flag is an argparse default that matches the paths
-in the table above (`--devices-json`, `--status`, `--queue`, `--auth-sock`, `--nonce-ledger`,
-`--share`, `--lib`, `--needless-seconds`). `--bind`/`--port` default to `0.0.0.0` and `8447`. Nothing
+in the table above (`--devices-json`, `--status`, `--queue`, `--reviews`, `--auth-sock`,
+`--nonce-ledger`, `--share`, `--lib`, `--needless-seconds`). `--bind`/`--port` default to `0.0.0.0` and `8447`. Nothing
 here is settable by a kid (`AGENTS.md`, "The trust boundary").
 
 ## Tests
@@ -83,4 +84,4 @@ here is settable by a kid (`AGENTS.md`, "The trust boundary").
 `needs_stopping`) with no listener; `test/shell.d/relayd-test.sh` starts the relay on a scratch tree
 with a test certificate and drives it from a Python client over TLS (signed and unsigned reads, a
 replay, a stale timestamp, an unknown device, a decision POST to a stub authd, a pair POST and a
-malformed one, an SSE stream, a plaintext client, and the not-in-use stop with a stream held open).
+malformed one, an SSE stream, a plaintext client, and the not-in-use stop with a stream held open). It also proves the state carries the open reviews, and the refusals each route makes on its own shape (an unsigned POST, a review id that is not one, a record naming another review, a grant naming another account, minutes out of range, an end carrying minutes).
