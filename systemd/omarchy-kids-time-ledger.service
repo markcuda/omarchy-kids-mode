@@ -22,4 +22,9 @@ ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectControlGroups=yes
 RestrictAddressFamilies=AF_UNIX
-ReadWritePaths=/var/lib/omarchy-kids /run/omarchy-kids
+# StateDirectory creates /var/lib/omarchy-kids before the sandbox exists, so a tick before the
+# first provisioning writes its ledger instead of failing on EROFS; /run/omarchy-kids is created
+# by the sockets' own DirectoryMode, and "-" on both keeps the unit startable if either is
+# missing.
+StateDirectory=omarchy-kids
+ReadWritePaths=-/var/lib/omarchy-kids -/run/omarchy-kids

@@ -1312,3 +1312,100 @@ One operator lesson, recorded because it cost a stray write: `omarchy-kids-conf 
 dry-run. `DRY_RUN=1 omarchy-kids-conf set kid-ada dns ...` *writes*. The value was restored to the
 band default immediately and has no effect either way, but the loop's habit of prefixing writers
 with `DRY_RUN=1` does not hold for this command.
+### 2026-09-22, loop iteration: the packaging fix the handoff called merged was not
+
+Dogfooded first (session healthy at Level 2, Blinken and KTuberling tiled 50/50, clean journal,
+timer toasts the only session-log lines); the live pass found nothing new, so the iteration went to
+the backlog's first actionable item, the packaging fixes. Checking whether they were really in the
+union turned up the opposite of the handoff: `PROGRESS.md` calls `PKGBUILD arch=('any')` and the
+fresh-install ordering "merged", but `integration/dogfood-2026-09-19` still pins `arch=('x86_64')`,
+its two units have no optional-path allowance, and its assert exits 1 on a box with no boot mode and
+no kid -- so the pacman hook would abort a clean install and the aarch64 dogfood VM cannot build the
+package from the union at all. All of it lives only on `fix/install-packaging`, which is based 150
+commits back and would delete newer work if merged as-is. Re-landed the four changes on the current
+tip (`fix/fresh-install-ordering`): `arch=('any')`, `StateDirectory`/`ConfigurationDirectory` so the
+socket-activated authd starts and can write on a box that has never had those directories,
+`-` on the `ReadWritePaths` entries, the `docs/install.md` clone path, and `.SRCINFO`'s arch. Two
+fable review rounds blocked it first: the first for the assert's early exit 0 (it made the `units`
+row, the no-kids notice and two exit-code sentences false, and skipped the machine-level lock issue
+#46 exists for -- fixed by falling through to the existing no-kids branch so `units` still runs and
+decides the exit code), for a running authd that could not write `/var/lib` on a fresh box, and for
+`.SRCINFO`; the second found the same EROFS trap surviving on the `/etc/omarchy-kids` bind (the
+wizard's A2 password check starts authd before Apply). Every new assertion was mutation-checked:
+reverting the assert fix fails five, and dropping `ConfigurationDirectory`, either `StateDirectory`
+or either `-` fails the pkgbuild pins. Suite green (52 files, five environment skips).
+
+Live-verified on the VM, since the fresh-box case itself cannot be reproduced there (its
+directories already exist): a transient unit carrying the same `StateDirectory`/
+`ConfigurationDirectory`/`ProtectSystem=strict` properties created both directories as
+`drwxr-xr-x root root` and wrote inside them, which is the mechanism the fix depends on; both unit
+files pass `systemd-analyze verify` on the box's systemd 261; and the reworked assert installed from
+this branch still exits 0 (`--quiet` and plain) with `kid-ada` present, repairing the same locks it
+did before. `PROGRESS.md` on this branch no longer claims the packaging work is merged.
+
+Recorded for the owner: `fix/install-packaging` is superseded by this branch and should not be
+merged as-is; the same "merged" correction was also made on `fix/stale-threshold-name`, where the
+sentence and the branch count were wrong too.
+
+### 2026-09-22, loop iteration: Level 1 re-verified, and the package actually built
+
+Dogfooded first, and this time on Level 1, which the loop had not exercised since the short-screen
+fixes: set `kid-ada` to level 1, restarted the session through the documented autologin drop-in, and
+the grid came up at 960x540 (`L1.lua present and verifies`, five columns, both rows inside the
+frame, focus ring on the first tile, footer reading only the keys Level 1 has). The live check is
+now 49 PASS / 1 FAIL / 3 WARN -- the three install-history FAILs cleared when the re-landed assert
+repaired the locks, leaving only `firmware:password`, a step no software can do.
+
+Two things came out of that screen. First, a cursor was parked on it, which looked like the merged
+"hide the idle pointer" fix failing; it was the guest's own stale config: `/etc/omarchy-kids/
+hyprland/L1.lua` was the old package copy with no `cursor = { inactive_timeout = 1 }`, and after
+installing the union's L1/L2 and reloading, `hyprctl getoption cursor:inactive_timeout` reports
+`1.000000, set: true` and the pointer is gone -- the fix is real on the compositor, and the lesson
+is that Level 1 evidence needs the config installed from the branch exactly as Level 2 and 3 do.
+Second, a finding for the owner: at 960x540 the tile labels elide to one line with a 18px font, so
+"SuperTux" and "SuperTuxKart" both render as "Super...", and `GCompris`, `KTuberling`, `KLettres`,
+`Kanagram` truncate the same way. The tiles are still distinguishable by icon on a box with an icon
+theme -- this guest has none, so every tile shows a letter initial -- but the label is the fallback
+identifier and it is ambiguous in exactly the case a kid cannot read the icon. Making it fit means
+a layout or typography trade-off (wider cells, a smaller label, or two lines for names that cannot
+word-wrap), which is the owner's call, not the loop's; recorded here rather than changed.
+
+Then the backlog's packaging item got the verification it had never had. The aarch64 dogfood VM
+cannot install from the union (that is why the fix exists), but it can build: a clean checkout of
+this branch, `makepkg -d -f` as the parent user, no install. It built, and the PKGBUILD's own
+post-substitution greps passed -- arch `any` in `.PKGINFO`, `SCHEMA="/usr/share/omarchy-kids/
+config/schema.toml"` inside `usr/bin/omarchy-kids-conf`, `KIDS_PY=/usr/bin/python3` inside
+`usr/lib/omarchy-kids/kids.sh`, 27 commands, 38 lib files, 77 data files, 13 units, both initcpio
+files, the 0644 pacman hook, the `.INSTALL` scriptlet, twelve avatars and a `KidsTheme.qml` beside
+each of the six standalone surfaces. That build also falsified something this branch's own docs
+said: the artifact is not `...pkg.tar.zst` as a property of our package, it is whatever the build
+box's `PKGEXT` says -- this guest is `.pkg.tar.xz`. `docs/packaging.md` now names the stock-Arch
+example and says the extension is the machine's.
+
+Still open (recorded for the owner): installing a built package on the test VM (`pacman -U`), which
+needs a real box and is the remaining half of that doc's own item.
+
+### 2026-09-22, loop iteration: the lock that caught the loop's own install
+
+Dogfooded first, and the app-launch flow this time: from the Level 2 picker, two arrow presses and
+Enter put Blinken on screen (verified with `ps -u kid-ada`), then `omarchy-kids-check --live` came
+back with **two** FAILs where the box has had one for days. The new one was
+`lock:hyprland-configs`, and it was the loop's own doing, not a defect: for the cursor verification
+two iterations ago I installed the union's `L1.lua`/`L2.lua` into `/etc/omarchy-kids/hyprland/`
+(the copy the session reads) and left `/usr/share/omarchy-kids/hyprland/` — the package's copy and
+the lock's source of truth — at the stale versions. The check reporting that drift is the lock
+working exactly as `docs/assert.md` describes; the recovery it names (`omarchy-kids-assert`)
+restores `/etc` *from* `/usr/share`, which would have put the stale configs back.
+
+Fixed by making both copies the union's (all five files now compare equal, and the box is back to
+49 PASS / 1 FAIL / 3 WARN), and the recipe now says so: install a config into both copies, not just
+the one the session reads.
+
+The iteration's other half came out of trying to do it the *proper* way — rebuild and reinstall the
+package — which is the packaging branch's own remaining "install it on the test VM" item. It is
+blocked on that box, and the reasons are worth having written down: the union cannot be built on
+aarch64 at all while `arch=('x86_64')` is unmerged (`makepkg` refuses it, which is why the guest's
+files were hand-copied in the first place), and `pacman -U` of a fresh build then stops on
+`conflicting files: /usr/lib/omarchy-kids/panel-machine.sh exists in filesystem` because the
+installed package predates files later hand-copied from branches. `docs/packaging.md`'s open item
+now records all of it, including that the `hyprland-configs` alarm is the check doing its job.

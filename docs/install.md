@@ -20,7 +20,7 @@ There is no AUR package yet. Build from the complete checkout:
 
 ```sh
 git clone https://github.com/markcuda/omarchy-kids-mode
-cd omarchy-kids-sandbox
+cd omarchy-kids-mode
 makepkg -si
 ```
 

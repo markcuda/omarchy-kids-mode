@@ -1509,5 +1509,62 @@ else
   pass "invalid mode: assert stops before UKI or Limine access"
 fi
 
+# --- fresh install: no boot mode and no kid yet ----------------------------
+# Live finding, 2026-09-21: the pacman hook runs `assert --quiet` after every
+# transaction, and a brand-new box has neither a boot mode nor a kid, so assert
+# exited 1 and aborted a clean install. Nothing boot-related can be locked
+# without a mode, so the run falls through to the no-kids path -- which still
+# asserts the machine-level units lock (issue #46) -- while a missing mode with
+# a kid provisioned stays the fail-closed refusal (I-4). This pins both sides.
+
+conf_del "$ETC/machine.conf" boot
+mv "$ETC/kids" "$ETC/kids.fresh-install-hold"
+rm -f "$DENY_RULE"
+: >"$ARGV_LOG"
+
+out="$(run_assert_clean --quiet 2>&1)"
+st=$?
+check_eq "$st" 0 "fresh install: no boot mode and no kids exits 0 (the hook must not fail the transaction)"
+check_eq "$out" "" "fresh install: --quiet prints nothing"
+
+out="$(run_assert_clean 2>&1)"
+st=$?
+check_eq "$st" 0 "fresh install: without --quiet it still exits 0"
+check_contains "$out" "nothing else to assert" "fresh install: says why it skipped the boot locks"
+if grep -qF 'boot-locks:' <<<"$out"; then
+  fail "fresh install: reported a boot-lock status that never ran"
+else
+  pass "fresh install: prints no boot-lock status"
+fi
+if grep -qE "(objcopy|lsinitcpio|mkinitcpio|limine|$SCRATCH_ROOT/boot/limine.conf|$LIMINE_DEFAULT)" "$ARGV_LOG"; then
+  fail "fresh install: touched UKI or Limine with no mode to act on"
+else
+  pass "fresh install: records zero UKI/Limine access"
+fi
+if [[ ! -e "$DENY_RULE" ]]; then
+  pass "fresh install: repaired nothing that needed a kid"
+else
+  fail "fresh install: changed state before deciding it had nothing to do"
+fi
+
+# The same state with one kid back is the fail-closed error, not a skip.
+mv "$ETC/kids.fresh-install-hold" "$ETC/kids"
+out="$(run_assert_clean 2>&1)"
+st=$?
+check_eq "$st" 1 "missing boot mode with a kid present: exits 1 (fail closed, I-4)"
+check_contains "$out" "cannot read trusted boot mode" "missing boot mode with a kid present: names the failure"
+
+# A real fresh box has no machine.conf at all, not merely no boot key in one.
+mv "$ETC/kids" "$ETC/kids.fresh-install-hold"
+mv "$ETC/machine.conf" "$ETC/machine.conf.fresh-install-hold"
+out="$(run_assert_clean --quiet 2>&1)"
+st=$?
+check_eq "$st" 0 "fresh install: no machine.conf at all still exits 0"
+check_eq "$out" "" "fresh install: no machine.conf, --quiet still prints nothing"
+mv "$ETC/machine.conf.fresh-install-hold" "$ETC/machine.conf"
+mv "$ETC/kids.fresh-install-hold" "$ETC/kids"
+
+conf_set "$ETC/machine.conf" boot invalid
+
 echo "assert-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc

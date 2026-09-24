@@ -13,10 +13,12 @@ green; the Ask request path was exercised end to end (kid `submit` -> collect ->
 **Fixed from the live passes and merged:** the unavailable tile no longer takes focus; the grid
 fits short screens (height-aware cells, content scaled and clipped); the idle cursor hides; the
 exit modal and Ask modal say "Your password"; the launcher refuses a close request so `Super+Q`
-cannot blank the desktop; `PKGBUILD` is `arch=('any')` and a fresh install no longer fails its
-own hook or authd startup; Level 3's menu trim uses omarchy-menu's real extension
+cannot blank the desktop; Level 3's menu trim uses omarchy-menu's real extension
 (`~/.config/omarchy/extensions/omarchy-menu.jsonc`, `when: "false"` per id) and no longer runs
-Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips).
+Omarchy's first-run provisioning. Full Mac suite green (52 files, five environment skips). The
+packaging fixes are the exception in this list: **not merged here** -- this integration line still
+pinned `arch=('x86_64')` and failed a clean install until `fix/fresh-install-ordering` re-landed
+them from the stale `fix/install-packaging` (`docs/loop-report.md`, 2026-09-22).
 
 **Fixed on a topic branch awaiting merge:** `docs/levels-l2-cheat-sheet-inert` -- live check found
 Level 2's `Super+K` cheat sheet does nothing (the Omarchy menu needs the Omarchy shell, which Level

@@ -297,5 +297,35 @@ else
   fail "PKGBUILD does not install lib/*.sh -- lib/sock.sh would be missing"
 fi
 
+# --- fresh install: the package must build and start before any kid -------
+# Nothing is compiled, so pinning one architecture only blocked the aarch64
+# dogfood VM; and both units name a runtime path that does not exist until the
+# first provisioning. The "-" keeps them startable, StateDirectory makes the
+# directory exist before the sandbox is built -- without it the first GRANT
+# under ProtectSystem=strict died on EROFS (review, 2026-09-22).
+if grep -qx "arch=('any')" "$PKGBUILD"; then
+  pass "PKGBUILD builds for any architecture (nothing is compiled)"
+else
+  fail "PKGBUILD pins one architecture although nothing is compiled"
+fi
+if grep -q '^StateDirectory=omarchy-kids$' "$ROOT/systemd/omarchy-kids-authd.service" &&
+  grep -q '^ConfigurationDirectory=omarchy-kids$' "$ROOT/systemd/omarchy-kids-authd.service" &&
+  grep -q '^StateDirectory=omarchy-kids$' "$ROOT/systemd/omarchy-kids-time-ledger.service"; then
+  pass "units create /var/lib and /etc/omarchy-kids before their sandbox (no EROFS on the first GRANT)"
+else
+  fail "a unit can start before /var/lib/omarchy-kids or /etc/omarchy-kids exists and then cannot write it"
+fi
+if grep -q '^ReadWritePaths=-/var/lib/omarchy-kids -/etc/omarchy-kids$' "$ROOT/systemd/omarchy-kids-authd.service" &&
+  grep -q '^ReadWritePaths=-/var/lib/omarchy-kids -/run/omarchy-kids$' "$ROOT/systemd/omarchy-kids-time-ledger.service"; then
+  pass "units also tolerate a missing runtime dir (no 226/NAMESPACE)"
+else
+  fail "a unit would refuse to start before /var/lib/omarchy-kids exists"
+fi
+if [[ "$(sed -n 's/^arch=//p' "$PKGBUILD" | tr -d "'()")" == "$(sed -n 's/^\tarch = //p' "$ROOT/.SRCINFO")" ]]; then
+  pass ".SRCINFO's arch matches PKGBUILD's"
+else
+  fail ".SRCINFO and PKGBUILD disagree on arch (.SRCINFO says '$(sed -n 's/^\tarch = //p' "$ROOT/.SRCINFO")')"
+fi
+
 echo "pkgbuild-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc

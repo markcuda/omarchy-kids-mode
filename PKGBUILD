@@ -16,7 +16,10 @@ pkgname=omarchy-kids
 pkgver=0.1.0
 pkgrel=1
 pkgdesc="Kids Mode as an app on a normal Omarchy install"
-arch=('x86_64')
+# Nothing is compiled: every file is shell, Lua, QML, or data, so the package
+# builds on any architecture (the aarch64 try-omarchy VM hit the old x86_64
+# pin during dogfooding, 2026-09-21).
+arch=('any')
 url="https://github.com/markcuda/omarchy-kids-mode"
 license=('MIT')
 # qt6-svg: SDDM renders share/avatars/*.svg (#39). networkmanager: wifid drives nmcli (#26).
