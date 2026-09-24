@@ -32,19 +32,9 @@ Live status (2026-09-21, try-omarchy aarch64 VM, real SDDM logins; see
 `docs/dogfood-2026-09-21.md`): **Level 1 and Level 2 have both run against a real Hyprland and
 Quickshell.** Level 1 verified the fullscreen grid, keyboard navigation, launch, the exit modal,
 and the portal after logout; Level 2 verified the desktop hint layer and the windowed searchable
-picker. Two apps open side by side was checked live on 2026-09-22 (Blinken and KTuberling, 446x496
-each at 960x540, and `Super+Shift+Left` swapped them), so it is no longer open; still open from the
-checklist below: `share/wifi/shell.qml`'s network-dependent parts (its overlay, list Process, empty
-state, `Try again` and Esc were verified live 2026-09-22, but the list render, password step and
-join outcomes still need a wireless card -- `docs/wifi.md`). The Level 2 `Super+K` cheat sheet
-was checked live on 2026-09-22 and **does nothing there**: `omarchy-menu-keybindings` summons its
-menu with `omarchy-shell shell summon`, which needs a running Omarchy shell, and a Level 2 session
-runs the kids launcher instead (only Level 3's start hook runs `omarchy-launch-shell`); the command
-also fails first in that session on the unset `$OMARCHY_PATH` ("OMARCHY_PATH is not set", exit 1).
-The bind is Appendix E's, so it stays, but it is inert at Level 2, and its `--print` mode (which
-does print the live binds as text) has no kid surface to show it -- a kid-side cheat sheet is an
-open decision. Level 3's cheat sheet works, as the dogfood pass recorded. The stock desktop (Level
-3) remains unverified on a real box (`share/menu/omarchy-kids-trimmed.jsonc` is an admitted guess).
+picker. Still open from the checklist below: two apps open side by side, the `Super+K` cheat
+sheet, and every `share/wifi/shell.qml` claim (unchanged). The stock desktop (Level 3) remains
+unverified on a real box (`share/menu/omarchy-kids-trimmed.jsonc` is an admitted guess).
 
 ## The files
 
@@ -85,8 +75,7 @@ set; nothing more, nothing less.
 
 **Level 2.** Everything Level 1 binds, plus `Super+arrows` to focus a window,
 `Super+Shift+arrows` to swap it, `Super+K` for Omarchy's own keybindings cheat sheet
-(`omarchy-menu-keybindings` -- bound for Appendix E, but inert at Level 2; see the live-status
-note above), and `Super+Space` aliased onto the same launcher as
+(`omarchy-menu-keybindings`), and `Super+Space` aliased onto the same launcher as
 `Super+Home`. The "50/50 dwindle split" Appendix E asks for isn't extra config here — it's
 `default.hypr.looknfeel`'s own `general.layout = "dwindle"` / `dwindle.preserve_split = true`,
 which Level 2 requires (see below) and which already gives that behavior for two tiled windows.
@@ -150,19 +139,20 @@ is readable, manifest construction appends a `chromium` tile with the fixed argv
 fixed argv for `/usr/bin/quickshell` and the packaged plugins shelf, with the band supplied as an
 environment argument. No tile is evaluated by a shell.
 
-**Installed/missing tiles (issue #42, I-6).** Every pack/`apps.extra` tile carries
-`installed: true|false` — a matched `.desktop` file, or (the bare-command fallback) `command -v`
-on the resolved executable, **never `pacman -Q`**, so this works the same for a pack app, an
-`apps.extra` id with no package at all, or any future non-pacman app source. `lib/launcher-map.sh`
-decides what happens to a missing tile: by default (`apps.show_missing=no`, docs/conf.md) the tile
-is left out of the map and manifest entirely, with one line on stderr naming why — the live bug
-this issue fixes was a tile that rendered but did nothing on Enter. With `apps.show_missing=yes`
-the tile is kept instead, `installed: false` and no argv; `share/launcher/shell.qml` renders it
-greyed with its `"not installed yet"` label underneath, skips it in arrow navigation, and refuses
-to launch it on Enter (`installed === false`, checked before `launchCurrent()` runs anything). A
-kept missing tile always reads `"not installed yet"`; the pending-install `"installing..."` caption
-is not implemented (docs/apps.md). The synthetic `chromium`/`more-apps`/`kids-data` tiles are built
-into the manifest with fixed argv.
+**Installed/missing tiles (issue #42, I-6).** Every pack/`apps.extra` tile in the manifest also
+carries `installed: true|false` — a matched `.desktop` file, or (the bare-command fallback)
+`command -v` on the resolved executable, **never `pacman -Q`**, so this works the same for a pack app,
+an `apps.extra` id with no package at all, or any future non-pacman app source. By default
+(`apps.show_missing=no`, docs/conf.md) a missing app's tile is left out of the JSON entirely, with
+one log line naming why (`$RUN/session-<uid>.log`) — the live bug this issue fixes was a tile that
+rendered but did nothing on Enter. With `apps.show_missing=yes` the tile is kept instead, with
+`caption` set to `"installing..."` if the app's package is sitting in
+`bin/omarchy-kids-apps`' pending install queue (`OMARCHY_KIDS_ROOT/var/lib/omarchy-kids/apps-queue`,
+read here, never written) or `"not installed yet"` otherwise; `share/launcher/shell.qml` renders
+that tile greyed and the caption underneath the label, and refuses to launch it on Enter
+(`installed === false`, checked before `launchCurrent()` runs anything). An installed tile always
+carries `installed: true` and an empty `caption`. The synthetic `chromium`/`more-apps`/`kids-data`
+tiles are built into the manifest with fixed argv.
 
 `share/launcher/shell.qml` reads the manifest through the fixed `omarchy-kids-session --manifest`
 command and polls only the small control file (`/run/user/<uid>/omarchy-kids/launcher-control`)
@@ -226,18 +216,6 @@ file's own header for exactly what it can and can't check without a real Quicksh
 run the file against.
 
 ## Open questions / what could not be verified without Hyprland or Quickshell
-
-Live status (2026-09-21, `docs/dogfood-2026-09-21.md`): **items 3, 5 and 8 are answered for
-Levels 1 and 2.** Both configs loaded on a real Hyprland with no parse errors; the launcher read
-its manifest and control file, launched apps, moved the highlight with the arrows and rendered
-real icons through `Quickshell.iconPath()`; the Level 2 picker and desktop layer rendered as
-sibling Quickshell windows (the `PanelWindow`/desktop-mode shapes are real API). The live output
-there is 876x491 and the grid drew exactly the four columns `gridnav.js` computes for that width,
-so the issue #43 column model holds on a real surface too. Still open: item 1 and 2 (Level 3's
-terminal binds and `omarchy-sudo-passwordless`), item 4 (`hl.unbind`'s signature, Level 3 only),
-item 6 (the omarchy-menu extension schema) and item 7 (whether Omarchy ships its own volume/
-brightness wrappers); item 8's exact per-row layout on unusual geometries still deserves its own
-look.
 
 This repo had two of Omarchy's real `default.hypr.bindings.*` files to check syntax against
 (`bindings-tiling.lua`, `bindings-utilities.lua`) and a handful of other `default.hypr.*` files,
@@ -327,10 +305,8 @@ scripts copied to their spec-required paths and made root-owned):
 3. `Super+Home` and `Super+Space` (Level 2) bring the launcher back after opening an app;
    `Super+Enter` opens whatever tile is highlighted without needing the launcher already focused.
 4. `Super+Q` closes the focused app; `Super+Shift+K` opens the exit modal (`docs/exit.md`).
-5. Repeat for `L2.lua` (focus/swap; the `Super+K` cheat sheet is expected to do nothing here --
-   Level 2 runs the kids launcher, not the Omarchy shell) and `L3.lua` (real Omarchy desktop minus
-   the terminal bind — try `Super+Return` and confirm nothing launches; `Super+K` should open the
-   cheat sheet there, since Level 3 starts the Omarchy shell).
+5. Repeat for `L2.lua` (focus/swap/cheat sheet) and `L3.lua` (real Omarchy desktop minus the
+   terminal bind — try `Super+Return` and confirm nothing launches).
 6. Confirm the manifest-selected band overlay makes the cursor visibly larger and GTK/Qt apps
    render bigger.
 7. Issue #42: on a box where pack apps are missing, confirm the manifest marks them
