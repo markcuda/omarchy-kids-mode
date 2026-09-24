@@ -56,6 +56,10 @@ void main() {
       base64.encode(decisionMessage(builtMissing)),
       equals(doc['review_missing_message_b64'] as String),
     );
+    expect(
+      await signBase64(keyPair, decisionMessage(builtMissing)),
+      equals(doc['review_missing_signature_b64'] as String),
+    );
   });
 
   test('signing with the seed reproduces the recorded signatures', () async {

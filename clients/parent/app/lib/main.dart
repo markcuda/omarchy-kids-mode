@@ -372,9 +372,22 @@ class _ReviewScreenState extends State<ReviewScreen> {
     } catch (error) {
       setState(() {
         _busy = false;
-        _error = "Couldn't send that: $error";
+        _error = _refusal(error);
       });
     }
+  }
+
+  /// The box's own reasons in the parent's words: a surface that moved on, or a
+  /// review already decided, are not failures to hide behind "couldn't send".
+  String _refusal(Object error) {
+    final text = error.toString();
+    if (text.contains('changed-again')) {
+      return 'That add-on changed again since you looked. Refresh to see the new change.';
+    }
+    if (text.contains('no-such-review')) {
+      return 'That one was already decided. Refresh to see what is left.';
+    }
+    return "Couldn't send that: $error";
   }
 
   @override

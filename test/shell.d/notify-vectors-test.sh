@@ -125,6 +125,15 @@ check(
     devices.valid_review_record(doc["review_missing"]) and doc["review_missing"]["seen"] == "missing",
     "a removed add-on's review signs the missing sentinel",
 )
+missing_ok = True
+try:
+    pub.verify(
+        base64.b64decode(doc["review_missing_signature_b64"], validate=True),
+        devices.canonical(doc["review_missing"]),
+    )
+except Exception:
+    missing_ok = False
+check(missing_ok, "the missing-sentinel review signature verifies too")
 
 req = doc["request"]
 req_ok = True

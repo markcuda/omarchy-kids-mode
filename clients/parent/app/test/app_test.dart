@@ -73,6 +73,19 @@ class FakeRelay implements RelayTransport {
   }
 }
 
+/// A box that refuses a review decision the way the real one does on a stale
+/// fingerprint (403 with `no changed-again`).
+class RefusingRelay extends FakeRelay {
+  RefusingRelay(super.state);
+  @override
+  Future<Map<String, dynamic>> decideReview({
+    required Map<String, Object?> record,
+    required int ts,
+    required String nonce,
+  }) async =>
+      throw Exception('decideReview: 403 {"reply":"no changed-again"}');
+}
+
 /// A box that is not there: both the read and the feed fail, as they would.
 class ThrowingRelay extends FakeRelay {
   ThrowingRelay() : super(stateWith([]));
@@ -279,6 +292,24 @@ void main() {
     expect(relay.reviewed.single['seen'], 'b' * 64);
     expect(find.byTooltip('Refresh'), findsOneWidget, reason: 'back on the list after answering');
     expect(find.text('Approve'), findsNothing);
+  });
+
+  testWidgets("a refusal the box gives is shown in the parent's words, not as a success", (tester) async {
+    final rid = 'kid-ada.' + 'a' * 16;
+    final relay = RefusingRelay(BoxState.fromJson({
+      'kids': [],
+      'requests': [],
+      'reviews': [
+        {'id': rid, 'kid': 'kid-ada', 'app': 'firefox', 'was': 'a' * 64, 'now': 'b' * 64},
+      ],
+    }));
+    await pumpHome(tester, relay);
+    await tester.tap(find.text('firefox changed since you approved it'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Approve'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('changed again since you looked'), findsOneWidget);
+    expect(find.text('Approve'), findsOneWidget, reason: 'still here to try again');
   });
 
   testWidgets('Deny sends a deny with the same fingerprint', (tester) async {

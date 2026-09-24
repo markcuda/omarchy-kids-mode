@@ -137,6 +137,7 @@ def build():
         "review_signature_b64": b64(key.sign(devices.canonical(review))),
         "review_missing": review_missing,
         "review_missing_message_b64": b64(devices.canonical(review_missing)),
+        "review_missing_signature_b64": b64(key.sign(devices.canonical(review_missing))),
         "request": request,
         "request_message_b64": b64(
             devices.request_message(
