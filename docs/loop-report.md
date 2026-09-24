@@ -1928,3 +1928,22 @@ band-group/groups drift, the `lock:hyprland-configs` my earlier L2.lua install i
 Operator note: completing that install needed a second ~11-minute wait on the guest's
 `pam_faillock` (the install loop's first attempt failed and each retry reset the window); the VM was
 left with the branch libs installed, the kid session up, and the box's four known FAILs.
+### 2026-09-21, loop iteration: a browse row with no title shifted its visit count (live)
+
+Fixed the same class flagged last iteration in `bin/omarchy-kids-data`: `lib/data.py
+chromium-visits` prints `LOCAL_TIME<TAB>host<TAB>title<TAB>visit_count` and a page can have no
+title (`title or ""`), so `read -r t host title visits` with a tab IFS collapsed the empty field --
+the title column showed the visit count and the count was empty. `chromium-visits` and
+`chromium-top-sites` now emit US (0x1f) separated rows through a `_row` helper, both readers use
+`IFS=$'\x1f'`, and `_row` strips every C0 control and DEL -- the fable review's catch: a free-form
+page title carrying ESC could otherwise inject a terminal escape sequence into the parent's
+`omarchy-kids-data` output (I-6). Fixed on `fix/data-browse-empty-title` (`17b0fb8`);
+`data-test.sh`'s History fixture gains an empty-title row and an ESC-bearing row, the latter
+asserting the raw ESC never reaches the output. Full Mac suite 52 files green; fable review MERGE
+after the C0 hardening. Live-verified from the branch on the VM with a fixture History db: a
+no-title row renders "(no title) (2 visits)" (not a shifted count) and an ESC title prints as
+plain text (`evil [2Ktitle`); the fixture was removed afterwards.
+
+Follow-up noted by the review, not on this branch: a title whose bytes are not valid UTF-8 makes
+`lib/data.py`'s `fetchall()` raise outside any handler, a traceback instead of the exit-2 one-liner
+the docstring promises (a loud error, not a silent or forged one).

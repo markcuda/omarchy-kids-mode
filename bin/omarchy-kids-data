@@ -172,7 +172,7 @@ cmd_sites() {
     return 0
   fi
   echo "$kid: sites visited${since:+ (last $since day$(plural "$since"))}"
-  printf '%s\n' "$rows" | while IFS=$'\t' read -r t host title visits; do
+  printf '%s\n' "$rows" | while IFS=$'\x1f' read -r t host title visits; do
     printf '  %s  %s — %s (%s visit%s)\n' "$t" "$host" "${title:-(no title)}" "$visits" "$(plural "$visits")"
   done
 }
@@ -250,7 +250,7 @@ cmd_summary() {
       rm_chromium_copy "$copy"
       if [[ -n "$site_rows" ]]; then
         echo "top sites:"
-        printf '%s\n' "$site_rows" | while IFS=$'\t' read -r host visits _last; do
+        printf '%s\n' "$site_rows" | while IFS=$'\x1f' read -r host visits _last; do
           printf '  %s: %s visit%s\n' "$host" "$visits" "$(plural "$visits")"
         done
       else
