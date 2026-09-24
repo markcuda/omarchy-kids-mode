@@ -125,6 +125,75 @@ def do_decide(args):
     return 0 if code == 200 else 1
 
 
+def do_review(args):
+    key = load_key(args.key)
+    now = int(time.time())
+    nonce = f"live-{os.getpid()}-{now}"
+    record = {
+        "device_id": args.id,
+        "review_id": args.review_id,
+        "decision": args.decision,
+        "seen": args.seen,
+        "ts": now,
+        "nonce": nonce,
+    }
+    record_sig = b64(
+        key.sign(SIGN_CONTEXT + json.dumps(record, sort_keys=True, separators=(",", ":")).encode())
+    )
+    body = json.dumps({"record": record, "signature": record_sig}, separators=(",", ":"), sort_keys=True).encode()
+    path = f"/v1/reviews/{args.review_id}/decision"
+    message = {
+        "device_id": args.id,
+        "ts": now,
+        "nonce": nonce,
+        "method": "POST",
+        "path": path,
+        "body_sha256": hashlib.sha256(body).hexdigest(),
+    }
+    sig = b64(
+        key.sign(REQUEST_CONTEXT + json.dumps(message, sort_keys=True, separators=(",", ":")).encode())
+    )
+    headers = {"X-Kids-Device": args.id, "X-Kids-Sig": f"{now}.{nonce}.{sig}"}
+    code, reply = https_request("POST", path, body, headers)
+    print(f"review {code} {reply.decode(errors='replace').strip()}")
+    return 0 if code == 200 else 1
+
+
+def do_act(args):
+    key = load_key(args.key)
+    now = int(time.time())
+    nonce = f"live-{os.getpid()}-{now}"
+    record = {
+        "device_id": args.id,
+        "account": args.account,
+        "action": args.action,
+        "ts": now,
+        "nonce": nonce,
+    }
+    if args.action == "grant":
+        record["minutes"] = args.minutes
+    record_sig = b64(
+        key.sign(SIGN_CONTEXT + json.dumps(record, sort_keys=True, separators=(",", ":")).encode())
+    )
+    body = json.dumps({"record": record, "signature": record_sig}, separators=(",", ":"), sort_keys=True).encode()
+    path = f"/v1/kids/{args.account}/{args.action}"
+    message = {
+        "device_id": args.id,
+        "ts": now,
+        "nonce": nonce,
+        "method": "POST",
+        "path": path,
+        "body_sha256": hashlib.sha256(body).hexdigest(),
+    }
+    sig = b64(
+        key.sign(REQUEST_CONTEXT + json.dumps(message, sort_keys=True, separators=(",", ":")).encode())
+    )
+    headers = {"X-Kids-Device": args.id, "X-Kids-Sig": f"{now}.{nonce}.{sig}"}
+    code, reply = https_request("POST", path, body, headers)
+    print(f"act {code} {reply.decode(errors='replace').strip()}")
+    return 0 if code == 200 else 1
+
+
 def main():
     parser = argparse.ArgumentParser(prog="notify-client.py")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -138,8 +207,26 @@ def main():
     decide.add_argument("--id", required=True)
     decide.add_argument("--request", required=True)
     decide.add_argument("--decision", default="approve", choices=["approve", "decline"])
+    review = sub.add_parser("review")
+    review.add_argument("--key", required=True)
+    review.add_argument("--id", required=True)
+    review.add_argument("--review-id", required=True)
+    review.add_argument("--decision", default="approve", choices=["approve", "deny"])
+    review.add_argument("--seen", required=True)
+    act = sub.add_parser("act")
+    act.add_argument("--key", required=True)
+    act.add_argument("--id", required=True)
+    act.add_argument("--account", required=True)
+    act.add_argument("--action", default="grant", choices=["grant", "end"])
+    act.add_argument("--minutes", type=int, default=15)
     args = parser.parse_args()
-    return do_pair(args) if args.cmd == "pair" else do_decide(args)
+    if args.cmd == "pair":
+        return do_pair(args)
+    if args.cmd == "decide":
+        return do_decide(args)
+    if args.cmd == "review":
+        return do_review(args)
+    return do_act(args)
 
 
 if __name__ == "__main__":
