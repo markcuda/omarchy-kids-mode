@@ -19,6 +19,9 @@ class FakeRelay implements RelayTransport {
   final List<Map<String, Object?>> decided = [];
   final List<String> paired = [];
   final List<StreamController<BoxState>> opened = [];
+
+  /// Holds the next signed read open, so a test can land it after a feed event.
+  Future<BoxState>? pendingRead;
   FakeRelay(this.state, {String? pin}) : pin = pin ?? ('ab' * 32);
 
   /// The feed the screen is listening to now; a reconnect opens a new one.
@@ -30,7 +33,8 @@ class FakeRelay implements RelayTransport {
   @override
   String get pinnedFingerprint => pin;
   @override
-  Future<BoxState> boxState({required int ts, required String nonce}) async => state;
+  Future<BoxState> boxState({required int ts, required String nonce}) async =>
+      pendingRead != null ? await pendingRead! : state;
   @override
   Stream<BoxState> boxEvents({required int ts, required String nonce}) {
     final controller = StreamController<BoxState>.broadcast();
@@ -54,11 +58,15 @@ class FakeRelay implements RelayTransport {
   }
 }
 
+/// A box that is not there: both the read and the feed fail, as they would.
 class ThrowingRelay extends FakeRelay {
   ThrowingRelay() : super(stateWith([]));
   @override
   Future<BoxState> boxState({required int ts, required String nonce}) async =>
       throw StateError('relay unreachable');
+  @override
+  Stream<BoxState> boxEvents({required int ts, required String nonce}) =>
+      Stream<BoxState>.error(StateError('relay unreachable'));
 }
 
 /// Stands in for KidsRelayClient: records the address it was dialled at and
@@ -174,6 +182,41 @@ void main() {
     expect(find.text('kid-ada asked for 15 more minutes'), findsOneWidget);
   });
 
+  testWidgets('a slow read does not overwrite a newer event', (tester) async {
+    final relay = FakeRelay(stateWith([
+      {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft', 'asked_at': 1},
+    ]));
+    final stale = Completer<BoxState>();
+    relay.pendingRead = stale.future;
+    await tester.pumpWidget(MaterialApp(home: HomeScreen(session: await sessionWith(relay))));
+    await tester.pump();
+    relay.emit(stateWith([
+      {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft', 'asked_at': 1},
+      {'id': 'req-2', 'kid': 'kid-ada', 'kind': 'time', 'what': '15', 'minutes': 15, 'asked_at': 2},
+    ]));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('kid-ada asked for 15 more minutes'), findsOneWidget);
+    stale.complete(stateWith([
+      {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft', 'asked_at': 1},
+    ]));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('kid-ada asked for 15 more minutes'), findsOneWidget,
+        reason: 'the older read must not replace the newer list');
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Refresh does not tear down a running feed', (tester) async {
+    final relay = FakeRelay(stateWith([]));
+    await pumpHome(tester, relay);
+    await tester.tap(find.byTooltip('Refresh'));
+    await tester.pump();
+    await tester.pump();
+    expect(relay.opened.length, 1, reason: 'the feed keeps running; only a read was sent');
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('a transport error is said out loud, and the last list stays', (tester) async {
     final relay = FakeRelay(stateWith([
       {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft', 'asked_at': 1},
@@ -209,7 +252,9 @@ void main() {
 
   testWidgets('an unreachable box is an honest message, not a crash or a fake state', (tester) async {
     await pumpHome(tester, ThrowingRelay());
-    expect(find.textContaining("Can't reach the computer"), findsOneWidget);
+    expect(find.textContaining('relay unreachable'), findsOneWidget);
+    expect(find.textContaining('Nothing to answer'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('an unpaired app asks for the code, not a blank screen', (tester) async {

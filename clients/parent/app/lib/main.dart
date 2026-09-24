@@ -64,10 +64,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _retry;
   int _backoff = 1;
 
+  /// Bumped by every feed event: a signed read that lands after one is stale and
+  /// is dropped, so a slow read cannot overwrite a newer list.
+  int _seq = 0;
+
   @override
   void initState() {
     super.initState();
-    _load();
+    // The feed carries the whole state on connect, so the read is only there to
+    // paint something sooner; it is skipped once a list is on screen.
+    if (_state == null) _read();
     _watchNow();
   }
 
@@ -78,17 +84,21 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  /// One signed read: the first thing the screen shows, and the retry's recovery.
-  Future<void> _load() async {
+  /// One signed read. It is a convenience, never the source of truth: a result
+  /// that arrives after a feed event is dropped, and a failure is only worth
+  /// saying when there is nothing on screen and no feed to wait for.
+  Future<void> _read() async {
+    final before = _seq;
     try {
       final state = await widget.session.refresh();
-      if (!mounted) return;
+      if (!mounted || _seq != before) return;
       setState(() {
         _state = state;
         _error = null;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || _seq != before) return;
+      if (_state != null || _watch != null) return;
       _lost("Can't reach the computer: $error");
     }
   }
@@ -101,6 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _watch = widget.session.watch().listen(
       (state) {
         if (!mounted) return;
+        _seq++;
         setState(() {
           _state = state;
           _error = null;
@@ -109,10 +120,12 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       onError: (Object error) {
         if (!mounted) return;
+        _watch = null;
         _lost("Lost the connection to the computer: $error");
       },
       onDone: () {
         if (!mounted) return;
+        _watch = null;
         _lost('The connection to the computer closed.');
       },
       cancelOnError: true,
@@ -124,7 +137,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _retry ??= Timer(Duration(seconds: _backoff), () {
       _retry = null;
       _backoff = (_backoff * 2).clamp(1, 30);
-      _load();
+      // The feed is the recovery (its first event is the whole state); a read
+      // here would race it for nothing.
       _watchNow();
     });
   }
@@ -150,9 +164,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// A pull: ask for a read, and only rebuild the feed if it is not running.
   void _reload() {
-    _load();
-    _watchNow();
+    _read();
+    if (_watch == null) _watchNow();
   }
 
   Widget _requests(BoxState state) {
