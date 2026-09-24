@@ -15,6 +15,14 @@ abstract class RelayTransport {
     required String nonce,
   });
 
+  /// POST a signed ACT (R-NOTIFY-13): a grant or an end. `record` is what
+  /// [actRecord] builds; its `account` and `action` are the path.
+  Future<Map<String, dynamic>> act({
+    required Map<String, Object?> record,
+    required int ts,
+    required String nonce,
+  });
+
   /// POST a signed review decision (R-NOTIFY-12). `record` is the review record
   /// [reviewDecisionRecord] builds; its `review_id` is the path segment.
   Future<Map<String, dynamic>> decideReview({

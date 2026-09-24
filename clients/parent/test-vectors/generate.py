@@ -76,6 +76,23 @@ def build():
         "nonce": "nonce-review-2",
     }
 
+    # An ACT (R-NOTIFY-13): a grant and an end, the same signer and context.
+    act_grant = {
+        "device_id": "d-vector",
+        "account": "kid-ada",
+        "action": "grant",
+        "minutes": 30,
+        "ts": 1758530400,
+        "nonce": "nonce-act-1",
+    }
+    act_end = {
+        "device_id": "d-vector",
+        "account": "kid-ada",
+        "action": "end",
+        "ts": 1758530400,
+        "nonce": "nonce-act-2",
+    }
+
     body = b'{"record":{}}'
     request = {
         "device_id": "d-vector",
@@ -138,6 +155,12 @@ def build():
         "review_missing": review_missing,
         "review_missing_message_b64": b64(devices.canonical(review_missing)),
         "review_missing_signature_b64": b64(key.sign(devices.canonical(review_missing))),
+        "act_grant": act_grant,
+        "act_grant_message_b64": b64(devices.canonical(act_grant)),
+        "act_grant_signature_b64": b64(key.sign(devices.canonical(act_grant))),
+        "act_end": act_end,
+        "act_end_message_b64": b64(devices.canonical(act_end)),
+        "act_end_signature_b64": b64(key.sign(devices.canonical(act_end))),
         "request": request,
         "request_message_b64": b64(
             devices.request_message(

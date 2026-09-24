@@ -13,6 +13,10 @@ class KidStatus {
 
   KidStatus({required this.kid, required this.minutesLeft, required this.paused, required this.live});
 
+  /// A kid account's shape (lib/devices.py's RE_KID_ACCOUNT); the app only shows
+  /// controls for an account it could name in an ACT.
+  static final RegExp accountPattern = RegExp(r'^[a-z_][a-z0-9_-]*$');
+
   factory KidStatus.fromJson(Map<String, dynamic> json) => KidStatus(
         kid: _clean(json['kid'], 32),
         minutesLeft: _int(json['minutes_left']),

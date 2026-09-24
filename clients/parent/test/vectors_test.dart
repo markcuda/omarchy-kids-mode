@@ -62,6 +62,33 @@ void main() {
     );
   });
 
+  test('the ACT records the app builds are the box vectors (R-NOTIFY-13)', () async {
+    final keyPair = await signKeyFromSeed(_hexToBytes(doc['sign_seed_hex'] as String));
+    final grant = (doc['act_grant'] as Map).cast<String, Object?>();
+    final builtGrant = actRecord(
+      deviceId: grant['device_id'] as String,
+      account: grant['account'] as String,
+      action: grant['action'] as String,
+      minutes: grant['minutes'] as int,
+      ts: grant['ts'] as int,
+      nonce: grant['nonce'] as String,
+    );
+    expect(builtGrant, equals(grant));
+    expect(base64.encode(decisionMessage(builtGrant)), equals(doc['act_grant_message_b64'] as String));
+    expect(await signBase64(keyPair, decisionMessage(builtGrant)), equals(doc['act_grant_signature_b64'] as String));
+    final end = (doc['act_end'] as Map).cast<String, Object?>();
+    final builtEnd = actRecord(
+      deviceId: end['device_id'] as String,
+      account: end['account'] as String,
+      action: end['action'] as String,
+      ts: end['ts'] as int,
+      nonce: end['nonce'] as String,
+    );
+    expect(builtEnd, equals(end));
+    expect(base64.encode(decisionMessage(builtEnd)), equals(doc['act_end_message_b64'] as String));
+    expect(await signBase64(keyPair, decisionMessage(builtEnd)), equals(doc['act_end_signature_b64'] as String));
+  });
+
   test('signing with the seed reproduces the recorded signatures', () async {
     final decision = (doc['decision'] as Map).cast<String, Object?>();
     final request = (doc['request'] as Map).cast<String, dynamic>();

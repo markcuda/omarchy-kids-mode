@@ -135,6 +135,31 @@ except Exception:
     missing_ok = False
 check(missing_ok, "the missing-sentinel review signature verifies too")
 
+# The ACT records (R-NOTIFY-13): a grant and an end, the same context and signer.
+act_grant = doc["act_grant"]
+check(devices.valid_act_record(act_grant), "the recorded grant is a valid ACT record")
+act_ok = True
+try:
+    pub.verify(base64.b64decode(doc["act_grant_signature_b64"], validate=True), devices.canonical(act_grant))
+except Exception:
+    act_ok = False
+check(act_ok, "the grant signature verifies over the canonical record")
+check(
+    doc["act_grant_message_b64"] == base64.b64encode(devices.canonical(act_grant)).decode(),
+    "the recorded grant message is the canonical record the box signs",
+)
+act_end = doc["act_end"]
+check(devices.valid_act_record(act_end), "the recorded end is a valid ACT record")
+check(
+    doc["act_end_message_b64"] == base64.b64encode(devices.canonical(act_end)).decode(),
+    "the recorded end message is the canonical record the box signs",
+)
+check(
+    not devices.valid_record(act_grant) and not devices.valid_review_record(act_grant)
+    and not devices.valid_act_record(doc["decision"]),
+    "an ACT, a request decision and a review are not interchangeable",
+)
+
 req = doc["request"]
 req_ok = True
 try:

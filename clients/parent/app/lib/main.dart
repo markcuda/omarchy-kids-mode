@@ -174,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
           : Column(
               children: [
                 if (_error != null) _Stale(message: _error!),
-                Expanded(child: _requests(state)),
+                Expanded(child: _body(state)),
               ],
             ),
     );
@@ -206,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (forget == true) await widget.onForget!();
   }
 
-  Widget _requests(BoxState state) {
+  Widget _body(BoxState state) {
     final children = <Widget>[];
     // R-NOTIFY-12: an add-on that changed since the parent approved it comes
     // first, above the kid's requests, because it is the thing that needs a look.
@@ -228,6 +228,30 @@ class _HomeScreenState extends State<HomeScreen> {
         ));
       }
       children.add(const Divider(height: 1));
+    }
+    // The kids this phone can act for (R-NOTIFY-13): a tap opens the two
+    // actions. Only a kid account the box would accept is listed.
+    final kids = state.kids.where((kid) => KidStatus.accountPattern.hasMatch(kid.kid)).toList();
+    if (kids.isNotEmpty) {
+      children.add(const _SectionHeader('Kids'));
+      for (final kid in kids) {
+        children.add(ListTile(
+          title: Text(kid.kid),
+          subtitle: Text(_kidLine(kid)),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () async {
+            final acted = await Navigator.of(context).push<bool>(
+              MaterialPageRoute(
+                builder: (_) => KidScreen(session: widget.session, kid: kid),
+              ),
+            );
+            if (acted == true) _reload();
+          },
+        ));
+      }
+      children.add(const Divider(height: 1));
+    }
+    if (state.reviews.isNotEmpty || kids.isNotEmpty) {
       children.add(const _SectionHeader('Requests'));
     }
     if (state.requests.isEmpty) {
@@ -255,6 +279,14 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
     return ListView(children: children);
+  }
+
+  /// What a kid row says under the account: minutes left while running, or why
+  /// there is nothing to count.
+  String _kidLine(KidStatus kid) {
+    if (kid.paused) return 'paused · ${kid.minutesLeft} min left';
+    if (!kid.live) return 'not running';
+    return '${kid.minutesLeft} min left';
   }
 
   /// The kid's display name if the box sent one, else the account.
@@ -335,6 +367,118 @@ class _RequestScreenState extends State<RequestScreen> {
             OutlinedButton(
               onPressed: _busy ? null : () => _answer('decline'),
               child: const Text('Decline'),
+            ),
+          ],
+        ),
+      );
+}
+
+/// One kid: more time today, or end the session. Both sign with this device's
+/// key and the `act` scope the parent gave it -- no password is typed here, and
+/// the box refuses the action without that scope (R-NOTIFY-13).
+class KidScreen extends StatefulWidget {
+  final Session session;
+  final KidStatus kid;
+  const KidScreen({super.key, required this.session, required this.kid});
+
+  @override
+  State<KidScreen> createState() => _KidScreenState();
+}
+
+class _KidScreenState extends State<KidScreen> {
+  static const _choices = [15, 30, 60];
+  int _minutes = 30;
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _run(Future<void> Function() action) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await action();
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (error) {
+      setState(() {
+        _busy = false;
+        _error = _refusal(error);
+      });
+    }
+  }
+
+  /// The box's own reasons in the parent's words.
+  String _refusal(Object error) {
+    final text = error.toString();
+    if (text.contains('scope-missing')) {
+      return 'This device was paired to decide requests, not to act. Ask on the computer, or pair it again with the act scope.';
+    }
+    if (text.contains('not-a-kid')) {
+      return 'The computer would not take that account.';
+    }
+    return "Couldn't send that: $error";
+  }
+
+  Future<void> _confirmEnd() async {
+    final end = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('End ${widget.kid.kid}\'s session?'),
+        content: const Text('Their session ends now. They can sign in again if they still have time.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('End now')),
+        ],
+      ),
+    );
+    if (end == true) await _run(() => widget.session.endSession(widget.kid.kid));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: Text(widget.kid.kid)),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(
+              widget.kid.live ? '${widget.kid.minutesLeft} min left' : 'Not running',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 24),
+            const Text('More time today'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final minutes in _choices)
+                  ChoiceChip(
+                    label: Text('$minutes min'),
+                    selected: _minutes == minutes,
+                    onSelected: _busy ? null : (chosen) => setState(() => _minutes = chosen ? minutes : _minutes),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            FilledButton(
+              onPressed: _busy ? null : () => _run(() => widget.session.grantTime(widget.kid.kid, _minutes)),
+              child: Text('Give $_minutes minutes'),
+            ),
+            const SizedBox(height: 24),
+            const Text('End session'),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: _busy ? null : _confirmEnd,
+              child: const Text('End session now'),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 16),
+              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ],
+            const SizedBox(height: 16),
+            Text(
+              'This phone acts with the key the computer paired; no password is typed. '
+              'More time is for today only.',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),

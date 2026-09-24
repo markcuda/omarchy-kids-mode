@@ -12,6 +12,7 @@ import '../lib/state_model.dart';
 class FakeRelay implements RelayTransport {
   final List<Map<String, Object?>> decided = [];
   final List<Map<String, Object?>> reviewed = [];
+  final List<Map<String, Object?>> acted = [];
   final List<(int, String)> requestHeaders = [];
   BoxState state = BoxState(kids: [], requests: [], recent: []);
   final List<BoxState> events = [];
@@ -46,6 +47,16 @@ class FakeRelay implements RelayTransport {
     required String nonce,
   }) async {
     reviewed.add(record);
+    return {'reply': 'ok'};
+  }
+
+  @override
+  Future<Map<String, dynamic>> act({
+    required Map<String, Object?> record,
+    required int ts,
+    required String nonce,
+  }) async {
+    acted.add(record);
     return {'reply': 'ok'};
   }
 }
@@ -120,5 +131,20 @@ void main() {
 
     relay.events.add(BoxState.fromJson({'requests': []}));
     expect(await session.watch().first.then((s) => s.requests), isEmpty);
+  });
+
+  test('grantTime and endSession sign the ACT records the box takes', () async {
+    await session.grantTime('kid-ada', 30);
+    final grant = relay.acted.single;
+    expect(grant['account'], 'kid-ada');
+    expect(grant['action'], 'grant');
+    expect(grant['minutes'], 30);
+    expect(grant['device_id'], session.deviceId);
+    await session.endSession('kid-ada');
+    final end = relay.acted.last;
+    expect(end['action'], 'end');
+    expect(end.containsKey('minutes'), isFalse);
+    expect(() => session.grantTime('Kid!', 10), throwsArgumentError);
+    expect(() => session.endSession('../etc'), throwsArgumentError);
   });
 }

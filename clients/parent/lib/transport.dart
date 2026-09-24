@@ -249,6 +249,24 @@ class KidsRelayClient implements RelayTransport {
     return jsonDecode(reply.body) as Map<String, dynamic>;
   }
 
+  /// POST /v1/kids/<account>/<action> with the signed ACT record.
+  @override
+  Future<Map<String, dynamic>> act({
+    required Map<String, Object?> record,
+    required int ts,
+    required String nonce,
+  }) async {
+    final account = record['account'] as String;
+    final action = record['action'] as String;
+    final path = '/v1/kids/$account/$action';
+    final body = utf8.encode(await buildDecisionBody(keyPair: keyPair, record: record));
+    final reply = await _send(method: 'POST', path: path, body: body, ts: ts, nonce: nonce);
+    if (reply.status != 200) {
+      throw HttpException('act: ${reply.status} ${reply.body}');
+    }
+    return jsonDecode(reply.body) as Map<String, dynamic>;
+  }
+
   /// POST /v1/reviews/<review-id>/decision with the signed review record.
   @override
   Future<Map<String, dynamic>> decideReview({

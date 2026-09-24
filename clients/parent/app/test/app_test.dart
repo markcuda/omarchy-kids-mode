@@ -22,6 +22,7 @@ class FakeRelay implements RelayTransport {
   final String pin;
   final List<Map<String, Object?>> decided = [];
   final List<Map<String, Object?>> reviewed = [];
+  final List<Map<String, Object?>> acted = [];
   final List<String> paired = [];
   final List<StreamController<BoxState>> opened = [];
 
@@ -71,6 +72,29 @@ class FakeRelay implements RelayTransport {
     reviewed.add(record);
     return {'reply': 'ok'};
   }
+
+  @override
+  Future<Map<String, dynamic>> act({
+    required Map<String, Object?> record,
+    required int ts,
+    required String nonce,
+  }) async {
+    acted.add(record);
+    return {'reply': 'ok'};
+  }
+}
+
+/// A box that refuses an ACT the way the real one does when the device lacks the
+/// `act` scope (403 with `no scope-missing`).
+class ScopeRefusingRelay extends FakeRelay {
+  ScopeRefusingRelay(super.state);
+  @override
+  Future<Map<String, dynamic>> act({
+    required Map<String, Object?> record,
+    required int ts,
+    required String nonce,
+  }) async =>
+      throw Exception('act: 403 {"reply":"no scope-missing"}');
 }
 
 /// A box that refuses a review decision the way the real one does on a stale
@@ -222,14 +246,14 @@ void main() {
   testWidgets('a paired app offers to forget the computer, and Cancel keeps it', (tester) async {
     final keystore = await pairedKeystore();
     await pumpPairing(tester, connect: FakeConnect(), keystore: keystore);
-    expect(find.text('Requests'), findsOneWidget);
+    expect(find.byTooltip('Refresh'), findsOneWidget, reason: 'on the list screen');
     await tester.tap(find.byTooltip('More'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Forget this computer…'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
-    expect(find.text('Requests'), findsOneWidget);
+    expect(find.byTooltip('Refresh'), findsOneWidget, reason: 'on the list screen');
     expect(await keystore.loadPaired(), isNotNull);
   });
 
@@ -248,6 +272,63 @@ void main() {
     expect(await keystore.loadPaired(), isNull);
     expect(connect.relays.first.opened.first.hasListener, isFalse,
         reason: 'forgetting drops the old feed, not just the pin');
+  });
+
+  testWidgets('a live kid is listed with their minutes and opens the two actions', (tester) async {
+    await pumpHome(tester, FakeRelay(stateWith([])));
+    expect(find.text('Kids'), findsOneWidget);
+    expect(find.text('kid-ada'), findsOneWidget);
+    expect(find.text('12 min left'), findsOneWidget);
+    await tester.tap(find.text('kid-ada'));
+    await tester.pumpAndSettle();
+    expect(find.text('More time today'), findsOneWidget);
+    expect(find.text('Give 30 minutes'), findsOneWidget);
+    expect(find.text('End session now'), findsOneWidget);
+    expect(find.textContaining('no password is typed'), findsOneWidget);
+  });
+
+  testWidgets('giving time signs a grant with the chosen minutes', (tester) async {
+    final relay = FakeRelay(stateWith([]));
+    await pumpHome(tester, relay);
+    await tester.tap(find.text('kid-ada'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('15 min'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Give 15 minutes'));
+    await tester.pumpAndSettle();
+    expect(relay.acted.single['account'], 'kid-ada');
+    expect(relay.acted.single['action'], 'grant');
+    expect(relay.acted.single['minutes'], 15);
+    expect(find.byTooltip('Refresh'), findsOneWidget, reason: 'back on the list');
+  });
+
+  testWidgets('ending a session asks first, then signs an end with no minutes', (tester) async {
+    final relay = FakeRelay(stateWith([]));
+    await pumpHome(tester, relay);
+    await tester.tap(find.text('kid-ada'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('End session now'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(relay.acted, isEmpty, reason: 'Cancel sends nothing');
+    await tester.tap(find.text('End session now'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('End now'));
+    await tester.pumpAndSettle();
+    expect(relay.acted.single['action'], 'end');
+    expect(relay.acted.single.containsKey('minutes'), isFalse);
+  });
+
+  testWidgets('a device without the act scope is told so, not left guessing', (tester) async {
+    final relay = ScopeRefusingRelay(stateWith([]));
+    await pumpHome(tester, relay);
+    await tester.tap(find.text('kid-ada'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Give 30 minutes'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('not to act'), findsOneWidget);
+    expect(find.text('Give 30 minutes'), findsOneWidget, reason: 'still here to try another way');
   });
 
   testWidgets('a changed add-on is shown above the requests, and opens to what changed', (tester) async {
@@ -456,7 +537,7 @@ void main() {
     // A new run of the app with the same store: no code, no fingerprint.
     await tester.pumpWidget(const SizedBox());
     await pumpPairing(tester, connect: FakeConnect(), keystore: SecureKeystore(store));
-    expect(find.text('Requests'), findsOneWidget);
+    expect(find.byTooltip('Refresh'), findsOneWidget, reason: 'on the list screen');
     expect(find.text('Pair with the computer'), findsNothing);
   });
 

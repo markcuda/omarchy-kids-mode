@@ -16,6 +16,7 @@ import '../lib/state_model.dart';
 class FakeRelay implements RelayTransport {
   final List<Map<String, dynamic>> frames = [];
   final List<Map<String, Object?>> reviewed = [];
+  final List<Map<String, Object?>> acted = [];
   Map<String, dynamic> reply = {'reply': 'ok'};
 
   @override
@@ -47,6 +48,16 @@ class FakeRelay implements RelayTransport {
     required String nonce,
   }) async {
     reviewed.add(record);
+    return {'reply': 'ok'};
+  }
+
+  @override
+  Future<Map<String, dynamic>> act({
+    required Map<String, Object?> record,
+    required int ts,
+    required String nonce,
+  }) async {
+    acted.add(record);
     return {'reply': 'ok'};
   }
 }

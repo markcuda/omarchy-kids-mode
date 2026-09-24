@@ -24,8 +24,10 @@ A phone or desktop app that pairs with the box, shows a kid's requests with **Ap
 
 `clients/parent/app` is the Flutter UI over it: pairing (paste the code the computer printed, type
 the fingerprint it showed, compare, pair), the request list, a request screen with Approve, Decline
-and the reply chips, and — above the requests — an add-on that changed since it was approved, with
-what changed (`was`/`now`) and Approve or Deny. The review decision signs the fingerprint the screen
+and the reply chips, an add-on that changed since it was approved (with what changed — `was`/`now` —
+and Approve or Deny), and the kids themselves, where a tap gives **more time today** (15/30/60
+minutes) or ends the session. Those two act with the device's own key and the `act` scope the parent
+gave it: no password is typed, the box refuses without the scope, and the screen says so. The review decision signs the fingerprint the screen
 showed, so the box refuses it if the surface moved since (R-NOTIFY-12). The list follows the box's own feed (`/v1/events`), so a new request
 appears without a refresh; when the feed drops it says so, keeps the last list on screen, and
 retries with a growing delay. The overflow menu offers **Forget this computer**, which clears the

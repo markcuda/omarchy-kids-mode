@@ -14,6 +14,7 @@ import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
 
 import 'notify_crypto.dart';
+import 'state_model.dart';
 
 const String kidsPairScheme = 'omarchy-kids://pair';
 
@@ -103,6 +104,42 @@ bool _printable(int rune) {
   if (rune == 0xfeff) return false; // BOM / zero-width no-break space
   if (rune >= 0xe0000 && rune <= 0xe007f) return false; // tag characters
   return true;
+}
+
+/// An ACT record (R-NOTIFY-13) with a fresh ts and nonce: more time for a kid
+/// today, or an end of their session. The same signer and context as a decision.
+/// `minutes` belongs to a grant only, 1..1440 (the box's own bound); an end has
+/// no minutes key at all, so one cannot be smuggled in.
+Map<String, Object?> actRecord({
+  required String deviceId,
+  required String account,
+  required String action,
+  int? minutes,
+  required int ts,
+  required String nonce,
+}) {
+  if (action != 'grant' && action != 'end') {
+    throw ArgumentError("an act must be 'grant' or 'end'");
+  }
+  if (!KidStatus.accountPattern.hasMatch(account)) {
+    throw ArgumentError('not a kid account: $account');
+  }
+  final record = <String, Object?>{
+    'device_id': deviceId,
+    'account': account,
+    'action': action,
+    'ts': ts,
+    'nonce': nonce,
+  };
+  if (action == 'grant') {
+    if (minutes == null || minutes < 1 || minutes > 1440) {
+      throw ArgumentError('minutes must be 1..1440 for a grant');
+    }
+    record['minutes'] = minutes;
+  } else if (minutes != null) {
+    throw ArgumentError('an end takes no minutes');
+  }
+  return record;
 }
 
 /// A review-decision record (R-NOTIFY-12) with a fresh ts and nonce. The same

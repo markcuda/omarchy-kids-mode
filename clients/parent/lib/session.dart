@@ -119,6 +119,13 @@ class Session {
   /// Decline a request, optionally with a reply (a reason the box shows the kid).
   Future<void> decline(String requestId, {String? reply}) => _decide(requestId, 'decline', reply);
 
+  /// Give a kid more time today (R-NOTIFY-13). The box applies it through
+  /// omarchy-kids-time; nothing else changes.
+  Future<void> grantTime(String kid, int minutes) => _act(kid, 'grant', minutes);
+
+  /// End a kid's session now. The box applies it through omarchy-kids-exit.
+  Future<void> endSession(String kid) => _act(kid, 'end', null);
+
   /// Approve a changed add-on's new surface (R-NOTIFY-12). `seen` is the review's
   /// own `now`; the box refuses it if the surface moved since the app looked.
   Future<void> approveReview(String reviewId, String seen) => _decideReview(reviewId, 'approve', seen);
@@ -144,6 +151,22 @@ class Session {
       reply: reply,
     );
     await relay.decide(record: record, ts: ts, nonce: newNonce());
+  }
+
+  Future<void> _act(String kid, String action, int? minutes) async {
+    if (!KidStatus.accountPattern.hasMatch(kid)) {
+      throw ArgumentError('not a kid account: $kid');
+    }
+    final ts = now();
+    final record = actRecord(
+      deviceId: deviceId,
+      account: kid,
+      action: action,
+      minutes: minutes,
+      ts: ts,
+      nonce: newNonce(),
+    );
+    await relay.act(record: record, ts: ts, nonce: newNonce());
   }
 
   Future<void> _decideReview(String reviewId, String decision, String seen) async {
