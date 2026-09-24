@@ -18,6 +18,9 @@ A phone or desktop app that pairs with the box, shows a kid's requests with **Ap
   approve/decline with a reply) over an injectable transport.
 - `lib/pairing.dart`: the pairing flow (generate the device's sign and box keys once, send the proof
   and never the token, remember the paired box).
+- `lib/feed.dart`: the new-row diff the notifications use, and the derived platform id.
+- `lib/relay_transport.dart`: what the session needs from the box, so its flows are testable
+  without a network.
 - `lib/app_link.dart`: what the pairing screen needs from the box's output — the URI inside a
   terminal paste, a fingerprint typed with spaces or colons, and bare addresses turned into
   host + port (the relay's port is fixed at 8447).
@@ -33,7 +36,7 @@ open the row); nothing arrives while the app is closed, and the screen says exac
 no push, no server and no wake in v1. The rules (and the no-buttons choice: a tap opens the screen
 that decides) are built and tested here; the platform adapter that raises them
 (`app/lib/local_notifier.dart`) is written but has not run on any platform yet. Windows has no
-notification adapter in this build; the lists and decisions work there regardless. The review decision signs the fingerprint the screen
+notification adapter in this build; nor does Linux. The lists and decisions work there regardless. The review decision signs the fingerprint the screen
 showed, so the box refuses it if the surface moved since (R-NOTIFY-12). The list follows the box's own feed (`/v1/events`), so a new request
 appears without a refresh; when the feed drops it says so, keeps the last list on screen, and
 retries with a growing delay. The overflow menu offers **Forget this computer**, which clears the
@@ -113,9 +116,10 @@ resulting string.
 - **Pairing proof** (not Ed25519): hex HMAC-SHA256 keyed by the raw token bytes, over the UTF-8
   string `sign_pub + "|" + box_pub + "|" + name`.
 
-The box verifies all three against the root-owned public key and refuses on an unknown or revoked
-device, a missing `decide` scope, clock skew over five minutes, and a nonce seen in the last ten
-minutes (`docs/devices.md`).
+The box checks the pairing proof's HMAC against the record's own token, then verifies each
+DECIDE/REVIEW/ACT signature against the root-owned public key and refuses on an unknown or revoked
+device, a missing scope, clock skew over five minutes, and a nonce seen in the last ten minutes
+(`docs/devices.md`).
 
 ## Away envelopes (N-11)
 

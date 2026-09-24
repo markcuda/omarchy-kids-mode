@@ -17,14 +17,16 @@ leaving their apps open — is not built yet: the box offers Finish only, so no 
 shown at all, rather than one that does nothing. See "Not yet" below.)
 
 **2. The login screen (the portal).** One tile per person in the house, yours last. Arrow keys
-move the highlight, Enter picks a tile, then type that person's password. Whoever's password
-unlocked the *disk* at power-on lands straight on their own desktop with no login screen at all —
-that only happens once, right after the machine turns on. Every other time you see a login
-screen — after **Finish** ends someone's turn, or if the disk password you typed didn't match
-anyone's — it's this one.
+move the highlight, Enter picks a tile, then type that person's password (a kid with no password
+gets in on Enter). If the machine is set to go straight in from the disk password — the default —
+whoever's password unlocked the *disk* at power-on lands on their own desktop with no login screen
+at all, once, right after the machine turns on; if it is set to show the portal every time, this
+screen is what you see at every power-on. Every other time — after **Finish** ends someone's turn,
+or if the disk password you typed didn't match anyone's — it's this one.
 
 **3. Time's Up.** When a kid's screen time runs out, their screen shows an owl (or their own
-avatar), the time, a countdown, and one button: **Ask a grown-up for more time**. Left alone for
+avatar), their name and why they are out of time, a countdown, and one button: **Ask a grown-up for
+more time**. Left alone for
 60 seconds, it finishes on its own (no button needed for that). "Ask a grown-up" is the same
 request queue as everything else a kid asks for — see "Four things you'll do most" below.
 
@@ -52,7 +54,7 @@ computer, if you've set that up — `systemctl restart sddm` there is the gentle
 1. **Give a kid more time today.** Their row → Screen time → "Give more minutes today". Doesn't
    touch tomorrow's budget, just today's.
 2. **Answer a request.** Home screen → Requests (shows the count). Enter on one shows what they
-   asked for; approve or decline in one keystroke.
+   asked for; Enter approves (Approve is preselected), arrow to Decline and Enter declines.
 3. **Change what they can see or use.** Their row → Web (the allow list, if they're on one) or
    Apps (turn something on or off from their starter pack).
 4. **Add another kid.** Home screen → "Add a kid" — the same wizard as the first one, one kid at
@@ -82,10 +84,12 @@ boot something else entirely and skip everything on this card. Set a firmware pa
 way you would on any computer (reboot, enter setup — usually a key held right at power-on, check
 your machine's manual for which one — and look for "Set Supervisor/Admin/Firmware Password"). This
 is the actual wall; everything else on this card is a fence for a curious kid, not a lock against
-someone who's decided to get around it. Kids Mode tracks whether you've done this: the panel's Machine
-safety screen stays red until it is marked done, and the box's own check reports a failure until
-then. What is not built is the check-off itself — nothing writes that mark yet — so for now, do it,
-and remember that you did, the same as any other thing on this card outside Kids Mode's reach.
+someone who's decided to get around it. Kids Mode tracks whether you've done this: once a kid
+exists, the box's own check reports it as a FAILing row and the panel's Machine screen shows
+**Safety: NOT READY — n check(s) failing** with the firmware step named, until it is marked done
+(before the first kid, the check skips rather than fails). What is not built is the check-off
+itself — nothing writes that mark yet — so for now, do it, and remember that you did, the same as
+any other thing on this card outside Kids Mode's reach.
 
 ---
 
