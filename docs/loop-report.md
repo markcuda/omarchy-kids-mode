@@ -1197,3 +1197,21 @@ A capture note for the next pass: QEMU's QMP `screendump` comes back all black f
 taken inside the guest with `import -window root` on the greeter's own X display (as the `sddm`
 user, with the greeter's `/tmp/xauth_*`). The kid's Wayland sessions capture fine with `grim`
 (that is the recipe's method) and are unaffected.
+
+### 2026-09-22, loop iteration: the Wi-Fi picker overlay has run live
+
+Dogfooded the one surface `docs/wifi.md` still called unrun: with `wifi=helper` (the VM has no
+wireless device), `Super+Shift+W` reached Hyprland and opened `share/wifi/shell.qml` under a real
+Quickshell over the Level 2 tiled windows -- the overlay drew, the `omarchy-kids-wifi list` Process
+ran and its stdout was read back (empty), the "No networks found" empty state rendered with "Try
+again" focused and "Enter try again · Esc close" in the footer, Enter re-ran the list (still empty,
+no error), and Esc closed the process; the profile was set back to `parent`. So the doc's "this has
+never run against a real Quickshell" was stale. The fix moves those device-free paths under
+"Verified live" and leaves only the network-dependent parts (the populated list, the password step,
+the join outcomes) open, with the same update in `docs/levels.md`'s live-status. Docs only, no
+code; `test/all` green. Branch `docs/wifi-picker-verified`, stacked on
+`docs/levels-two-apps-verified` (both edit `docs/levels.md`).
+
+Also this iteration: the Level 2 "More apps" shelf renders its empty state honestly over the tiled
+windows, and a full read of `share/wifi/shell.qml` found its join/refusal messages and the
+`nmcli -t` colon-parse limitation exactly as `docs/wifi.md` already records them.
