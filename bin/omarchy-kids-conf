@@ -77,7 +77,7 @@ Usage: $(basename "$0") <command> [args]
   show <kid>                every key, its value, and where it came from
   export <kid>              every effective setting as key=value (read-only)
   import <kid> <file>       apply key=value settings, validated all-or-nothing
-  reset <kid>                clear overrides except band/name/avatar/password/onboarded
+  reset <kid>                clear overrides except band/name/avatar/theme/password/onboarded
   bands                      list bands with their label and blurb
   band <band>                print one band's defaults
   slug <display name>        the kid- account-name slug for a display name

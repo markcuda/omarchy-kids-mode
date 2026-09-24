@@ -33,6 +33,10 @@ correcting `docs/wifi.md`'s stale "never run" claim.
 set the idle-pointer rule twice (a stale merge); it now sets it once, and `levels-test.sh` pins the
 count.
 
+**Fixed on a topic branch awaiting merge:** `fix/panel-reset-claims` -- the panel's "Reset to band
+defaults" card promised that hand-added sites stay; `sites` is `reset = "clear"`, so the card (and
+`CHANGELOG.md`) now say a reset takes them back to the band's defaults.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After

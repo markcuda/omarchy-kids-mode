@@ -1501,3 +1501,28 @@ what it actually checks (it had called the file UNTESTED while checking three th
 Operator note: the first install was botched -- both files are named `shell.qml`, so one `scp` to
 `/tmp` left only the exit modal and installing that into both directories opened the ask as a
 squashed exit card. The recipe now warns about it.
+### 2026-09-22, loop iteration: a reset the panel promised would keep your sites
+
+Dogfooded the VM first (kid-ada at Level 2, session healthy; `omarchy-kids-check --live` at its
+usual 46 PASS plus the four known drift FAILs this box always shows). The I-6 pass then moved into
+`lib/`, which earlier iterations had swept less: the parent panel's "Reset to band defaults" card
+told the parent their "password, theme and any sites you added by hand stay" -- but `sites` is
+`reset = "clear"` in `share/config/schema.toml` and `cmd_reset` deletes every clear key, so a reset
+really does delete hand-added sites (along with `dns`, `history_visible`, `menu` and the apps
+keys). Fixed on `fix/panel-reset-claims`: the facts block now says every other screen's settings go
+back to the band's defaults and names hand-added sites among them, the function comment and
+`CHANGELOG.md` are corrected, and `conf`'s `reset` usage line gains the missing `theme`.
+`panel-test.sh`'s real reset fixture now carries `sites=` and `theme=` and proves the code deletes
+one and keeps the other; `test/all` green (52 files, five skips), `shellcheck -x` clean, fable
+review one major (the changelog claim, now fixed) and three minors closed. This supersedes the
+Reset-card wording quoted in the earlier 2026-09 entry below.
+
+Live on the VM: installed `bin/omarchy-kids-conf` and `lib/panel-kid.sh` from the branch and ran
+the panel's own file-mode harness (`OMARCHY_KIDS_TUI_ANSWERS` + `--dry-run`) as the parent; on real
+gum the reset card rendered "Every other screen for this kid goes back to the band's defaults ...
+Any sites you added by hand go back too. The account, name, face, band, password and theme stay.",
+and the false claim is gone. Substrate note: a bare `bin/omarchy-kids-conf` from a branch does not
+work installed as-is -- the PKGBUILD rewrites its `SCHEMA` seam (and `lib/kids.sh`'s `KIDS_PY`), so
+the same `sed` ran before `install` (an unrewritten copy looks for
+`/usr/share/config/schema.toml` and breaks every conf read). The kid session stayed up and
+`omarchy-kids-check --live` still shows only this box's four known FAILs.

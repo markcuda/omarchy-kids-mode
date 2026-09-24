@@ -174,6 +174,12 @@ answers="$(answers_file "kid:kid-ada" reset reset back quit)"
 run_panel "$answers"
 check_contains "$out" "sudo $TREE_BIN/omarchy-kids-conf reset kid-ada" \
   "dry-run: reset to defaults prints the exact conf-reset command"
+# The screen used to say hand-added sites stay; the schema gives `sites`
+# reset=clear, so the reset does delete them (live-review I-6 finding).
+check_not_contains "$out" "sites you added by hand stay" \
+  "reset screen: never claims hand-added sites survive the reset"
+check_contains "$out" "Any sites you added by hand go back too." \
+  "reset screen: names hand-added sites among what the reset clears"
 
 answers="$(answers_file "kid:kid-ada" remove NotAda back quit)"
 run_panel "$answers"
@@ -381,8 +387,10 @@ cat >"$ETC/kids/kid-ada.conf" <<'EOF'
 name=Ada
 avatar=fox
 band=6-8
+theme=tokyo-night
 budget_min=45
 wifi=helper
+sites=kid.example.org
 EOF
 answers="$(answers_file "kid:kid-ada" reset reset back quit)"
 run_panel "$answers" --apply
@@ -391,10 +399,14 @@ check_not_contains "$(cat "$ETC/kids/kid-ada.conf")" "budget_min=" \
   "real: reset clears a budget override"
 check_not_contains "$(cat "$ETC/kids/kid-ada.conf")" "wifi=helper" \
   "real: reset clears a Wi-Fi override"
+check_not_contains "$(cat "$ETC/kids/kid-ada.conf")" "sites=" \
+  "real: reset clears hand-added sites (the reset screen used to say they stay)"
 check_contains "$(cat "$ETC/kids/kid-ada.conf")" "name=Ada" \
   "real: reset keeps the kid's name"
 check_contains "$(cat "$ETC/kids/kid-ada.conf")" "band=6-8" \
   "real: reset keeps the kid's band"
+check_contains "$(cat "$ETC/kids/kid-ada.conf")" "theme=tokyo-night" \
+  "real: reset keeps the kid's theme"
 
 # --- real: approve a request, and it's really marked approved ----------
 
