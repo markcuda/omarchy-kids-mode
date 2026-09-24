@@ -121,6 +121,9 @@ class _AppRootState extends State<AppRoot> {
   /// Forget the paired box on this device and go back to pairing. The box keeps
   /// its own record until the parent revokes the device there.
   Future<void> _forget() async {
+    // The platform keeps notifications after the process dies; a forgotten box
+    // must not leave its rows on the shade (R-NOTIFY-14.4).
+    await widget.notifier?.cancelAll();
     await widget.keystore.clearPaired();
     if (!mounted) return;
     setState(() => _session = null);
@@ -130,6 +133,7 @@ class _AppRootState extends State<AppRoot> {
   /// The escape from a stored key the app can no longer read: clear the seeds and
   /// the pairing, so this device pairs again as a new one.
   Future<void> _resetKeys() async {
+    await widget.notifier?.cancelAll();
     await widget.keystore.reset();
     if (!mounted) return;
     setState(() => _session = null);

@@ -92,8 +92,13 @@ class _HomeScreenState extends State<HomeScreen> {
   NoticeFeed? _notice;
 
   /// A tap that arrived for a row the current document does not carry yet (the
-  /// notification launched the app); opened once the row appears.
+  /// notification launched the app); opened on the next document if the row is
+  /// there, dropped otherwise (R-NOTIFY-14.3: "else the list").
   NoticeTap? _pendingTap;
+
+  /// The note under the list; the refusal line replaces it if the platform
+  /// declines the permission (R-NOTIFY-14.2).
+  String? _noticeNote;
 
   /// Bumped by every feed event: a signed read that lands after one is stale and
   /// is dropped, so a slow read cannot overwrite a newer list.
@@ -102,10 +107,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _noticeNote = widget.noticeNote;
     final notifier = widget.notifier;
     if (notifier != null) {
       _notice = NoticeFeed(notifier);
-      unawaited(notifier.initialize(onTap: _onNoticeTap));
+      unawaited(notifier.initialize(onTap: _onNoticeTap).then((granted) {
+        if (!granted && mounted) {
+          setState(() => _noticeNote =
+              'Notifications are off for this app in your system settings. Open the app to see what is waiting.');
+        }
+      }));
     }
     // The feed carries the whole state on connect, so the read is only there to
     // paint something sooner; it is skipped once a list is on screen.
@@ -287,10 +298,10 @@ class _HomeScreenState extends State<HomeScreen> {
     if (state.reviews.isNotEmpty || kids.isNotEmpty) {
       children.add(const _SectionHeader('Requests'));
     }
-    if (widget.noticeNote != null) {
+    if (_noticeNote != null) {
       children.add(Padding(
         padding: const EdgeInsets.all(16),
-        child: Text(widget.noticeNote!, style: Theme.of(context).textTheme.bodySmall),
+        child: Text(_noticeNote!, style: Theme.of(context).textTheme.bodySmall),
       ));
     }
     if (state.requests.isEmpty) {
@@ -323,7 +334,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openPending() {
     final tap = _pendingTap;
     if (tap == null) return;
-    if (_openNotice(tap)) _pendingTap = null;
+    // One attempt, on the first document after the tap: the row is there or the
+    // tap is stale (the review was decided before the app opened).
+    _pendingTap = null;
+    _openNotice(tap);
   }
 
   bool _openNotice(NoticeTap tap) {

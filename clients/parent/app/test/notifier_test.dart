@@ -64,6 +64,32 @@ void main() {
     expect(notifier.shows.length, 1);
   });
 
+  test('a review reopened after being decided raises again', () async {
+    final notifier = FakeNotifier();
+    final feed = NoticeFeed(notifier);
+    final row = {'id': rid, 'kid': 'kid-ada', 'app': 'firefox', 'now': 'b' * 64};
+    await feed.update(state());
+    await feed.update(state(reviews: [row]));
+    expect(notifier.shows.single.id, rid);
+    await feed.update(state()); // decided on the box: the row leaves
+    expect(notifier.cancels.single.id, rid);
+    await feed.update(state(reviews: [row])); // the add-on changes again, same id
+    expect(notifier.shows.length, 2, reason: 'a reopened review carries the same id and must raise');
+  });
+
+  test('two documents that land together raise once and clear once', () async {
+    final notifier = FakeNotifier();
+    final feed = NoticeFeed(notifier);
+    await feed.update(state());
+    // Not awaited: both folds are in flight at once. Without serialization the
+    // second sees the old set and cancels nothing, or both raise.
+    final a = feed.update(state(requests: [request]));
+    final b = feed.update(state());
+    await Future.wait([a, b]);
+    expect(notifier.shows.length, 1, reason: 'raised once');
+    expect(notifier.cancels.length, 1, reason: 'cleared when it left');
+  });
+
   test('the payload is the kind and the id, and junk parses to null', () {
     expect(parseNoticePayload(noticePayload('request', 'req-1'))!.id, 'req-1');
     expect(parseNoticePayload(noticePayload('review', rid))!.kind, 'review');

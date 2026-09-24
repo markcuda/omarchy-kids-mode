@@ -175,13 +175,21 @@ Future<InMemoryKeystore> pairedKeystore() async {
   return keystore;
 }
 
-Future<void> pumpPairing(WidgetTester tester, {required FakeConnect connect, Keystore? keystore}) async {
+Future<void> pumpPairing(
+  WidgetTester tester, {
+  required FakeConnect connect,
+  Keystore? keystore,
+  Notifier? notifier,
+  String? noticeNote,
+}) async {
   await tester.pumpWidget(MaterialApp(
     home: AppRoot(
       keystore: keystore ?? InMemoryKeystore(),
       connect: connect.call,
       name: 'parent-phone',
       platform: 'linux',
+      notifier: notifier,
+      noticeNote: noticeNote,
     ),
   ));
   await tester.pumpAndSettle();
@@ -275,6 +283,28 @@ void main() {
     expect(await keystore.loadPaired(), isNull);
     expect(connect.relays.first.opened.first.hasListener, isFalse,
         reason: 'forgetting drops the old feed, not just the pin');
+  });
+
+  testWidgets('a refused permission says so instead of the optimistic note', (tester) async {
+    final notifier = FakeNotifier()..granted = false;
+    await pumpHome(tester, FakeRelay(stateWith([])), notifier: notifier);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Notifications are off'), findsOneWidget);
+    expect(find.textContaining('Notifies while the app is open'), findsNothing);
+  });
+
+  testWidgets('Forget clears the notifications too', (tester) async {
+    final keystore = await pairedKeystore();
+    final notifier = FakeNotifier();
+    await pumpPairing(tester, connect: FakeConnect(), keystore: keystore, notifier: notifier);
+    final before = notifier.cancelAlls;
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Forget this computer…'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Forget'));
+    await tester.pumpAndSettle();
+    expect(notifier.cancelAlls, greaterThan(before), reason: 'a forgotten box leaves no rows behind');
   });
 
   testWidgets('a request that arrives while the app is open raises a notification, and a tap opens it', (tester) async {

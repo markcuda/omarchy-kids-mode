@@ -54,9 +54,13 @@ class FakeNotifier implements Notifier {
   final cancels = <({String kind, String id})>[];
   int cancelAlls = 0;
   void Function(NoticeTap)? onTap;
+  bool granted = true;
 
   @override
-  Future<void> initialize({required void Function(NoticeTap tap) onTap}) async => this.onTap = onTap;
+  Future<bool> initialize({required void Function(NoticeTap tap) onTap}) async {
+    this.onTap = onTap;
+    return granted;
+  }
   @override
   Future<void> show({
     required String kind,

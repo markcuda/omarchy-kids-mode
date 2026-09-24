@@ -17,12 +17,16 @@ class LocalNotifier implements Notifier {
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   void Function(NoticeTap tap)? _onTap;
 
+  /// A cold-start tap is delivered once per process, whatever else calls
+  /// initialize again (Forget, then a fresh pairing).
+  static bool _launchDelivered = false;
+
   /// True on a platform this adapter can raise a notification on. Windows is not
   /// wired: the app still lists and decides, it just cannot raise one there.
   static bool get supported => const {'android', 'ios', 'macos'}.contains(Platform.operatingSystem);
 
   @override
-  Future<void> initialize({required void Function(NoticeTap tap) onTap}) async {
+  Future<bool> initialize({required void Function(NoticeTap tap) onTap}) async {
     _onTap = onTap;
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     // Ask for nothing at initialize: the permission is requested once after
@@ -37,21 +41,27 @@ class LocalNotifier implements Notifier {
       const InitializationSettings(android: android, iOS: darwin, macOS: darwin),
       onDidReceiveNotificationResponse: _dispatch,
     );
-    await _plugin
+    final androidGranted = await _plugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
-    await _plugin
+    final iosGranted = await _plugin
         .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
         ?.requestPermissions(alert: true, badge: false, sound: true);
-    await _plugin
+    final macosGranted = await _plugin
         .resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>()
         ?.requestPermissions(alert: true, badge: false, sound: true);
-    // A tap that launched the app (it was not running): deliver it too, once the
-    // app is alive; the row opens when the first document carries it.
-    final launch = await _plugin.getNotificationAppLaunchDetails();
-    final payload = launch?.notificationResponse?.payload;
-    final tap = parseNoticePayload(payload);
-    if (launch?.didNotificationLaunchApp == true && tap != null) onTap(tap);
+    // A null answer means the platform did not ask (already decided, or no
+    // permission model): only an explicit false is a refusal.
+    final granted = androidGranted != false && iosGranted != false && macosGranted != false;
+    // A tap that launched the app (it was not running): deliver it once per
+    // process; the row opens when the first document carries it.
+    if (!_launchDelivered) {
+      final launch = await _plugin.getNotificationAppLaunchDetails();
+      final tap = parseNoticePayload(launch?.notificationResponse?.payload);
+      if (launch?.didNotificationLaunchApp == true && tap != null) onTap(tap);
+      _launchDelivered = true;
+    }
+    return granted;
   }
 
   void _dispatch(NotificationResponse response) {
