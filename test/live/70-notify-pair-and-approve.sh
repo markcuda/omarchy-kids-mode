@@ -36,8 +36,19 @@ notify_pair_client "$KEY" ||
 # scenario 50's); this scenario is about the decide path, not the ask modal.
 now="$(vmroot "date +%s" | tr -d '[:space:]')"
 record="{\"kid\": \"$LIVE_KID1_ACCOUNT\", \"kind\": \"time\", \"what\": \"15\", \"minutes\": 15, \"asked_at\": $now, \"state\": \"open\"}"
-vmroot "printf '%s\\n' '$record' > /var/lib/omarchy-kids/queue/$REQ_ID.json; chmod 0644 /var/lib/omarchy-kids/queue/$REQ_ID.json" &&
+vmroot "install -d -m 0750 /var/lib/omarchy-kids/queue; chown root:omarchy-parents /var/lib/omarchy-kids/queue; printf '%s\\n' '$record' > /var/lib/omarchy-kids/queue/$REQ_ID.json; chmod 0640 /var/lib/omarchy-kids/queue/$REQ_ID.json; chown root:omarchy-parents /var/lib/omarchy-kids/queue/$REQ_ID.json" &&
   ok "queued request $REQ_ID" || fail "could not queue the request"
+
+# R-NOTIFY-7: the queue is 0750 root:omarchy-parents and the record 0640. The VM is where the
+# root branch of write_atomic's chown is proven (a user namespace cannot map the group).
+mode_dir="$(vmroot "stat -c '%a %U %G' /var/lib/omarchy-kids/queue" | tr -s '[:space:]' ' ' | sed 's/ $//')"
+mode_rec="$(vmroot "stat -c '%a %U %G' /var/lib/omarchy-kids/queue/$REQ_ID.json" | tr -s '[:space:]' ' ' | sed 's/ $//')"
+[[ "$mode_dir" == "750 root omarchy-parents" ]] &&
+  ok "the queue directory is 750 root omarchy-parents" ||
+  fail "queue directory modes are '$mode_dir'"
+[[ "$mode_rec" == "640 root omarchy-parents" ]] &&
+  ok "the record is 640 root omarchy-parents" ||
+  fail "record modes are '$mode_rec'"
 
 before="$(vmroot "omarchy-kids-time status $LIVE_KID1_ACCOUNT | head -1")"
 
