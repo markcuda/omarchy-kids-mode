@@ -40,7 +40,7 @@ with open(os.path.join(queue, "2-kid-ada-app.json"), "w") as f:
                "asked_at": 2, "state": "approved", "decided_at": int(time.time()), "reply": "OK"}, f)
 with open(os.path.join(queue, "3-kid-ada-site.json"), "w") as f:
     json.dump({"kid": "kid-ada", "kind": "site", "what": "example.com",
-               "asked_at": 3, "state": "declined", "decided_at": int(time.time()) - 60}, f)
+               "asked_at": 3, "state": "declined", "decided_at": int(time.time()) - 60, "reply": ""}, f)
 with open(os.path.join(queue, "4-old.json"), "w") as f:
     json.dump({"kid": "kid-ada", "kind": "app", "what": "old", "asked_at": 4,
                "state": "approved", "decided_at": int(time.time()) - 90000}, f)

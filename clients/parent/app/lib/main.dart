@@ -300,35 +300,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (state.reviews.isNotEmpty || kids.isNotEmpty) {
       children.add(const _SectionHeader('Requests'));
     }
-    // R-NOTIFY-15: what was decided, read-only, last. Absent when the box's 24h
-    // window is empty (an empty window is not information).
-    if (state.recent.isNotEmpty) {
-      children.add(const _SectionHeader('Recently decided'));
-      final rows = [...state.recent]..sort((a, b) {
-          final byTime = (b.decidedAt ?? 0).compareTo(a.decidedAt ?? 0);
-          return byTime != 0 ? byTime : b.id.compareTo(a.id);
-        });
-      for (final row in rows.take(20)) {
-        children.add(ListTile(
-          title: Text(describeRequest(row, _kidName(state, row.kid))),
-          subtitle: Text(describeOutcome(row)),
-          trailing: Text(_decidedWhen(row.decidedAt!), style: Theme.of(context).textTheme.bodySmall),
-        ));
-      }
-      children.add(const Padding(
-        padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
-        child: Text(
-          'What the computer decided in the last 24 hours, as it reports it. Nothing here can be changed.',
-          style: TextStyle(fontSize: 12),
-        ),
-      ));
-    }
-    if (_noticeNote != null) {
-      children.add(Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text(_noticeNote!, style: Theme.of(context).textTheme.bodySmall),
-      ));
-    }
     if (state.requests.isEmpty) {
       children.add(
         const Padding(
@@ -345,6 +316,36 @@ class _HomeScreenState extends State<HomeScreen> {
           onTap: () => _pushRequest(request),
         ));
       }
+    }
+    // R-NOTIFY-15: what was decided, read-only, after the requests list and above
+    // the notification note (the footer). Absent when the box's 24h window is
+    // empty (an empty window is not information).
+    if (state.recent.isNotEmpty) {
+      children.add(const _SectionHeader('Recently decided'));
+      final rows = [...state.recent]..sort((a, b) {
+          final byTime = (b.decidedAt ?? 0).compareTo(a.decidedAt ?? 0);
+          return byTime != 0 ? byTime : b.id.compareTo(a.id);
+        });
+      for (final row in rows.take(20)) {
+        children.add(ListTile(
+          title: Text(describeRequest(row, _kidName(state, row.kid))),
+          subtitle: Text(describeOutcome(row)),
+          trailing: Text(_decidedWhen(row.decidedAt!), style: Theme.of(context).textTheme.bodySmall),
+        ));
+      }
+      children.add(const Padding(
+        padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: Text(
+          'What was decided on the computer in the last 24 hours, as it reports it. Nothing here can be changed.',
+          style: TextStyle(fontSize: 12),
+        ),
+      ));
+    }
+    if (_noticeNote != null) {
+      children.add(Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(_noticeNote!, style: Theme.of(context).textTheme.bodySmall),
+      ));
     }
     return ListView(children: children);
   }

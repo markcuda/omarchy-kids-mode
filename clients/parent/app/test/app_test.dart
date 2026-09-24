@@ -397,6 +397,53 @@ void main() {
     expect(recentTile.onTap, isNull, reason: 'a recent row cannot be acted on');
   });
 
+  testWidgets('the section is after the requests list, capped at 20', (tester) async {
+    final relay = FakeRelay(BoxState.fromJson({
+      'kids': [
+        {'kid': 'kid-ada', 'live': true},
+      ],
+      'requests': [
+        {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft', 'asked_at': 1},
+      ],
+      'recent': [
+        for (var i = 0; i < 25; i++)
+          {'id': 'r$i', 'kid': 'kid-ada', 'kind': 'app', 'what': 'app$i',
+           'state': 'approved', 'decided_at': 1000 + i},
+      ],
+    }));
+    await pumpHome(tester, relay);
+    final requestY = tester.getTopLeft(find.text('kid-ada asked to use minecraft')).dy;
+    final headerY = tester.getTopLeft(find.text('Recently decided')).dy;
+    expect(requestY, lessThan(headerY), reason: 'the section follows the requests');
+    expect(find.text('kid-ada asked to use app24'), findsOneWidget);
+    expect(find.text('kid-ada asked to use app4'), findsNothing,
+        reason: 'only the newest 20 of 25 are shown');
+  });
+
+  testWidgets('equal decided_at ties are ordered by id, and a today row shows a bare time', (tester) async {
+    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final relay = FakeRelay(BoxState.fromJson({
+      'kids': [],
+      'requests': [],
+      'recent': [
+        {'id': 'a', 'kid': 'kid-ada', 'kind': 'app', 'what': 'x',
+         'state': 'approved', 'decided_at': 500},
+        {'id': 'b', 'kid': 'kid-ada', 'kind': 'app', 'what': 'y',
+         'state': 'approved', 'decided_at': 500},
+        {'id': 'c', 'kid': 'kid-ada', 'kind': 'app', 'what': 'z',
+         'state': 'approved', 'decided_at': nowSeconds},
+      ],
+    }));
+    await pumpHome(tester, relay);
+    expect(
+      tester.getTopLeft(find.text('kid-ada asked to use y')).dy,
+      lessThan(tester.getTopLeft(find.text('kid-ada asked to use x')).dy),
+      reason: 'an equal time breaks by id, descending',
+    );
+    expect(find.textContaining(RegExp(r'^\d{2}:\d{2}$')), findsOneWidget,
+        reason: 'a decision from today shows a bare time');
+  });
+
   testWidgets('no recently-decided section when the window is empty', (tester) async {
     await pumpHome(tester, FakeRelay(stateWith([])));
     expect(find.text('Recently decided'), findsNothing);
