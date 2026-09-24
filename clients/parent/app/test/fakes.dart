@@ -1,6 +1,7 @@
 // Shared test doubles (not a test file itself; the runner runs *_test.dart).
 
 import 'package:omarchy_kids_app/keystore.dart';
+import 'package:omarchy_kids_app/notifier.dart';
 
 /// An in-memory [SecretStore]: what the OS store would hold between runs, and a
 /// switch to make it fail like a device with no keystore.
@@ -46,4 +47,31 @@ class DroppingStore implements SecretStore {
   Future<void> write(String key, String value) async {}
   @override
   Future<void> delete(String key) async {}
+}
+
+class FakeNotifier implements Notifier {
+  final shows = <({String kind, String id, String title, String body})>[];
+  final cancels = <({String kind, String id})>[];
+  int cancelAlls = 0;
+  void Function(NoticeTap)? onTap;
+
+  @override
+  Future<void> initialize({required void Function(NoticeTap tap) onTap}) async => this.onTap = onTap;
+  @override
+  Future<void> show({
+    required String kind,
+    required String id,
+    required String title,
+    required String body,
+  }) async {
+    shows.add((kind: kind, id: id, title: title, body: body));
+  }
+
+  @override
+  Future<void> cancel({required String kind, required String id}) async {
+    cancels.add((kind: kind, id: id));
+  }
+
+  @override
+  Future<void> cancelAll() async => cancelAlls++;
 }

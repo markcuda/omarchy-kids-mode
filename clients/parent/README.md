@@ -27,7 +27,12 @@ the fingerprint it showed, compare, pair), the request list, a request screen wi
 and the reply chips, an add-on that changed since it was approved (with what changed — `was`/`now` —
 and Approve or Deny), and the kids themselves, where a tap gives **more time today** (15/30/60
 minutes) or ends the session. Those two act with the device's own key and the `act` scope the parent
-gave it: no password is typed, the box refuses without the scope, and the screen says so. The review decision signs the fingerprint the screen
+gave it: no password is typed, the box refuses without the scope, and the screen says so. A request
+or an add-on change that arrives while the app is open is raised as a local notification (tap it to
+open the row); nothing arrives while the app is closed, and the screen says exactly that — there is
+no push, no server and no wake in v1. The notification rules (and the no-buttons choice: a tap opens
+the screen that decides) are in the amendment, R-NOTIFY-14. Windows has no notification adapter in
+this build; the lists and decisions work there regardless. The review decision signs the fingerprint the screen
 showed, so the box refuses it if the surface moved since (R-NOTIFY-12). The list follows the box's own feed (`/v1/events`), so a new request
 appears without a refresh; when the feed drops it says so, keeps the last list on screen, and
 retries with a growing delay. The overflow menu offers **Forget this computer**, which clears the

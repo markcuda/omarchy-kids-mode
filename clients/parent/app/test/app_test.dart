@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omarchy_kids_app/app_root.dart';
 import 'package:omarchy_kids_app/keystore.dart';
+import 'package:omarchy_kids_app/notifier.dart';
 import 'package:omarchy_kids_app/main.dart';
 import 'package:omarchy_kids_parent/relay_transport.dart';
 import 'package:omarchy_kids_parent/session.dart';
@@ -156,8 +157,10 @@ BoxState stateWith(List<Map<String, Object?>> requests) => BoxState.fromJson({
       'requests': requests,
     });
 
-Future<void> pumpHome(WidgetTester tester, FakeRelay relay) async {
-  await tester.pumpWidget(MaterialApp(home: HomeScreen(session: await sessionWith(relay))));
+Future<void> pumpHome(WidgetTester tester, FakeRelay relay, {Notifier? notifier}) async {
+  await tester.pumpWidget(
+    MaterialApp(home: HomeScreen(session: await sessionWith(relay), notifier: notifier)),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -272,6 +275,41 @@ void main() {
     expect(await keystore.loadPaired(), isNull);
     expect(connect.relays.first.opened.first.hasListener, isFalse,
         reason: 'forgetting drops the old feed, not just the pin');
+  });
+
+  testWidgets('a request that arrives while the app is open raises a notification, and a tap opens it', (tester) async {
+    final relay = FakeRelay(stateWith([]));
+    final notifier = FakeNotifier();
+    await pumpHome(tester, relay, notifier: notifier);
+    expect(notifier.shows, isEmpty, reason: 'the first document is silent');
+    expect(notifier.cancelAlls, 1);
+    relay.emit(stateWith([
+      {'id': 'req-9', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft', 'asked_at': 1},
+    ]));
+    await tester.pump();
+    await tester.pump();
+    expect(notifier.shows.single.id, 'req-9');
+    expect(notifier.shows.single.title, 'kid-ada asked to use minecraft');
+    // The parent taps it: the row opens.
+    notifier.onTap!(const NoticeTap('request', 'req-9'));
+    await tester.pumpAndSettle();
+    expect(find.text('Approve'), findsOneWidget);
+  });
+
+  testWidgets('a tap for a row the document does not carry yet waits for it', (tester) async {
+    final relay = FakeRelay(stateWith([]));
+    final notifier = FakeNotifier();
+    await pumpHome(tester, relay, notifier: notifier);
+    // The tap launched the app: the row is not in the first document yet.
+    notifier.onTap!(const NoticeTap('request', 'req-later'));
+    await tester.pumpAndSettle();
+    expect(find.text('Approve'), findsNothing, reason: 'nothing to open yet');
+    relay.emit(stateWith([
+      {'id': 'req-later', 'kid': 'kid-ada', 'kind': 'time', 'what': '15', 'minutes': 15, 'asked_at': 2},
+    ]));
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('Approve'), findsOneWidget, reason: 'opened once the row arrived');
   });
 
   testWidgets('a live kid is listed with their minutes and opens the two actions', (tester) async {

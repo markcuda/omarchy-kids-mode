@@ -1,0 +1,76 @@
+// The app's notification rules (R-NOTIFY-14) over a fake: the first document is
+// silent, a new row raises once, a row that leaves is cleared, a replay raises
+// nothing. The platform adapter is not exercised here.
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:omarchy_kids_app/notifier.dart';
+import 'package:omarchy_kids_parent/state_model.dart';
+
+import 'fakes.dart';
+
+BoxState state({List<Map<String, Object?>> requests = const [], List<Map<String, Object?>> reviews = const []}) =>
+    BoxState.fromJson({
+      'kids': [
+        {'kid': 'kid-ada', 'live': true},
+      ],
+      'requests': requests,
+      'reviews': reviews,
+    });
+
+void main() {
+  final rid = 'kid-ada.' + 'a' * 16;
+  final request = {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft'};
+
+  test('the first document is silent and clears anything left over', () async {
+    final notifier = FakeNotifier();
+    final feed = NoticeFeed(notifier);
+    expect(feed.silent, isTrue);
+    await feed.update(state(requests: [request]));
+    expect(notifier.shows, isEmpty, reason: 'the first document seeds, it does not raise');
+    expect(notifier.cancelAlls, 1, reason: 'a previous run may have left notifications');
+    expect(feed.silent, isFalse);
+  });
+
+  test('a request that arrives later raises once, in the list words', () async {
+    final notifier = FakeNotifier();
+    final feed = NoticeFeed(notifier);
+    await feed.update(state());
+    await feed.update(state(requests: [request]));
+    expect(notifier.shows.single.kind, 'request');
+    expect(notifier.shows.single.id, 'req-1');
+    expect(notifier.shows.single.title, 'kid-ada asked to use minecraft');
+    expect(notifier.shows.single.body, 'Open to approve or decline');
+    // A reconnect replays the same document: nothing more is raised.
+    await feed.update(state(requests: [request]));
+    expect(notifier.shows.length, 1);
+  });
+
+  test('a review raises with its own words, and a decision elsewhere clears it', () async {
+    final notifier = FakeNotifier();
+    final feed = NoticeFeed(notifier);
+    await feed.update(state());
+    await feed.update(state(reviews: [
+      {'id': rid, 'kid': 'kid-ada', 'app': 'firefox', 'now': 'b' * 64},
+    ]));
+    expect(notifier.shows.single.kind, 'review');
+    expect(notifier.shows.single.title, 'firefox changed since you approved it');
+    expect(notifier.shows.single.body, 'Open to approve, deny or check');
+    // The row leaves the document (decided on the box): clear it.
+    await feed.update(state());
+    expect(notifier.cancels.single.kind, 'review');
+    expect(notifier.cancels.single.id, rid);
+    // And a later document without it raises nothing again.
+    await feed.update(state());
+    expect(notifier.shows.length, 1);
+  });
+
+  test('the payload is the kind and the id, and junk parses to null', () {
+    expect(parseNoticePayload(noticePayload('request', 'req-1'))!.id, 'req-1');
+    expect(parseNoticePayload(noticePayload('review', rid))!.kind, 'review');
+    expect(parseNoticePayload(null), isNull);
+    expect(parseNoticePayload('not json'), isNull);
+    expect(parseNoticePayload('{"kind":"other","id":"x"}'), isNull);
+    expect(parseNoticePayload('{"kind":"request"}'), isNull);
+    expect(parseNoticePayload('{"kind":"request","id":""}'), isNull);
+  });
+}

@@ -10,6 +10,7 @@ import 'package:omarchy_kids_parent/relay_transport.dart';
 import 'package:omarchy_kids_parent/session.dart';
 
 import 'main.dart';
+import 'notifier.dart';
 import 'pairing_screen.dart';
 
 /// Builds the client for one box address, pinned to the fingerprint the parent
@@ -31,6 +32,12 @@ class AppRoot extends StatefulWidget {
   final String name;
   final String platform;
 
+  /// The app's notifications (R-NOTIFY-14), or null where a test does not care.
+  final Notifier? notifier;
+
+  /// The honest note about what notifications do here (R-NOTIFY-14.2), or null.
+  final String? noticeNote;
+
   /// An honest note about where the pairing is kept, for a build that fell back
   /// to memory because the system keystore was not usable.
   final String? storageNote;
@@ -41,6 +48,8 @@ class AppRoot extends StatefulWidget {
     required this.connect,
     required this.name,
     required this.platform,
+    this.notifier,
+    this.noticeNote,
     this.storageNote,
   });
 
@@ -133,13 +142,21 @@ class _AppRootState extends State<AppRoot> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     final session = _session;
-    if (session != null) return HomeScreen(session: session, onForget: _forget);
+    if (session != null) {
+      return HomeScreen(
+        session: session,
+        notifier: widget.notifier,
+        noticeNote: widget.noticeNote,
+        onForget: _forget,
+      );
+    }
     return PairingScreen(
       keystore: widget.keystore,
       connect: widget.connect,
       name: widget.name,
       platform: widget.platform,
       storageNote: widget.storageNote,
+      noticeNote: widget.noticeNote,
       bootError: _error,
       // Always offered here: this is the only screen a parent reaches when the
       // app cannot read a stored key, whether that failed at boot (a bad paired

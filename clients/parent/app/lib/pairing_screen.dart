@@ -16,6 +16,9 @@ class PairingScreen extends StatefulWidget {
   final String name;
   final String platform;
   final String? storageNote;
+
+  /// What notifications do here (R-NOTIFY-14.2), said where the pairing happens.
+  final String? noticeNote;
   final String? bootError;
 
   /// Clear a stored key the app cannot read and pair afresh. Always offered here:
@@ -32,6 +35,7 @@ class PairingScreen extends StatefulWidget {
     required this.platform,
     required this.onPaired,
     this.storageNote,
+    this.noticeNote,
     this.bootError,
     this.onResetKeys,
   });
@@ -184,6 +188,10 @@ class _PairingScreenState extends State<PairingScreen> {
         if (widget.storageNote != null) ...[
           const SizedBox(height: 16),
           Text(widget.storageNote!, style: Theme.of(context).textTheme.bodySmall),
+        ],
+        if (widget.noticeNote != null) ...[
+          const SizedBox(height: 8),
+          Text(widget.noticeNote!, style: Theme.of(context).textTheme.bodySmall),
         ],
       ];
 

@@ -3,7 +3,7 @@
 // the parent's reply chips) that sign and post through the Session. The logic,
 // the crypto and the transport live in the package beside it and are tested there.
 
-import 'dart:async' show StreamSubscription, Timer;
+import 'dart:async' show StreamSubscription, Timer, unawaited;
 import 'dart:io' show Platform;
 
 import 'package:cryptography/cryptography.dart';
@@ -15,12 +15,17 @@ import 'package:omarchy_kids_parent/transport.dart';
 
 import 'app_root.dart';
 import 'keystore.dart';
+import 'local_notifier.dart';
+import 'notifier.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // The system keystore where it works; a memory-only fallback, said out loud on
   // the pairing screen, where it does not (I-6).
   final opened = await openKeystore();
+  // A notification only where the platform can raise one; the label on the
+  // requests screen says which (R-NOTIFY-14.2).
+  final notifier = LocalNotifier.supported ? LocalNotifier() : const NoopNotifier();
   runApp(
     MaterialApp(
       title: 'Kids Mode',
@@ -43,6 +48,11 @@ Future<void> main() async {
         ),
         name: const String.fromEnvironment('KIDS_DEVICE_NAME', defaultValue: 'parent-phone'),
         platform: Platform.operatingSystem,
+        notifier: notifier,
+        noticeNote: LocalNotifier.supported
+            ? 'Notifies while the app is open. Nothing arrives while it is closed; open it to see '
+                'what is waiting.'
+            : 'This platform has no notifications in this build. Open the app to see what is waiting.', 
         storageNote: opened.note,
       ),
     ),
@@ -53,11 +63,18 @@ Future<void> main() async {
 class HomeScreen extends StatefulWidget {
   final Session session;
 
+  /// Raises a notification for a request or review that arrives while the app is
+  /// open (R-NOTIFY-14); null where a test does not care.
+  final Notifier? notifier;
+
+  /// The honest note about what notifications do here (R-NOTIFY-14.2).
+  final String? noticeNote;
+
   /// Forget the box on this device and return to pairing (the app offers it in
   /// the overflow menu). Null in a test that has no pairing to forget.
   final Future<void> Function()? onForget;
 
-  const HomeScreen({super.key, required this.session, this.onForget});
+  const HomeScreen({super.key, required this.session, this.notifier, this.noticeNote, this.onForget});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -70,6 +87,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _retry;
   int _backoff = 1;
 
+  /// Raises a notification for a request or review that arrives while the app is
+  /// open (R-NOTIFY-14). Null when no notifier was given.
+  NoticeFeed? _notice;
+
+  /// A tap that arrived for a row the current document does not carry yet (the
+  /// notification launched the app); opened once the row appears.
+  NoticeTap? _pendingTap;
+
   /// Bumped by every feed event: a signed read that lands after one is stale and
   /// is dropped, so a slow read cannot overwrite a newer list.
   int _seq = 0;
@@ -77,6 +102,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    final notifier = widget.notifier;
+    if (notifier != null) {
+      _notice = NoticeFeed(notifier);
+      unawaited(notifier.initialize(onTap: _onNoticeTap));
+    }
     // The feed carries the whole state on connect, so the read is only there to
     // paint something sooner; it is skipped once a list is on screen.
     if (_state == null) _read();
@@ -102,6 +132,13 @@ class _HomeScreenState extends State<HomeScreen> {
         _state = state;
         _error = null;
       });
+      // The read can be the first document of the run (it paints before the
+      // feed's first event), so it seeds the notification sets too; otherwise a
+      // request that was in the read but arrived after opening would be raised
+      // as if it were new.
+      final notice = _notice;
+      if (notice != null) unawaited(notice.update(state));
+      _openPending();
     } catch (error) {
       if (!mounted || _seq != before) return;
       if (_state != null || _watch != null) return;
@@ -123,6 +160,9 @@ class _HomeScreenState extends State<HomeScreen> {
           _error = null;
           _backoff = 1;
         });
+        final notice = _notice;
+        if (notice != null) unawaited(notice.update(state));
+        _openPending();
       },
       onError: (Object error) {
         if (!mounted) return;
@@ -217,14 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
           title: Text(describeReview(review)),
           subtitle: Text(review.kid),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () async {
-            final answered = await Navigator.of(context).push<bool>(
-              MaterialPageRoute(
-                builder: (_) => ReviewScreen(session: widget.session, review: review),
-              ),
-            );
-            if (answered == true) _reload();
-          },
+          onTap: () => _pushReview(review),
         ));
       }
       children.add(const Divider(height: 1));
@@ -254,6 +287,12 @@ class _HomeScreenState extends State<HomeScreen> {
     if (state.reviews.isNotEmpty || kids.isNotEmpty) {
       children.add(const _SectionHeader('Requests'));
     }
+    if (widget.noticeNote != null) {
+      children.add(Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(widget.noticeNote!, style: Theme.of(context).textTheme.bodySmall),
+      ));
+    }
     if (state.requests.isEmpty) {
       children.add(
         const Padding(
@@ -267,18 +306,59 @@ class _HomeScreenState extends State<HomeScreen> {
           title: Text(describeRequest(request, _kidName(state, request.kid))),
           subtitle: Text(request.kind),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () async {
-            final answered = await Navigator.of(context).push<bool>(
-              MaterialPageRoute(
-                builder: (_) => RequestScreen(session: widget.session, request: request),
-              ),
-            );
-            if (answered == true) _reload();
-          },
+          onTap: () => _pushRequest(request),
         ));
       }
     }
     return ListView(children: children);
+  }
+
+  /// A tapped notification: open the row it names if the current document has
+  /// it, else remember it for the next document (a cold-start tap).
+  void _onNoticeTap(NoticeTap tap) {
+    if (!mounted) return;
+    if (!_openNotice(tap)) _pendingTap = tap;
+  }
+
+  void _openPending() {
+    final tap = _pendingTap;
+    if (tap == null) return;
+    if (_openNotice(tap)) _pendingTap = null;
+  }
+
+  bool _openNotice(NoticeTap tap) {
+    final state = _state;
+    if (state == null) return false;
+    if (tap.kind == 'request') {
+      for (final request in state.requests) {
+        if (request.id == tap.id) {
+          _pushRequest(request);
+          return true;
+        }
+      }
+      return false;
+    }
+    for (final review in state.reviews) {
+      if (review.id == tap.id) {
+        _pushReview(review);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _pushRequest(OpenRequest request) async {
+    final answered = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => RequestScreen(session: widget.session, request: request)),
+    );
+    if (answered == true) _reload();
+  }
+
+  Future<void> _pushReview(OpenReview review) async {
+    final answered = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ReviewScreen(session: widget.session, review: review)),
+    );
+    if (answered == true) _reload();
   }
 
   /// What a kid row says under the account: minutes left while running, or why
