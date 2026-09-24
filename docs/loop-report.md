@@ -1817,3 +1817,22 @@ real-file conflicts also exist and want a look: `docs/levels.md` between the old
 `docs/levels-live-status` and `fix/levels-live-status`, and `share/launcher/shell.qml` between the
 older `fix/launcher-insets-simplify` and `fix/launcher-time-left-refresh`. Everything else
 auto-merges (tested branch-by-branch with `git merge-tree`). No code changed this iteration.
+
+### 2026-09-21, loop iteration: docs/apps.md described runtime files that no longer exist
+
+Dogfooded the Web path on the VM: `omarchy-kids-web launch` opened Chromium and navigating to
+`example.com` showed Chromium's "This page is blocked", so the garden policy (URLBlocklist `*` plus
+the band's starter allowlist) is enforced live; the non-live safety report showed only the known
+drift. An I-6 sweep then found a substantive stale section in `docs/apps.md`: it described a
+runtime `launcher-<uid>.json` (display-only, ridden against the root map) and a
+`$RUN/allowlist.json` that `bin/omarchy-kids-session-start` "writes unconditionally" at Levels 2/3.
+The manifest refactor (`38f878e`) removed both -- `session-start-test.sh` and `levels-test.sh`
+assert neither is created -- because the manifest carries the tiles' fixed argv and the effective
+allowlist, and the launcher executes the manifest. Fixed on `fix/apps-docs-manifest` (`0088383`,
+stacked on `fix/show-missing-regression` so the tile-list pointer lands on the already-fixed
+`docs/levels.md`/`docs/conf.md`): both passages rewritten, the "session-start calls allowlist for
+the runtime JSON" sentence corrected, the queue-caption claim corrected (no launcher surface reads
+the apps queue; a missing tile reads only "not installed yet"), and `lib/launcher-map.sh`'s stale
+"the kid's runtime JSON is display-only" header comment fixed. fable review MERGE after four rounds
+trimming overclaims (chiefly the queue/`apps.show_missing` wording, resolved by stacking on the
+enforcement branch). Docs plus one comment.
