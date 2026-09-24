@@ -6,7 +6,9 @@ featured, EXCITING implementation and go with that." The design is
 this repo). This document is the exact SPEC.md text to apply, plus the AGENTS.md and PRIVACY.md
 edits that follow from it.
 
-Amends SPEC.md: I-2; adds the **R-NOTIFY** section (R-NOTIFY-1..12); R-BAR-3 (the status document
+Amends SPEC.md: I-2; adds the **R-NOTIFY** section (R-NOTIFY-1..12, and the later
+sections continue the numbering with R-NOTIFY-11.x, 12.x, 13, 14 and 15, which SPEC.md also
+carries); R-BAR-3 (the status document
 gains the open-request count); R-ASK-3 (the queue is now served); Appendix D (`by` gains `device`,
 plus `device` and `reply`); Appendix G (relay rows); **Appendix H** (new — the wire and file
 formats). Code follows the design's tickets N-1..N-13, in order; N-3/N-4/N-5/N-6 touch the trust
@@ -42,8 +44,10 @@ After:
   use and notifications are enabled, and exits on its own when idle. No listener exists while
   notifications are off. The parent may opt in (N-10) to extend the fence to the CGNAT range their
   own VPN uses; off by default, one range only, and the relay's authentication remains the lock.
-- R-NOTIFY-2 The relay never decides. Every decision is authenticated and applied by root
-  (`omarchy-kids-authd` / `omarchy-kids-ask`), through the same `apply_record` path the panel uses.
+- R-NOTIFY-2 The relay never decides. A request decision is authenticated and applied by root
+  (`omarchy-kids-authd` / `omarchy-kids-ask`) through the same `apply_record` path the panel uses; an
+  add-on review decision and an action (grant/end) are authenticated the same way and then run the
+  command the panel's own row runs (`omarchy-kids-review`, `omarchy-kids-time`, `omarchy-kids-exit`).
   A compromised relay can, at worst, stop delivering notifications.
 - R-NOTIFY-3 The device registry is root-owned under `/etc/omarchy-kids/devices/`. Each record holds
   a device's public keys, its scopes and its pairing provenance. Revocation is a root write and
@@ -55,8 +59,9 @@ After:
 - R-NOTIFY-5 Pairing is gated by the parent password through the existing verifier. The pairing code
   is single-use and expires; no device key is established without it.
 - R-NOTIFY-6 A kid learns the outcome through a root-written file under their own directory
-  (`/var/lib/omarchy-kids/<kid>/`). The kid session holds no credential to the relay and gains no
-  new way to act.
+  (`/var/lib/omarchy-kids/<kid>/`; **not built on this branch** — the ask overlay shows the result
+  instead, Appendix H's file section says so). The kid session holds no credential to the relay and
+  gains no new way to act.
 - R-NOTIFY-7 The queue is not world-readable: `/var/lib/omarchy-kids/queue/` is `0750
   root:omarchy-parents` and each record is `0640`. `omarchy-kids-ask list` reads for root or a
   member of `omarchy-parents`; `omarchy-kids --requests` works for the parent.
@@ -83,7 +88,7 @@ Before:
 After:
 
 > R-BAR-3 Reads `/run/omarchy-kids/status.json`, root-written, group `omarchy-parents` readable.
-> The document carries each live kid's minutes-left and paused state (R-NOTIFY-7) and the open-request
+> The document carries each live kid's minutes-left and paused state and the open-request
 > count (`open_requests`); the bar widget's badge reads the count from the document rather than running
 > any command.
 > It also carries the pairing window's expiry (`pairing_open_until`), never the token, so the relay
@@ -118,8 +123,10 @@ POST /v1/kids/<account>/end         {signed:{...}}               scope act
 GET  /v1/avatars/<id>.svg
 ```
 
-Authenticated requests carry `X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<sig>`; state
-changes carry an inner `signed` object that root re-verifies (R-NOTIFY-4).
+Authenticated requests carry `X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<sig>`; a decision,
+review decision or action POST carries `{record, signature}` (a state *read* has no such body, and
+the SSE stream is authenticated once at connect), and root re-verifies the signature before
+applying it (R-NOTIFY-4).
 
 `proof` on `/v1/pair` is `HMAC-SHA256(token, sign_pub|box_pub|name)`: the pairing token (the QR's
 credential) never travels, only a proof that the device holds it. The `grant`/`end` routes above are
@@ -431,7 +438,7 @@ R-NOTIFY-11's quoted text gains, after "the away drop-in that widens the relay's
    - `lock:relay-tls`, through `relay_tls_ok`. Proves: `/etc/omarchy-kids/relay` is absent, or is a root `omarchy-parents` `0750` directory in which `cert.pem`, if present, is root `omarchy-parents` `0644`, `key.pem`, if present, is root `omarchy-parents` `0640`, neither is a symlink, and nothing else is there. A warn is the directory being unreadable to this run. Cannot: that `key.pem` is the key `cert.pem` was minted with, or the one the relay is serving; that no paired device holds a pin for an earlier pair (`enable` after `disable` mints a new pair, and R-NOTIFY-3's re-pairing is the only cure); that the relay is running or listening; that the key was not read while its mode was wrong, or by anyone in `omarchy-parents`, who may read it by design.
    - `lock:courier-conf`, through `courier_conf_ok`. Proves: `/etc/omarchy-kids/courier.conf` is absent, or is a root-owned `0600` regular file, not a symlink. Cannot: that the file parses, that `transport=`, `url=`, `topic=` or `reply_topic=` name anything real, that the `token=` is valid or has not been revoked on the server, that the parent's server is reachable, that the courier's timer is enabled or has ever run, or that the token was not read while the mode was wrong.
 
-5. **What these locks deliberately do not do.** Neither opens either file: no lock reads the key, the certificate, or a line of `courier.conf`, so no lock can, and none claims to, tell a valid token from a stale one or a matching pair from a mismatched one. Neither redacts anything: assert's and check's output name the lock id and the path, never a byte of content, and this section makes no claim that the token or key is absent from any other log or output (R-NOTIFY-13 and `omarchy-kids-notify`'s stdin-only token rule are where that is stated). Neither looks at the ntfy or Gotify side: no request is made, no topic is checked, no reply is read (I-2 as amended: assert and check open no network connection). Neither creates, removes, rotates or rewrites a secret: `omarchy-kids-notify enable`, `disable`, `mailbox` and `mailbox off` are the only writers and removers, and a lock that minted or deleted a credential would be deciding for the parent. A mode restored by `fix` says the file is closed from now; it says nothing about who read it before, and the row does not pretend otherwise.
+5. **What these locks deliberately do not do.** Neither opens either file: no lock reads the key, the certificate, or a line of `courier.conf`, so no lock can, and none claims to, tell a valid token from a stale one or a matching pair from a mismatched one. Neither redacts anything: assert's and check's output name the lock id and the path, never a byte of content, and this section makes no claim that the token or key is absent from any other log or output (`omarchy-kids-notify`'s stdin-only token rule and the pairing record's root-only mode are where that is stated). Neither looks at the ntfy or Gotify side: no request is made, no topic is checked, no reply is read (I-2 as amended: assert and check open no network connection). Neither creates, removes, rotates or rewrites a secret: `omarchy-kids-notify enable`, `disable`, `mailbox` and `mailbox off` are the only writers and removers, and a lock that minted or deleted a credential would be deciding for the parent. A mode restored by `fix` says the file is closed from now; it says nothing about who read it before, and the row does not pretend otherwise.
 
 ### R-NOTIFY-11.5 Docs
 
@@ -446,7 +453,7 @@ R-NOTIFY-11's quoted text gains, after "the away drop-in that widens the relay's
 
 ## 18. R-NOTIFY-7, built (exact)
 
-R-NOTIFY-7's quoted text stands as written and gains one sentence at its end: "The queue is under the `queue` assert lock, which owns the directory's and each record's mode and ownership and nothing else (R-NOTIFY-7.4); `omarchy-kids-check` has a row for it stating what it proves and what it cannot (R-TRUST-2)."
+R-NOTIFY-7's quoted text stands as written and gains one sentence at its end: "The queue is under the `queue` assert lock, which owns the directory's and each record's mode and ownership and nothing else (item 4 of this section); `omarchy-kids-check` has a row for it stating what it proves and what it cannot (R-TRUST-2)."
 
 1. **Why this is a change and not a description.** Today `omarchy-kids-ask collect`, `apply-grant` and `list` each create the queue `install -d -m 0755`, and `lib/ask.py`'s `write_atomic` writes every record `0644` under a directory it `makedirs` at `0755`. Every local account can list and read every kid's requests: what they asked for, when, and how it was decided. The kid's own draft in the outbox is `0644` inside a `0700` directory, closed by the directory alone. Nothing a kid runs needs the queue (item 3), so closing it costs no kid path anything.
 
