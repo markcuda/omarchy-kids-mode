@@ -13,8 +13,8 @@ forwards a signed decision to authd, which root verifies and applies. A missing
 certificate, device key or ledger fails closed. See
 docs/phase1/SPEC-AMENDMENT-notifications.md.
 
-HTTPS/1.1 only, stdlib (asyncio + ssl). SSE, the pair route and the decision
-route are served; the ACT actions (grant/end) are the next slice.
+HTTPS/1.1 only, stdlib (asyncio + ssl). SSE, the pair route, the request and
+review decisions, and the ACT actions (grant/end) are all served.
 """
 
 from __future__ import annotations

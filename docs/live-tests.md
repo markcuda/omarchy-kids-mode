@@ -154,8 +154,8 @@ installed, so it boots the VM itself only if it finds it down.
 
 Not covered yet: §8 items 4 (browser walled garden / DoH), 7 (`omarchy update` + a kernel update),
 and 9 (changing the parent's login password) — each needs its own scenario and its own care about
-what state it leaves the VM in; left for a follow-on issue rather than guessed at here. Scenarios
-Scenarios 70 through 73 are **new drafts no gate has run yet** (AGENTS.md rule 11): review them on
+what state it leaves the VM in; left for a follow-on issue rather than guessed at here. Scenarios 70
+through 73 are **new drafts no gate has run yet** (AGENTS.md rule 11): review them on
 the first VM run before trusting their PASS. 70, 72 and 73 share `lib.sh`'s `notify_pair_client`
 (enable, start the relay, open a pairing window, pair the client, check the registry) so their setup
 cannot drift.
