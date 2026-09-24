@@ -50,8 +50,11 @@ Single-context; `SPEC.md`, `AGENTS.md` and `docs/*.md` are the domain model toda
 
 1. **The parent's account is never restricted** (spec I-1). If your change touches the parent's
    session, home, browser, or DNS, stop.
-2. **Nothing about a child leaves the machine** (I-2). No network calls from anything but the
-   package manager and the DoH template inside the kids browser policy.
+2. **Nothing about a child leaves the machine, except to a device the parent paired or a server the
+   parent named, and only when notifications are on** (I-2 as amended, 2026-09-22). The only
+   processes that may open a network connection are the package manager, the DoH template inside the
+   kids browser policy, `omarchy-kids-relayd` on the LAN, and `omarchy-kids-relay-courier` to the
+   parent's own server. (R-NOTIFY; `docs/phase1/SPEC-AMENDMENT-notifications.md`.)
 3. **Locks are root-owned and live outside every home** (I-3). Never make a plugin, a dotfile, or
    anything user-writable responsible for enforcement.
 4. **Fail closed at kid login, fail safe in early boot** (I-4, I-9).
