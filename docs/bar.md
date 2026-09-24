@@ -136,6 +136,17 @@ consent, both ways).
 - A badge with the count of open requests, read from `status.json`'s `open_requests` (R-BAR-3 as
   amended): the ledger publishes it, so the widget runs no subprocess and needs no 30-second
   polling (it follows the file). The requests row opens the panel, which lists them.
+- A badge with the count of open requests, refreshed every 30s by running `omarchy-kids-ask list`
+  in a `Process` and counting its output lines (that command prints a plain aligned table or the
+  literal line `omarchy-kids-ask: no open requests` -- there is no `--json`/`--count` mode, so this
+  counts lines rather than adding a new output mode to a command another issue owns).
+  **As written it cannot populate:** `omarchy-kids-ask list` requires root (`docs/ask.md`) and this
+  widget runs in the parent's unprivileged session, so the `Process` exits 1 with empty stdout and
+  the count stays 0; the `Open requests` row below runs `omarchy-kids --requests`, which fails the
+  same way. Reconciling that is an open decision, not a bug this page can settle: the live failure
+  is recorded in `docs/loop-bar-requests-finding`, and `docs/phase1/DECISIONS-NEEDED.md` carries the
+  choice between publishing the count in root-written `status.json`, reading the queue the way the
+  panel already does, or tightening the queue's permissions.
 - Click or Enter opens a menu: two-line "Give 15 more" and "End session" rows for each live kid,
   with the affected kid's status and minutes on the detail line (R-BAR-1's
   "Ada · paused · 32 min"), then "Open requests" and "Open Kids Mode".
@@ -289,8 +300,16 @@ script), so there is no bash unit test for it here -- item 4 above is the VM che
 `KidsModule.qml` without QML errors. It rendered nothing until the owner was a member of
 `omarchy-parents` (status.json is 0640 for that group): the new `parent-group` lock in
 `omarchy-kids-assert` adds the parent, and the membership takes effect at the next login. After
-an SDDM restart the module showed its kid indicator at the right end of the bar. The popup
-menu, grant and end actions are not yet exercised live.
+an SDDM restart the module showed its kid indicator at the right end of the bar.
+
+The two actions' underlying commands have since been verified live (2026-09-22), though not through
+the popup: `omarchy-kids-exit --finish --kid kid-ada` -- what `end` runs under sudo -- found the
+kid's Hyprland, exited it through `runuser`, and SDDM's greeter came back on the Kids theme with no
+"Process crashed" black screen (the entry is in `docs/loop-report.md`, branch
+`docs/loop-portal-after-exit`); and a time grant's effect is covered by the time-gate live pass
+(2026-09-21). Still not exercised live: the popup menu itself (opening it, arrow/Enter navigation)
+and the terminal the `grant`/`end` wrappers open for the parent's password -- both need the owner's
+own shell with the plugin enabled (I-1).
 
 ## Source header (moved from `bin/omarchy-kids-bar`, issue #49)
 
