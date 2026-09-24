@@ -39,17 +39,6 @@ record="{\"kid\": \"$LIVE_KID1_ACCOUNT\", \"kind\": \"time\", \"what\": \"15\", 
 vmroot "install -d -m 0750 /var/lib/omarchy-kids/queue; chown root:omarchy-parents /var/lib/omarchy-kids/queue; printf '%s\\n' '$record' > /var/lib/omarchy-kids/queue/$REQ_ID.json; chmod 0640 /var/lib/omarchy-kids/queue/$REQ_ID.json; chown root:omarchy-parents /var/lib/omarchy-kids/queue/$REQ_ID.json" &&
   ok "queued request $REQ_ID" || fail "could not queue the request"
 
-# R-NOTIFY-7: the queue is 0750 root:omarchy-parents and the record 0640. The VM is where the
-# root branch of write_atomic's chown is proven (a user namespace cannot map the group).
-mode_dir="$(vmroot "stat -c '%a %U %G' /var/lib/omarchy-kids/queue" | tr -s '[:space:]' ' ' | sed 's/ $//')"
-mode_rec="$(vmroot "stat -c '%a %U %G' /var/lib/omarchy-kids/queue/$REQ_ID.json" | tr -s '[:space:]' ' ' | sed 's/ $//')"
-[[ "$mode_dir" == "750 root omarchy-parents" ]] &&
-  ok "the queue directory is 750 root omarchy-parents" ||
-  fail "queue directory modes are '$mode_dir'"
-[[ "$mode_rec" == "640 root omarchy-parents" ]] &&
-  ok "the record is 640 root omarchy-parents" ||
-  fail "record modes are '$mode_rec'"
-
 before="$(vmroot "omarchy-kids-time status $LIVE_KID1_ACCOUNT | head -1")"
 
 # notify_pair_client returned non-zero if anything above failed, and fail() does not exit (it just
@@ -85,6 +74,19 @@ fi
 state="$(vmroot "jq -r '.state' /var/lib/omarchy-kids/queue/$REQ_ID.json 2>/dev/null" | tr -d '[:space:]')"
 [[ "$state" == "approved" ]] && ok "the request record is approved" ||
   fail "the request record is not approved (state='$state')"
+
+# R-NOTIFY-7, after the rewrite: the decision was applied by authd as root through
+# omarchy-kids-ask, whose write_atomic rewrote this record. Its mode and group now are the
+# root branch's, not the scenario's -- the VM is where that chown can be proven (a user
+# namespace cannot map omarchy-parents).
+mode_dir="$(vmroot "stat -c '%a %U %G' /var/lib/omarchy-kids/queue" | tr -s '[:space:]' ' ' | sed 's/ $//')"
+mode_rec="$(vmroot "stat -c '%a %U %G' /var/lib/omarchy-kids/queue/$REQ_ID.json" | tr -s '[:space:]' ' ' | sed 's/ $//')"
+[[ "$mode_dir" == "750 root omarchy-parents" ]] &&
+  ok "the queue directory is 750 root omarchy-parents" ||
+  fail "queue directory modes are '$mode_dir'"
+[[ "$mode_rec" == "640 root omarchy-parents" ]] &&
+  ok "the record rewrite left it 640 root omarchy-parents" ||
+  fail "record modes after the decision are '$mode_rec'"
 
 shot 70-notify-approve || fail "screenshot failed"
 
