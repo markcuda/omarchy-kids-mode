@@ -2276,3 +2276,46 @@ exercised). The fable review needed several rounds, each closing a real overclai
 "the unbind worked" -- and a wrong #200 attribution), ending MERGE. Only `docs/levels.md` changed;
 `levels-test.sh` was unaffected. The panel-install mismatch is noted so future dogfood installs the
 whole component set.
+### 2026-09-22, loop iteration: the two commands that resolved their interpreter through $PATH
+
+Dogfooded the Ask flow end to end this time, since it is core and had not been run in a while: as
+the kid, `omarchy-kids-ask submit time 15` wrote the request into their outbox; as root,
+`collect --apply` moved it into the real queue ("1 request(s) collected, 0 dropped") and `list`
+showed it with its id; `decline <id> --apply` closed it, the queue went empty and the budget never
+moved. One thing that invocation taught: the kid-facing `omarchy-kids-ask time 15` (the shape the
+Time's Up card and the plugins shelf run) is not a submit at all -- it opens the ask *modal*, which
+is why it failed from an SSH shell with a Qt platform-plugin error until `WAYLAND_DISPLAY` was set.
+The CLI submit is `submit <kind> <what>`; both shapes are in the command's `--help`, so nothing was
+changed for it.
+
+Then the backlog's I-6 pass, on the command contract rather than the kid surfaces: every
+`bin/omarchy-kids-*` command's `--help` was run (all 28 exit 0 and name themselves; `omarchy-kids-
+conf --help` only needs a Python 3.11+ on PATH, which the suite pins), and all 28 carry the
+`omarchy:summary` header the conventions require. Nothing pins either fact, though, which is worth
+a test someday.
+
+What the contract sweep did find was a trust-boundary inconsistency in the shipped artifact. The
+two Python commands, `omarchy-kids-authd` and `omarchy-kids-wifid`, ship
+`#!/usr/bin/env python3`, so a direct exec resolves the interpreter through `$PATH` -- the exact
+thing the PKGBUILD's own comment, three lines above, says this package must not do for `KIDS_PY`
+("baked in here rather than resolving python3 through $PATH"). Both are socket-activated root
+services started by systemd, whose PATH is fixed and root-controlled, so the practical exposure was
+small; the artifact was still inconsistent with rule 9, and nothing pinned it either.
+
+Fixed on `fix/python-shebang-absolute`: the PKGBUILD rewrites exactly those two shebangs to
+`/usr/bin/python3`, each with the same guard-grep style as the `KIDS_PY` substitution, and the two
+files carry the one-line "why python" header note the conventions ask for instead of an exception.
+`trust-boundary-test.sh` gained a section that keeps the list honest in both directions: every
+command's shebang must be bash or the python dev form, the PKGBUILD must name exactly the commands
+that carry the dev form, and the rewrite and its guard must be present. The review earned its keep
+again: the first version of that check parsed the PKGBUILD with a sed *range* that swept in a
+neighbouring command and compared only one direction, so a python command named elsewhere in the
+window would have passed while shipping a PATH-resolved shebang -- and its "exactly" claim was
+false. Both are closed, and the reverse direction now fails a name that is not a python command.
+
+Verified live through the real build: the arch fix and this hunk were applied together in the
+guest's scratch tree (the union cannot build on aarch64 until that branch merges), `makepkg -d -f`
+built it, and the package's `usr/bin/omarchy-kids-authd` and `-wifid` now begin
+`#!/usr/bin/python3` while a bash command is still `#!/bin/bash` and the repo copies keep the dev
+form. `docs/packaging.md`'s four `PKGBUILD:37-109` file-list citations became `37-123` (the
+function's new end).

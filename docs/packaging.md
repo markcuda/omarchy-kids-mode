@@ -14,17 +14,13 @@ makepkg -sf
 ```
 
 `-s` asks pacman to install missing declared dependencies. `-f` rebuilds an existing package with
-the same version. The current package is `0.1.0-1` and nothing is compiled, so the architecture in
-the artifact's name is the PKGBUILD's `arch=('any')`: on a stock Arch box you get
-`omarchy-kids-0.1.0-1-any.pkg.tar.zst`. The extension is the build machine's `PKGEXT`
-(`/etc/makepkg.conf`), not a property of this package -- the aarch64 dogfood guest sets
-`.pkg.tar.xz`, so its 2026-09-22 build there produced `omarchy-kids-0.1.0-1-any.pkg.tar.xz`. Use
-whatever `makepkg` prints.
+the same version. The current package is `0.1.0-1`, so the result is
+`omarchy-kids-0.1.0-1-x86_64.pkg.tar.zst`.
 
-Install that package on the test system (same name `makepkg` printed):
+Install that package on the test system:
 
 ```sh
-sudo pacman -U omarchy-kids-0.1.0-1-any.pkg.tar.zst
+sudo pacman -U omarchy-kids-0.1.0-1-x86_64.pkg.tar.zst
 ```
 
 The package's install scriptlet then creates its groups and reloads systemd when systemd is
@@ -53,35 +49,16 @@ but these items still need to happen:
   the generated result. Compare `PKGBUILD:15-35` with `.SRCINFO:1-27`.
 - **Build and inspect a clean package on Arch.** Run `makepkg -sf` from a clean clone that contains
   the whole checkout, inspect the package contents, and install it in the test VM before
-  publishing. The file list comes from `PKGBUILD:37-109`. Half of this was done on 2026-09-22: a
-  clean checkout of the branch that carries the `arch=('any')` fix was built with `makepkg -d -f`
-  on the aarch64 try-omarchy guest (no install), and the package it produced was checked -- arch
-  `any` in `.PKGINFO`, the two build-time substitutions baked in (`SCHEMA` in
-  `usr/bin/omarchy-kids-conf`, `KIDS_PY` in `usr/lib/omarchy-kids/kids.sh`), 27 commands, 38 lib
-  files, 77 data files, 13 units, both initcpio files, the 0644 pacman hook and the `.INSTALL`
-  scriptlet, the twelve avatars, and a `KidsTheme.qml` beside each of the six standalone surfaces.
-  **Still open: installing that package on the test VM** (`pacman -U`) before publishing — and
-  that half is blocked by the same gap this branch closes, on the box that matters. Attempted
-  2026-09-22 on the aarch64 dogfood VM: (1) the *union* that box runs cannot be built there at all
-  (`makepkg` refuses `arch=('x86_64')`), which is why its installed files were hand-copied from
-  topic branches; (2) `pacman -U` of a fresh build then stops with
-  `conflicting files: /usr/lib/omarchy-kids/panel-machine.sh exists in filesystem` — the box's
-  installed package predates files that were later copied in by hand, so a reinstall needs
-  `--overwrite` (which would replace those branch-verified files with the union's) or a box that
-  has never been hand-installed onto; and (3) doing that surfaced a real, correct alarm:
-  `omarchy-kids-check --live` reported `lock:hyprland-configs` broken while `/etc/omarchy-kids/
-  hyprland/L*.lua` held a newer config than the package's `/usr/share` copy. The lock is doing its
-  job — the package is its source of truth, and the recovery it names (`omarchy-kids-assert`)
-  restores `/etc` from `/usr/share` — so anyone hand-installing one of those configs has to update
-  both copies, not just the one the session reads.
+  publishing. The file list comes from `PKGBUILD:37-123`; this checkout has no recorded clean
+  Arch build here.
 - **Run the package lint checks.** `namcap`, Arch's package linter, should check `PKGBUILD` and
   the built package. Resolve or consciously accept its findings. This is maintainer validation,
-  not something the install scriptlet provides (`PKGBUILD:15-35,37-109`).
+  not something the install scriptlet provides (`PKGBUILD:15-35,37-123`).
 - **Create and upload the AUR package repository.** No AUR repository or first upload exists yet
   (`docs/install.md:19-31`).
   Because `source=()` is empty, that repository must include every path read by `package()`,
   including `bin/`, `lib/`, `initcpio/`, `systemd/`, `share/`, `desktop/`, `pacman/`, and
-  `LICENSE` (`PKGBUILD:34,37-109`).
+  `LICENSE` (`PKGBUILD:34,37-123`).
 - **Choose the public scope.** `pkgver=0.1.0` describes this as an early build, and the runtime
   gaps remain documented in `docs/install.md` and the command docs. Decide whether the first AUR
   entry is an explicitly early package or wait for those checks before publishing
@@ -96,7 +73,7 @@ Already done in this checkout:
   still needs regeneration as described above.
 - `package()` installs the commands, support libraries, mkinitcpio files, all `.service`,
   `.socket`, and `.timer` units, shared data, the SDDM theme, pacman hook, desktop entries, and
-  license (`PKGBUILD:37-109`).
+  license (`PKGBUILD:37-123`).
 - `omarchy-kids.install` exists and defines `post_install`, `post_upgrade`, and `post_remove`
   (`omarchy-kids.install:23-36`).
 - The pacman hook is present and triggers after install, upgrade, and removal of any package, then
@@ -116,8 +93,6 @@ files are created later by the commands.
 | `initcpio/omarchy-kids-open` | `/usr/lib/initcpio/omarchy-kids-open` | 755 | Boot-time cryptsetup helper |
 | `share/boot/omarchy_kids.conf` | `/usr/share/omarchy-kids/boot/omarchy_kids.conf` | 644 | Package-owned inactive template; the disk transition copies it to `/etc/mkinitcpio.conf.d/omarchy_kids.conf` |
 | `systemd/*.service`, `systemd/*.socket`, `systemd/*.timer` | `/usr/lib/systemd/system/` | 644 | Auth, Wi-Fi, boot/login, assertion, screen-time, request, and app-install units |
-| `systemd/*.user.service` | `/usr/lib/systemd/user/` (the `.user` suffix dropped) | 644 | The parent's desktop notifier (N-9); the package installs it, `omarchy-kids-bar notify-enable` enables it per session, and the package never enables it |
-| `/etc/systemd/system/omarchy-kids-relayd.service.d/away.conf` | created at runtime | 644 | Not shipped: `omarchy-kids-notify away tailnet` (N-10) writes it to widen the relay's fence to the parent's VPN range; `away off` removes it, and `omarchy-kids-remove` removes it with everything else |
 | `share/**` | `/usr/share/omarchy-kids/` | source modes | Bands, packs, desktop data, policy, avatars, menus, and QML |
 | `share/sddm-theme/**` | `/usr/share/sddm/themes/omarchy-kids/` | source modes | The SDDM greeter theme is copied there separately |
 | `pacman/omarchy-kids.hook` | `/usr/share/libalpm/hooks/omarchy-kids.hook` | 644 | Post-transaction lock check |
@@ -128,14 +103,9 @@ files are created later by the commands.
 The package does not create these runtime paths itself: `/etc/omarchy-kids/kids/<account>.conf`,
 `/etc/omarchy-kids/machine.conf`, `/etc/omarchy-kids/luks-slots`, the transition-owned
 `/etc/mkinitcpio.conf.d/omarchy_kids.conf`, Chromium policy files,
-polkit and PAM changes, or SDDM runtime configuration. The wizard, provisioning, web, assertion,
-and removal commands create or remove them as their jobs require; `/run/omarchy-kids` is created by
-the two socket units' own `DirectoryMode=0755`. `/var/lib/omarchy-kids` and `/etc/omarchy-kids`
-themselves are created by systemd's `StateDirectory=`/`ConfigurationDirectory=` on
-`omarchy-kids-authd.service` (root:root 0755, the same mode the commands use), because that
-socket-activated unit can start before the wizard's Apply has written either one; authd and the
-time ledger also carry `-` on their `ReadWritePaths` entries so a missing path cannot fail the unit
-with `226/NAMESPACE`.
+polkit and PAM changes, SDDM runtime configuration, `/run/omarchy-kids/`, or
+`/var/lib/omarchy-kids/`. The wizard, provisioning, web, assertion, and removal commands create
+or remove them as their jobs require.
 
 ### Groups
 

@@ -431,5 +431,70 @@ else
   fi
 fi
 
+# =====================================================================
+# 6. Every command's shipped interpreter is absolute. A repo copy of a
+#    python command says `#!/usr/bin/env python3` so a dev checkout
+#    runs; the PKGBUILD must rewrite exactly those to /usr/bin/python3,
+#    the same build-time seam KIDS_PY uses -- a direct exec of the
+#    packaged copy must not resolve its interpreter through $PATH.
+#    This is also the table's own check: a new python command that the
+#    PKGBUILD does not name fails here.
+# =====================================================================
+
+py_bins=()
+shebang_ok=1
+for f in bin/omarchy-kids*; do
+  case "$(head -1 "$f")" in
+    '#!/bin/bash') ;;
+    '#!/usr/bin/env python3') py_bins+=("$f") ;;
+    *)
+      bad "unexpected shebang in $f: $(head -1 "$f")"
+      shebang_ok=0
+      ;;
+  esac
+done
+((shebang_ok)) && ok "trust boundary: every bin/omarchy-kids-* shebang is bash or the python dev form"
+if ((${#py_bins[@]})); then
+  # Only the loop line itself: a wider range would sweep in other commands named
+  # nearby and quietly accept a python command the loop does not rewrite.
+  py_in_pkgbuild=()
+  while IFS= read -r name; do
+    [[ -n "$name" ]] && py_in_pkgbuild+=("$(basename "$name")")
+  done < <(grep -E '^\tfor py in .*; do$' "$DIR/PKGBUILD" | grep -oE 'omarchy-kids-[a-z-]+')
+  same=1
+  for f in "${py_bins[@]}"; do
+    base="$(basename "$f")"
+    named=0
+    for n in ${py_in_pkgbuild[@]+"${py_in_pkgbuild[@]}"}; do
+      [[ "$n" == "$base" ]] && named=1
+    done
+    ((named)) || {
+      bad "PKGBUILD does not rewrite the shebang of $base"
+      same=0
+    }
+  done
+  # ... and the other direction: nothing else may be in that list, or "exactly"
+  # below would be false.
+  for n in ${py_in_pkgbuild[@]+"${py_in_pkgbuild[@]}"}; do
+    is_py=0
+    for f in "${py_bins[@]}"; do
+      [[ "$(basename "$f")" == "$n" ]] && is_py=1
+    done
+    ((is_py)) || {
+      bad "the PKGBUILD rewrites $n's shebang, but it is not a python command"
+      same=0
+    }
+  done
+  ((same)) && ok "trust boundary: the PKGBUILD rewrites exactly the $((${#py_bins[@]})) python command(s) the repo ships"
+  if grep -Fq "s|^#!/usr/bin/env python3\$|#!/usr/bin/python3|" "$DIR/PKGBUILD" &&
+    grep -Fq "grep -q '^#!/usr/bin/python3\$' \"\$py\"" "$DIR/PKGBUILD"; then
+    ok "trust boundary: the python shebang rewrite and its guard are in the PKGBUILD"
+  else
+    bad "the PKGBUILD does not rewrite the python shebang to an absolute path"
+  fi
+else
+  bad "no python command carries the dev shebang -- the PKGBUILD rewrite has nothing to rewrite"
+fi
+
 echo "trust-boundary-test RESULT: $([[ $fail == 0 ]] && echo PASS || echo FAIL)"
 exit $fail
