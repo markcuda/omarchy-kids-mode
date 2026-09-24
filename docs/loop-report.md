@@ -2030,3 +2030,22 @@ Up/Down, and opened the Ask modal for that plugin on Enter -- so the surface is 
 end (`8aaa847` updates docs/plugins.md and the shelf header), leaving only the band-3-5 launcher and
 the panel's shelf screen open. Full Mac suite 52 files green; fable review MERGE after the gsub fix.
 The fixture index was removed from the VM afterwards.
+### 2026-09-21, loop iteration: session-start read the manifest's fields with a shift (live)
+
+Recorded from the previous pass and fixed here: `bin/omarchy-kids-session-start` parsed the
+manifest's jq `@tsv` row with `IFS=$'\t' read`, and the row has ten fields into only nine
+variables, so the trailing `allowlist` was absorbed into `OMARCHY_KIDS_LIGHTS_OUT_WEEKEND`; a kid
+with no theme override (`theme=""`, valid per docs/theming.md and the manifest) shifted every later
+field too (THEME="garden", WEB="60", ...), and the non-empty guard still passed on the shifted
+values. Fixed on `fix/session-start-manifest-fields` (`1154692`): the row is US (0x1f) separated
+with 0x1f/CR/LF stripped from values, the allowlist is read into `_ALLOWLIST` so it cannot be
+absorbed, and the guard no longer requires a non-empty theme (the other eight fields still must be
+present, so a genuinely absent field still fails closed). `session-start-test.sh` sets
+`lights_out`/`lights_out_weekend` in its fixture profile and asserts they arrive unshifted, plus a
+no-theme kid that starts and exports an empty theme. Full Mac suite 52 files green; fable review
+MERGE. Live-verified from the branch on the VM with an env-dumping copy of the installed command:
+`OMARCHY_KIDS_LIGHTS_OUT_WEEKEND=20:00` (no allowlist appended), and the installed session-start
+starts as kid-ada (exit 0, correct Level 2 exec line).
+
+Remaining same-class candidate: `bin/omarchy-kids-data`'s browse rows (`read -r t host title
+visits`) when a page has no title, shifting `visits` into `title`.
