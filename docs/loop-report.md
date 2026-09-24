@@ -1075,3 +1075,30 @@ the kid's own uid and never the parent's account). Evidence `ask-wrong-hint-2026
 
 Still open in `docs/ask.md`: item 2's app/plugin/site grants end to end, which needs a real
 installed app/plugin/site and is not a read-only check.
+### 2026-09-22, loop iteration: the bar's request badge cannot read the queue (needs a decision)
+
+Live, as the parent `omini-test` (uid 1000) on the try-omarchy VM: both `/usr/bin/omarchy-kids-ask
+list` and `/usr/bin/omarchy-kids --requests` die with "omarchy-kids-ask: list: root only" (exit 1).
+That is exactly what the parent's bar widget runs: `share/bar/KidsModule.qml:112` polls
+`omarchy-kids-ask list` every 30 s and counts its stdout lines, so its open-request badge is always
+0, and the "Open requests" menu row (`KidsModule.qml:185`) runs `omarchy-kids --requests`, whose
+error output the widget discards. Both are shown controls that cannot do what they claim (I-6), on
+a surface `docs/bar.md:218-245` already lists as never exercised live.
+
+Cause: the 2026-09-03 security fix (`60496dc`, "Require root at every ask review entry point") added
+`is_root || die "list: root only" 1` at `bin/omarchy-kids-ask:469`; the widget and `--requests`
+were written against the earlier unprivileged read. But the queue is world-readable by design
+today -- `lib/ask.py:135` chmods each record 0644, the directory is 0755, and the parent's panel
+reads it unprivileged (`lib/panel-requests.sh:44`, and `bin/omarchy-kids-panel:243-245`'s
+`count_open_requests` via `ask.py list-open`). So the guard blocks the bar while not blocking the
+panel, or anyone who can `cat` the files.
+
+This is a request-visibility decision, not a patch to make quietly, so no code changed. Options:
+1. Publish the open-request count in the root-written `/run/omarchy-kids/status.json` (0640
+   root:`omarchy-parents`, which the widget already reads) and let the badge use that; keep `list`
+   root-only.
+2. Have `omarchy-kids --requests` (and so the badge) read the queue the way the panel already does,
+   leaving `list` root-only -- consistent with the panel, but any local user of the parent command
+   sees requests, which they already can via the 0644 files.
+3. Tighten the queue to 0640 root:`omarchy-parents` and route the panel and the bar through a
+   parent-group read, which is the only option that makes the root guard a real boundary.
