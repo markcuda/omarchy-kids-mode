@@ -1470,3 +1470,34 @@ account ~10 minutes, cleared on its own -- `.local/VM-DOGFOOD.md` now says never
 `sudo -S` with a heredoc), and the per-boot autologin drop-in was removed by hand because the
 cleanup unit did not fire on a manual `systemctl restart sddm`. The VM was left with the kid
 session up, no drop-in, and only the VM-only `firmware:password` FAIL.
+### 2026-09-22, loop iteration: the modals that never said which keys work
+
+Dogfooded the Ask modal this time -- a core kid surface the loop had never seen rendered. Drove it
+exactly as the launcher and the Time's Up card do (`omarchy-kids-ask time 15` as the kid) and it
+renders well: "Ask a grown-up", the request line ("15 more minutes of screen time"), the masked
+password field, and the two choices side by side with "A grown-up is here" preselected, as the
+standing decision requires.
+
+What it showed: that card, and the exit modal, were the only kid-facing surfaces **with no key
+hint**. The portal ("Enter Sign in · Esc Back"), the picker ("↑ ↓ Choose Enter Open Esc Back"), the
+Wi-Fi picker, the plugins shelf and the launcher all name their keys; a kid facing two choices had
+no way to learn that Tab moved between them, and had to guess that Enter confirms and Escape leaves
+without asking. I-5 says every screen works with no pointer *and* that the keys are discoverable,
+not memorized.
+
+Fixed on `fix/modal-key-hints`: both modals carry a footer in the same style as the others -- the
+ask card's says "← → Choose · Enter Ask · Esc Never mind" and the exit card's "Enter Finish · Esc
+Back" -- and the ask modal now also answers Left/Right, since its two choices sit side by side and
+every other kid surface's arrows select. Each footer hides while the field is locked out (Enter is
+inert then, and the error line above already explains the wait).
+
+Verified live, both installed from the worktree: the ask card shows its footer and a Right press
+moves the ring from "A grown-up is here" to "Ask later"; Escape leaves with `omarchy-kids-ask list`
+reporting no open requests (the hint's "Never mind" is true); the exit card shows its footer under
+"Finish for Ada". `ask-test.sh` gained the key-handler and hint assertions and a header that says
+what it actually checks (it had called the file UNTESTED while checking three things about it),
+`exit-modal-test.sh` the footer; dropping the arrows or either footer fails them. Suite green.
+
+Operator note: the first install was botched -- both files are named `shell.qml`, so one `scp` to
+`/tmp` left only the exit modal and installing that into both directories opened the ask as a
+squashed exit card. The recipe now warns about it.
