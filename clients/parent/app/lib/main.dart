@@ -207,15 +207,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _requests(BoxState state) {
-    if (state.requests.isEmpty) {
-      return const _Notice(message: 'Nothing to answer right now.');
+    final children = <Widget>[];
+    // R-NOTIFY-12: an add-on that changed since the parent approved it comes
+    // first, above the kid's requests, because it is the thing that needs a look.
+    if (state.reviews.isNotEmpty) {
+      children.add(const _SectionHeader('Add-ons that changed'));
+      for (final review in state.reviews) {
+        children.add(ListTile(
+          title: Text(describeReview(review)),
+          subtitle: Text(review.kid),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () async {
+            final answered = await Navigator.of(context).push<bool>(
+              MaterialPageRoute(
+                builder: (_) => ReviewScreen(session: widget.session, review: review),
+              ),
+            );
+            if (answered == true) _reload();
+          },
+        ));
+      }
+      children.add(const Divider(height: 1));
+      children.add(const _SectionHeader('Requests'));
     }
-    return ListView.separated(
-      itemCount: state.requests.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, i) {
-        final request = state.requests[i];
-        return ListTile(
+    if (state.requests.isEmpty) {
+      children.add(
+        const Padding(
+          padding: EdgeInsets.all(24),
+          child: Text('Nothing to answer right now.', textAlign: TextAlign.center),
+        ),
+      );
+    } else {
+      for (final request in state.requests) {
+        children.add(ListTile(
           title: Text(describeRequest(request, _kidName(state, request.kid))),
           subtitle: Text(request.kind),
           trailing: const Icon(Icons.chevron_right),
@@ -227,9 +251,10 @@ class _HomeScreenState extends State<HomeScreen> {
             );
             if (answered == true) _reload();
           },
-        );
-      },
-    );
+        ));
+      }
+    }
+    return ListView(children: children);
   }
 
   /// The kid's display name if the box sent one, else the account.
@@ -312,6 +337,95 @@ class _RequestScreenState extends State<RequestScreen> {
               child: const Text('Decline'),
             ),
           ],
+        ),
+      );
+}
+
+/// One changed add-on: what changed, and the parent's Approve / Deny. The
+/// fingerprints are the whole of Check -- this screen decides nothing until a
+/// button is tapped (I-6).
+class ReviewScreen extends StatefulWidget {
+  final Session session;
+  final OpenReview review;
+  const ReviewScreen({super.key, required this.session, required this.review});
+
+  @override
+  State<ReviewScreen> createState() => _ReviewScreenState();
+}
+
+class _ReviewScreenState extends State<ReviewScreen> {
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _answer(String decision) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      if (decision == 'approve') {
+        await widget.session.approveReview(widget.review.id, widget.review.now);
+      } else {
+        await widget.session.denyReview(widget.review.id, widget.review.now);
+      }
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (error) {
+      setState(() {
+        _busy = false;
+        _error = "Couldn't send that: $error";
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: Text(widget.review.kid)),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(describeReview(widget.review), style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 24),
+            const Text('What changed'),
+            const SizedBox(height: 8),
+            SelectableText(
+              'was  ${widget.review.was}\nnow  ${widget.review.now}',
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'This is what the computer reports. Nothing is decided until you choose below.',
+              style: TextStyle(fontSize: 12),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 16),
+              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ],
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: _busy ? null : () => _answer('approve'),
+              child: const Text('Approve'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: _busy ? null : () => _answer('deny'),
+              child: const Text('Deny (hide it again)'),
+            ),
+          ],
+        ),
+      );
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  const _SectionHeader(this.title);
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Text(
+          title,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
         ),
       );
 }

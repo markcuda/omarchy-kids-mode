@@ -23,8 +23,10 @@ A phone or desktop app that pairs with the box, shows a kid's requests with **Ap
   host + port (the relay's port is fixed at 8447).
 
 `clients/parent/app` is the Flutter UI over it: pairing (paste the code the computer printed, type
-the fingerprint it showed, compare, pair), the request list, and a request screen with Approve,
-Decline and the reply chips. The list follows the box's own feed (`/v1/events`), so a new request
+the fingerprint it showed, compare, pair), the request list, a request screen with Approve, Decline
+and the reply chips, and — above the requests — an add-on that changed since it was approved, with
+what changed (`was`/`now`) and Approve or Deny. The review decision signs the fingerprint the screen
+showed, so the box refuses it if the surface moved since (R-NOTIFY-12). The list follows the box's own feed (`/v1/events`), so a new request
 appears without a refresh; when the feed drops it says so, keeps the last list on screen, and
 retries with a growing delay. The overflow menu offers **Forget this computer**, which clears the
 local pairing so the app can pair again (a box that re-keyed has a pin this app can no longer

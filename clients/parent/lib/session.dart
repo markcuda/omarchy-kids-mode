@@ -119,6 +119,13 @@ class Session {
   /// Decline a request, optionally with a reply (a reason the box shows the kid).
   Future<void> decline(String requestId, {String? reply}) => _decide(requestId, 'decline', reply);
 
+  /// Approve a changed add-on's new surface (R-NOTIFY-12). `seen` is the review's
+  /// own `now`; the box refuses it if the surface moved since the app looked.
+  Future<void> approveReview(String reviewId, String seen) => _decideReview(reviewId, 'approve', seen);
+
+  /// Deny a changed add-on: the box hides the app again and clears the review.
+  Future<void> denyReview(String reviewId, String seen) => _decideReview(reviewId, 'deny', seen);
+
   Future<void> _decide(String requestId, String decision, String? reply) async {
     // Fail fast on an id the box would refuse anyway: it is not a request the app
     // could decide, and it must not reach a URL path (state_model drops such rows).
@@ -137,6 +144,23 @@ class Session {
       reply: reply,
     );
     await relay.decide(record: record, ts: ts, nonce: newNonce());
+  }
+
+  Future<void> _decideReview(String reviewId, String decision, String seen) async {
+    // Fail fast on an id the box would refuse anyway: it must not reach a URL path.
+    if (!OpenReview.idPattern.hasMatch(reviewId)) {
+      throw ArgumentError('not a review id: $reviewId');
+    }
+    final ts = now();
+    final record = reviewDecisionRecord(
+      deviceId: deviceId,
+      reviewId: reviewId,
+      decision: decision,
+      seen: seen,
+      ts: ts,
+      nonce: newNonce(),
+    );
+    await relay.decideReview(record: record, ts: ts, nonce: newNonce());
   }
 
   /// The device's signing public key, base64 (what the pairing frame sends).

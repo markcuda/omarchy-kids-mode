@@ -11,6 +11,7 @@ import 'package:cryptography/cryptography.dart';
 import 'package:test/test.dart';
 
 import '../lib/notify_crypto.dart';
+import '../lib/relay_client.dart';
 
 void main() {
   final doc = jsonDecode(File('test-vectors/notify-vectors.json').readAsStringSync()) as Map<String, dynamic>;
@@ -22,6 +23,39 @@ void main() {
     // the recorded message is the context plus the canonical record
     expect(message, equals(want.sublist(signContext.length)));
     expect(utf8.decode(message), contains(r'Apr\u00e8s \"d\u00eener\" \\ ok'));
+  });
+
+  test('the review record the app builds is the box vector, byte for byte (R-NOTIFY-12)', () async {
+    final review = (doc['review'] as Map).cast<String, Object?>();
+    final built = reviewDecisionRecord(
+      deviceId: review['device_id'] as String,
+      reviewId: review['review_id'] as String,
+      decision: review['decision'] as String,
+      seen: review['seen'] as String,
+      ts: review['ts'] as int,
+      nonce: review['nonce'] as String,
+    );
+    expect(built, equals(review));
+    expect(
+      base64.encode(decisionMessage(built)),
+      equals(doc['review_message_b64'] as String),
+    );
+    final keyPair = await signKeyFromSeed(_hexToBytes(doc['sign_seed_hex'] as String));
+    expect(await signBase64(keyPair, decisionMessage(built)), equals(doc['review_signature_b64'] as String));
+    // The "missing" sentinel is a signed value too, and the same context carries it.
+    final missing = (doc['review_missing'] as Map).cast<String, Object?>();
+    final builtMissing = reviewDecisionRecord(
+      deviceId: missing['device_id'] as String,
+      reviewId: missing['review_id'] as String,
+      decision: missing['decision'] as String,
+      seen: missing['seen'] as String,
+      ts: missing['ts'] as int,
+      nonce: missing['nonce'] as String,
+    );
+    expect(
+      base64.encode(decisionMessage(builtMissing)),
+      equals(doc['review_missing_message_b64'] as String),
+    );
   });
 
   test('signing with the seed reproduces the recorded signatures', () async {

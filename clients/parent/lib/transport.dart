@@ -249,6 +249,23 @@ class KidsRelayClient implements RelayTransport {
     return jsonDecode(reply.body) as Map<String, dynamic>;
   }
 
+  /// POST /v1/reviews/<review-id>/decision with the signed review record.
+  @override
+  Future<Map<String, dynamic>> decideReview({
+    required Map<String, Object?> record,
+    required int ts,
+    required String nonce,
+  }) async {
+    final reviewId = record['review_id'] as String;
+    final path = '/v1/reviews/$reviewId/decision';
+    final body = utf8.encode(await buildDecisionBody(keyPair: keyPair, record: record));
+    final reply = await _send(method: 'POST', path: path, body: body, ts: ts, nonce: nonce);
+    if (reply.status != 200) {
+      throw HttpException('decideReview: ${reply.status} ${reply.body}');
+    }
+    return jsonDecode(reply.body) as Map<String, dynamic>;
+  }
+
   /// Subscribe to /v1/events (SSE): a stream of the decoded `state` events, one
   /// per change, with the heartbeat comments dropped. Authenticated once at
   /// connect, like the relay expects. The relay beats every 25 seconds, so

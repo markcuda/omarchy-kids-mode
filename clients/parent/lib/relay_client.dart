@@ -105,6 +105,34 @@ bool _printable(int rune) {
   return true;
 }
 
+/// A review-decision record (R-NOTIFY-12) with a fresh ts and nonce. The same
+/// signer and context as a request decision, over the review shape: no
+/// request_id, no reply. `seen` is the review's own `now` (a sha256 or the box's
+/// "missing" sentinel), so the box can refuse a surface that moved since.
+Map<String, Object?> reviewDecisionRecord({
+  required String deviceId,
+  required String reviewId,
+  required String decision,
+  required String seen,
+  required int ts,
+  required String nonce,
+}) {
+  if (decision != 'approve' && decision != 'deny') {
+    throw ArgumentError("a review decision must be 'approve' or 'deny'");
+  }
+  if (!RegExp(r'^(?:[0-9a-f]{64}|missing)$').hasMatch(seen)) {
+    throw ArgumentError('seen must be a fingerprint or "missing"');
+  }
+  return <String, Object?>{
+    'device_id': deviceId,
+    'review_id': reviewId,
+    'decision': decision,
+    'seen': seen,
+    'ts': ts,
+    'nonce': nonce,
+  };
+}
+
 /// A decision record with a fresh ts and nonce. `reply` is optional and, when
 /// given, must be printable Unicode of at most 80 code points. This matches the
 /// box's `max_reply`/`isprintable` for everything a person types (an accented

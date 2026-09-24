@@ -83,14 +83,63 @@ class RecentDecision extends OpenRequest {
   }
 }
 
+/// One open add-on review (R-NOTIFY-12): an approved app whose surface changed
+/// since it was stamped. `was` and `now` are the surface fingerprints the parent
+/// compares (the app shows both; Check decides nothing); `now` is "missing" when
+/// the desktop file no longer resolves. `id` is the review id the decision names.
+class OpenReview {
+  final String id;
+  final String kid;
+  final String app;
+  final String was;
+  final String now;
+  final int? detectedAt;
+
+  OpenReview({
+    required this.id,
+    required this.kid,
+    required this.app,
+    required this.was,
+    required this.now,
+    this.detectedAt,
+  });
+
+  /// The box's review-id shape (lib/devices.py's RE_REVIEW_ID, the file name
+  /// omarchy-kids-review writes); the app only shows and decides a review whose
+  /// id it could POST back.
+  static final RegExp idPattern = RegExp(r'^[a-z_][a-z0-9_-]*\.[0-9a-f]{16}$');
+
+  /// What the app may sign as `seen`: a sha256 fingerprint, or the box's own
+  /// sentinel for a desktop file that is gone.
+  static final RegExp _seenPattern = RegExp(r'^(?:[0-9a-f]{64}|missing)$');
+
+  bool get decidable => _seenPattern.hasMatch(now);
+
+  factory OpenReview.fromJson(Map<String, dynamic> json) => OpenReview(
+        id: _clean(json['id'], 128),
+        kid: _clean(json['kid'], 32),
+        app: _clean(json['app'], 128),
+        was: _clean(json['was'], 128),
+        now: _clean(json['now'], 128),
+        detectedAt: json['detected_at'] is int ? json['detected_at'] as int : null,
+      );
+}
+
 /// The whole document.
 class BoxState {
   final String? generatedAt;
   final List<KidStatus> kids;
   final List<OpenRequest> requests;
   final List<RecentDecision> recent;
+  final List<OpenReview> reviews;
 
-  BoxState({this.generatedAt, required this.kids, required this.requests, required this.recent});
+  BoxState({
+    this.generatedAt,
+    required this.kids,
+    required this.requests,
+    required this.recent,
+    this.reviews = const [],
+  });
 
   factory BoxState.fromJson(Map<String, dynamic> json) => BoxState(
         generatedAt: json['generated_at'] is String ? json['generated_at'] as String : null,
@@ -103,10 +152,24 @@ class BoxState {
             .map(RecentDecision.fromJson)
             .where((row) => OpenRequest.idPattern.hasMatch(row.id))
             .toList(),
+        reviews: _bounded(_rows(json['reviews']))
+            .map(OpenReview.fromJson)
+            .where((row) => OpenReview.idPattern.hasMatch(row.id) && row.decidable)
+            .toList(),
       );
 
   /// The kid rows that are live right now, in the order the box sent them.
   List<KidStatus> get liveKids => kids.where((kid) => kid.live).toList();
+}
+
+/// One review in the parent's words: what changed, and that deciding is the
+/// parent's call (Check shows this and nothing more).
+String describeReview(OpenReview review) {
+  final app = review.app.isEmpty ? review.id : review.app;
+  if (review.now == 'missing') {
+    return '$app is no longer installed';
+  }
+  return '$app changed since you approved it';
 }
 
 /// One request in the parent's words (the notification copy).

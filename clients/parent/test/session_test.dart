@@ -11,6 +11,7 @@ import '../lib/state_model.dart';
 
 class FakeRelay implements RelayTransport {
   final List<Map<String, Object?>> decided = [];
+  final List<Map<String, Object?>> reviewed = [];
   final List<(int, String)> requestHeaders = [];
   BoxState state = BoxState(kids: [], requests: [], recent: []);
   final List<BoxState> events = [];
@@ -35,6 +36,16 @@ class FakeRelay implements RelayTransport {
   }) async {
     decided.add(record);
     requestHeaders.add((ts, nonce));
+    return {'reply': 'ok'};
+  }
+
+  @override
+  Future<Map<String, dynamic>> decideReview({
+    required Map<String, Object?> record,
+    required int ts,
+    required String nonce,
+  }) async {
+    reviewed.add(record);
     return {'reply': 'ok'};
   }
 }

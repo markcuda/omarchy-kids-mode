@@ -104,6 +104,28 @@ check(
     "the recorded decision message is the canonical record the box signs",
 )
 
+# The review record (R-NOTIFY-12): the same context and signer, the review shape.
+review = doc["review"]
+check(devices.valid_review_record(review), "the recorded review is a valid review record")
+rev_ok = True
+try:
+    pub.verify(base64.b64decode(doc["review_signature_b64"], validate=True), devices.canonical(review))
+except Exception:
+    rev_ok = False
+check(rev_ok, "the review signature verifies over the canonical record")
+check(
+    doc["review_message_b64"] == base64.b64encode(devices.canonical(review)).decode(),
+    "the recorded review message is the canonical record the box signs",
+)
+check(
+    not devices.valid_record(review) and not devices.valid_review_record(doc["decision"]),
+    "a request record and a review record are not interchangeable",
+)
+check(
+    devices.valid_review_record(doc["review_missing"]) and doc["review_missing"]["seen"] == "missing",
+    "a removed add-on's review signs the missing sentinel",
+)
+
 req = doc["request"]
 req_ok = True
 try:

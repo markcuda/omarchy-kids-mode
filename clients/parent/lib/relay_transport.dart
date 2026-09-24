@@ -14,5 +14,13 @@ abstract class RelayTransport {
     required int ts,
     required String nonce,
   });
+
+  /// POST a signed review decision (R-NOTIFY-12). `record` is the review record
+  /// [reviewDecisionRecord] builds; its `review_id` is the path segment.
+  Future<Map<String, dynamic>> decideReview({
+    required Map<String, Object?> record,
+    required int ts,
+    required String nonce,
+  });
   Future<Map<String, dynamic>> pair(String frame);
 }

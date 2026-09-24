@@ -57,6 +57,25 @@ def build():
         "nonce": "nonce-decision-1",
     }
 
+    # A review decision (R-NOTIFY-12): the same signer and context, the review
+    # record shape, and the `missing` sentinel as `seen` (a removed add-on).
+    review = {
+        "device_id": "d-vector",
+        "review_id": "kid-ada.7d0c67a410c57b10",
+        "decision": "approve",
+        "seen": "ab" * 32,
+        "ts": 1758530400,
+        "nonce": "nonce-review-1",
+    }
+    review_missing = {
+        "device_id": "d-vector",
+        "review_id": "kid-ada.7d0c67a410c57b10",
+        "decision": "deny",
+        "seen": "missing",
+        "ts": 1758530400,
+        "nonce": "nonce-review-2",
+    }
+
     body = b'{"record":{}}'
     request = {
         "device_id": "d-vector",
@@ -113,6 +132,11 @@ def build():
         "decision": decision,
         "decision_message_b64": b64(devices.canonical(decision)),
         "decision_signature_b64": b64(key.sign(devices.canonical(decision))),
+        "review": review,
+        "review_message_b64": b64(devices.canonical(review)),
+        "review_signature_b64": b64(key.sign(devices.canonical(review))),
+        "review_missing": review_missing,
+        "review_missing_message_b64": b64(devices.canonical(review_missing)),
         "request": request,
         "request_message_b64": b64(
             devices.request_message(

@@ -57,6 +57,7 @@ void main() {
     expect(state.requests.single.minutes, isNull, reason: 'a non-numeric minutes is null, not a crash');
     expect(state.requests.single.askedAt, isNull);
     expect(state.recent, isEmpty);
+    expect(state.reviews, isEmpty);
   });
 
   test('paused and live are strictly boolean (the box uses `is True`)', () {
@@ -89,11 +90,33 @@ void main() {
     expect(state.requests.length, 64);
   });
 
+  test('reviews parse, and only the decidable ones are kept (R-NOTIFY-12)', () {
+    final rid = 'kid-ada.' + 'a' * 16;
+    final state = BoxState.fromJson({
+      'reviews': [
+        {'id': rid, 'kid': 'kid-ada', 'app': 'firefox', 'was': 'a' * 64, 'now': 'b' * 64, 'detected_at': 5},
+        // the removed add-on the box records with its own sentinel: decidable
+        {'id': 'kid-ada.' + 'c' * 16, 'kid': 'kid-ada', 'app': 'gone', 'was': 'a' * 64, 'now': 'missing'},
+        // skipped: an id the app could not POST back, and a `now` it could not sign
+        {'id': 'not-a-review', 'kid': 'kid-ada', 'app': 'x', 'now': 'b' * 64},
+        {'id': 'kid-ada.' + 'd' * 16, 'kid': 'kid-ada', 'app': 'x', 'now': 'nonsense'},
+      ],
+    });
+    expect(state.reviews.length, 2);
+    expect(state.reviews.first.id, rid);
+    expect(state.reviews.first.app, 'firefox');
+    expect(state.reviews.first.decidable, isTrue);
+    expect(state.reviews.last.now, 'missing');
+    expect(describeReview(state.reviews.first), 'firefox changed since you approved it');
+    expect(describeReview(state.reviews.last), 'gone is no longer installed');
+  });
+
   test('an empty document parses to empty lists', () {
     final state = BoxState.fromJson({});
     expect(state.kids, isEmpty);
     expect(state.requests, isEmpty);
     expect(state.recent, isEmpty);
+    expect(state.reviews, isEmpty);
     expect(BoxState.fromJson({'kids': []}).liveKids, isEmpty);
   });
 

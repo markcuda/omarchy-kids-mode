@@ -21,6 +21,7 @@ class FakeRelay implements RelayTransport {
   BoxState state;
   final String pin;
   final List<Map<String, Object?>> decided = [];
+  final List<Map<String, Object?>> reviewed = [];
   final List<String> paired = [];
   final List<StreamController<BoxState>> opened = [];
 
@@ -58,6 +59,16 @@ class FakeRelay implements RelayTransport {
     required String nonce,
   }) async {
     decided.add(record);
+    return {'reply': 'ok'};
+  }
+
+  @override
+  Future<Map<String, dynamic>> decideReview({
+    required Map<String, Object?> record,
+    required int ts,
+    required String nonce,
+  }) async {
+    reviewed.add(record);
     return {'reply': 'ok'};
   }
 }
@@ -224,6 +235,69 @@ void main() {
     expect(await keystore.loadPaired(), isNull);
     expect(connect.relays.first.opened.first.hasListener, isFalse,
         reason: 'forgetting drops the old feed, not just the pin');
+  });
+
+  testWidgets('a changed add-on is shown above the requests, and opens to what changed', (tester) async {
+    final rid = 'kid-ada.' + 'a' * 16;
+    final relay = FakeRelay(BoxState.fromJson({
+      'kids': [
+        {'kid': 'kid-ada', 'live': true},
+      ],
+      'requests': [
+        {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft', 'asked_at': 1},
+      ],
+      'reviews': [
+        {'id': rid, 'kid': 'kid-ada', 'app': 'firefox', 'was': 'a' * 64, 'now': 'b' * 64, 'detected_at': 5},
+      ],
+    }));
+    await pumpHome(tester, relay);
+    expect(find.text('Add-ons that changed'), findsOneWidget);
+    expect(find.text('firefox changed since you approved it'), findsOneWidget);
+    expect(find.text('kid-ada asked to use minecraft'), findsOneWidget);
+    await tester.tap(find.text('firefox changed since you approved it'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('was  ${'a' * 64}'), findsOneWidget);
+    expect(find.textContaining('now  ${'b' * 64}'), findsOneWidget);
+  });
+
+  testWidgets('Approve sends the fingerprint the review showed', (tester) async {
+    final rid = 'kid-ada.' + 'a' * 16;
+    final relay = FakeRelay(BoxState.fromJson({
+      'kids': [],
+      'requests': [],
+      'reviews': [
+        {'id': rid, 'kid': 'kid-ada', 'app': 'firefox', 'was': 'a' * 64, 'now': 'b' * 64},
+      ],
+    }));
+    await pumpHome(tester, relay);
+    await tester.tap(find.text('firefox changed since you approved it'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Approve'));
+    await tester.pumpAndSettle();
+    expect(relay.reviewed.single['review_id'], rid);
+    expect(relay.reviewed.single['decision'], 'approve');
+    expect(relay.reviewed.single['seen'], 'b' * 64);
+    expect(find.byTooltip('Refresh'), findsOneWidget, reason: 'back on the list after answering');
+    expect(find.text('Approve'), findsNothing);
+  });
+
+  testWidgets('Deny sends a deny with the same fingerprint', (tester) async {
+    final rid = 'kid-ada.' + 'a' * 16;
+    final relay = FakeRelay(BoxState.fromJson({
+      'kids': [],
+      'requests': [],
+      'reviews': [
+        {'id': rid, 'kid': 'kid-ada', 'app': 'gone', 'was': 'a' * 64, 'now': 'missing'},
+      ],
+    }));
+    await pumpHome(tester, relay);
+    expect(find.text('gone is no longer installed'), findsOneWidget);
+    await tester.tap(find.text('gone is no longer installed'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Deny (hide it again)'));
+    await tester.pumpAndSettle();
+    expect(relay.reviewed.single['decision'], 'deny');
+    expect(relay.reviewed.single['seen'], 'missing');
   });
 
   testWidgets('a slow read does not overwrite a newer event', (tester) async {

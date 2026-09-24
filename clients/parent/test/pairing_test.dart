@@ -15,6 +15,7 @@ import '../lib/state_model.dart';
 
 class FakeRelay implements RelayTransport {
   final List<Map<String, dynamic>> frames = [];
+  final List<Map<String, Object?>> reviewed = [];
   Map<String, dynamic> reply = {'reply': 'ok'};
 
   @override
@@ -38,6 +39,16 @@ class FakeRelay implements RelayTransport {
     required String nonce,
   }) async =>
       {'reply': 'ok'};
+
+  @override
+  Future<Map<String, dynamic>> decideReview({
+    required Map<String, Object?> record,
+    required int ts,
+    required String nonce,
+  }) async {
+    reviewed.add(record);
+    return {'reply': 'ok'};
+  }
 }
 
 class _ShortPinRelay extends FakeRelay {
