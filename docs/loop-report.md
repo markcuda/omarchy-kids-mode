@@ -1996,3 +1996,16 @@ its write are unchanged, and docs/panel.md records the suffix. `panel-test.sh` s
 gcompris-qt installed) so the state is deterministic and asserts both labels; the fable review
 MERGE'd with no findings. Full Mac suite 52 files green. Live-verified from the branch:
 "Tux Paint (shown, not installed)" and the installed pack apps plain "(shown)".
+### 2026-09-21, loop iteration: the panel's read screens, live (preview)
+
+Across this day's loop sessions the parent panel was driven on the try-omarchy VM with
+`OMARCHY_KIDS_TUI_ANSWERS` (preview mode, no `--apply`) and the panel file set installed from the
+branch: Home (kid rows with minutes used/left), the kid screen, Screen time (its grant, weekday and
+weekend budget and lights-out rows), Web, Apps (the band pack rows, shown/hidden), Data (today and
+this week), Desktop (level and theme), and the Plugins shelf all rendered from live root data. The
+shelf listed a two-entry fixture catalog (kidmath, noage) and, once the fixture was removed, the
+honest empty state. Requests, Password and Remove were not opened, and no write ran for real (the
+write paths are `panel-test.sh`'s). `docs/panel.md` now records this, drops its stale "the Screen
+Time screen only edits the weekday pair" note (the screen edits both) and its "panel-test drives
+every screen" claim (it does not drive Web/Data/shelf/Password). fable review MERGE (after several
+rounds trimming overclaims about what the test covers). Docs only.
