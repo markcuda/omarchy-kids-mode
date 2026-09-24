@@ -1162,3 +1162,16 @@ Also landed: the merge-gate conflict map (`docs/branch-conflict-map-2026-09-22.m
 Planning fact: `python-cryptography` is present on neither the Mac nor the dogfood VM, so its crypto
 tests will skip locally the way authd's `libcrypt` checks already do; the dependency ships in N-4's
 PKGBUILD and a real run follows on a box that has it.
+### 2026-09-22, loop iteration: a removal "gap" that is a recorded decision (no change)
+
+Reviewing `omarchy-kids-remove` against everything provisioning writes turned up one asymmetry: the
+`pam_namespace` marker + `session required pam_namespace.so` line that `lib/provision-add.sh` adds
+to `/etc/pam.d/sddm`, `systemd-user` and `sddm-autologin` (and `omarchy-kids-assert` re-asserts) has
+no counterpart in the removal plan, so it survives Remove Kids Mode.
+
+It is not an oversight. `docs/remove.md:160-167` records it as deliberate: the line is inert once no
+account has a matching `namespace.conf` entry, the removal task's own checklist never named it, and
+it waits on "R-FND-2a's owner" to confirm it should be reversed. A fix was written
+(`posture_remove_pam_namespace`, three `pam-namespace:<stack>` plan steps) and its tests passed, then
+discarded -- reversing a documented decision is the owner's call, not a loop's. The next sweep that
+reaches this asymmetry should stop at `docs/remove.md`.
