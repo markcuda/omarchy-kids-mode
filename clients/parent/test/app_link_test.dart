@@ -19,9 +19,12 @@ void main() {
     expect(extractPairingUri(pasted), uri);
   });
 
-  test('the URI stops before a terminal bracket the box colors', () {
+  test('the URI stops before the shell brackets around it', () {
     final uri = 'omarchy-kids://pair?v=1&id=dev-1&token=$token&addr=192.168.1.5';
     expect(extractPairingUri('  $uri  '), uri);
+    expect(extractPairingUri('copy this: ($uri)'), uri);
+    expect(extractPairingUri('`$uri`'), uri);
+    expect(extractPairingUri('<$uri>'), uri);
   });
 
   test('no URI is null, not a wrong guess', () {

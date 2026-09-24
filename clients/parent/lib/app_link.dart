@@ -25,9 +25,10 @@ String? normalizeFingerprint(String input) {
   return cleaned.toLowerCase();
 }
 
-/// The box's addresses as host + port, for trying when one fails. A bare address
-/// takes [defaultPort]; `host:port` is read as written; IPv6 must be bracketed as
-/// `[::1]` or `[::1]:port`. Anything else is dropped rather than guessed at.
+/// The box's addresses as host + port, in the order it listed them. A bare
+/// address takes [defaultPort]; `host:port` is read as written; IPv6 must be
+/// bracketed as `[::1]` or `[::1]:port`. Anything else is dropped rather than
+/// guessed at. The app dials the first today; trying the rest is still to come.
 List<({String host, int port})> pairingAddresses(
   List<String> addresses, {
   int defaultPort = defaultRelayPort,

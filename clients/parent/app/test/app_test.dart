@@ -154,7 +154,7 @@ void main() {
   testWidgets('an unpaired app asks for the code, not a blank screen', (tester) async {
     await pumpPairing(tester, connect: FakeConnect());
     expect(find.text('Pair with the computer'), findsOneWidget);
-    expect(find.textContaining('omarchy-kids-notify pair'), findsOneWidget);
+    expect(find.textContaining('omarchy-kids-notify pair --apply'), findsOneWidget);
   });
 
   testWidgets('pasting the code and the fingerprint shows the fingerprint to compare', (tester) async {

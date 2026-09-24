@@ -134,7 +134,7 @@ class _PairingScreenState extends State<PairingScreen> {
       );
 
   List<Widget> _ask() => [
-        const Text('1. On the computer, run:  sudo omarchy-kids-notify pair'),
+        const Text('1. On the computer, run:  sudo omarchy-kids-notify pair --apply'),
         const SizedBox(height: 8),
         TextField(
           controller: _uri,
