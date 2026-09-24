@@ -240,4 +240,23 @@ else
   echo "SKIP gridnav.js index-math check: node not found"
 fi
 
+# Live 2026-09-22 (960x540): the centred picker window reached within a few
+# pixels of the desktop's own bottom hint line and sliced its top half into
+# broken glyphs; the desktop hides that line while the picker is open. These
+# three greps need no node, so they run even where the JS check above skips.
+desktop_content="$(cat "$DIR/share/launcher/Desktop.qml" 2>/dev/null || true)"
+check_contains "$desktop_content" 'property bool pickerOpen' \
+  "Desktop.qml takes a pickerOpen flag"
+check_contains "$qml_content" 'pickerOpen: root.pickerOpen' \
+  "shell.qml tells the Level 2 desktop when its picker is open"
+# Pin the binding to the hint line itself: moving it onto another Text must
+# not satisfy this (the sliced line would come back).
+if grep -A2 -F 'visible: !desktop.pickerOpen' "$DIR/share/launcher/Desktop.qml" 2>/dev/null |
+  grep -qF 'Super + Q: Close app'; then
+  echo "ok   Desktop.qml hides the bottom hint line itself while the picker covers it"
+else
+  echo "FAIL Desktop.qml: the pickerOpen binding is not on the bottom hint line"
+  fail=1
+fi
+
 exit $fail

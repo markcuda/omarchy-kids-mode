@@ -37,6 +37,16 @@ count.
 defaults" card promised that hand-added sites stay; `sites` is `reset = "clear"`, so the card (and
 `CHANGELOG.md`) now say a reset takes them back to the band's defaults.
 
+**Fixed on a topic branch awaiting merge:** `fix/picker-slices-desktop-hint` -- at Level 2 the app
+picker's window edge sliced the desktop's bottom hint line on a short screen; the desktop now hides
+that line while the picker is open.
+
+**The loop's actionable work is exhausted:** the last sweeps (wizard, panel, check report, desktop
+entries, systemd units) found nothing left to fix safely -- only the nit that the Machine card calls
+the skipped live checks "warnings". Every remaining item needs the owner or hardware (SPEC
+amendment, GCompris proposal, packaging, Level 2 verification, favorites/recents, W2's fail-open
+decision, Level 3 menu-trim on a real box). 27 topic branches await the owner's gate.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After
