@@ -1,15 +1,22 @@
 // omarchy-kids-trimmed.jsonc — the omarchy-menu user extension for a kid whose
 // profile says `menu=trimmed` (SPEC.md R-DESK-4).
 //
-// VERIFIED MECHANISM (try-omarchy VM, Omarchy 4.0.2, 2026-09-21). omarchy-menu
+// VERIFIED MECHANISM (try-omarchy VM, 2026-09-21; its files are owned by
+// try-omarchy-runtime 4.0.3-1 and /usr/share/omarchy/version reads
+// 4.0.0.alpha -- "4.0.2" elsewhere in these docs is the upstream release the
+// research compares against). omarchy-menu
 // is a Quickshell plugin; it reads the stock entries from
 // /usr/share/omarchy/default/omarchy/omarchy-menu.jsonc and merges the user
 // extension at $HOME/.config/omarchy/extensions/omarchy-menu.jsonc
-// (shell/plugins/menu/Menu.qml, `userMenuPath`). MenuModel.mergeMenuSources()
-// merges the two **by id**, field by field, the user file winning. An entry is
-// hidden when its `when:` shell expression evaluates false
-// (Menu.qml `evaluateGuards`). So a hide is the same id with `when: "false"` —
-// not a "hide" list, which this file used to guess at.
+// (shell/plugins/menu/Menu.qml, `userMenuPath`). Both files are maps keyed by
+// id, and MenuModel.parseMenuJsonc turns each such map into items before the
+// merge, which is what makes a bare id key the right shape here.
+// MenuModel.mergeMenuSources() then merges the two **by id**, field by field,
+// the user file winning. An entry is hidden when its `when:` shell expression
+// evaluates false (Menu.qml `evaluateGuards`). So a hide is the same id with
+// `when: "false"` — not a "hide" list, which this file used to guess at.
+// Re-checked against the VM's Omarchy 4.0.2 on 2026-09-22, including that the
+// four ids below are top-level keys in that stock file (lines 23-26).
 //
 // Where it is applied: provisioning copies this file into the kid's own
 // ~/.config/omarchy/extensions/omarchy-menu.jsonc when the profile's
