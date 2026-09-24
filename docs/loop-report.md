@@ -1039,3 +1039,26 @@ One wording note, not a defect: an app's description is its raw id (`the app "gc
 plugins shelf asks with `item.id` (`share/plugins/shell.qml:85`), so a shelf id that is not already
 a readable app name would reach the kid verbatim. Whether that happens needs a real synced
 marketplace index; there is none to judge from here.
+### 2026-09-22, loop iteration: dogfood, the I-6 sweep, and the Ask "Ask later" path live
+
+Dogfood: kid-ada logged in at Level 2 (the day's budget topped up), the desktop hint layer and
+"NNN minutes left" rendered, Super+Space opened the windowed picker, the list scrolled a clipped row
+into view, and Enter launched Blinken fullscreen. No defect.
+
+The I-6 sweep over `share/` and `lib/` found no new safe code change. The two real candidates it
+surfaced -- the `dns` and `sites` wizard choices that are stored and never applied -- are already
+carried by `fix/dns-control-honesty` and `fix/garden-sources-agree` and recorded as open owner
+decisions (`docs/phase1/DECISIONS-NEEDED.md` item 7); the ask and exit modals' missing key hints are
+`fix/modal-key-hints`; and the ask modal's "Asked." wording is R-ASK-1's exact text, not an
+overclaim. Nothing else in the two trees showed a control without an enforcement behind it.
+
+Closed `docs/ask.md`'s two remaining open items on the try-omarchy VM. The modal's own "Ask later"
+button (Right/Tab to the second choice, Enter) shows "Asked. Your grown-up will see it." and writes
+one outbox record, `{"kind":"time","minutes":15,"state":"open"}`; Escape closes the modal with the
+outbox and the root queue unchanged -- nothing written. Evidence `ask-later-sent-2026-09-22.png` and
+`ask-modal-2026-09-22.png` in `.local/media/`. The installed modal carried `fix/modal-key-hints`'
+footer, so the footer and the Left/Right handlers were exercised too; the `submit` and `closeModal`
+functions are identical in the union. (`docs/ask.md`'s own text is reconciled on the unmerged
+`14f47a3`, which still lists these two as open; this entry is the record until that branch merges.)
+Still open: the app/plugin/site kinds, the wrong-password lockout, and the password -> authd ->
+`apply-grant` path end to end.
