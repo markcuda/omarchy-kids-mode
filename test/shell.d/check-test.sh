@@ -536,6 +536,10 @@ chmod 0755 "$QUEUE_DIR"
 chmod 0644 "$QUEUE_DIR/1-kid-ada-time.json"
 plain="$(strip_ansi "$("$BIN")")"
 check_contains "$plain" "FAIL  lock:queue" "queue: a world-readable record fails"
+chmod 0000 "$QUEUE_DIR"
+plain="$(strip_ansi "$("$BIN")")"
+chmod 0750 "$QUEUE_DIR"
+check_contains "$plain" "WARN  lock:queue" "queue: an unreadable directory warns, not fails"
 rm -rf "$QUEUE_DIR"
 
 # --- Boot JSON is selected only by the trusted machine mode -----------

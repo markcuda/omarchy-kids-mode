@@ -55,7 +55,7 @@ Usage: omarchy-kids-ask time <minutes>
        omarchy-kids-ask grant <kind> <what> [--minutes N]   (password on stdin)
        omarchy-kids-ask apply-grant --kid K --kind KIND --what W [--minutes N] --apply
        omarchy-kids-ask collect [--apply]
-       omarchy-kids-ask list [<kid>]            # root or a member of omarchy-parents
+       omarchy-kids-ask list [<kid>]            # root or a member of omarchy-parents            # root or a member of omarchy-parents
        omarchy-kids-ask approve <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
        omarchy-kids-ask decline <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
        omarchy-kids-ask --help
@@ -462,7 +462,11 @@ cmd_apply_grant() {
     ${minutes:+--minutes "$minutes"} || die "apply-grant: refused"
   is_known_kid "$KIDS_DIR" "$kid" || die "apply-grant: '$kid' is not a provisioned kid account"
 
-  install -d -m 0755 "$QUEUE_DIR"
+  # R-NOTIFY-7: same modes collect sets, corrected on every run (an on-the-spot grant must
+  # not re-widen the queue an earlier version left 0755).
+  install -d -m 0750 "$QUEUE_DIR"
+  chown root:omarchy-parents "$QUEUE_DIR" 2>/dev/null || true
+  chmod 0750 "$QUEUE_DIR"
   local name
   name="$("$KIDS_PY" "$ASKPY" write "$QUEUE_DIR" --kid "$kid" --kind "$kind" --what "$what" \
     ${minutes:+--minutes "$minutes"})" || die "apply-grant: could not record the request"

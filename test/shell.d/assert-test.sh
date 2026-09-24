@@ -717,6 +717,23 @@ check_status "$out" "queue" "FAIL" "queue: a symlinked record fails the lock"
   fail "queue: the symlink was removed or replaced"
 rm -f "$QUEUE_DIR/evil.json" "$QUEUE_DIR/1-kid-ada-time.json"
 
+# A symlinked queue directory is refused, never followed.
+rm -rf "$QUEUE_DIR"
+ln -s /etc "$QUEUE_DIR"
+out="$($BIN)"
+check_status "$out" "queue" "FAIL" "queue: a symlinked directory fails the lock"
+[[ -L "$QUEUE_DIR" ]] && pass "queue: the directory symlink is left alone" ||
+  fail "queue: the directory symlink was removed or replaced"
+rm -f "$QUEUE_DIR"
+
+# A queue this caller cannot read is a warn ("I could not look"), not a FAIL.
+mkdir -p "$QUEUE_DIR"
+chmod 0000 "$QUEUE_DIR"
+out="$($BIN)"
+chmod 0750 "$QUEUE_DIR"
+check_status "$out" "queue" "warn" "queue: an unreadable directory is a warn"
+rmdir "$QUEUE_DIR"
+
 # --- --quiet on an all-ok tree prints nothing ---------------------------
 
 out="$("$BIN" --quiet)"

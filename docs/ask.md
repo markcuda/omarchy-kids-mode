@@ -66,6 +66,11 @@ for never gating its own runtime-dir writes.
 
 ### `collect [--apply]` — root
 
+Before it moves anything, `collect` checks that the `omarchy-parents` group exists (`getent`; where
+`getent` is absent the check is skipped), and exits `1` touching no outbox when it does not: a record
+moved into a queue the parent's own readers cannot open would be a request nobody sees. On every run
+it also sets the queue to `0750 root:omarchy-parents` (R-NOTIFY-7), correcting an earlier `0755`.
+
 For every `<uid>/omarchy-kids/ask-outbox/*.json` under `/run/user` (the root-side runtime tree),
 `/run/user`, i.e. every logged-in kid's real `$XDG_RUNTIME_DIR`), moves the file into
 `/var/lib/omarchy-kids/queue/` (Appendix D's real home, `0750 root:omarchy-parents`, each record
@@ -77,7 +82,7 @@ previews what it would collect; `--apply` (or `DRY_RUN=0`) does it for real. Run
 whenever a parent is looking, and by `systemd/omarchy-kids-ask-collect.timer` every minute
 otherwise (see below).
 
-### `list [<kid>]` — root
+### `list [<kid>]` — root or omarchy-parents
 
 Every **open** (undecided) request, all kids or one, one line each: id, kid, kind, what (minutes
 for `time`), and when it was asked. Nothing decided ever shows here — that's the whole point of a

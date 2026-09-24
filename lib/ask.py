@@ -157,7 +157,10 @@ def write_atomic(path, record):
             except OSError:
                 pass
     tmp = f"{path}.{os.getpid()}.tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
+    # O_EXCL|0600: the temp file is closed from the moment it exists, not only after the
+    # chmod below (the directory is closed first, but nothing should depend on that).
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(record, f, sort_keys=True)
         f.write("\n")
     os.chmod(tmp, 0o640 if root else 0o600)
@@ -225,7 +228,7 @@ def cmd_write(argv):
         except ValueError:
             die("write: --minutes must be an integer")
 
-    os.makedirs(directory, mode=0o755, exist_ok=True)
+    os.makedirs(directory, mode=0o700, exist_ok=True)
     # <unix-ts>-<account>-<kind>.json (Appendix D); a counter suffix
     # keeps two requests in the same second from colliding.
     base = f"{now}-{kid}-{kind}"
