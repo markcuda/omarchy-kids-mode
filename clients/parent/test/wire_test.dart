@@ -59,6 +59,82 @@ void main() {
     expect(body['record'], equals(record));
   });
 
+  test('a review record takes only the review shape and a real seen value', () {
+    final rid = 'kid-ada.' + 'a' * 16;
+    final record = reviewDecisionRecord(
+      deviceId: 'd1',
+      reviewId: rid,
+      decision: 'deny',
+      seen: 'missing',
+      ts: 1,
+      nonce: 'n',
+    );
+    expect(record.keys.toSet(), {'device_id', 'review_id', 'decision', 'seen', 'ts', 'nonce'});
+    expect(
+      reviewDecisionRecord(
+        deviceId: 'd1',
+        reviewId: rid,
+        decision: 'approve',
+        seen: 'ab' * 32,
+        ts: 1,
+        nonce: 'n',
+      )['decision'],
+      'approve',
+    );
+    expect(
+      () => reviewDecisionRecord(deviceId: 'd1', reviewId: rid, decision: 'decline', seen: 'ab' * 32, ts: 1, nonce: 'n'),
+      throwsArgumentError,
+      reason: 'the box takes approve/deny here, not decline',
+    );
+    expect(
+      () => reviewDecisionRecord(deviceId: 'd1', reviewId: rid, decision: 'approve', seen: 'nonsense', ts: 1, nonce: 'n'),
+      throwsArgumentError,
+    );
+    expect(
+      () => reviewDecisionRecord(deviceId: 'd1', reviewId: rid, decision: 'approve', seen: 'ab' * 31, ts: 1, nonce: 'n'),
+      throwsArgumentError,
+    );
+  });
+
+  test('an ACT record takes only the grant/end shape', () {
+    final grant = actRecord(deviceId: 'd1', account: 'kid-ada', action: 'grant', minutes: 30, ts: 1, nonce: 'n');
+    expect(grant.keys.toSet(), {'device_id', 'account', 'action', 'minutes', 'ts', 'nonce'});
+    final end = actRecord(deviceId: 'd1', account: 'kid-ada', action: 'end', ts: 1, nonce: 'n');
+    expect(end.keys.toSet(), {'device_id', 'account', 'action', 'ts', 'nonce'});
+    expect(end.containsKey('minutes'), isFalse);
+    expect(
+      () => actRecord(deviceId: 'd1', account: 'kid-ada', action: 'pause', ts: 1, nonce: 'n'),
+      throwsArgumentError,
+      reason: 'pause is not an action the box takes',
+    );
+    expect(
+      () => actRecord(deviceId: 'd1', account: 'kid-ada', action: 'grant', ts: 1, nonce: 'n'),
+      throwsArgumentError,
+      reason: 'a grant needs minutes',
+    );
+    expect(
+      () => actRecord(deviceId: 'd1', account: 'kid-ada', action: 'grant', ts: 1, nonce: 'n', minutes: 0),
+      throwsArgumentError,
+    );
+    expect(
+      () => actRecord(deviceId: 'd1', account: 'kid-ada', action: 'grant', ts: 1, nonce: 'n', minutes: 1441),
+      throwsArgumentError,
+    );
+    expect(
+      () => actRecord(deviceId: 'd1', account: 'kid-ada', action: 'end', ts: 1, nonce: 'n', minutes: 15),
+      throwsArgumentError,
+      reason: 'an end takes no minutes',
+    );
+    expect(
+      () => actRecord(deviceId: 'd1', account: 'Kid!', action: 'grant', minutes: 15, ts: 1, nonce: 'n'),
+      throwsArgumentError,
+    );
+    expect(
+      () => actRecord(deviceId: 'd1', account: '../../etc/passwd', action: 'grant', minutes: 15, ts: 1, nonce: 'n'),
+      throwsArgumentError,
+    );
+  });
+
   test('a decision record rejects a bad decision or a long/unprintable reply', () {
     expect(
       () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'maybe', ts: 1, nonce: 'n'),

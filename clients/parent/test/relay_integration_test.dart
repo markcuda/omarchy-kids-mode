@@ -109,6 +109,50 @@ void main() {
         ts: _now(),
         nonce: 'it-decide',
       ));
+      // An ACT reaches the relay's forwarding step too: the path is
+      // /v1/kids/<account>/<action> and the record passes the relay's own shape
+      // checks, so only the missing authd (502) stands in the way. This pins the
+      // path the app builds against the real relay.
+      await expectReachesAuthd(client.act(
+        record: {
+          'device_id': deviceId,
+          'account': 'kid-ada',
+          'action': 'grant',
+          'minutes': 15,
+          'ts': _now(),
+          'nonce': 'it-act',
+        },
+        ts: _now(),
+        nonce: 'it-act',
+      ));
+      await expectReachesAuthd(client.act(
+        record: {
+          'device_id': deviceId,
+          'account': 'kid-ada',
+          'action': 'end',
+          'ts': _now(),
+          'nonce': 'it-act-end',
+        },
+        ts: _now(),
+        nonce: 'it-act-end',
+      ));
+      // The relay refuses an end that carries minutes before it forwards (400,
+      // not 502): a hand-built record, since the app's own builder forbids it.
+      await expectLater(
+        client.act(
+          record: {
+            'device_id': deviceId,
+            'account': 'kid-ada',
+            'action': 'end',
+            'minutes': 15,
+            'ts': _now(),
+            'nonce': 'it-act-bad',
+          },
+          ts: _now(),
+          nonce: 'it-act-bad',
+        ),
+        throwsA(predicate((e) => e.toString().contains('400'))),
+      );
       await expectReachesAuthd(client.pair(await _pairFrame(deviceId, deviceKey, cert)));
 
       // A different pin must not be accepted: the self-signed certificate the
