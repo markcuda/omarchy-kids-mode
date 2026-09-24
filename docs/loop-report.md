@@ -1738,3 +1738,61 @@ Branch `test/panel-wifi-mode-label` (a test-only pin; no product change).
 Found honest along the way: the Data screen's sudo prompt appears once and falls back cleanly when
 it cannot (the desktop entry is `Terminal=true`, so the real path has a tty), and the Kid, Screen
 time and Apps screens' facts and rows are accurate.
+
+### 2026-09-22, loop iteration: dogfood round, nothing to fix
+
+Dogfooded the parent panel's remaining screens live (Web, Desktop, and the theme picker it opens)
+and re-ran `omarchy-kids-check --live`. All honest: the Web screen says "Editable list: no -- this
+mode has no allow list" for a non-garden mode and lists the kid's own sites for garden; the Desktop
+screen shows the level and theme; the theme picker offers exactly the six system themes and exits on
+Esc, as its footer says. The live check is the box's usual 46 PASS plus its four known FAILs
+(band-group, groups, the `lock:hyprland-configs` my L2.lua install invalidated, firmware:password).
+
+Also read two libs not yet swept. `lib/theme.sh`'s `$OMARCHY_PATH` handling is the documented
+issue-#48 design (`docs/theming.md`), and the same variable being unset in a kid session is what the
+Level 2 cheat-sheet finding turned on. `lib/session-manifest.sh` renders the launcher's manifest to
+a stage in the root-owned manifest dir, schema-validates it, chowns it root:root 0644, publishes it
+atomically, and re-validates it when served, so the `mktemp` is never a kid-writable path into the
+kid's tile argv -- the "root-validated manifest" is real, not a comment.
+
+Nothing actionable this round. The loop's remaining work is the owner's gate: 32 branches ahead of
+integration, the SPEC amendment, the GCompris proposal, packaging, Level 2 verification,
+favorites/recents and W2.
+
+Branch note: this record first landed on `test/panel-wifi-mode-label` by mistake (`git checkout -b`
+aborted because `docs/loop-report.md` differed, so the commit stayed on the current branch); it was
+moved to its own branch with `git branch` + `git update-ref` (no reset), which left it stacked on
+that branch rather than on integration. It is a docs-only record, so the stack is harmless.
+
+### 2026-09-22, loop iteration: the backlog is fully drafted; a gate picture
+
+Dogfooded: the Level 2 focus bind works (`Super+Right` moved focus from Blinken to KTuberling; the
+swap bind was checked earlier), and `omarchy-kids-check --live` is the box's usual 46 PASS plus its
+four known FAILs. Read `bin/omarchy-kids-bar`: `grant`/`end` build the terminal command with
+`printf '%q '`, so a kid name cannot inject a shell command, and both go through the stock
+`omarchy-launch-floating-terminal-with-presentation` with the parent's own sudo prompt.
+
+The backlog's remaining items are now all drafted rather than buildable without an owner decision,
+so this round records the state for the gate (it supersedes the 20-branch picture in
+`docs/loop-merge-readiness`):
+
+- 33 branches ahead of `integration/dogfood-2026-09-19`, each test-green on its own.
+- 420 of their pairs conflict on nothing but the append-only `PROGRESS.md`/`docs/loop-report.md` --
+  a keep-both resolution every time.
+- 12 pairs have a real-file conflict: `docs/levels.md` (7), `docs/time.md` (2), `docs/wifi.md` (1),
+  `share/launcher/shell.qml` (2).
+- Awaiting an owner decision: the two-kid-modes SPEC amendment (five questions), the GCompris
+  pre-seed, the add-on survey (five questions), favorites/recents (three decisions), W2's fail-open,
+  Level 3's `Super+Shift+F` under `menu=trimmed`. Live-only work: the real-box menu trim, the
+  laptop's Wi-Fi join/captive portal, a band-3-5 kid, the portal's wrong-password path.
+
+### 2026-09-22, loop iteration: third clean round
+
+Dogfooded the Level 2 session (the picker opens and closes, the two windows still tile) and
+finished the I-6 pass over the kid-facing commands: `bin/omarchy-kids-web`'s `launch` is sound -- it
+refuses to start Chromium unless the band's managed policy file is readable (R-WEB-4, fail closed),
+execs an argv array rather than a shell string, and takes its flags from the policy conf. Nothing
+else actionable: three consecutive rounds have found only the component-skew repair (VM state) and
+the gate picture, and every backlog item now needs an owner decision or hardware. Worth pausing the
+loop or pointing it at the owner's decisions instead of more sweeps.
+
