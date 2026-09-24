@@ -60,9 +60,9 @@ Starts a single-use pairing window (`omarchy-kids-devices pair-start`, R-NOTIFY-
 `omarchy-kids://pair` URI plus the relay's fingerprint. Where `qrencode` is installed the URI is also
 drawn as a QR; otherwise the URI is there as the code. The app puts a proof in `POST /v1/pair` — the
 HMAC of the token over its own keys and name, so the token itself never travels — and the relay
-carries that frame to `authd`; root verifies it and registers the device. The app that would do that
-is not built on this branch, so the window is ready for it with nothing on the device side to scan
-yet. The
+carries that frame to `authd`; root verifies it and registers the device. The parent app
+(`clients/parent/app`) is what does that: the parent pastes this code, types the fingerprint above,
+compares it, and pairs. The
 URI carries the single-use token, so it is piped to `qrencode` on **stdin**, never passed as an
 argument a local session could read out of `/proc`.
 
@@ -71,9 +71,10 @@ authentication, so there is no second password prompt. The window is consumed by
 that presents the token and expires on its own; `pair` refuses while notifications are off.
 
 The URI's `addr=` list carries the box's own routable addresses (every global IPv4 except the
-CGNAT range unless away is on, plus the tailnet address when `away tailnet` is on), so the app can
-try another when one fails (N-10). The addresses also ride the single-use record; each is validated
-before it reaches the URI.
+CGNAT range unless away is on, plus the tailnet address when `away tailnet` is on), so a device can
+reach the box when one address does not work (N-10; the app dials the first today and trying another
+is still to come). The addresses also ride the single-use record; each is validated before it
+reaches the URI.
 
 ## Away from home (N-10)
 

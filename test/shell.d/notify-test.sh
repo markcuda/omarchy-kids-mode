@@ -122,6 +122,10 @@ if python3 -c "import cryptography" >/dev/null 2>&1; then
     fail "enable: certificate or key missing"
   check_eq "$(kids_file_mode "$CERT")" "644" "the certificate is 0644"
   check_eq "$(kids_file_mode "$RKEY")" "640" "the private key is 0640"
+  # The hint must name the step that actually pairs: `pair` previews without
+  # --apply and prints no URI, so a parent would have nothing to paste (rule 6).
+  check_contains "$out" "omarchy-kids-notify pair --apply" \
+    "enable's hint names the pair step that writes"
 
   # The printed fingerprint must be the SPKI hash of what was written (the
   # device pins exactly this; lib/cert.py:makes the same choice).

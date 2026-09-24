@@ -168,7 +168,7 @@ cmd_enable() {
   echo "omarchy-kids-notify: notifications on (relay port $PORT)"
   echo "  host:        $host"
   echo "  fingerprint: $fingerprint"
-  echo "Pair a device with 'omarchy-kids-notify pair' (shows the QR and fingerprint)."
+  echo "Pair a device with 'omarchy-kids-notify pair --apply' (shows the QR and fingerprint)."
 }
 
 cmd_disable() {
