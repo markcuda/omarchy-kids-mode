@@ -347,32 +347,16 @@ devices_fix() {
 # *.conf in the directory is where a widened or replaced fence would live, and
 # assert cannot tell an admin's file from an attacker's, so it fails rather than
 # deleting one.
-RELAY_UNIT_NAME="omarchy-kids-relayd.service"
-RELAY_LAN_ALLOW="localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 fc00::/7 fe80::/10"
-RELAY_CGNAT="100.64.0.0/10"
-
 relay_unit_file() { printf '%s/usr/lib/systemd/system/%s' "$(posture_root)" "$RELAY_UNIT_NAME"; }
 relay_away_dir() { printf '%s/etc/systemd/system/%s.d' "$(posture_root)" "$RELAY_UNIT_NAME"; }
 relay_away_file() { printf '%s/away.conf' "$(relay_away_dir)"; }
-
-# The exact bytes omarchy-kids-notify away tailnet writes (bin/omarchy-kids-notify).
-relay_away_expected() {
-  cat <<EOF
-# Kids Mode: "Away from home: my own VPN" (N-10), written by
-# omarchy-kids-notify away tailnet. Extends the relay's fence to the CGNAT range
-# Tailscale uses, so a device on the parent's own tailnet can reach it. "away off"
-# removes this file. The LAN list is repeated so this file is correct whether
-# systemd merges IPAddressAllow or replaces the unit's.
-[Service]
-IPAddressAllow=$RELAY_LAN_ALLOW $RELAY_CGNAT
-EOF
-}
 
 relay_away_ok() {
   local dir file
   dir="$(relay_away_dir)"
   if [[ ! -e "$dir" && ! -L "$dir" ]]; then return 0; fi
   [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  [[ -r "$dir" && -x "$dir" ]] || return 2
   for file in "$dir"/*.conf; do
     [[ -e "$file" || -L "$file" ]] || continue
     [[ "$file" == "$(relay_away_file)" ]] || return 1 # a foreign drop-in
@@ -381,7 +365,7 @@ relay_away_ok() {
   file="$(relay_away_file)"
   [[ ! -e "$file" && ! -L "$file" ]] && return 0 # no away: the base fence applies
   time_metadata_file_ok "$file" 644 || return 1
-  [[ "$(cat "$file" 2>/dev/null)" == "$(relay_away_expected)" ]]
+  [[ "$(cat "$file" 2>/dev/null)" == "$(relay_away_conf_text)" ]]
 }
 
 relay_away_fix() {
@@ -390,15 +374,11 @@ relay_away_fix() {
   [[ -e "$dir" || -L "$dir" ]] || return 0 # nothing to re-assert
   [[ -d "$dir" && ! -L "$dir" ]] || return 1
   time_metadata_dir_fix "$dir" 755 || return 1
-  for foreign in "$dir"/*.conf; do
-    [[ -e "$foreign" || -L "$foreign" ]] || continue
-    [[ "$foreign" == "$(relay_away_file)" ]] || return 1 # never delete an admin's file
-  done
   file="$(relay_away_file)"
   if [[ -e "$file" || -L "$file" ]]; then
     [[ -f "$file" && ! -L "$file" ]] || return 1
     tmp="$file.$$"
-    relay_away_expected >"$tmp" || return 1
+    relay_away_conf_text >"$tmp" || return 1
     chmod 0644 "$tmp" || {
       rm -f "$tmp"
       return 1
@@ -411,6 +391,13 @@ relay_away_fix() {
     # The running fence must be the file's, not the stale one (N-10).
     relay_reload
   fi
+  # A foreign drop-in is not this lock's to repair, but the file it owns has been
+  # rewritten first: a widened away.conf must not stay widened while a second file
+  # sits beside it. The lock still FAILs (assert never deletes an admin's file).
+  for foreign in "$dir"/*.conf; do
+    [[ -e "$foreign" || -L "$foreign" ]] || continue
+    [[ "$foreign" == "$file" ]] || return 1
+  done
   return 0
 }
 

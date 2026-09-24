@@ -11,24 +11,51 @@
 # a packaged file (I-7). A fail here is a reinstall, not an assert; lock_check's
 # standard fail text names assert, so the row uses lock_check_relay_fence.
 relay_fence_ok() {
-  local unit allow deny
+  local unit service allow deny want fragment
   unit="$(relay_unit_file)"
   [[ -f "$unit" && ! -L "$unit" ]] || return 2 # the package is not installed here
-  [[ "$(grep -c "^IPAddressAllow=$RELAY_LAN_ALLOW\$" "$unit" 2>/dev/null)" == 1 ]] || return 1
-  [[ "$(grep -c '^IPAddressDeny=any$' "$unit" 2>/dev/null)" == 1 ]] || return 1
+  time_metadata_owner_ok "$unit" || return 1
+  # Only the [Service] section carries the fence; a line elsewhere does not apply.
+  service="$(awk '/^\[Service\]/{f=1;next} /^\[/{f=0} f' "$unit")"
+  [[ "$(printf '%s\n' "$service" | grep -c "^IPAddressAllow=$RELAY_LAN_ALLOW\$")" == 1 ]] || return 1
+  [[ "$(printf '%s\n' "$service" | grep -c '^IPAddressDeny=any$')" == 1 ]] || return 1
   if [[ -z "$(posture_root)" ]] && command -v systemctl >/dev/null 2>&1; then
-    deny="$(systemctl show "$RELAY_UNIT_NAME" -p IPAddressDeny --value 2>/dev/null || true)"
+    fragment="$(systemctl show "$RELAY_UNIT_NAME" -p FragmentPath --value 2>/dev/null || true)"
+    [[ -z "$fragment" ]] && return 2 # not loaded here
+    # A full override in /etc/systemd/system shadows the packaged unit: the fence
+    # the package installed is not the fence systemd runs.
+    [[ "$fragment" == "$unit" ]] || return 1
     allow="$(systemctl show "$RELAY_UNIT_NAME" -p IPAddressAllow --value 2>/dev/null || true)"
-    [[ -z "$allow" && -z "$deny" ]] && return 2 # not loaded here
+    deny="$(systemctl show "$RELAY_UNIT_NAME" -p IPAddressDeny --value 2>/dev/null || true)"
     [[ "$deny" == "any" ]] || return 1
+    want="$(systemd_addr_expand "$RELAY_LAN_ALLOW")"
     # The CGNAT range only if the parent's away drop-in is there (N-10).
-    if [[ -f "$(relay_away_file)" ]]; then
-      [[ "$allow" == *"$RELAY_CGNAT"* ]] || return 1
-    else
-      [[ "$allow" != *"$RELAY_CGNAT"* ]] || return 1
-    fi
+    [[ -f "$(relay_away_file)" ]] && want="$want $RELAY_CGNAT"
+    [[ "$(addr_set "$allow")" == "$(addr_set "$want")" ]] || return 1
   fi
   return 0
+}
+
+# systemd expands its three address zone tokens (man systemd.resource-control);
+# the comparison is over the expanded set, so the packaged list and what systemd
+# reports are compared as the same thing.
+systemd_addr_expand() {
+  local out="" token
+  for token in $1; do
+    case "$token" in
+      localhost) out="$out 127.0.0.0/8 ::1/128" ;;
+      link-local) out="$out 169.254.0.0/16 fe80::/64" ;;
+      multicast) out="$out 224.0.0.0/4 ff00::/8" ;;
+      *) out="$out $token" ;;
+    esac
+  done
+  printf '%s\n' "$out"
+}
+
+# addr_set — the tokens as a sorted, space-separated set (order and duplicates
+# do not matter to systemd, so they must not matter here).
+addr_set() {
+  tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ' | sed 's/ $//'
 }
 
 run_locks_section() {

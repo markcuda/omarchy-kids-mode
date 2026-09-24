@@ -607,17 +607,26 @@ check_status "$out" "relay-away" "ok" "relay-away: no drop-in is ok (the base fe
 [[ -e "$AWAY_FILE" ]] && fail "relay-away: assert created a consent file" ||
   pass "relay-away: assert never creates the drop-in"
 
-# Present with the wrong content and mode: fixed to the exact bytes.
+# Wrong bytes at the right mode: the content compare is what drives the fix.
 mkdir -p "$AWAY_DIR"
 printf 'IPAddressAllow=0.0.0.0/0\n' >"$AWAY_FILE"
-chmod 0666 "$AWAY_FILE"
+chmod 0644 "$AWAY_FILE"
 out="$($BIN)"
-check_status "$out" "relay-away" "fixed" "relay-away: an altered drop-in reports fixed"
-check_eq "$(kids_file_mode "$AWAY_FILE")" "644" "relay-away: the drop-in is mode 0644"
+check_status "$out" "relay-away" "fixed" "relay-away: wrong bytes at 0644 report fixed"
 grep -q '^IPAddressAllow=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 fc00::/7 fe80::/10 100.64.0.0/10$' "$AWAY_FILE" &&
   pass "relay-away: the drop-in carries the LAN list plus the CGNAT range" ||
   fail "relay-away: the drop-in content is wrong"
 check_eq "$(cksum <"$UNIT_FILE")" "$unit_before" "relay-away: the packaged unit was not touched (I-7)"
+
+# The exact bytes at 0644: ok, nothing to fix.
+out="$($BIN)"
+check_status "$out" "relay-away" "ok" "relay-away: the exact bytes at 0644 are ok"
+
+# A right file with the wrong mode is fixed, not rewritten as content drift.
+chmod 0600 "$AWAY_FILE"
+out="$($BIN)"
+check_status "$out" "relay-away" "fixed" "relay-away: a wrong mode reports fixed"
+check_eq "$(kids_file_mode "$AWAY_FILE")" "644" "relay-away: the mode is restored to 0644"
 
 # A foreign drop-in: the lock fails, and the file is left exactly as it was.
 printf '[Service]\nIPAddressAllow=0.0.0.0/0\n' >"$AWAY_DIR/local-admin.conf"

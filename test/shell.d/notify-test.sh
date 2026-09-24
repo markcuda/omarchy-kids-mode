@@ -210,6 +210,10 @@ check_eq "$?" 0 "away tailnet --apply succeeds"
 check_contains "$(cat "$AWAY_FILE")" "100.64.0.0/10" "the drop-in allows the tailnet's CGNAT range"
 check_contains "$(cat "$AWAY_FILE")" "192.168.0.0/16" "the drop-in keeps the LAN ranges"
 check_contains "$(cat "$SYSTEMCTL_LOG")" "daemon-reload" "away reloads systemd"
+# Exactly the bytes the relay-away lock expects (one template in lib/kids.sh):
+# a drift would rewrite and restart the relay on every boot (R-NOTIFY-11.1).
+check_eq "$(cat "$AWAY_FILE")" "$(bash -c 'source "$1/lib/kids.sh"; relay_away_conf_text' _ "$DIR")" \
+  "away tailnet writes the one shared fence text"
 check_eq "$("$BIN" away-status)" "tailnet" "away-status: tailnet after apply"
 if python3 -c "import cryptography" >/dev/null 2>&1; then
   "$BIN" enable --apply >/dev/null 2>&1

@@ -19,15 +19,15 @@ COURIER_CONF="$ETC/courier.conf"
 CERT="$RELAY_DIR/cert.pem"
 KEY="$RELAY_DIR/key.pem"
 PORT=8447
-RELAY_UNIT="omarchy-kids-relayd.service"
+RELAY_UNIT="$RELAY_UNIT_NAME"
 SYSROOT=""
 # "Away from home: my own VPN" (N-10): a drop-in that extends the relay's fence to
 # the CGNAT range Tailscale uses. The LAN list is repeated so the file is correct
 # whether systemd merges the drop-in's IPAddressAllow or replaces the unit's.
 AWAY_DIR="$SYSROOT/etc/systemd/system/$RELAY_UNIT.d"
 AWAY_FILE="$AWAY_DIR/away.conf"
-LAN_ALLOW="localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 fc00::/7 fe80::/10"
-CGNAT_RANGE="100.64.0.0/10"
+LAN_ALLOW="$RELAY_LAN_ALLOW"
+CGNAT_RANGE="$RELAY_CGNAT"
 DRY_RUN=1
 DEVICES_BIN="$(kids_bin devices "$DIR")"
 
@@ -306,15 +306,7 @@ cmd_away() {
       fi
       install -d -m 0755 "$AWAY_DIR"
       local tmp="$AWAY_FILE.$$"
-      cat >"$tmp" <<EOF
-# Kids Mode: "Away from home: my own VPN" (N-10), written by
-# omarchy-kids-notify away tailnet. Extends the relay's fence to the CGNAT range
-# Tailscale uses, so a device on the parent's own tailnet can reach it. "away off"
-# removes this file. The LAN list is repeated so this file is correct whether
-# systemd merges IPAddressAllow or replaces the unit's.
-[Service]
-IPAddressAllow=$LAN_ALLOW $CGNAT_RANGE
-EOF
+      relay_away_conf_text >"$tmp"
       chmod 0644 "$tmp"
       mv -f "$tmp" "$AWAY_FILE"
       reload_relay

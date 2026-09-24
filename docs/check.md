@@ -72,7 +72,10 @@ Three rows go beyond the "one line per assert lock" rule (R-NOTIFY-11.2). `lock:
 `lock:relay-fence` has **no assert lock behind it**: the relay's `IPAddressAllow`/`IPAddressDeny`
 fence lives in the package's own unit file, and assert never rewrites a packaged file (I-7). It is
 verify-only — the unit file is present, root-owned, with exactly the packaged allow line and
-`IPAddressDeny=any`, and, live and without `--root`, what `systemctl show` reports is that same fence
+`IPAddressDeny=any` in its `[Service]` section, and, live and without `--root`,
+`systemctl show … -p FragmentPath` names that same file (a full override in `/etc/systemd/system`
+shadows it and fails), the effective deny is `any`, and the effective allow set — over systemd's own
+expansion of `localhost`/`link-local`/`multicast`, compared as a set — is exactly the packaged list
 plus the CGNAT range if and only if the parent's `away.conf` is there. Absent unit (the package is
 not installed) is a WARN. A FAIL means "reinstall `omarchy-kids` and remove any drop-in you did not
 write", **not** "run `omarchy-kids-assert`", so this one row says so itself rather than reusing

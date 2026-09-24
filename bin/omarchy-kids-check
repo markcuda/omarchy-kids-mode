@@ -129,7 +129,7 @@ lock_check_relay_fence() {
   if [[ "$rc" -eq 0 ]]; then
     add_result Locks "lock:$id" pass "matches what the package installed, and the same fence is what systemd applies"
   elif [[ "$rc" -eq 2 ]]; then
-    add_result Locks "lock:$id" warn "the relay unit is not installed here, so its fence could not be verified"
+    add_result Locks "lock:$id" warn "the relay unit is not installed or not loaded here, so its fence could not be verified"
   else
     add_result Locks "lock:$id" fail "the relay's fence differs from what the package installed; reinstall 'omarchy-kids' (a packaged file, which 'omarchy-kids-assert' never rewrites) and remove any drop-in you did not write — see 'docs/check.md'"
   fi
