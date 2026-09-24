@@ -1796,3 +1796,24 @@ else actionable: three consecutive rounds have found only the component-skew rep
 the gate picture, and every backlog item now needs an owner decision or hardware. Worth pausing the
 loop or pointing it at the owner's decisions instead of more sweeps.
 
+### 2026-09-22, loop iteration: backlog check and merge-readiness
+
+Dogfood: re-ran `omarchy-kids-exit --finish --kid kid-ada` as root (no password needed) -- the kid's
+session ended and the SDDM portal came up with its two tiles ("kids=1 parents=1"), re-confirming
+the `--finish --kid` path `docs/exit.md` already marks verified (2026-09-03). Re-logged the kid in.
+
+Backlog check: the remaining items need the owner. Item 1 (two-kid-modes SPEC amendment) is drafted
+and awaiting review; item 2's safe live-UI defects are fixed, and the rest (the GCompris first-run
+dialog and its wrench) are proposals needing a packaging decision; item 3 lives on
+`fix/install-packaging`; item 4 (Level 2 verification) is owner-supervised; item 5
+(favorites/recents) is an owner-decision proposal; item 6's I-6 sweep is now down to design choices
+(the toast's short-screen placement) rather than defects. The live-unverified surfaces that remain
+need a real parent password (the portal after an exit) or hardware (a wifi join; a band-3-5 kid).
+
+Merge-readiness (for the owner's gate): the ~20 topic branches ahead of integration conflict
+heavily on the two append-only state files -- `PROGRESS.md` and `docs/loop-report.md` -- because
+each appends its own entry at the same tail; those are trivial "keep both" resolutions. Two
+real-file conflicts also exist and want a look: `docs/levels.md` between the older
+`docs/levels-live-status` and `fix/levels-live-status`, and `share/launcher/shell.qml` between the
+older `fix/launcher-insets-simplify` and `fix/launcher-time-left-refresh`. Everything else
+auto-merges (tested branch-by-branch with `git merge-tree`). No code changed this iteration.
