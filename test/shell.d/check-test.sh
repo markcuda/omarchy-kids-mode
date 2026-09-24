@@ -480,7 +480,7 @@ expand_out="$(
   source check-locks.sh
   printf '%s\n' "$(addr_set "$(systemd_addr_expand 'localhost link-local multicast')")"
 )"
-check_eq "$expand_out" "127.0.0.0/8 169.254.0.0/16 224.0.0.0/4 ::1/128 fe80::/10 ff00::/8" \
+check_eq "$expand_out" "127.0.0.0/8 169.254.0.0/16 224.0.0.0/4 ::1/128 fe80::/64 ff00::/8" \
   "systemd_addr_expand expands the three zone tokens as the spec table says"
 reorder_out="$(
   cd "$ROOT_DIR/lib" || exit 1
@@ -491,6 +491,15 @@ reorder_out="$(
   printf '%s\n' "$(addr_set '10.0.0.0/8 10.0.0.0/8 ::1/128')"
 )"
 check_eq "$reorder_out" "10.0.0.0/8 ::1/128" "addr_set ignores order and duplicates"
+reduce_out="$(
+  cd "$ROOT_DIR/lib" || exit 1
+  source conf.sh
+  source posture.sh
+  source kids.sh
+  source check-locks.sh
+  printf '%s\n' "$(addr_reduce 'fe80::/10 fe80::/64 ::1/128')"
+)"
+check_eq "$reduce_out" "::1/128 fe80::/10" "addr_reduce drops the covered fe80::/64"
 
 # --- Boot JSON is selected only by the trusted machine mode -----------
 

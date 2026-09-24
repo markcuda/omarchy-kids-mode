@@ -31,7 +31,10 @@ relay_fence_ok() {
     want="$(systemd_addr_expand "$RELAY_LAN_ALLOW")"
     # The CGNAT range only if the parent's away drop-in is there (N-10).
     [[ -f "$(relay_away_file)" ]] && want="$want $RELAY_CGNAT"
-    [[ "$(addr_set "$allow")" == "$(addr_set "$want")" ]] || return 1
+    # Reduce both sides over the one prefix the packaged list and the link-local
+    # zone both name: fe80::/10 covers fe80::/64, and systemd may report either or
+    # both, so the compare must not depend on that.
+    [[ "$(addr_reduce "$allow")" == "$(addr_reduce "$want")" ]] || return 1
   fi
   return 0
 }
@@ -44,12 +47,26 @@ systemd_addr_expand() {
   for token in $1; do
     case "$token" in
       localhost) out="$out 127.0.0.0/8 ::1/128" ;;
-      link-local) out="$out 169.254.0.0/16 fe80::/10" ;;
+      link-local) out="$out 169.254.0.0/16 fe80::/64" ;;
       multicast) out="$out 224.0.0.0/4 ff00::/8" ;;
       *) out="$out $token" ;;
     esac
   done
   printf '%s\n' "$out"
+}
+
+# addr_reduce TOKENS — drop a prefix another prefix on the same side covers, for
+# the one documented pair here (fe80::/10 covers fe80::/64). Applied to both sides
+# of the compare, so it does not matter whether systemd reports the wider prefix,
+# the narrower one, or both.
+addr_reduce() {
+  local set token out=""
+  set="$(addr_set "$1")"
+  for token in $set; do
+    if [[ "$token" == "fe80::/64" && "$set" == *"fe80::/10"* ]]; then continue; fi
+    out="$out $token"
+  done
+  addr_set "$out"
 }
 
 # addr_set TOKENS — the tokens as a sorted, space-separated set (order and
