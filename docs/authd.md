@@ -158,7 +158,10 @@ the "do the thing" code has exactly one home. The fourth is `REVIEW <json-frame>
 the same shape as `DECIDE` over a review record: the relay account or root may present it, the
 device's signature is verified against the registry with the `decide` scope, and root then re-reads
 the open review file, refuses `no changed-again` unless the file's `now` is the fingerprint the app
-signed it had seen, and runs `omarchy-kids-review approve|deny <kid> <id> --apply`. The fifth is
+signed it had seen, and runs `omarchy-kids-review approve <kid> <id> --seen <fp> --apply` or
+`omarchy-kids-review deny <kid> <id> --apply`. `approve` re-checks that fingerprint against the live
+surface under the lock `scan` takes and exits 3 when it differs, which authd maps to
+`no changed-again` -- so the pin is a lock, not a second read (rule 4). The fifth is
 `DECIDE <json-frame>\n`, a paired
 device's signed decision (R-NOTIFY-4): only the relay account (`--relay-user`) or root may send it (the away courier runs as root and
 carries the app's signed decision; both only carry it, root verifies here),
