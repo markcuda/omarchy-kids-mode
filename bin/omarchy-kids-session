@@ -45,13 +45,19 @@ full-screen "Ask a grown-up" message (omarchy-kids-blocked) and
 exits 1 -- fail closed (I-4, I-9). \$HOME/.config/hypr is never read
 (R-DESK-6).
 
-  --check             Run every R-DESK-2 check and print a PASS/FAIL/WARN
-                      table without starting Hyprland. Exits 1 if any
-                      check FAILs (a WARN does not fail this).
+  --check             Run every R-DESK-2 check and print a PASS/FAIL/WARN/
+                      SKIP table without starting Hyprland. The polkit row is
+                      SKIP when the invoking account has no Kids Mode profile
+                      (root, or a grown-up's own account): the probe only says
+                      something about a kid. Exits 1 if any check FAILs (a
+                      WARN does not fail this).
   --check-setup       Report checks available before child login. The two
                       private temporary mounts are SKIP, checked at child
-                      login. Never starts Hyprland or writes a session log.
-                      Exits 1 if any other check FAILs.
+                      login, as is the polkit row for an account with no Kids
+                      Mode profile (root, or a grown-up's own account): the
+                      probe says nothing about how a kid is treated. Never
+                      starts Hyprland or writes a session log. Exits 1 if any
+                      other check FAILs.
   --install-configs   Copy the level configs from $SHARE/hyprland to
                       $ETC/hyprland (mode 0644), the
                       root-owned copy the level files' band overlays
@@ -203,6 +209,23 @@ check_polkit() {
   # /etc/polkit-1/rules.d is 0750 root:polkitd by system default (tmpfiles re-applies it at boot),
   # so a kid cannot see the rule files. Ask polkit itself instead: with the deny rule in place a
   # denied action is refused outright; without it the default policy asks for admin authentication.
+  # This probe only says something about an account the deny rule binds, and
+  # the rule is written for kid accounts (lib/posture.sh). An invoker with no
+  # Kids Mode profile -- root (authorized outright, so an empty answer) or the
+  # parent's own account (left to the default policy, "requires
+  # authentication") -- would otherwise be read as a missing rule (found
+  # running --check-setup as root, 2026-09-22). SKIP for those, like the two
+  # mounts, in every mode. A profiled kid always runs the probe, even if their
+  # group membership has drifted: that drift is what this check is for.
+  if [[ ! -f "$PROFILE" ]] || is_root; then
+    RESULT=SKIP
+    if is_root; then
+      DETAIL="running as root, which polkit authorizes outright; the deny rule binds kid accounts, so run this as the kid"
+    else
+      DETAIL="'$ACCOUNT' has no Kids Mode profile, so the deny rule does not bind it; run this as the kid"
+    fi
+    return 0
+  fi
   local out
   if ! command -v pkcheck >/dev/null 2>&1; then
     RESULT=FAIL
@@ -218,12 +241,12 @@ check_polkit() {
       ;;
     *"requires authentication"* | *"Authorization requires"*)
       RESULT=FAIL
-      DETAIL="polkit would prompt for a denied action: the deny rule is not active"
+      DETAIL="polkit would prompt for a denied action: the deny rule does not bind this account (no rule, or the account is not in omarchy-kids)"
       return 1
       ;;
     "")
       RESULT=FAIL
-      DETAIL="polkit authorized a denied action: the deny rule is not active"
+      DETAIL="polkit authorized a denied action: the deny rule does not bind this account (no rule, or the account is not in omarchy-kids)"
       return 1
       ;;
     *)

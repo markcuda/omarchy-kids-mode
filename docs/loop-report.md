@@ -2472,3 +2472,37 @@ describes it): `fix/launcher-time-left-refresh` (docs/time.md), `fix/show-missin
 changes are internal enough that no doc describes the old behaviour they change. Nothing actionable
 this round: the docs' remaining stale claims are owned by the branches that fix the code they
 describe, and merge with them.
+### 2026-09-22, loop iteration: the polkit check blamed the rule for root's own exemption
+
+Dogfooded the box's read-only parent checks this time: `omarchy-kids-assert --dry-run` reports every
+lock ok (`skip boot-locks:portal`, plus the known unverifiable parent-unlock warning), and
+`omarchy-kids-session --check-setup` run as **root** printed a wall of per-account FAILs about
+root's own account. One of them was a lie: `polkit rules present  FAIL  polkit authorized a denied
+action: the deny rule is not active`. Root is authorized *outright* by polkit, so `pkcheck` exits 0
+with no output at all, and the check's empty-answer branch read that as the rule being missing. The
+same branch also misblames the parent's own account, which the default policy sends to "requires
+authentication" — the check said the rule was off for them too.
+
+Fix on `fix/polkit-check-as-root`: the probe now SKIPs (like the two mounts) when the invoking
+account has no Kids Mode profile, or is root, with a detail that says why — root is authorized
+outright, or the account simply isn't a kid, so the probe says nothing about how a kid is treated.
+The guard sits before the `pkcheck` presence test, so a SKIP never depends on a tool it does not
+use. `docs/session.md` and `--help` say the same thing, and the check's own FAIL detail no longer
+over-claims the cause ("the deny rule does not bind this account (no rule, or the account is not in
+omarchy-kids)").
+
+Three review rounds, each of which found something real. The first: my test's "does not blame the
+rule" assertion could not fail, because the harness's pkcheck stub substitutes "Not authorized."
+for an empty answer file, making root's real answer unreachable — the stub now has an `authorized`
+control value (nothing, exit 0), which also gives that branch its first coverage. The second, and
+the one that mattered: keying the SKIP on *group membership* would have skipped a profiled kid
+whose groups have drifted — exactly the state `lib/assert-locks.sh` exists to repair — turning a
+fail-closed check into a silent pass, so the predicate is the profile (plus root) and a profiled kid
+always gets the probe. A new test pins that case (`KIDS_TEST_GROUPS=wheel`, profile present,
+`break_polkit`): it must FAIL, name what it checked, and not start Hyprland. The third round caught
+the labels: help and docs still described the group predicate. Both mutation directions bite
+(removing the guard fails six assertions; the group predicate fails the four drifted-kid ones).
+
+Live-verified by installing the worktree copy as `/usr/bin/omarchy-kids-session` on the box: as root
+the row is now `SKIP` with the honest reason and no false blame; as `kid-ada` it is unchanged — the
+probe runs and reports the deny rule active.
