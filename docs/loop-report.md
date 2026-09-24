@@ -992,3 +992,23 @@ compares against, not this image's build string, so the two are being conflated 
 "confirmed against Omarchy 4.0.2" line. The note and the jsonc header now name both; a sweep of the
 rest is left for the owner or a later iteration (it touches a dozen files and several branches
 already edit the same lines).
+### 2026-09-22, loop iteration: the Level 2 Super+K cheat sheet does nothing
+
+Dogfooded a flow the loop had not: at Level 2 (kid-ada, session healthy), `Super+K` -- Appendix E's
+"cheat sheet" bind -- does nothing. Live diagnosis in the kid's session:
+`omarchy-menu-keybindings` prints `OMARCHY_PATH is not set` and exits, and its interactive mode is
+`omarchy-shell shell summon`, which by its own usage needs the Omarchy shell "already running;
+this command does not start it". A Level 2 session runs the kids launcher, not that shell (only
+Level 3's start hook execs `omarchy-launch-shell`), so the bind is inert at Level 2;
+`omarchy-menu-keybindings --print` does work and prints the live binds as text, but there is no kid
+surface to show it. Fixed the claims, not the bind, on `docs/levels-l2-cheat-sheet-inert`:
+`L2.lua`'s comment and `docs/levels.md` (live-status paragraph, Level 2 description, and the
+manual-verification step) now say the cheat sheet is inert at Level 2, note Level 3's works, and
+record a kid-side cheat sheet as the open decision. The fable review caught one blocking scope
+error -- an earlier draft doubted the Level 3 dogfood result on a false premise (`omarchy-shell` is
+also what `omarchy-launch-shell` runs) -- and it was corrected. `test/all` green, `shellcheck`
+untouched (Lua/docs only). Appendix E still mandates the bind, so it stays and the gap is recorded
+for the owner; this is the one I-6/spec tension the loop has hit, noted rather than resolved.
+
+(The earlier "actionable backlog is exhausted" entry stands for everything else the loop can reach
+without the owner.)

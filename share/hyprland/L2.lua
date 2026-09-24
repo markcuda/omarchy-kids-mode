@@ -104,8 +104,14 @@ o.bind("SUPER + SHIFT + RIGHT", "Swap window to the right", hl.dsp.window.swap({
 o.bind("SUPER + SHIFT + UP", "Swap window up", hl.dsp.window.swap({ direction = "u" }))
 o.bind("SUPER + SHIFT + DOWN", "Swap window down", hl.dsp.window.swap({ direction = "d" }))
 
--- Cheat sheet: Omarchy's own real keybindings viewer, same command
--- default.hypr.bindings.utilities binds SUPER + K to.
+-- Cheat sheet: the same command default.hypr.bindings.utilities binds
+-- SUPER + K to, kept for Appendix E -- but it is inert at Level 2 (live,
+-- 2026-09-22). Its menu is summoned with `omarchy-shell shell summon`, which
+-- needs a running Omarchy shell; a Level 2 session runs the kids launcher
+-- instead (only Level 3's start hook runs omarchy-launch-shell), and the
+-- command also fails first on the unset $OMARCHY_PATH. `omarchy-menu-keybindings
+-- --print` still prints the live binds as text, with no kid surface to show it;
+-- a kid-side viewer is the open item (docs/levels.md).
 o.bind("SUPER + K", "Kids Mode: keybindings", "omarchy-menu-keybindings")
 
 -- Launcher, aliased onto Super+Space too (Appendix E). Also doubles as
