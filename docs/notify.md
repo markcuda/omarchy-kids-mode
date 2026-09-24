@@ -17,6 +17,7 @@ omarchy-kids-notify away <off|tailnet> [--apply]
 omarchy-kids-notify away-status
 omarchy-kids-notify mailbox <off|ntfy|gotify> [--url U --topic T [--reply-topic R]] [--apply]
 omarchy-kids-notify mailbox-status
+omarchy-kids-notify publish [--apply]         # a pass-through to omarchy-kids-devices
 omarchy-kids-notify list [--json]              # a pass-through to omarchy-kids-devices
 omarchy-kids-notify pair-start [--apply]       # a pass-through to omarchy-kids-devices
 ```
@@ -87,9 +88,9 @@ changes nothing else about the fence, and it is the parent's own VPN, not a thir
 
 ## The device subcommands
 
-`devices`, `rename`, `scopes`, `revoke` and `publish` delegate straight to `omarchy-kids-devices`
-(`docs/devices.md`); this command adds nothing to them beyond the shared root check and the plan
-printing.
+`devices`, `list`, `rename`, `scopes`, `revoke`, `publish` and `pair-start` delegate straight to
+`omarchy-kids-devices` (`docs/devices.md`); this command adds nothing to them beyond the shared root
+check and the plan printing.
 
 ## Lifecycle: the relay exists only while it is needed (N-7)
 
@@ -98,10 +99,10 @@ There is no always-on listener. `omarchy-kids-time-ledger tick` (every 30 second
 pairing window open — and does nothing while notifications are off. The relay stops itself on the
 same condition (`lib/relay.py`'s `is_needed` and `needs_stopping`): after a 60-second grace with
 Kids Mode not in use, it closes — dropping any device that was holding a stream open, because a
-subscriber must not become the always-on listener R-NOTIFY-1 forbids. Root publishes only the
-pairing window's expiry in `status.json` (`pairing_open_until`), which the relay reads through
-`omarchy-parents`; the pairing record itself stays root-only, so the relay never sees the token
-(R-NOTIFY-2). So the port is closed soon
+subscriber must not become the always-on listener R-NOTIFY-1 forbids. Root publishes the
+pairing window's expiry in `status.json` (`pairing_open_until`) — never the token — which the relay
+reads through `omarchy-parents`; the pairing record itself stays root-only, so the relay never sees
+the token (R-NOTIFY-2). So the port is closed soon
 after the last kid leaves and the last request is decided (the bound is the tick's 30-second status
 refresh plus the grace plus the 5-second poll, about 95 seconds), and the tick brings it back within
 30 seconds of the next login, request, or pairing. Starting it is best effort and never fails a
