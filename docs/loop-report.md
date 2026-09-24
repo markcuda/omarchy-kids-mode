@@ -1444,3 +1444,29 @@ because SPEC R-WEB-3 says a filtered band adds no URL list, which its file says 
 `apps.show_missing` also surfaced: the union lost its only reader (the box runs
 `fix/show-missing-regression`, which restores it), so a missing app's tile is no longer omitted by
 default. That branch is at the gate; nothing here duplicates it.
+### 2026-09-22, loop iteration: the L2 idle-pointer rule was set twice
+
+Dogfooded the VM first: kid-ada at Level 2, session healthy; opened the picker, launched Blinken
+with Enter, and closed it with Super+Q -- all correct, and the launcher's time-left line showed
+the earlier grant ("18 minutes left"). Then the I-6 pass over `share/` (the shelf's "never run
+against a real Quickshell" claim is already corrected on `fix/plugins-shelf-field-shift`, so
+nothing to redo there) found `share/hyprland/L2.lua` setting `cursor = { inactive_timeout = 1 }`
+twice under two overlapping comments -- a stale merge -- with `test/shell.d/levels-test.sh`
+asserting the L1/L2 rule twice to match. It is behaviour-neutral (same key, same value) but reads
+like a botched merge in a root-owned level config. Fixed on `fix/l2-duplicate-cursor-rule`: one
+call, one comment, one pair of assertions, plus a count guard over comment-stripped files that
+fails (`got 2`) if the duplicate returns. `levels-test.sh` green (guard verified against a
+reintroduced duplicate), `test/all` green (52 files, five skips), `shellcheck -x` clean, fable
+review nothing blocking.
+
+Live on the VM: installed `/etc/omarchy-kids/hyprland/L2.lua` from the branch and restarted the
+kid session through SDDM; `omarchy-kids-session` reported `L2.lua present and verifies` and the
+Level 2 desktop came up with `omarchy-kids-check --live` green except the expected
+`firmware:password`. The kid's time had run out during the restart, so enforcement entered
+`finishing` and ended that session; `grant kid-ada 60` returned the state to `allowed` and the
+kid logged back in (58 minutes left). Two operator notes: a `sudo tee` with a heredoc swallowed
+the piped password and repeated attempts tripped the guest's `pam_faillock` (locked the parent
+account ~10 minutes, cleared on its own -- `.local/VM-DOGFOOD.md` now says never to combine
+`sudo -S` with a heredoc), and the per-boot autologin drop-in was removed by hand because the
+cleanup unit did not fire on a manual `systemctl restart sddm`. The VM was left with the kid
+session up, no drop-in, and only the VM-only `firmware:password` FAIL.

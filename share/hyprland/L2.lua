@@ -38,14 +38,10 @@ hl.env("XDG_SESSION_TYPE", "wayland")
 hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
 hl.env("XDG_SESSION_DESKTOP", "Hyprland")
 
--- Same idle-pointer rule as L1 (verified option, see L1.lua's note): a pointer
--- parked on a screen a kid drives by keyboard reads as clutter, and the live
--- review flagged it. It returns the moment the mouse moves.
-hl.config({ cursor = { inactive_timeout = 1 } })
-
 -- Hide the idle pointer after a second of stillness (verified option on
--- the running compositor; movement brings it back). Same live-review
--- finding as L1: a parked cursor on a keyboard-first surface.
+-- the running compositor; movement brings it back -- L1.lua's note records
+-- the how). Same live-review finding as L1: a parked cursor on a
+-- keyboard-first surface.
 hl.config({ cursor = { inactive_timeout = 1 } })
 
 -- Unlike L1, Level 2 actually tiles (50/50 dwindle split, below), so

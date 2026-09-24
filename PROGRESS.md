@@ -29,6 +29,10 @@ that two apps do tile side by side at Level 2, closing that open item in `docs/l
 picker overlay, its list Process and its empty/retry/close paths really run under Quickshell,
 correcting `docs/wifi.md`'s stale "never run" claim.
 
+**Fixed on a topic branch awaiting merge:** `fix/l2-duplicate-cursor-rule` -- `share/hyprland/L2.lua`
+set the idle-pointer rule twice (a stale merge); it now sets it once, and `levels-test.sh` pins the
+count.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After
