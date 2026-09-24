@@ -60,7 +60,7 @@ documented away.
 - `lib/provision-add.sh` (or the wizard's account step): a small, per-app seeding block, keyed by
   account, writing into the kid's own home; a comment naming the app and version it was verified
   against.
-- `docs/packs.md` or `docs/apps.md`: one line per app we seed this way, stating that it is
+- `docs/apps.md`: one line per app we seed this way, stating that it is
   configuration, not a lock.
 - `test/shell.d/provision-test.sh`: a fixture asserting the seeded file exists and is owned by the
   kid, for a stubbed config path (no real GCompris).

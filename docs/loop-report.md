@@ -2334,3 +2334,51 @@ overlay needs the laptop's card" contradiction; the picker's dangling "UNTESTED 
 comment now points at `docs/wifi.md`. fable review MERGE (one pre-existing note fixed). The same
 install-hygiene trap as `timesup.qml` appeared again: the VM's packaged files are older than the
 branches, so a live check must install the file under test first.
+### 2026-09-22, loop iteration: three broken doc references
+
+Dogfooded (session healthy; the live check is the box's usual 46 PASS plus its four known FAILs)
+and then tried an angle the loop had not: a mechanical link-check over the live docs (`docs/*.md`,
+excluding `docs/archive/`) for `docs/*.md` references that do not resolve. It found three:
+
+- `docs/style.md` still pointed at `docs/hyprland-levels.md`, a file that was never created; the
+  per-level rationale it describes (including why `default.hypr.envs` is not required) lives in
+  `docs/levels.md` today.
+- `docs/data.md` glued two paths into one twice (`docs/panel.md/docs/ask.md`,
+  `docs/time.md/docs/panel.md`), each reading as a path to a file that does not exist.
+- the GCompris proposal offered `docs/packs.md` (never created) or `docs/apps.md`; the pack format
+  lives in docs/apps.md.
+
+Fixed on `docs/fix-doc-references`; the live docs now have no unresolved `docs/*.md` reference.
+`test/all` green. The archive's own references are historical and were left alone.
+
+### 2026-09-22, loop iteration: two mechanical sweeps, both clean
+
+Dogfooded (session healthy; the live check is 46 PASS plus the box's four known FAILs), then tried
+two angles the loop had not:
+
+- **Command <-> doc <-> test inventory.** Every `bin/omarchy-kids-*` either has its own
+  `docs/<command>.md` or is documented inside its topic doc (`blocked`, `boot-login`, `parent-auth`,
+  `session-start`, `super-tap`, `time-ledger` and `wifid` are each mentioned in 3-11 live docs), and
+  the extra `test/shell.d/*` files are topic tests (trust-boundary, qml-*, theme-*, wizard-*, ...),
+  not gaps. No tracked build artifacts (`bin/__pycache__` is gitignored).
+- **SPEC requirement-id traceability.** `SPEC.md` has 90 ids. The 8 cited in neither a test nor a
+  doc are all explained: R-EXIT-2 is a pointer line ("verified through R-SEC-2"), R-EXIT-4/5 are
+  Pause, deliberately unshipped (DECISIONS-NEEDED §6 item 2), and the rest (R-BOOT-4, R-BUILD-1,
+  R-LOGIN-2, R-SEC-5, R-SEC-6) have their substance documented or their id cited in code -- e.g.
+  R-LOGIN-2 is implemented and cited at `share/sddm-theme/Main.qml:211`, and R-BOOT-4's
+  "supersedes, sorts later" is `docs/boot.md:28,90,128`.
+
+Also confirmed the band data is consistent: four bands, each with a pack, a policy JSON and a list
+file, and `render_policy_json` merges the list only for garden bands (the 13+ list is a parked proxy
+blocklist, never merged), so R-WEB-3 holds. Nothing actionable this round; the remaining work is the
+owner's (DECISIONS-NEEDED §7).
+
+### 2026-09-22, loop iteration: conventions and file-mode audit, clean
+
+Dogfooded (session healthy; 46 PASS plus the box's four known FAILs) and audited the repo's own
+conventions mechanically: every bash command in `bin/` has `#!/bin/bash`, `set -euo pipefail`, an
+`omarchy:summary=` line and the executable bit; the two Python daemons (`omarchy-kids-authd`,
+`omarchy-kids-wifid`) carry `omarchy:summary=` and `omarchy:hidden=true`, and R-BUILD-1 sanctions a
+Python verifier ("a tiny Python or Perl helper") for both. Every tracked file's mode matches its
+kind once the executable set is read correctly (`bin/`, the `initcpio/` hook scripts, `scripts/`,
+`test/live/`, `test/phase1/`, `test/all`). Nothing to fix.
