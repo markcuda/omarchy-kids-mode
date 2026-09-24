@@ -11,6 +11,20 @@ per kid, the parent never restricted, one parent password. This is the one repos
 project; the design records are `CORE.md`, `SPOKES.md` and `research/` here, plus
 `PATH-SANDBOX.md`/`PATH-INSTALLER.md` on the `two-paths` branch.
 
+## Build philosophy (owner, 2026-09-22)
+
+These sit under the invariants below, never over them.
+
+1. **User experience reigns supreme. "It just works" — always.** Every surface must wow the parent
+   and the kid: native-looking, responsive, obvious, keyboard-complete, and correct the first time
+   and every time. Foolproof is the floor, not the ceiling. A screen that needs a manual, a README,
+   or a second try is not done.
+2. **Lean into the most robust, full-featured build; no holds barred.** We have the tokens to
+   burn. When a choice exists between the smaller thing and the complete, delightful, well-tested
+   thing, build the complete one — as long as it keeps the invariants and the trust boundary. Turn
+   vague tickets into real specs; turn "later" into "now"; find the design that makes the parent
+   say "incredible" without ever crossing I-1..I-11.
+
 ## Rules that override everything
 
 1. **The parent's account is never restricted** (spec I-1). If your change touches the parent's
