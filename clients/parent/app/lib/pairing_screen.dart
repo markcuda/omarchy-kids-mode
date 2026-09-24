@@ -133,7 +133,20 @@ class _PairingScreenState extends State<PairingScreen> {
               _Error(text: widget.bootError!),
               const SizedBox(height: 16),
             ],
-            if (!_confirming) ..._ask() else ..._confirm(),
+            ...(_confirming ? _confirm() : _ask()),
+            // On either step: a pairing can fail on a stored key the app cannot
+            // read (the box seed is first read here), and that must not be a dead
+            // end.
+            if (widget.onResetKeys != null) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: _busy ? null : _confirmReset,
+                  child: const Text('Trouble? Reset this device'),
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -170,16 +183,6 @@ class _PairingScreenState extends State<PairingScreen> {
         if (widget.storageNote != null) ...[
           const SizedBox(height: 16),
           Text(widget.storageNote!, style: Theme.of(context).textTheme.bodySmall),
-        ],
-        if (widget.onResetKeys != null) ...[
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              onPressed: _busy ? null : _confirmReset,
-              child: const Text('Trouble? Reset this device'),
-            ),
-          ),
         ],
       ];
 

@@ -355,6 +355,44 @@ void main() {
     expect(find.text('Pair with the computer'), findsNothing);
   });
 
+  testWidgets('a store that cannot even be read lands on pairing with a way out, not a spinner', (tester) async {
+    final store = FakeStore()..readThrows.add(SecureKeystore.pairedKey);
+    final keystore = SecureKeystore(store);
+    await pumpPairing(tester, connect: FakeConnect(), keystore: keystore);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.textContaining("Couldn't open the session"), findsOneWidget);
+    expect(find.text('Trouble? Reset this device'), findsOneWidget);
+    await tester.tap(find.text('Trouble? Reset this device'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reset'));
+    await tester.pumpAndSettle();
+    expect(store.readThrows, isEmpty, reason: 'the reset deleted the unreadable item');
+    expect(await keystore.loadPaired(), isNull);
+    expect(find.textContaining("Couldn't open the session"), findsNothing);
+  });
+
+  testWidgets('a bad box seed, only read at a pairing, still offers the reset', (tester) async {
+    final store = FakeStore();
+    store.values[SecureKeystore.boxKey] = base64.encode(List.filled(31, 1));
+    final keystore = SecureKeystore(store);
+    await pumpPairing(tester, connect: FakeConnect(), keystore: keystore);
+    // No paired record, so boot is fine and only the pairing reads the seed.
+    expect(find.text('Pair with the computer'), findsOneWidget);
+    expect(find.textContaining("Couldn't open the session"), findsNothing);
+    await tester.enterText(find.byType(TextField).at(0), _uri);
+    await tester.enterText(find.byType(TextField).at(1), 'ab' * 32);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pair'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("Pairing didn't work"), findsOneWidget);
+    await tester.tap(find.text('Trouble? Reset this device'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reset'));
+    await tester.pumpAndSettle();
+    expect(await keystore.loadBoxSeed(), isNull);
+  });
+
   testWidgets('a stored key the app cannot read is not a dead end: Reset clears it', (tester) async {
     final store = FakeStore();
     store.values[SecureKeystore.signKey] = base64.encode(List.filled(31, 1));

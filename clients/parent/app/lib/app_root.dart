@@ -64,20 +64,24 @@ class _AppRootState extends State<AppRoot> {
       _loading = true;
       _error = null;
     });
-    final paired = PairingResult.decode(await widget.keystore.loadPaired());
-    if (paired == null) {
-      setState(() => _loading = false);
-      return;
-    }
-    final where = pairingAddresses(paired.addresses);
-    if (where.isEmpty) {
-      setState(() {
-        _loading = false;
-        _error = 'the paired computer gave no address to reach it at';
-      });
-      return;
-    }
+    // Every keystore read is inside the guard: a store that cannot answer at all
+    // must land on the pairing screen with the reset offered, never on a spinner.
     try {
+      final paired = PairingResult.decode(await widget.keystore.loadPaired());
+      if (paired == null) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+      final where = pairingAddresses(paired.addresses);
+      if (where.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _error = 'the paired computer gave no address to reach it at';
+          });
+        }
+        return;
+      }
       final keyPair = await loadSignKeyPair(widget.keystore);
       final relay = widget.connect(
         host: where.first.host,
@@ -137,9 +141,10 @@ class _AppRootState extends State<AppRoot> {
       platform: widget.platform,
       storageNote: widget.storageNote,
       bootError: _error,
-      // A boot error is a stored-key error (the network is only touched later),
-      // so offer the way out from here as well as from the requests screen.
-      onResetKeys: _error == null ? null : _resetKeys,
+      // Always offered here: this is the only screen a parent reaches when the
+      // app cannot read a stored key, whether that failed at boot (a bad paired
+      // record or key) or only later (a bad box seed, first read at a pairing).
+      onResetKeys: _resetKeys,
       onPaired: (_) => _boot(),
     );
   }

@@ -6,11 +6,17 @@ import 'package:omarchy_kids_app/keystore.dart';
 /// switch to make it fail like a device with no keystore.
 class FakeStore implements SecretStore {
   final Map<String, String> values = {};
+
+  /// Every read, write and delete fails, as on a device with no keystore.
   bool broken = false;
+
+  /// Keys whose read fails while the rest of the store works (an item that did
+  /// not survive a backup, say).
+  final Set<String> readThrows = {};
 
   @override
   Future<String?> read(String key) async {
-    if (broken) throw StateError('no keystore');
+    if (broken || readThrows.contains(key)) throw StateError('no keystore');
     return values[key];
   }
 
@@ -23,6 +29,10 @@ class FakeStore implements SecretStore {
   @override
   Future<void> delete(String key) async {
     if (broken) throw StateError('no keystore');
+    // Deleting a value that could not be read removes it for good, as it would
+    // on a device (the restored-backup case): a read after the delete is null,
+    // not an error.
+    readThrows.remove(key);
     values.remove(key);
   }
 }
