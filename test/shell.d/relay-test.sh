@@ -12,7 +12,7 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 python3 - "$DIR/lib/relay.py" "$TMP" <<'PY'
-import importlib.util, json, os, socket, sys, threading
+import importlib.util, json, os, socket, sys, threading, time
 
 relay_py, tmp = sys.argv[1], sys.argv[2]
 spec = importlib.util.spec_from_file_location("kids_relay", relay_py)
@@ -37,8 +37,16 @@ with open(os.path.join(queue, "1-kid-ada-time.json"), "w") as f:
                "asked_at": 1, "state": "open"}, f)
 with open(os.path.join(queue, "2-kid-ada-app.json"), "w") as f:
     json.dump({"kid": "kid-ada", "kind": "app", "what": "gcompris",
-               "asked_at": 2, "state": "approved"}, f)
-with open(os.path.join(queue, "3-bad.json"), "w") as f:
+               "asked_at": 2, "state": "approved", "decided_at": int(time.time()), "reply": "OK"}, f)
+with open(os.path.join(queue, "3-kid-ada-site.json"), "w") as f:
+    json.dump({"kid": "kid-ada", "kind": "site", "what": "example.com",
+               "asked_at": 3, "state": "declined", "decided_at": int(time.time()) - 60}, f)
+with open(os.path.join(queue, "4-old.json"), "w") as f:
+    json.dump({"kid": "kid-ada", "kind": "app", "what": "old", "asked_at": 4,
+               "state": "approved", "decided_at": int(time.time()) - 90000}, f)
+with open(os.path.join(queue, "5-nodate.json"), "w") as f:
+    json.dump({"kid": "kid-ada", "kind": "app", "what": "nodate", "asked_at": 5, "state": "approved"}, f)
+with open(os.path.join(queue, "6-bad.json"), "w") as f:
     f.write("{not json")
 
 state = relay.build_state(status, queue)
@@ -46,6 +54,22 @@ check(state["kids"][0]["kid"] == "kid-ada", "build_state carries the kids")
 check(len(state["requests"]) == 1 and state["requests"][0]["id"] == "1-kid-ada-time",
       "build_state lists only the open request, with its id")
 check(state["requests"][0]["minutes"] == 15, "build_state carries the request fields")
+check(set(state["requests"][0]) == {"id", "kid", "kind", "what", "minutes", "asked_at"},
+      "an open request's row is exactly its six keys (R-NOTIFY-15.1)")
+
+# recent (R-NOTIFY-15.1): the request row plus state, decided_at and reply?; the
+# old record is outside the window and the undated one is in neither list.
+recent = {row["id"]: row for row in state["recent"]}
+check(recent.get("2-kid-ada-app", {}).get("reply") == "OK",
+      "a recent row carries the parent's reply when there was one")
+check(recent["2-kid-ada-app"]["state"] == "approved" and isinstance(recent["2-kid-ada-app"]["decided_at"], int),
+      "a recent row carries state and decided_at")
+check("reply" not in recent.get("3-kid-ada-site", {"reply": "x"}),
+      "a decision with no reply puts no reply key on the row")
+check(len(state["recent"]) == 2, "only the in-window decisions are recent")
+check("5-nodate" not in recent and "5-nodate" not in [r["id"] for r in state["requests"]],
+      "a decision with no integer decided_at is in neither list")
+check("4-old" not in recent, "a decision older than the window is not recent")
 
 # a missing status/queue is empty, never an error
 empty = relay.build_state(os.path.join(tmp, "nope.json"), os.path.join(tmp, "nope"))

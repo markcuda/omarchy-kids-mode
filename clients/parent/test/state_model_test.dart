@@ -18,7 +18,8 @@ void main() {
         {'id': 'r1', 'kid': 'kid-ada', 'kind': 'time', 'what': '15', 'minutes': 15, 'asked_at': 1000000009},
       ],
       'recent': [
-        {'id': 'r0', 'kid': 'kid-cy', 'kind': 'app', 'what': 'gcompris', 'state': 'approved'},
+        {'id': 'r0', 'kid': 'kid-cy', 'kind': 'app', 'what': 'gcompris',
+         'state': 'approved', 'decided_at': 1000000010},
       ],
     });
     expect(state.generatedAt, '2026-09-22T12:00:00Z');
@@ -36,6 +37,7 @@ void main() {
     expect(request.minutes, 15);
     expect(request.askedAt, 1000000009);
     expect(state.recent.single.state, 'approved');
+    expect(state.recent.single.decidedAt, 1000000010);
   });
 
   test('odd fields read as safe defaults, and an unusable row is dropped', () {
@@ -109,6 +111,42 @@ void main() {
     expect(state.reviews.last.now, 'missing');
     expect(describeReview(state.reviews.first), 'firefox changed since you approved it');
     expect(describeReview(state.reviews.last), 'gone is no longer installed');
+  });
+
+  test('recent decisions parse only when they can be labelled (R-NOTIFY-15)', () {
+    final state = BoxState.fromJson({
+      'recent': [
+        {'id': 'r1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft',
+         'state': 'approved', 'decided_at': 1758530400, 'reply': 'After dinner'},
+        {'id': 'r2', 'kid': 'kid-ada', 'kind': 'time', 'what': '15', 'minutes': 15,
+         'state': 'declined', 'decided_at': 1758530000},
+        // dropped: a state the app cannot label, and a missing/non-integer time
+        {'id': 'r3', 'kid': 'kid-ada', 'kind': 'app', 'what': 'x', 'state': 'open', 'decided_at': 1},
+        {'id': 'r4', 'kid': 'kid-ada', 'kind': 'app', 'what': 'x', 'state': 'approved'},
+        {'id': 'r5', 'kid': 'kid-ada', 'kind': 'app', 'what': 'x', 'state': 'approved', 'decided_at': 'soon'},
+      ],
+    });
+    expect(state.recent.map((r) => r.id), ['r1', 'r2']);
+    expect(describeOutcome(state.recent.first), 'Approved: "After dinner"');
+    expect(describeOutcome(state.recent.last), 'Declined');
+    // A reply that is not a string, or empty, is no reply.
+    final noReply = BoxState.fromJson({
+      'recent': [
+        {'id': 'r6', 'kid': 'kid-ada', 'kind': 'app', 'what': 'x', 'state': 'approved',
+         'decided_at': 1, 'reply': ''},
+        {'id': 'r7', 'kid': 'kid-ada', 'kind': 'app', 'what': 'x', 'state': 'approved',
+         'decided_at': 2, 'reply': 7},
+      ],
+    });
+    expect(noReply.recent.every((r) => r.reply == null), isTrue);
+    // The reply is cleaned and capped at the box's own 80.
+    final long = BoxState.fromJson({
+      'recent': [
+        {'id': 'r8', 'kid': 'kid-ada', 'kind': 'app', 'what': 'x', 'state': 'approved',
+         'decided_at': 3, 'reply': 'a' * 200},
+      ],
+    });
+    expect(long.recent.single.reply!.length, 80);
   });
 
   test('an empty document parses to empty lists', () {

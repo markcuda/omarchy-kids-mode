@@ -90,7 +90,9 @@ cd clients/parent/app && flutter pub get && flutter test
 3. **Decide.** Sign a decision record and `POST /v1/requests/<id>/decision` with a JSON body
    `{record, signature}` **and** the same signed headers; the reply line rides `record.reply` (at most
    80 printable characters — `lib/devices.py`'s `MAX_REPLY`).
-4. **Act** (grant/end) is the ACT frame's and is not built on the box yet.
+4. **Away mailbox.** The app package opens the courier's sealed state
+   (`lib/relay_client.dart`'s `openStateEnvelope`), but there is no mailbox view:
+   the app reads the box over the relay, not the parent's own ntfy/Gotify server.
 
 ## The signing scheme
 

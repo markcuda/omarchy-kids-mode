@@ -59,9 +59,13 @@ class OpenRequest {
       );
 }
 
-/// One request decided in the last 24 hours, with the outcome.
+/// One request decided in the last 24 hours, with the outcome, when, and the
+/// parent's own reply when they typed one (R-NOTIFY-15). The app shows this
+/// read-only; `state` and `decided_at` are what let it label the row honestly.
 class RecentDecision extends OpenRequest {
   final String state;
+  final int? decidedAt;
+  final String? reply;
 
   RecentDecision({
     required super.id,
@@ -71,10 +75,16 @@ class RecentDecision extends OpenRequest {
     super.minutes,
     super.askedAt,
     required this.state,
+    this.decidedAt,
+    this.reply,
   });
+
+  /// The app only shows a row it can label: approved or declined, with a time.
+  bool get showable => (state == 'approved' || state == 'declined') && decidedAt != null;
 
   factory RecentDecision.fromJson(Map<String, dynamic> json) {
     final base = OpenRequest.fromJson(json);
+    final reply = json['reply'];
     return RecentDecision(
       id: base.id,
       kid: base.kid,
@@ -83,6 +93,8 @@ class RecentDecision extends OpenRequest {
       minutes: base.minutes,
       askedAt: base.askedAt,
       state: _clean(json['state'], 32),
+      decidedAt: json['decided_at'] is int ? json['decided_at'] as int : null,
+      reply: reply is String && reply.isNotEmpty ? _clean(reply, 80) : null,
     );
   }
 }
@@ -154,7 +166,7 @@ class BoxState {
             .toList(),
         recent: _bounded(_rows(json['recent']))
             .map(RecentDecision.fromJson)
-            .where((row) => OpenRequest.idPattern.hasMatch(row.id))
+            .where((row) => OpenRequest.idPattern.hasMatch(row.id) && row.showable)
             .toList(),
         reviews: _bounded(_rows(json['reviews']))
             .map(OpenReview.fromJson)
@@ -164,6 +176,14 @@ class BoxState {
 
   /// The kid rows that are live right now, in the order the box sent them.
   List<KidStatus> get liveKids => kids.where((kid) => kid.live).toList();
+}
+
+/// What a decided request says under its row: the outcome and, when there is one,
+/// the parent's reply (R-NOTIFY-15.2).
+String describeOutcome(RecentDecision decision) {
+  final verb = decision.state == 'approved' ? 'Approved' : 'Declined';
+  final reply = decision.reply;
+  return reply == null ? verb : '$verb: "$reply"';
 }
 
 /// One review in the parent's words: what changed, and that deciding is the

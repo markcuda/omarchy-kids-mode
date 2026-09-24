@@ -300,6 +300,29 @@ class _HomeScreenState extends State<HomeScreen> {
     if (state.reviews.isNotEmpty || kids.isNotEmpty) {
       children.add(const _SectionHeader('Requests'));
     }
+    // R-NOTIFY-15: what was decided, read-only, last. Absent when the box's 24h
+    // window is empty (an empty window is not information).
+    if (state.recent.isNotEmpty) {
+      children.add(const _SectionHeader('Recently decided'));
+      final rows = [...state.recent]..sort((a, b) {
+          final byTime = (b.decidedAt ?? 0).compareTo(a.decidedAt ?? 0);
+          return byTime != 0 ? byTime : b.id.compareTo(a.id);
+        });
+      for (final row in rows.take(20)) {
+        children.add(ListTile(
+          title: Text(describeRequest(row, _kidName(state, row.kid))),
+          subtitle: Text(describeOutcome(row)),
+          trailing: Text(_decidedWhen(row.decidedAt!), style: Theme.of(context).textTheme.bodySmall),
+        ));
+      }
+      children.add(const Padding(
+        padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: Text(
+          'What the computer decided in the last 24 hours, as it reports it. Nothing here can be changed.',
+          style: TextStyle(fontSize: 12),
+        ),
+      ));
+    }
     if (_noticeNote != null) {
       children.add(Padding(
         padding: const EdgeInsets.all(16),
@@ -383,6 +406,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (kid.paused) return 'paused · ${kid.minutesLeft} min left';
     if (!kid.live) return 'not running';
     return '${kid.minutesLeft} min left';
+  }
+
+  /// When a decision landed, on the device's clock: time only if it is today,
+  /// else the weekday and the time (R-NOTIFY-15.2; no date arithmetic beyond that).
+  String _decidedWhen(int seconds) {
+    final at = DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+    final now = DateTime.now();
+    final hm = '${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
+    if (at.year == now.year && at.month == now.month && at.day == now.day) return hm;
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return '${days[at.weekday - 1]} $hm';
   }
 
   /// The kid's display name if the box sent one, else the account.

@@ -117,6 +117,15 @@ def build_state(status_path, queue_dir, reviews_dir=None, now=None):
             if isinstance(decided, int) and not isinstance(decided, bool) and now - decided <= RECENT_SECONDS:
                 row = _request_row(path, record)
                 row["state"] = record.get("state", "")
+                # R-NOTIFY-15.1: the app shows when and what was decided, and the
+                # parent's own reply when there was one. `by`/`device` stay on the
+                # box (omarchy-kids-ask list): an away envelope is confidential but
+                # not authenticated, so provenance would be a claim a replayed
+                # envelope could make. `reply` only when it is a non-empty string.
+                row["decided_at"] = decided
+                reply = record.get("reply")
+                if isinstance(reply, str) and reply:
+                    row["reply"] = reply
                 recent.append(row)
     return {
         "generated_at": status.get("generated_at"),

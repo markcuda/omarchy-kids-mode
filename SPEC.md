@@ -395,7 +395,7 @@ States: `idle` (no active session) → `counting` (Active=yes, unlocked) → `wa
 
 ```text
 POST /v1/pair                       {id, name, platform, sign_pub, box_pub, proof} -> {reply}
-GET  /v1/state                      -> {kids:[...], requests:[open...], recent:[decided<24h], reviews:[open add-on reviews]}
+GET  /v1/state                      -> {kids, requests:[{id,kid,kind,what,minutes,asked_at}], recent:[requests row + {state, decided_at, reply?}, decided<24h], reviews:[open add-on reviews]}
 GET  /v1/events                     SSE: one `state` event per change, plus a heartbeat
 POST /v1/requests/<id>/decision     {record:{...}, signature}
 POST /v1/reviews/<review-id>/decision {record:{device_id,review_id,decision,seen,ts,nonce}, signature}  scope decide

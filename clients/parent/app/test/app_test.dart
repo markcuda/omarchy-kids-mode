@@ -368,6 +368,40 @@ void main() {
     expect(find.text('Approve'), findsOneWidget, reason: 'opened once the row arrived');
   });
 
+  testWidgets('recently decided rows show the outcome and the reply, newest first, inert', (tester) async {
+    final relay = FakeRelay(BoxState.fromJson({
+      'kids': [
+        {'kid': 'kid-ada', 'live': true},
+      ],
+      'requests': [],
+      'recent': [
+        {'id': 'r1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft',
+         'state': 'approved', 'decided_at': 1000, 'reply': 'After dinner'},
+        {'id': 'r2', 'kid': 'kid-ada', 'kind': 'site', 'what': 'example.com',
+         'state': 'declined', 'decided_at': 2000},
+      ],
+    }));
+    await pumpHome(tester, relay);
+    expect(find.text('Recently decided'), findsOneWidget);
+    expect(find.text('Approved: "After dinner"'), findsOneWidget);
+    expect(find.text('Declined'), findsOneWidget);
+    expect(find.textContaining('Nothing here can be changed'), findsOneWidget);
+    // Newest first (r2's decided_at is the later one).
+    final newer = tester.getTopLeft(find.text('kid-ada asked to use example.com')).dy;
+    final older = tester.getTopLeft(find.text('kid-ada asked to use minecraft')).dy;
+    expect(newer, lessThan(older), reason: 'sorted by decided_at, newest first');
+    // Inert: the recent rows carry no tap handler (the kid row above does).
+    final recentTile = tester.widget<ListTile>(
+      find.widgetWithText(ListTile, 'Approved: "After dinner"'),
+    );
+    expect(recentTile.onTap, isNull, reason: 'a recent row cannot be acted on');
+  });
+
+  testWidgets('no recently-decided section when the window is empty', (tester) async {
+    await pumpHome(tester, FakeRelay(stateWith([])));
+    expect(find.text('Recently decided'), findsNothing);
+  });
+
   testWidgets('a live kid is listed with their minutes and opens the two actions', (tester) async {
     await pumpHome(tester, FakeRelay(stateWith([])));
     expect(find.text('Kids'), findsOneWidget);
