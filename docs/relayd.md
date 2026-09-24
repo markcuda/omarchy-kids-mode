@@ -28,7 +28,7 @@ HTTP response.
 
 Every request except the TLS handshake and `/v1/pair` must be signed by a paired, unrevoked device:
 the headers `X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<base64 Ed25519 signature>` cover the
-method, path, timestamp, nonce and body. The relay refuses an unsigned request, a bad signature, an
+device id, method, path, timestamp, nonce and body. The relay refuses an unsigned request, a bad signature, an
 unknown device, a stale timestamp (over five minutes) and a replayed nonce (a nonce seen in the last
 ten minutes is in `--nonce-ledger`). `/v1/pair` is pre-auth: there is no device yet, and the frame
 carries a proof (`HMAC-SHA256(token, sign_pub|box_pub|name)` — the pairing token itself never

@@ -19,7 +19,7 @@ ExecStart=/usr/bin/omarchy-kids-relayd --cert /etc/omarchy-kids/relay/cert.pem -
 # The one network listener this project ships. It is fenced to the home network
 # here, in the kernel, not in a label: every address outside loopback, link-local
 # and multicast, and the private ranges, is dropped (R-NOTIFY-1). Read-only
-# access is exactly the queue and the public device copy it verifies against.
+# access is exactly the queue, the open reviews and the public device copy it verifies against.
 IPAddressAllow=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 fc00::/7 fe80::/10
 IPAddressDeny=any
 ReadOnlyPaths=/var/lib/omarchy-kids
