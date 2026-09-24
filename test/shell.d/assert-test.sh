@@ -650,6 +650,48 @@ check_status "$out" "relay-away" "ok" "relay-away: removing the consent file is 
 [[ "$(cksum <"$UNIT_FILE")" == "$unit_before" ]] && pass "relay-away: the unit is still untouched" ||
   fail "relay-away: a packaged file changed"
 
+# --- the secret-holding files: relay-tls and courier-conf (R-NOTIFY-11.4) ---
+
+RELAY_DIR="$SCRATCH_ROOT/etc/omarchy-kids/relay"
+COURIER_CONF="$SCRATCH_ROOT/etc/omarchy-kids/courier.conf"
+
+out="$($BIN)"
+check_status "$out" "relay-tls" "ok" "relay-tls: no relay directory is ok"
+check_status "$out" "courier-conf" "ok" "courier-conf: no mailbox file is ok"
+[[ -e "$RELAY_DIR" ]] && fail "relay-tls: assert created a relay directory" ||
+  pass "relay-tls: assert never creates the directory"
+[[ -e "$COURIER_CONF" ]] && fail "courier-conf: assert created the mailbox file" ||
+  pass "courier-conf: assert never creates the file"
+
+mkdir -p "$RELAY_DIR"
+printf 'cert' >"$RELAY_DIR/cert.pem"
+printf 'key' >"$RELAY_DIR/key.pem"
+printf 'transport=ntfy\nurl=https://x\ntopic=y\n' >"$COURIER_CONF"
+chmod 0777 "$RELAY_DIR"
+chmod 0666 "$RELAY_DIR/cert.pem" "$RELAY_DIR/key.pem" "$COURIER_CONF"
+out="$($BIN)"
+check_status "$out" "relay-tls" "fixed" "relay-tls: wrong modes report fixed"
+check_eq "$(kids_file_mode "$RELAY_DIR")" "750" "relay-tls: the directory is 0750"
+check_eq "$(kids_file_mode "$RELAY_DIR/cert.pem")" "644" "relay-tls: cert.pem is 0644"
+check_eq "$(kids_file_mode "$RELAY_DIR/key.pem")" "640" "relay-tls: key.pem is 0640"
+check_status "$out" "courier-conf" "fixed" "courier-conf: a wrong mode reports fixed"
+check_eq "$(kids_file_mode "$COURIER_CONF")" "600" "courier-conf: the mailbox file is 0600"
+
+# A loose copy of the key beside the real one: FAIL, left exactly as it was, and
+# the file the lock owns is still repaired first.
+printf 'key' >"$RELAY_DIR/key.pem.bak"
+chmod 0600 "$RELAY_DIR/key.pem.bak"
+foreign_before="$(cksum <"$RELAY_DIR/key.pem.bak")"
+chmod 0666 "$RELAY_DIR/key.pem"
+out="$($BIN)"
+check_status "$out" "relay-tls" "FAIL" "relay-tls: a foreign copy fails the lock"
+check_eq "$(kids_file_mode "$RELAY_DIR/key.pem")" "640" "relay-tls: the owned key is still repaired"
+check_eq "$(cksum <"$RELAY_DIR/key.pem.bak")" "$foreign_before" \
+  "relay-tls: the foreign copy is left untouched"
+rm -f "$RELAY_DIR/key.pem.bak"
+out="$($BIN)"
+check_status "$out" "relay-tls" "ok" "relay-tls: ok again once the foreign copy is gone"
+
 # --- --quiet on an all-ok tree prints nothing ---------------------------
 
 out="$("$BIN" --quiet)"

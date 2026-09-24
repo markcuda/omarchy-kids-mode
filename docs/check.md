@@ -84,6 +84,17 @@ write", **not** "run `omarchy-kids-assert`", so this one row says so itself rath
 that the fence is a firewall (it binds one unit's sockets, not the machine), or that someone with
 root has not replaced the packaged copy too.
 
+Two more rows, `lock:relay-tls` and `lock:courier-conf`, are the assert locks of the same names
+(R-NOTIFY-11.4), standard shape and standard fail text. They prove only that the relay's private key
+(`/etc/omarchy-kids/relay/key.pem`, root `omarchy-parents` `0640`, its certificate `0644`, the
+directory `0750` with nothing else in it) and the courier's mailbox file
+(`/etc/omarchy-kids/courier.conf`, root `0600`, which carries the Gotify token or the ntfy reply
+topic) are absent or closed to everyone but root and, for the key, the parent group. Neither row
+opens either file: not that the key matches the certificate or the one a device pinned, not that the
+token is valid or the server reachable, not that the relay or the courier is running, and not that
+nobody read the secret while its mode was wrong. A warn on `lock:relay-tls` is the directory being
+unreadable to this run, which is what a run outside `omarchy-parents` sees.
+
 **One exception, not a FAIL:** `face:<account>` (the SDDM avatar icon, issue #39) is a WARN even
 in this technical catalog. It is the one lock in the table that isn't a security fence at all —
 missing or wrong, a kid still logs in exactly as fenced, just without their picture on the portal

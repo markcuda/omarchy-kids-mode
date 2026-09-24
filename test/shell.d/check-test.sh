@@ -510,6 +510,20 @@ deny_any="$(
 )"
 check_eq "$deny_any" "yes" "deny_is_any accepts the keyword and systemd's expansion, and nothing else"
 
+# --- the secret-holding files (R-NOTIFY-11.4) --------------------------
+RELAY_DIR="$SCRATCH_ROOT/etc/omarchy-kids/relay"
+COURIER_CONF="$SCRATCH_ROOT/etc/omarchy-kids/courier.conf"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "PASS  lock:relay-tls" "relay-tls: absent passes"
+check_contains "$plain" "PASS  lock:courier-conf" "courier-conf: absent passes"
+mkdir -p "$RELAY_DIR"
+printf 'key' >"$RELAY_DIR/key.pem"
+chmod 0644 "$RELAY_DIR/key.pem"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "FAIL  lock:relay-tls" "relay-tls: a world-readable key fails"
+check_contains "$plain" "omarchy-kids-assert" "relay-tls: the fail points at assert (repairable)"
+rm -rf "$RELAY_DIR"
+
 # --- Boot JSON is selected only by the trusted machine mode -----------
 
 if command -v python3 >/dev/null 2>&1; then

@@ -410,6 +410,66 @@ relay_reload() {
   systemctl try-restart "$RELAY_UNIT_NAME" >/dev/null 2>&1 || true
 }
 
+# relay-tls and courier-conf (R-NOTIFY-11.4): the two files that hold secrets.
+# relay dir/key.pem is the private half of every paired device's pin; courier.conf
+# carries the parent's Gotify token (or ntfy reply topic). The locks own modes and
+# ownership only: they never open either file, never create one, never remove one,
+# and never read a byte.
+relay_dir() { printf '%s/etc/omarchy-kids/relay' "$(posture_root)"; }
+courier_conf_file() { printf '%s/etc/omarchy-kids/courier.conf' "$(posture_root)"; }
+
+# _relay_tls_entry ENTRY FIX -- one entry: cert.pem/key.pem at their modes, or a
+# foreign name (never repaired; a loose copy of the key is what this catches).
+relay_tls_entry() {
+  local entry="$1" fix="$2"
+  case "$(basename "$entry")" in
+    cert.pem) "$fix" "$entry" 644 omarchy-parents ;;
+    key.pem) "$fix" "$entry" 640 omarchy-parents ;;
+    *) return 1 ;;
+  esac
+}
+
+relay_tls_ok() {
+  local dir entry
+  dir="$(relay_dir)"
+  if [[ ! -e "$dir" && ! -L "$dir" ]]; then return 0; fi
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  [[ -r "$dir" && -x "$dir" ]] || return 2
+  time_metadata_dir_ok "$dir" 750 omarchy-parents || return 1
+  for entry in "$dir"/*; do
+    [[ -e "$entry" || -L "$entry" ]] || continue
+    relay_tls_entry "$entry" time_metadata_file_ok || return 1
+  done
+}
+
+relay_tls_fix() {
+  local dir entry foreign=0
+  dir="$(relay_dir)"
+  [[ -e "$dir" || -L "$dir" ]] || return 0
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  time_metadata_dir_fix "$dir" 750 omarchy-parents || return 1
+  for entry in "$dir"/*; do
+    [[ -e "$entry" || -L "$entry" ]] || continue
+    relay_tls_entry "$entry" time_metadata_file_fix || foreign=1
+  done
+  [[ "$foreign" -eq 0 ]] || return 1 # a foreign copy is left for a human
+  return 0
+}
+
+courier_conf_ok() {
+  local file
+  file="$(courier_conf_file)"
+  [[ ! -e "$file" && ! -L "$file" ]] && return 0
+  time_metadata_file_ok "$file" 600 || return 1
+}
+
+courier_conf_fix() {
+  local file
+  file="$(courier_conf_file)"
+  [[ -e "$file" || -L "$file" ]] || return 0
+  time_metadata_file_fix "$file" 600 || return 1
+}
+
 # units (R-BOOT-3, R-SEC-2): enabled or the autologin drop-in never
 # gets written. KIDS_UNITS/SOCKETS/TIMERS come from lib/kids.sh, shared
 # with bin/omarchy-kids-wizard's Apply-time enable --now (issue #46).
