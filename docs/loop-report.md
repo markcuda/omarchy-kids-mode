@@ -1600,3 +1600,26 @@ syntax check exists.
 
 Recorded for the owner: the greeter's live pass (`docs/portal.md`, 2026-09-02) kept the old fixed
 footer string as its record; that paragraph now names 2026-09-22 and says which case it describes.
+### 2026-09-21, loop iteration: apps.show_missing was dead; restored (live)
+
+Live Level 2 picker: `Super+Space` still showed "Tux Paint / Not installed yet" while
+`omarchy-kids-conf show kid-ada` reported `apps.show_missing no`, which docs/conf.md and
+docs/levels.md say must omit the tile entirely. `git log -S show_missing` shows the read lived in
+`bin/omarchy-kids-session-start` (#42, `c93e89a`) and the manifest refactor (`38f878e`) moved tile
+building to `lib/launcher-map.sh` without it, so every missing tile shipped regardless. Fixed on
+`fix/show-missing-regression` (`f96d4f0`): `launcher_map_render` reads the effective
+`apps.show_missing` and omits a missing pack app's tile unless it is `yes` (one stderr line per
+omission), keeping the `yes` case (`installed:false`, no argv); the unknown-extra-id error is
+unchanged. `session-manifest-test.sh` asserts omission at the default and the kept tile under `yes`;
+the full Mac suite is 52 files green (5 environment skips) and the fable review returned MERGE.
+Live re-verified after installing the branch's `lib/launcher-map.sh` into the VM and rebuilding the
+manifest: with `no` the picker shows GCompris then KTuberling (Tux Paint gone); the `yes` rebuild
+keeps `tuxpaint installed=false`, the `no` rebuild returns zero tuxpaint tiles. Docs
+(conf/levels/apps) now say what the code does, including that the queue-based `"installing..."`
+caption the same refactor dropped is not implemented.
+
+Process note: this iteration collided with a second loop driver -- the headless `opencode-loopd`
+was still serving its own session in this checkout while the TUI `/loop` job ran here; the other
+session restarted the kid's SDDM session mid-pass (it set the budget to trigger Time's Up). The
+owner chose to stop loopd and keep this session. Do not run `/loop` and `opencode-loopd` against
+this repo at once.

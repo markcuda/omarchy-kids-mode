@@ -70,7 +70,7 @@ launcher_map_bare_json() {
 
 # launcher_map_render ACCOUNT OUTPUT — derives one map from the root profile.
 launcher_map_render() {
-  local account="$1" output="$2" band level web allowlist pack id meta label pkg desktop icon argv_json installed known bare_rc
+  local account="$1" output="$2" band level web show_missing allowlist pack id meta label pkg desktop icon argv_json installed known bare_rc
   local entries
   local -a ids
   local sysroot="${OMARCHY_KIDS_ROOT:-}" apps_bin
@@ -78,6 +78,8 @@ launcher_map_render() {
   band="$(conf_get "$KIDS_DIR/$account.conf" band)"
   level="$("$CONF_BIN" get "$account" level)"
   web="$("$CONF_BIN" get "$account" web)"
+  # apps.show_missing=no (the default, docs/conf.md) omits a missing app's tile.
+  show_missing="$("$CONF_BIN" get "$account" apps.show_missing 2>/dev/null || echo no)"
   apps_bin="$(kids_bin apps "$DIR")"
   # A failed allowlist must not become an empty map: keep whatever map exists and say why.
   if ! allowlist="$(OMARCHY_KIDS_ETC="$ETC" OMARCHY_KIDS_SHARE="$SHARE" "$apps_bin" allowlist "$account")"; then
@@ -124,13 +126,21 @@ launcher_map_render() {
         argv_json='[]'
       fi
     fi
-    if [[ "$known" == false && "$argv_json" == '[]' ]]; then
-      echo "launcher-map: unknown launcher id '$id'" >&2
-      rm -f "$entries"
-      return 1
-    fi
     installed=false
     [[ "$argv_json" != '[]' ]] && installed=true
+    if [[ "$installed" == false ]]; then
+      # A missing pack app is omitted by default (apps.show_missing=no) and kept
+      # greyed when yes (issue #42); an unknown extra id is a config error, not a tile.
+      if [[ "$known" == false ]]; then
+        echo "launcher-map: unknown launcher id '$id'" >&2
+        rm -f "$entries"
+        return 1
+      fi
+      if [[ "$show_missing" != yes ]]; then
+        echo "launcher-map: omitting tile '$id' for '$account': app not installed (apps.show_missing=no)" >&2
+        continue
+      fi
+    fi
     jq -n --arg id "$id" --arg label "$label" --arg icon "$icon" --arg pkg "$pkg" \
       --argjson argv "$argv_json" --argjson installed "$installed" \
       '{id: $id, label: $label, icon: $icon, pkg: $pkg, installed: $installed, argv: $argv}' >>"$entries"

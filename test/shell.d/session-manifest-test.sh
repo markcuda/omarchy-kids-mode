@@ -139,10 +139,16 @@ check "$(jq -r '.tiles[] | select(.id == "tuxpaint") | .argv[0]' "$MANIFEST")" "
   "installed tile has a fixed absolute argv"
 check "$(jq -r '.tiles[] | select(.id == "tuxpaint") | .argv | length' "$MANIFEST")" "2" \
   "installed tile keeps fixed arguments"
+check "$(jq -r '[.tiles[] | select(.id == "ktuberling")] | length' "$MANIFEST")" "0" \
+  "missing pack app is omitted by default (apps.show_missing=no)"
+conf_set "$PROFILE" apps.show_missing yes
+session_manifest build "$ACCOUNT" >/dev/null
 check "$(jq -r '.tiles[] | select(.id == "ktuberling") | .installed' "$MANIFEST")" "false" \
-  "missing application is represented as unavailable"
+  "apps.show_missing=yes keeps the missing tile as unavailable"
 check "$(jq -r '.tiles[] | select(.id == "ktuberling") | .argv | length' "$MANIFEST")" "0" \
-  "missing application has no executable argv"
+  "kept missing tile has no executable argv"
+conf_set "$PROFILE" apps.show_missing no
+session_manifest build "$ACCOUNT" >/dev/null
 
 session_manifest check "$ACCOUNT" >/dev/null
 check "$?" "0" "check accepts a current manifest"
