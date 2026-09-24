@@ -30,15 +30,16 @@ restarting OpenCode:
 or headless: `opencode-loopd --project . --every 5m --prompt-file .opencode/loop-prompt.md --timeout 30m`
 (Loop 0.5.38 is installed globally; the mise global node is pinned so the shim resolves).
 
-**Waiting on the owner:** the two-mode SPEC amendment's five questions
-(`docs/phase1/SPEC-AMENDMENT-two-kid-modes.md`); the GCompris pre-seed (approved, needs one VM
-check of `kiosk=true`); the add-on model's five questions
-(`docs/research/2026-09-21-discord-plugin-survey.md`); whether Level 3 keeps the file-manager
-bind (`Super+Shift+F`) under `menu=trimmed`.
+**Waiting on the owner:** six decisions, now consolidated in
+`docs/phase1/DECISIONS-NEEDED.md` §7 -- the two-mode SPEC amendment's five questions, the GCompris
+pre-seed, the add-on model's five questions, favorites/recents' three, W2's fail-open, and whether
+Level 3 keeps the file-manager bind (`Super+Shift+F`) under `menu=trimmed`.
 
-**Next work without owner input:** the I-6 sweep over `share/` and `lib/`; live checks of the
-Ask modal's own submit keys and the Time's Up screen on this build; the portal after a kid exits;
-keeping `docs/loop-report.md` current.
+**Next work without owner input:** none the loop can still reach. The I-6 sweep over `share/` and
+`lib/` is done, every live surface it can drive on the VM has been exercised, and the last rounds
+found only one new item -- the bar request-visibility decision, item 8 above. It waits on the
+decisions, the merge gate (`docs/branch-conflict-map-2026-09-22.md` maps it: 60 branches, eight
+safe to skip, two stale), or an owner-run live session.
 
 ## Paused — September 11, 2026
 

@@ -58,3 +58,73 @@ work properly and offered ("just make it work properly now"; "available, just wi
 per the parental permissions"). The autostart and menu-trim work is on
 `fix/level3-no-parent-autostart` and `fix/level3-menu-trim`, verified live in
 `docs/dogfood-2026-09-21.md`, and the three pickers now offer Level 3.
+
+## 7. Open decisions at the end of the 2026-09-22 loop
+
+By 2026-09-22 the loop had fixed and pushed everything it could reach on the try-omarchy VM, and
+four consecutive rounds found nothing left to change. Each item below is already drafted or
+proposed and waits only on the owner; none blocks merging the pushed branches, but each holds up
+the work that follows it.
+
+| # | Decision | Where the proposal and evidence are | What is needed |
+| --- | --- | --- | --- |
+| 1 | Collapse R-DESK-3/Appendix E to two kid modes (`grid`, `desktop`; band defaults 3-8 grid, 9+ desktop) | `docs/phase1/SPEC-AMENDMENT-two-kid-modes.md`, branch `docs/spec-amendment-two-kid-modes` (`64c73c5`) | Review the amendment; its five closing questions are yours. No code until then. |
+| 2 | GCompris's first-run dialog and its config/quit controls — **decided 2026-09-21** (pre-seed the config), live-checked 2026-09-22, implemented on `feat/gcompris-preseed` | `docs/research/2026-09-21-gcompris-first-run-and-config-proposal.md` (its results section has the check: what `kiosk=true` hides and what suppresses each dialog) | Nothing further; it only needs the merge gate. |
+| 3 | The add-on (plugins) model | `docs/research/2026-09-21-discord-plugin-survey.md` | Its five questions are yours. |
+| 4 | Favorites/recents from the launch log (root-owned manifest stays authoritative) | `docs/favorites-recents-proposal` (`1c9a1a3`) | Three decisions: recents-first manifest ordering vs a Recent row; parent-pinned favorites; where recents appear. |
+| 5 | W2: the time tick fails open when a budget or lights-out value cannot be read (the last state stays in force; `time:timer` only proves the timer is active) | `docs/time.md`; ticket W2 in `docs/research/2026-09-19-per-app-limits-and-weekly-caps-proposal.md` | Whether W2 (a `grace` state with reason `policy-invalid`) ships before the next dogfood round. |
+| 6 | Does Level 3 keep the file-manager bind (`Super+Shift+F`) under `menu=trimmed`? | `share/hyprland/L3.lua`; `docs/levels.md` | Keep it, or unbind it with the rest of the trimmed rows. |
+| 7 | The `dns` **and `sites`** keys are stored and never applied: the wizard offers Cloudflare / CleanBrowsing / "type my own", and the rendered Chromium policy always uses Cloudflare's family resolver (`omarchy-kids-web render` reads only the band's `web` mode) | `share/policy/README.md` ("not wired into `omarchy-kids-web` yet"), `docs/conf.md`'s `dns` row and `lib/wizard-advanced.sh`'s two descriptions, corrected 2026-09-22 to say so; `fix/dns-control-honesty`. `sites` is the same shape: the wizard offers an "Allowed sites" editor whose value nothing reads -- the live allowlist is `allow.txt` (approved requests) plus `share/policy/lists/<band>.txt`, and the pack's `[garden]` had drifted from that list until 2026-09-22 (`fix/garden-sources-agree`, pinned by `test/shell.d/garden-lists-test.sh`) | Wire them (the policy file is per band while the keys are per kid, so a per-kid override needs a re-think -- band-level only, with the docs saying so) or drop the choices. The same sweep found `apps.show_missing` has no reader on the union (`fix/show-missing-regression` restores it) and that `password`/`onboarded` are system-managed records nothing keys off. |
+| 8 | The bar widget's open-request badge and its "Open requests" row run the root-only `omarchy-kids-ask list` from the parent's unprivileged session, so neither can ever work (`share/bar/KidsModule.qml:112` polls it; `:185` runs `omarchy-kids --requests`) | `docs/loop-bar-requests-finding` (live: `omarchy-kids --requests` exits 1 "list: root only"; the queue is 0644 by `lib/ask.py:135`, and the panel reads it unprivileged via `lib/panel-requests.sh:44`). The contradiction is explicit in the docs: `docs/ask.md:78-82` documents `list` as root-only while `docs/bar.md:114` assumes the badge runs it unprivileged, so one of them is wrong whatever the fix | Pick one: publish the count in root-written `status.json` (0640 `omarchy-parents`); have `omarchy-kids --requests` read the queue the way the panel does; or tighten the queue to 0640 `omarchy-parents` (the only option that makes the guard real). |
+
+**Live evidence only an owner-run session can produce** (the loop drives the VM, never the laptop):
+the Level 3 menu trim on a real Omarchy box (`share/menu/omarchy-kids-trimmed.jsonc` is an admitted
+guess), a Wi-Fi join through the helper plus a captive portal, a band-3-5 kid's level, and the
+portal's wrong-password path.
+
+**The gate:** 60 branches sit ahead of `integration/dogfood-2026-09-19`;
+`docs/branch-conflict-map-2026-09-22.md` (branch `docs/branch-conflict-map-2026-09-22`) maps the
+file overlaps, the real pairwise conflicts and how each resolves (all supersets or stale branches),
+the eight branches that are safe to skip, and the two stale ones. Read it before opening the gate.
+
+## 9. Owner decisions (2026-09-22, second round)
+
+The owner answered items 1-8, and directed the notification workstream. Recorded here so the loop
+can build without asking again.
+
+- **Item 1 — approved.** Collapse to two kid modes. Mode labels in the parent UI are **"Simple
+  Computer"** (grid) and **"Full Desktop"** (desktop). Take the amendment's recommended defaults
+  (numeric `level` key kept; a 6-8 Grid kid's browser stays a grid tile).
+- **Item 3 — direction set.** Add-ons: a feed (RSS-like) parents subscribe to, simple install
+  commands, distribution and re-approval as the survey's recorded decisions say, and **all
+  surfaces** (tiles, sites, themes, kid screen, panel). Parents get **one native Quickshell
+  management UI and full terminal parity** for everything. A spec is drafted before code.
+  - **Q2 (re-approval scope) — answered.** Re-approve only when a surface or exec changes, and drive
+    it through the **notification system**: when an update exists the parent is notified and can
+    **approve, deny, or ask their onboard agent to "check it"** for anything worrisome for their
+    child. (The same relay/app that carries ask requests carries update approvals.)
+  - **Q4 (distribution) — answered: the package-manager route (a).** Add-ons resolve to packages the
+    parent installs with a simple command (`omarchy-kids-install <id>`), through their normal
+    package manager; nothing is bundled. A small curated MIT set may also ship as `optdepends`.
+    GPL stays separate.
+- **Item 4 — approved, revised.** Parent-pinned **Favorites** row at the top, automatic **Recents**
+  row at the bottom of the launcher (presentation only; the root-owned manifest stays authoritative).
+  This reverses the earlier "not adopted" note.
+- **Item 5 — approved.** The time tick must **fail closed** on an unreadable policy value (`grace`,
+  reason `policy-invalid`), never fail open.
+- **Item 6 — revised.** At Level 3, **do not unbind the terminal**. Keep the terminal and the file
+  manager, scoped to the kid's own files, and instead **block the commands** a parent does not want
+  a kid running (`bash`, `sudo`, …) as a per-kid **setup** choice, enforced by root.
+- **Item 7 — approved.** Wire `dns` and `sites`, band-level only, with the docs saying so.
+- **Item 8 — resolved by the owner as "have fable 5.1 determine the best implementation".** The
+  fable-5.1 design (`docs/research/2026-09-22-parental-notifications.md`) resolves it as **option 3**
+  (queue `0750 root:omarchy-parents`, records `0640`, `list` reads for the group, the ledger
+  publishes the count into `status.json`, the badge reads that), and grows it into the full parental
+  notification system (N-0..N-13) — local `relayd`, a Flutter parent app for mobile/macOS/Windows, an
+  on-box Omarchy notifier, LAN-first with opt-in tailnet and mailbox transports, root verifying
+  device signatures. The spec amendment (N-0) is written in that document; it amends I-2.
+
+**Standing build philosophy (owner, 2026-09-22), now in `AGENTS.md`:** user experience reigns
+supreme and it must "just work" always; lean into the most robust, full-featured build, no holds
+barred — both under I-1..I-11, never over them.
+
