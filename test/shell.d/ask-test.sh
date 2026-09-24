@@ -509,6 +509,17 @@ check_contains "$out_ada" "kid-ada" "list kid-ada: shows kid-ada"
 out_bo="$("$BIN" list kid-bo)"
 check_contains "$out_bo" "no open requests" "list kid-bo: nothing open for kid-bo"
 
+# A non-time request has no `minutes`; its ASKED_AT column must still hold
+# the timestamp (ask.py's row is US-separated, so the empty field does not
+# shift asked_at into it and leave the column blank).
+cat >"$QUEUE_DIR/1000000004-kid-ada-site.json" <<'EOF'
+{"kid": "kid-ada", "kind": "site", "what": "example.org", "asked_at": 1234567890, "state": "open"}
+EOF
+out_site="$("$BIN" list)"
+check_contains "$out_site" "1234567890" "list: a non-time request still shows its asked_at"
+check_contains "$out_site" "example.org" "list: a non-time request shows its what"
+rm -f "$QUEUE_DIR/1000000004-kid-ada-site.json"
+
 # =====================================================================
 # R-NOTIFY-7: the queue is root and omarchy-parents only
 # =====================================================================

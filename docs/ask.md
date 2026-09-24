@@ -111,6 +111,11 @@ root's `collect` heals it on its next run (`ask.py sync-decisions`). It is a cop
 not a channel: nothing reads it to decide or act, the queue record stays the decision of record,
 and `omarchy-kids-data retention` prunes it with the queue (90 days).
 
+The machine-readable form behind this is `lib/ask.py list-open`'s stdout — one row per request,
+fields `id`, `kid`, `kind`, `what`, `minutes`, `asked_at`, separated by ASCII 0x1f (US), not tab:
+`minutes` is an empty field for a non-`time` request, and a tab (IFS whitespace) makes bash `read`
+collapse the run and shift `asked_at` into it. The panel reads this directly (docs/panel.md).
+
 ### `approve <id>` / `decline <id>` — root
 
 `approve` decides the record first — atomically, write-once — and only then performs the action

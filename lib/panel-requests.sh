@@ -65,7 +65,7 @@ screen_requests() {
 
     local -a choices=()
     local id kid kind what minutes asked_at desc age kid_name
-    while IFS=$'\t' read -r id kid kind what minutes asked_at; do
+    while IFS=$'\x1f' read -r id kid kind what minutes asked_at; do
       [[ -z "$id" ]] && continue
       if [[ "$kind" == time ]]; then desc="$minutes more minute(s)"; else desc="$kind: $what"; fi
       [[ "$asked_at" =~ ^[0-9]+$ ]] || asked_at=0 # never arithmetic on an unchecked field, docs/panel.md
