@@ -30,9 +30,10 @@ minutes) or ends the session. Those two act with the device's own key and the `a
 gave it: no password is typed, the box refuses without the scope, and the screen says so. A request
 or an add-on change that arrives while the app is open is raised as a local notification (tap it to
 open the row); nothing arrives while the app is closed, and the screen says exactly that — there is
-no push, no server and no wake in v1. The notification rules (and the no-buttons choice: a tap opens
-the screen that decides) are in the amendment, R-NOTIFY-14. Windows has no notification adapter in
-this build; the lists and decisions work there regardless. The review decision signs the fingerprint the screen
+no push, no server and no wake in v1. The rules (and the no-buttons choice: a tap opens the screen
+that decides) are built and tested here; the platform adapter that raises them
+(`app/lib/local_notifier.dart`) is written but has not run on any platform yet. Windows has no
+notification adapter in this build; the lists and decisions work there regardless. The review decision signs the fingerprint the screen
 showed, so the box refuses it if the surface moved since (R-NOTIFY-12). The list follows the box's own feed (`/v1/events`), so a new request
 appears without a refresh; when the feed drops it says so, keeps the last list on screen, and
 retries with a growing delay. The overflow menu offers **Forget this computer**, which clears the
@@ -144,7 +145,8 @@ app reproduces every signature. Run the generator after changing the scheme and 
 
 ## What this does not decide
 
-The device list, the platform notification plumbing, and the store builds are the app's own work
-(N-8/N-12) and are not claimed. The system-keystore adapter (`lib/keystore.dart`'s
-`FlutterSecureStore`) is written but has only been exercised through its seam and its memory
-fallback here; a device build is where it is proven.
+The device list (the app pairs and shows its own box; it does not list the box's other devices), the
+away mailbox view, the platform scaffolding and the store builds are the app's own work (N-8/N-12)
+and are not claimed. Two adapters are written but have only been exercised through their seams and
+their memory/no-op fallbacks here — the system keystore (`lib/keystore.dart`'s `FlutterSecureStore`)
+and the system notifier (`app/lib/local_notifier.dart`); a device build is where they are proven.

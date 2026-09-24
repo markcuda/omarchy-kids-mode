@@ -13,8 +13,8 @@ you to remember, not something the app will nag about.
 **1. Getting the parent controls up.** Tap **Super three times, fast** (within about a second
 and a half), or press **Super+Shift+K**. Either one opens the same box: your password, then
 **Finish**, which closes the kid's apps and takes you back to the login screen. (**Pause** —
-leaving their apps open — is on the screen but greyed out; it isn't built yet. See "Not yet"
-below.)
+leaving their apps open — is not built yet: the box offers Finish only, so no Pause button is
+shown at all, rather than one that does nothing. See "Not yet" below.)
 
 **2. The login screen (the portal).** One tile per person in the house, yours last. Arrow keys
 move the highlight, Enter picks a tile, then type that person's password. Whoever's password
@@ -82,10 +82,10 @@ boot something else entirely and skip everything on this card. Set a firmware pa
 way you would on any computer (reboot, enter setup — usually a key held right at power-on, check
 your machine's manual for which one — and look for "Set Supervisor/Admin/Firmware Password"). This
 is the actual wall; everything else on this card is a fence for a curious kid, not a lock against
-someone who's decided to get around it. Kids Mode is meant to track whether you've done this and
-stay red until you have; that screen isn't built yet, so for now there's nothing to check off in
-the app — do it, and remember that you did, the same as any other thing on this card outside Kids
-Mode's reach.
+someone who's decided to get around it. Kids Mode tracks whether you've done this: the panel's Machine
+safety screen stays red until it is marked done, and the box's own check reports a failure until
+then. What is not built is the check-off itself — nothing writes that mark yet — so for now, do it,
+and remember that you did, the same as any other thing on this card outside Kids Mode's reach.
 
 ---
 
