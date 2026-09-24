@@ -129,6 +129,7 @@ run_locks_section() {
   lock_check devices devices_ok
   lock_check relay-tls relay_tls_ok
   lock_check courier-conf courier_conf_ok
+  lock_check queue queue_ok
   lock_check hyprland-configs hyprland_ok
 
   dir="$(chromium_dir)"

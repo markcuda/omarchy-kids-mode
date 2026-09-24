@@ -43,6 +43,7 @@ kids_stub() {
 # test drives that the same way it already drives `loginctl`.
 kids_id_stub() {
   local dir="$1" account="$2" uid="${3:-1000}"
+  local groups="${4:-$account}"
   cat >"$dir/id" <<EOF
 #!/bin/bash
 case "\${1:-}" in
@@ -55,6 +56,12 @@ case "\${1:-}" in
     else
       echo "\${KIDS_TEST_UID:-$uid}"
     fi
+    ;;
+  -Gn)
+    echo "\${KIDS_TEST_GROUPS:-$groups}"
+    ;;
+  -gn)
+    echo "$account"
     ;;
   *) exit 1 ;;
 esac

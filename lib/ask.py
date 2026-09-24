@@ -34,6 +34,7 @@ for "already decided" (decide only) -- never a Python traceback.
 """
 import glob
 import fcntl
+import grp
 import json
 import os
 import re
@@ -127,14 +128,46 @@ def load_record(path):
         die(f"could not read {path}: {e}")
 
 
+def _parent_gid():
+    """The omarchy-parents gid, or None where the group is not set up (the
+    caller's own tooling reports that; a mode still lands)."""
+    try:
+        return grp.getgrnam("omarchy-parents").gr_gid
+    except KeyError:
+        return None
+
+
 def write_atomic(path, record):
+    """Write RECORD to PATH atomically, with the mode the writer's store wants
+    (R-NOTIFY-7): root writes the request queue (0640 root:omarchy-parents, so
+    the parent group and the relay's unit read it); anyone else writes their own
+    outbox draft (0600, closed by the writer's 0700 directory too). Who writes
+    decides, never a path pattern or an argument (AGENTS.md rule 9)."""
     directory = os.path.dirname(path) or "."
-    os.makedirs(directory, mode=0o755, exist_ok=True)
+    root = os.geteuid() == 0
+    os.makedirs(directory, mode=0o750 if root else 0o700, exist_ok=True)
+    if root:
+        # The queue directory is group-readable on every write, not only at
+        # creation: an earlier 0755 is corrected here.
+        os.chmod(directory, 0o750)
+        gid = _parent_gid()
+        if gid is not None:
+            try:
+                os.chown(directory, 0, gid)
+            except OSError:
+                pass
     tmp = f"{path}.{os.getpid()}.tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(record, f, sort_keys=True)
         f.write("\n")
-    os.chmod(tmp, 0o644)
+    os.chmod(tmp, 0o640 if root else 0o600)
+    if root:
+        gid = _parent_gid()
+        if gid is not None:
+            try:
+                os.chown(tmp, 0, gid)
+            except OSError:
+                pass
     os.replace(tmp, path)
 
 

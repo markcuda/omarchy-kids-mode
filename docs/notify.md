@@ -118,8 +118,8 @@ it (`omarchy-kids-notify mailbox`) and sends nothing while notifications are off
 ## The desktop notifier (N-9)
 
 On the Omarchy box the parent is told through their own desktop, not a device: `bin/omarchy-kids-notify-watch`
-is a user-side process that polls the request queue (world-readable today; R-NOTIFY-7 tightens it to
-`0750 root:omarchy-parents`, which the parent's group also reads) and the open add-on reviews
+is a user-side process that polls the request queue
+(`0750 root:omarchy-parents`, which the parent's group also reads; R-NOTIFY-7) and the open add-on reviews
 (`docs/review.md`), and posts one libnotify notification per item. A request offers **Approve** and
 **Decline**; a changed add-on offers **Approve**, **Deny** and **Check**. An action runs
 `omarchy-kids-bar approve|decline <id>` or `omarchy-kids-bar review-approve|review-deny|review-check

@@ -59,7 +59,8 @@ omarchy-kids-ask submit <kind> <what> --state open|approved --by keyboard [--min
 ```text
 
 Writes one Appendix D record into `/run/user/<uid>/omarchy-kids/ask-outbox/<unix-ts>-<account>-<kind>.json`
-(`lib/ask.py write` does the actual JSON, atomically). Never gated by `DRY_RUN` — it only ever
+(`lib/ask.py write` does the actual JSON, atomically), `0600` inside the kid's own `0700` directory
+(R-NOTIFY-7: the draft is the kid's; the queue it later lands in is not). Never gated by `DRY_RUN` — it only ever
 touches the kid's own runtime directory, same reasoning `bin/omarchy-kids-super-tap` already gives
 for never gating its own runtime-dir writes.
 
@@ -67,7 +68,8 @@ for never gating its own runtime-dir writes.
 
 For every `<uid>/omarchy-kids/ask-outbox/*.json` under `/run/user` (the root-side runtime tree),
 `/run/user`, i.e. every logged-in kid's real `$XDG_RUNTIME_DIR`), moves the file into
-`/var/lib/omarchy-kids/queue/` (Appendix D's real home), keeping the same filename. Any record
+`/var/lib/omarchy-kids/queue/` (Appendix D's real home, `0750 root:omarchy-parents`, each record
+`0640`, R-NOTIFY-7), keeping the same filename. Any record
 that already arrived decided (`state: "approved"`, from the modal's "A grown-up is here" path) is
 applied right here, via the same dispatch `approve` uses. An `"open"` record is left exactly as it
 is, for a human to `approve`/`decline` later. `DRY_RUN=1` by default (AGENTS.md rule 8): it only
@@ -79,7 +81,9 @@ otherwise (see below).
 
 Every **open** (undecided) request, all kids or one, one line each: id, kid, kind, what (minutes
 for `time`), and when it was asked. Nothing decided ever shows here — that's the whole point of a
-one-keystroke panel. The command requires `is_root` before reading the queue.
+one-keystroke panel. The command runs for root or a member of `omarchy-parents` (the parent), and
+creates nothing: an absent queue reads as no open requests, and a queue the caller cannot open is an
+error rather than an empty answer (R-NOTIFY-7).
 
 ### `approve <id>` / `decline <id>` — root
 
@@ -106,7 +110,8 @@ opening or changing a queue record. `DRY_RUN=1` by default; `--apply` makes eith
 
 ## Judgment calls made in this implementation
 
-- **The queue lives at the exact path Appendix D names**, but this issue does *not* make the
+- **The queue lives at the exact path Appendix D names**, is `0750 root:omarchy-parents` with
+  `0640` records (R-NOTIFY-7, the `queue` lock), and this issue does *not* make the
   kid-writable half of the pipeline live there. A kid write to a root-owned, shared directory
   would need either a special group + sticky bit or a root-setuid helper — both more moving parts,
   and both weaker than the answer actually available for free: `$XDG_RUNTIME_DIR` is already a

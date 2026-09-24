@@ -253,6 +253,8 @@ check_contains "$(cat "$rec")" '"kid": "kid-ada"' "submit (open): kid field"
 check_contains "$(cat "$rec")" '"state": "open"' "submit (open): state=open"
 check_contains "$(cat "$rec")" '"minutes": 20' "submit (open): minutes=20"
 check_not_contains "$(cat "$rec")" '"by"' "submit (open): no 'by' yet -- undecided"
+# R-NOTIFY-7: the outbox draft is the kid's own, 0600 (its 0700 directory closes it too).
+check_eq "$(kids_file_mode "$rec")" "600" "submit (open): the outbox draft is 0600"
 rm -f "$rec"
 
 # --- review S1: `submit` has no way to write a decision at all -----------
@@ -490,6 +492,53 @@ check_contains "$out_ada" "kid-ada" "list kid-ada: shows kid-ada"
 
 out_bo="$("$BIN" list kid-bo)"
 check_contains "$out_bo" "no open requests" "list kid-bo: nothing open for kid-bo"
+
+# =====================================================================
+# R-NOTIFY-7: the queue is root and omarchy-parents only
+# =====================================================================
+
+# collect refuses to move anything when the parent group does not exist: where
+# `getent` says so, a record moved into the queue would be unreadable by the relay
+# and the desktop notifier, so it stays in the outbox for the next minute.
+stub getent 'exit 1'
+rec10="$RUN_USER_ROOT/1000/omarchy-kids/ask-outbox/1000000010-kid-ada-time.json"
+printf '%s
+' '{"kid": "kid-ada", "kind": "time", "what": "10", "minutes": 10, "asked_at": 1000000010, "state": "open"}' >"$rec10"
+"$BIN" collect --apply >/dev/null 2>&1
+check_eq "$?" 1 "collect: refuses when omarchy-parents is missing"
+[[ -f "$rec10" ]] && pass "collect: left the outbox record in place" ||
+  fail "collect: moved a record with no parent group"
+rm -f "$STUBS/getent" "$rec10"
+
+# list: a non-root caller outside omarchy-parents is refused; inside it, reads.
+export KIDS_TEST_UID=1000
+kids_id_stub "$STUBS" kid-ada 1000 "kid-ada"
+out="$("$BIN" list 2>&1)"
+check_eq "$?" 1 "list: a caller outside omarchy-parents is refused"
+check_contains "$out" "root or a member of omarchy-parents" "list: says who may read the queue"
+
+kids_id_stub "$STUBS" kid-ada 1000 "kid-ada omarchy-parents"
+out="$("$BIN" list 2>&1)"
+check_contains "$out" "kid-ada" "list: a member of omarchy-parents reads the queue"
+
+# list: an unreadable queue is an error, never "no open requests".
+chmod 0000 "$QUEUE_DIR"
+out="$("$BIN" list 2>&1)"
+st=$?
+chmod 0750 "$QUEUE_DIR"
+check_eq "$st" 1 "list: an unreadable queue is an error"
+check_contains "$out" "cannot read the queue" "list: says why a queue it cannot read is not empty"
+
+# list: a reader creates nothing (the fixture queue is moved aside, not deleted).
+kids_id_stub "$STUBS" kid-ada 1000 "kid-ada omarchy-parents"
+mv "$QUEUE_DIR" "$QUEUE_DIR.keep"
+"$BIN" list >/dev/null 2>&1
+[[ -e "$QUEUE_DIR" ]] && fail "list: a reader created the queue" ||
+  pass "list: a reader creates nothing"
+mv "$QUEUE_DIR.keep" "$QUEUE_DIR"
+
+kids_id_stub "$STUBS" kid-ada 1000
+export KIDS_TEST_UID=0
 
 # =====================================================================
 # approve / decline: one keystroke, act on an id from `list`

@@ -410,6 +410,35 @@ relay_reload() {
   systemctl try-restart "$RELAY_UNIT_NAME" >/dev/null 2>&1 || true
 }
 
+# queue (R-NOTIFY-7): what a kid asked for and how it was decided is for root and the
+# parent group, not every local account. The kid's own write path is its 0700 outbox;
+# root's collect moves the record into this queue. Modes and ownership only: the lock
+# never creates a record, removes one, rewrites one or reads one.
+queue_dir() { printf '%s/var/lib/omarchy-kids/queue' "$(posture_root)"; }
+
+queue_ok() {
+  local dir file
+  dir="$(queue_dir)"
+  if [[ ! -e "$dir" && ! -L "$dir" ]]; then return 0; fi
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  [[ -r "$dir" && -x "$dir" ]] || return 2
+  time_metadata_dir_ok "$dir" 750 omarchy-parents || return 1
+  while IFS= read -r -d '' file; do
+    time_metadata_file_ok "$file" 640 omarchy-parents || return 1
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -name '*.json' -print0 2>/dev/null)
+}
+
+queue_fix() {
+  local dir file
+  dir="$(queue_dir)"
+  [[ -e "$dir" || -L "$dir" ]] || return 0
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  time_metadata_dir_fix "$dir" 750 omarchy-parents || return 1
+  while IFS= read -r -d '' file; do
+    time_metadata_file_fix "$file" 640 omarchy-parents || return 1
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -name '*.json' -print0 2>/dev/null)
+}
+
 # relay-tls and courier-conf (R-NOTIFY-11.4): the two files that hold secrets.
 # relay dir/key.pem is the private half of every paired device's pin; courier.conf
 # carries the parent's Gotify token (or ntfy reply topic). The locks own modes and

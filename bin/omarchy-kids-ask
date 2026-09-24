@@ -55,7 +55,7 @@ Usage: omarchy-kids-ask time <minutes>
        omarchy-kids-ask grant <kind> <what> [--minutes N]   (password on stdin)
        omarchy-kids-ask apply-grant --kid K --kind KIND --what W [--minutes N] --apply
        omarchy-kids-ask collect [--apply]
-       omarchy-kids-ask list [<kid>]
+       omarchy-kids-ask list [<kid>]            # root or a member of omarchy-parents
        omarchy-kids-ask approve <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
        omarchy-kids-ask decline <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
        omarchy-kids-ask --help
@@ -346,7 +346,18 @@ cmd_collect() {
     esac
   done
 
-  install -d -m 0755 "$QUEUE_DIR"
+  # R-NOTIFY-7: the queue is 0750 root:omarchy-parents so the parent group (the relay's
+  # unit, the desktop notifier) can read it and no other local account can. The parent
+  # group has to exist before anything is moved into it; where `getent` is absent (macOS)
+  # the check is skipped, the repo's own idiom for a group this box does not have.
+  if command -v getent >/dev/null 2>&1 && ! getent group omarchy-parents >/dev/null 2>&1; then
+    die "collect: the omarchy-parents group is missing; the parent's own tools could not read the queue" 1
+  fi
+
+  # On every run, not only on creation: an earlier 0755 directory is corrected here.
+  install -d -m 0750 "$QUEUE_DIR"
+  chown root:omarchy-parents "$QUEUE_DIR" 2>/dev/null || true
+  chmod 0750 "$QUEUE_DIR"
 
   local collected=0 skipped=0
   local -a outbox_dirs=("$RUN_USER_ROOT"/*/omarchy-kids/ask-outbox)
@@ -467,9 +478,18 @@ cmd_apply_grant() {
 # --- root: list / approve / decline ---------------------------------------
 
 cmd_list() {
-  is_root || die "list: root only" 1
+  is_root || in_parent_group || die "list: root or a member of omarchy-parents only" 1
   local kid="${1:-}"
-  install -d -m 0755 "$QUEUE_DIR"
+  # A reader creates nothing (R-NOTIFY-7). An absent queue is empty; a queue this caller
+  # cannot open is an error, never "no open requests" -- a group added since login is not
+  # in the session's credentials until the next login, and an empty answer there would lie.
+  if [[ ! -d "$QUEUE_DIR" ]]; then
+    echo "omarchy-kids-ask: no open requests"
+    return 0
+  fi
+  if [[ ! -r "$QUEUE_DIR" || ! -x "$QUEUE_DIR" ]] && ! is_root; then
+    die "list: cannot read the queue (are you in omarchy-parents in this session?)" 1
+  fi
   local -a args=("list-open" "$QUEUE_DIR")
   [[ -n "$kid" ]] && args+=(--kid "$kid")
 

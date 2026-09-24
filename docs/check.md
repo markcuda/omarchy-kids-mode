@@ -95,6 +95,13 @@ token is valid or the server reachable, not that the relay or the courier is run
 nobody read the secret while its mode was wrong. A warn on `lock:relay-tls` is the directory being
 unreadable to this run, which is what a run outside `omarchy-parents` sees.
 
+`lock:queue` is the assert lock of the same name (R-NOTIFY-7), standard shape and standard fail
+text. It proves only that the request queue (`/var/lib/omarchy-kids/queue`, root `omarchy-parents`
+`0750`, each `*.json` record `0640`, none a symlink) is absent or closed to everyone but root and the
+parent group; not that any record is valid or open, that `collect` runs, or that nobody read a
+record while its mode was wrong. A warn is the directory being unreadable to this run, which is what
+a run outside `omarchy-parents` sees.
+
 **One exception, not a FAIL:** `face:<account>` (the SDDM avatar icon, issue #39) is a WARN even
 in this technical catalog. It is the one lock in the table that isn't a security fence at all —
 missing or wrong, a kid still logs in exactly as fenced, just without their picture on the portal

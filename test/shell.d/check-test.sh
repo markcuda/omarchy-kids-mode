@@ -526,6 +526,18 @@ check_contains "$plain" "does not match what omarchy-kids-assert expects" \
   "relay-tls: the fail carries assert's own wording (repairable)"
 rm -rf "$RELAY_DIR"
 
+# --- the request queue (R-NOTIFY-7) ------------------------------------
+QUEUE_DIR="$SCRATCH_ROOT/var/lib/omarchy-kids/queue"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "PASS  lock:queue" "queue: absent passes"
+mkdir -p "$QUEUE_DIR"
+printf '{}' >"$QUEUE_DIR/1-kid-ada-time.json"
+chmod 0755 "$QUEUE_DIR"
+chmod 0644 "$QUEUE_DIR/1-kid-ada-time.json"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "FAIL  lock:queue" "queue: a world-readable record fails"
+rm -rf "$QUEUE_DIR"
+
 # --- Boot JSON is selected only by the trusted machine mode -----------
 
 if command -v python3 >/dev/null 2>&1; then

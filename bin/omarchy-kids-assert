@@ -146,6 +146,8 @@ main() {
     assert_one "units" units_ok units_fix
     # devices is machine-level too (R-NOTIFY-3): absent is fine, wrong is not.
     assert_one "devices" devices_ok devices_fix
+    # queue (R-NOTIFY-7): the request queue is 0750 root:omarchy-parents, records 0640.
+    assert_one "queue" queue_ok queue_fix
     # relay-away (R-NOTIFY-11.1): the away drop-in, if the parent consents to one.
     assert_one "relay-away" relay_away_ok relay_away_fix
     # The two secret-holding files (R-NOTIFY-11.4): modes only.
@@ -194,6 +196,8 @@ main() {
   assert_one "units" units_ok units_fix
   # devices (R-NOTIFY-3): the paired-device registry stays root-owned.
   assert_one "devices" devices_ok devices_fix
+  # queue (R-NOTIFY-7): the request queue is 0750 root:omarchy-parents, records 0640.
+  assert_one "queue" queue_ok queue_fix
   # relay-away (R-NOTIFY-11.1): the away drop-in, if the parent consents to one.
   assert_one "relay-away" relay_away_ok relay_away_fix
   # The two secret-holding files (R-NOTIFY-11.4): modes only.

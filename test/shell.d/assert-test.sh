@@ -692,6 +692,31 @@ rm -f "$RELAY_DIR/.key.pem.bak"
 out="$($BIN)"
 check_status "$out" "relay-tls" "ok" "relay-tls: ok again once the foreign copy is gone"
 
+# --- the request queue (R-NOTIFY-7) ----------------------------------------
+
+QUEUE_DIR="$SCRATCH_ROOT/var/lib/omarchy-kids/queue"
+out="$($BIN)"
+check_status "$out" "queue" "ok" "queue: absent is ok (no request has been collected)"
+[[ -e "$QUEUE_DIR" ]] && fail "queue: assert created the queue" ||
+  pass "queue: assert never creates it"
+
+mkdir -p "$QUEUE_DIR"
+printf '{}' >"$QUEUE_DIR/1-kid-ada-time.json"
+chmod 0755 "$QUEUE_DIR"
+chmod 0644 "$QUEUE_DIR/1-kid-ada-time.json"
+out="$($BIN)"
+check_status "$out" "queue" "fixed" "queue: wrong modes report fixed"
+check_eq "$(kids_file_mode "$QUEUE_DIR")" "750" "queue: the directory is 0750"
+check_eq "$(kids_file_mode "$QUEUE_DIR/1-kid-ada-time.json")" "640" "queue: the record is 0640"
+
+# A symlinked record is refused and never followed.
+ln -sf /etc/passwd "$QUEUE_DIR/evil.json"
+out="$($BIN)"
+check_status "$out" "queue" "FAIL" "queue: a symlinked record fails the lock"
+[[ -L "$QUEUE_DIR/evil.json" ]] && pass "queue: the symlink is left alone" ||
+  fail "queue: the symlink was removed or replaced"
+rm -f "$QUEUE_DIR/evil.json" "$QUEUE_DIR/1-kid-ada-time.json"
+
 # --- --quiet on an all-ok tree prints nothing ---------------------------
 
 out="$("$BIN" --quiet)"
@@ -1016,6 +1041,7 @@ check_contains "$out2" "nothing else to assert" "no profiles, not quiet: names w
 
 check_status "$out2" "units" "ok" "no profiles: units is still checked (not skipped) with zero kids"
 check_status "$out2" "relay-tls" "ok" "no profiles: relay-tls is still checked with zero kids"
+check_status "$out2" "queue" "ok" "no profiles: queue is still checked with zero kids"
 check_status "$out2" "courier-conf" "ok" "no profiles: courier-conf is still checked with zero kids"
 
 # The secret-holding locks are fixed on the zero-kids path too (a leaked key

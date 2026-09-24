@@ -574,6 +574,10 @@ KIDS_SOCKETS=(omarchy-kids-authd.socket omarchy-kids-wifid.socket)
 # shellcheck disable=SC2034 # read by sourcing callers, not here
 KIDS_TIMERS=(omarchy-kids-time.timer omarchy-kids-ask-collect.timer omarchy-kids-review.timer omarchy-kids-relay-courier.timer)
 
+# in_parent_group — the caller's own session groups include omarchy-parents (R-NOTIFY-7:
+# the request queue is readable by root and the parent group, nothing else).
+in_parent_group() { id -Gn 2>/dev/null | tr ' ' '\n' | grep -Fxq omarchy-parents; }
+
 # The relay's network fence, in one place: the notify writer and the assert lock
 # both use these (R-NOTIFY-11.1). A drift between two copies would make every
 # boot and every update rewrite the drop-in and restart the relay, dropping every
