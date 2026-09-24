@@ -733,6 +733,9 @@ check_contains "$log_out" "argv=-p $SHARE/time/timesup.qml" \
   "daemon: root grace state opens the display-only Time's Up card"
 check_not_contains "$log_out" "omarchy-kids-exit" \
   "daemon: root grace state does not invoke the finish command"
+# The fuller version of this (the whole overlay, names and structure) is
+# trust-boundary-test.sh's kid-time-overlay check; this one stays as the local
+# reminder beside the other timesup assertions.
 check_not_contains "$(cat "$DIR/share/time/timesup.qml")" "omarchy-kids-exit" \
   "timesup: overlay contains no finish command"
 check_contains "$(cat "$DIR/share/time/timesup.qml")" 'root.reason === "lights-out"' \

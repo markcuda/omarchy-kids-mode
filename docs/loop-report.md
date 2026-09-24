@@ -2049,3 +2049,169 @@ starts as kid-ada (exit 0, correct Level 2 exec line).
 
 Remaining same-class candidate: `bin/omarchy-kids-data`'s browse rows (`read -r t host title
 visits`) when a page has no title, shifting `visits` into `title`.
+### 2026-09-22, loop iteration: the trust-boundary denylist named a function that does not exist
+
+Dogfooded (session healthy; the box's four known FAILs), then tried a new mechanical angle --
+identifiers cited by docs and tests that do not exist in the tree. It found `time_toast_thresholds`,
+named in `test/shell.d/trust-boundary-test.sh`'s kid-time denylist and twice in `docs/time.md`. The
+10/5/1 decision function is `time_warning_thresholds` (`lib/time.sh:246`, called by the ledger at
+`bin/omarchy-kids-time-ledger:345`), so the denylist -- the check that the kid-side display can only
+*show* root's decision -- was blind to the one policy function the daemon must not call, and the
+docs pointed at a name no reader can find. Fixed on `fix/stale-threshold-name`; the denylist now
+also names the other policy entry points the review pointed out (`time_next_boundary`, the direct
+readers `time_budget_minutes`/`time_lights_out`/`time_used_minutes`/`time_granted_minutes`) plus
+`remaining_seconds`. Verified by injection: each added name fails the check when placed in
+`cmd_daemon`; `test/all` green; the fable review found nothing blocking.
+
+Review follow-ups recorded for the owner (pre-existing, outside that diff): the check's `sed` range
+covers only `cmd_daemon`, so a policy call in `show_toast`/`show_timesup`/`dismiss_timesup` would be
+invisible (the oneshot daemon tests in `time-test.sh` partly cover it), and `docs/time.md`'s
+Issue-#40 paragraph still says the function is "table-tested in `test/shell.d/time-test.sh`" (that
+file never calls it directly) and that every check logs a `toast-check:` line (no file under `bin/`
+emits it) -- both belong to that paragraph's staleness, which `fix/toast-clock-overlap` also edits.
+
+### 2026-09-22, loop iteration: the denylist now covers the daemon's own helpers
+
+Dogfooded (session healthy; the box's four known FAILs). Took last review's follow-up: the trust
+boundary's kid-time denylist inspected only `cmd_daemon`, so a policy or finish call added to one of
+the daemon's overlay helpers (`show_toast`, `show_timesup`, `dismiss_timesup`, `warning_label`)
+would have been invisible to it. The window now covers those four plus `cmd_daemon`, with
+`cmd_status`/`cmd_grant` deliberately outside (the kid-side read and the parent path both touch the
+ledger legitimately), and a note that `remaining_seconds` is a state-file field a legitimate display
+read could need. Verified by injection into `show_toast` (invisible to the old window, now fails the
+check); `test/all` green; `shellcheck -x` clean; fable review nothing blocking.
+
+Still pre-existing and recorded for the owner: the check is intra-file, so a `Process` block added
+to `share/time/timesup.qml` or a `loginctl` in a `lib/kids.sh` `modal_*` helper would be invisible
+(the reviewer read both and the boundary holds today), and the dispatch block and globals sit
+outside the window as before.
+
+### 2026-09-22, loop iteration: two identifier-reference scans, clean
+
+Dogfooded (session healthy; the box's four known FAILs). Continued last round's angle -- identifiers
+that docs and tests reference but the tree does not define -- across the whole live docs and the
+test greps. After fixing the scan's own bugs (it first skipped `bin/` and accepted any word found in
+code), the result is clean:
+
+- Every lowercase `name()` cited in a live doc exists in the tree once the QML/JS/Lua/library APIs
+  are counted; the only genuine miss was `time_toast_thresholds`, fixed last round. The names in
+  `docs/specs/04-one-kid-shell.md` (`ping()`, `showLauncher()`, `hideModal()`, ...) are design
+  proposals for a feature that is not built yet (a typed Quickshell IPC handler), not claims about
+  the code.
+- Every alternation name in a test's `grep` exists somewhere: the ones that are not repo
+  identifiers (`declare`, `warn`, `fixed`, `lsinitcpio`, `mkinitcpio`, `objcopy`, `limine`) are
+  commands or status words the tests look for.
+
+Nothing to fix this round.
+
+### 2026-09-22, loop iteration: the docs' code-path references, checked
+
+Dogfooded (session healthy; the box's four known FAILs) and ran the last angle in this family: every
+`lib/...`, `bin/...` or `share/...` path a live doc cites. Nothing genuine is missing -- the flagged
+paths are Omarchy's own tools the docs name as external commands (`bin/omarchy`, `bin/omarchy-menu`,
+`bin/omarchy-theme-color`, `bin/omarchy-plugin-add`, ...), files that exist only in future specs
+(`docs/specs/04-one-kid-shell.md`'s `share/shell/*.qml` and `lib/shell-ipc.sh`,
+`docs/specs/07-boot-mode.md`'s `lib/boot-mode-transition.sh`, `docs/specs/05`'s `lib/locks.sh`, ...),
+or a *past* consolidation the doc itself describes as past (`docs/style.md`'s "`lib/units.sh` ...
+folded into `lib/kids.sh`"). The live docs cite the TUI demo at its real
+`scripts/omarchy-kids-tui-demo`; only the dated review records still say `bin/`. Nothing to fix.
+
+With this, the mechanical-reference family is exhausted: docs links, docs-cited functions, docs-cited
+code paths, test-grep alternations, command/doc/test inventory, SPEC id traceability, conventions and
+file modes have all been swept, and each found only what earlier rounds fixed.
+
+### 2026-09-22, loop iteration: a textual guard on the kid time overlays
+
+Dogfooded (session healthy; the box's four known FAILs). Closed the review's follow-up from the
+denylist round: nothing textual guarded the QML overlays a kid's session runs, so a `Process` block
+or an `execDetached` added to `share/time/timesup.qml` (or `toast.qml`) would be caught only if a
+behavioural test happened to exercise it -- and nothing in the suite executes QML. The
+trust-boundary test now checks both display-only overlays structurally: the file exists, no
+`Process {` block, no root enforcement name (`loginctl`, `omarchy-kids-exit`,
+`omarchy-kids-time-ledger`, `omarchy-kids-assert`, `--finish`), no `execDetached` in `toast.qml`,
+and exactly the one `omarchy-kids-ask` call in `timesup.qml`. `time-test.sh`'s narrower
+finish-command duplicate now points here. Verified by injection (a `Process` block in `toast.qml`
+fails the check); the suite is green; the review's two majors (a vacuous pass on a missing file, and
+a names-only set that missed the shapes it had named) and two minors are closed.
+
+Still open (recorded for the owner): `lib/kids.sh`'s `modal_*` helpers and the other kid overlays
+(`ask`, `exit-modal`, `plugins`, `wifi`) have no equivalent guard -- the exit modal legitimately runs
+the parent-authenticated finish, so its check would need a different shape.
+
+### 2026-09-22, loop iteration: the overlay guard enumerated, one table
+
+Dogfooded (session healthy; the box's four known FAILs). Extended last round's two-time-overlay
+guard to every kid surface and closed the review's two majors: the file list was hand-written (a
+new overlay would have been unchecked -- the "assertion must own its fixture" shape), and the "one
+table" comment was untrue because the daemon check repeated the names in its own grep. Now every
+`.qml` and `.js` under `share/` is checked, enumerated rather than listed, with the two surfaces
+this repository does not own for a kid session skipped (the parent's bar widget and the SDDM
+portal); the name table is defined once and spliced into the `bin/omarchy-kids-time` check too; it
+gains the two parent paths (`omarchy-kids-time grant`, `omarchy-kids-bar end`); and the ok label
+says "the named enforcement commands" rather than implying completeness. Verified: a brand-new
+`share/zz-new-overlay/shell.qml` containing `loginctl` fails, the bar module's comment is skipped,
+the exit modal's finish pair stays allowed, and the suite is green (the review's two minors -- the
+overclaiming label and the multi-line indent -- are closed too).
+
+Still open (recorded for the owner): `hyprctl dispatch exit` cannot be blanket-denied because the
+launcher legitimately uses `hyprctl` for focus, so it stays a hole outside the two time overlays,
+and `lib/kids.sh`'s `modal_*` helpers have no equivalent guard.
+
+### 2026-09-22, loop iteration: the dispatcher exit spelling, and two more routes
+
+Dogfooded (session healthy; the box's four known FAILs). Extended the overlay table's remaining
+holes, and the review blocked the first try for a good reason: `dispatch[^[:alpha:]]*exit` misses
+the spelling this repository actually uses -- `hl.dsp.exit()`, which `bin/omarchy-kids-exit` asks
+Hyprland's Lua dispatcher for -- while the launcher's legitimate focus call is `hl.dsp.focus(...)`,
+so a bare `exit` was not the shape to forbid. The dispatcher shape now has its own check, matched
+against the file with newlines removed (a wrapped QML array cannot evade it) and with a
+prefix-tolerant pattern that trips `hl.dsp.exit` and leaves `hl.dsp.focus` alone. The line-based
+table drops that entry and gains the D-Bus route to logind
+(`busctl`/`gdbus`/`qdbus`/`dbus-send`/`login1`, unused today), and the time-overlay rationale now
+says a count -- not a name -- is what justifies its stricter check. Verified: same-line and wrapped
+`hl.dsp.exit` both fail the check, the launcher's focus line passes, and the suite is green.
+
+Still open (recorded for the owner): `lib/kids.sh`'s `modal_*` helpers have no equivalent guard (a
+file-wide one would false-fail on the `KIDS_UNITS` array, which names the assert *service*), and
+bare `kill` cannot be forbidden -- it would hit `killactive`-style dispatchers, so a word-bounded
+form would be needed if ever wanted.
+
+### 2026-09-22, loop iteration: the modal pidfile helpers guarded too
+
+Dogfooded (session healthy; the box's four known FAILs). Closed the recorded follow-up:
+`lib/kids.sh`'s `modal_*` pidfile helpers (which every kid overlay uses to track and close its own
+process) had no equivalent of the enforcement table. They are now extracted per function -- an
+`awk` that handles one-line and multi-line bodies -- and checked against the same shared table; a
+plain line range would have swept in the `KIDS_UNITS` array just below, whose
+`omarchy-kids-assert.service` entry is a service name, not kid-side enforcement. A missing helper
+fails loudly rather than passing vacuously. The review's minors were applied: the one-line test is
+anchored to a trailing brace (a header with a brace expansion no longer truncates the body), all
+three names are pinned, the failure output prints the real `lib/kids.sh` line numbers rather than
+offsets into the extracted blob, and the header pattern admits digits. Verified: `loginctl` and
+`pkill` injected into `modal_close` fail the check with their real line numbers, `KIDS_UNITS` is
+tolerated, the suite is green; the review found nothing blocking.
+
+Still open (accepted, recorded for the owner): bare `kill` cannot be forbidden (it would hit
+`killactive`-style dispatchers), and a column-0 `}` inside a helper body would end extraction early
+-- nothing today has one.
+
+### 2026-09-22, loop iteration: what the dogfood VM is actually running
+
+Dogfooded (session healthy at Level 2, 36 min left, no autologin drop-in; the box's four known
+FAILs, 46 PASS). Rather than start another fix on that surface, closed a hole in how our own live
+claims are read: the guest's checkout is old and its installed files were placed by hand iteration
+by iteration, so "verified live on the VM" can describe code the base does not have. Reconstructed
+the installed set empirically -- each installed file's md5 against every one of the 78 local heads'
+blobs, with the PKGBUILD's two build-time substitutions applied, and reported only files that
+differ from `integration/dogfood-2026-09-19` (`.local/VM-PROVENANCE-2026-09-22.md`, untracked;
+`/tmp/vm-provenance.py`). The result is legible: 18 files match exactly one topic branch (the
+deliberate installs, each named in the recipe), 2 share one change across several on-base heads
+(`lib/data.py`'s US-separator reader; `L2.lua`'s "inert at Level 2" note), and 17 match only
+heads *not* descended from the base -- the guest simply predates a base commit (e.g.
+`omarchy-kids-authd` lacks base's `omarchy:hidden=true`), which is why a naive "does it match some
+branch" test called them drift. The recipe's "all green on 2026-09-21" line was false and is
+replaced by the box's real four FAILs and what each means. No product code changed.
+
+Still open (recorded for the owner): the four VM FAILs are this box's history, not defects --
+re-running `omarchy-kids-assert` and re-provisioning `kid-ada`'s band group would clear two of
+them but disturbs the session the loop keeps up for dogfooding, so they stay.

@@ -304,9 +304,33 @@ else
   ok "trust boundary: no shell read of the kid's runtime log"
 fi
 
-# The kid time path may display root's decision, but it must not make one.
-if hits="$(sed -n '/^cmd_daemon()/,/^}/p' bin/omarchy-kids-time |
-  grep -nE 'time_remaining_minutes|time_is_lights_out|time_toast_thresholds|loginctl|omarchy-kids-exit|--finish' || true)" &&
+# Root enforcement is named once here (AGENTS.md: one table, never a second list
+# that can drift): the lock, the ledger, the assert, the two parent paths that
+# write the ledger or finish a session, and the ways to end one without naming
+# those (systemctl, pkill/killall, and logind over D-Bus rather than loginctl).
+# The finish pair is added for every surface except the exit modal, which runs it
+# after the parent authenticates. The dispatcher spelling (`hyprctl dispatch ...`)
+# is checked separately below, because it is the one shape that can wrap a line.
+overlay_root_re='loginctl|omarchy-kids-time-ledger|omarchy-kids-assert|omarchy-kids-time grant|omarchy-kids-bar end|systemctl|pkill|killall|busctl|gdbus|qdbus|dbus-send|login1'
+overlay_finish_re='omarchy-kids-exit|--finish'
+
+# The dispatcher spelling can span lines (a wrapped QML array) and carries the
+# `hl.dsp.` prefix the exit command actually uses, so it is matched against the
+# file with newlines removed and a prefix-tolerant pattern: `hl.dsp.exit` trips
+# it, the launcher's `hl.dsp.focus` does not.
+overlay_dispatch_re='dispatch[^[:alpha:]]*([[:alpha:]_]+\.)*exit'
+
+# The kid time display path -- the daemon and every overlay helper it runs --
+# may show root's decision, but it must not make one. cmd_status and cmd_grant
+# are deliberately outside this range: one is the kid-side read, the other the
+# parent path, and both legitimately touch the ledger.
+#
+# One entry is a state-file field, not a function: `remaining_seconds` is a
+# legitimate display read *if* the daemon ever shows "N minutes left" from it,
+# so revisit this list rather than dropping the entry. Today the daemon shows
+# only what `state`/`warnings_fired` say.
+if hits="$(sed -n '/^show_toast()/,/^}/p;/^show_timesup()/,/^}/p;/^dismiss_timesup()/,/^}/p;/^warning_label()/,/^}/p;/^cmd_daemon()/,/^}/p' bin/omarchy-kids-time |
+  grep -nE "time_remaining_minutes|time_next_boundary|time_warning_thresholds|time_is_lights_out|time_budget_minutes|time_lights_out|time_used_minutes|time_granted_minutes|remaining_seconds|$overlay_root_re|$overlay_finish_re" || true)" &&
   [[ -n "$hits" ]]; then
   bad "trust boundary: kid time display still contains policy or finish capability:"
   printf '     %s\n' "$hits"
@@ -319,6 +343,92 @@ if grep -q 'time_state_read' bin/omarchy-kids-time &&
   ok "trust boundary: kid time display reads root state and keeps the ask action"
 else
   bad "trust boundary: kid time display lost root state or ask wiring"
+fi
+# No overlay a kid's session can show may reach root enforcement. Every QML or JS
+# file under share/ is checked except the surfaces this repository does not own
+# for a kid session: the parent's bar widget and the SDDM portal. The file list
+# is enumerated, not hand-written, so a *new* overlay is checked from the day it
+# lands. Nothing in the suite executes QML, so this textual check is the only
+# guard on what these files run.
+overlay_hits=""
+while IFS= read -r q; do
+  [[ "$q" =~ ^share/(bar|sddm-theme)/ ]] && continue
+  if [[ ! -f "$q" ]]; then
+    overlay_hits+="$q: missing"$'\n'
+    continue
+  fi
+  re="$overlay_root_re"
+  [[ "$q" == share/exit-modal/* ]] || re="$re|$overlay_finish_re"
+  hits="$(grep -nE "$re" "$q" || true)"
+  [[ -n "$hits" ]] && overlay_hits+="$q: $hits"$'\n'
+  if grep -qE "$overlay_dispatch_re" <(tr -d '\n' <"$q"); then
+    overlay_hits+="$q: dispatch ... exit"$'\n'
+  fi
+done < <(find share -name '*.qml' -o -name '*.js' | sort)
+if [[ -n "$overlay_hits" ]]; then
+  bad "trust boundary: a kid overlay names a root enforcement command:"
+  printf '%s\n' "$overlay_hits" | sed 's/^/     /'
+else
+  ok "trust boundary: no kid overlay names the named enforcement commands (the exit modal may finish)"
+fi
+
+# The two display-only time overlays are stricter still: their only legitimate
+# process use is the one ask call in timesup.qml, so any Process block or extra
+# execDetached in either file is a change worth failing on -- a count, not a
+# name, which is what the table above cannot express. Nothing in the suite
+# executes QML, so the structure is asserted textually. time-test.sh carries a
+# narrower duplicate for the finish command alone.
+overlay_hits=""
+for q in share/time/toast.qml share/time/timesup.qml; do
+  if [[ ! -f "$q" ]]; then
+    overlay_hits+="$q: missing"$'\n'
+    continue
+  fi
+  hits="$(grep -nE "$overlay_root_re|$overlay_finish_re|Process[[:space:]]*\{" "$q" || true)"
+  [[ -n "$hits" ]] && overlay_hits+="$q: $hits"$'\n'
+done
+toast_detach="$(grep -c 'execDetached' share/time/toast.qml || true)"
+timesup_detach="$(grep -c 'execDetached' share/time/timesup.qml || true)"
+if [[ "$toast_detach" != 0 ]]; then
+  overlay_hits+="share/time/toast.qml: $toast_detach execDetached call(s)"$'\n'
+fi
+if [[ "$timesup_detach" != 1 ]] || ! grep -q 'omarchy-kids-ask' share/time/timesup.qml; then
+  overlay_hits+="share/time/timesup.qml: expected exactly one execDetached, of omarchy-kids-ask"$'\n'
+fi
+if [[ -n "$overlay_hits" ]]; then
+  bad "trust boundary: a kid time overlay enforces, launches, or is missing:"
+  printf '     %s' "$overlay_hits"
+else
+  ok "trust boundary: the kid time overlays never enforce and keep only the ask call"
+fi
+
+# The pidfile helpers the kid overlays use (lib/kids.sh's modal_* functions) get
+# the same names check. They are extracted per function, not by a line range: the
+# units array just below them names the assert *service*, which is not kid-side
+# enforcement and would false-fail. A function that has gone missing is a failure,
+# not a silent pass.
+modal_bodies="$(awk '
+  /^modal_[a-z0-9_]*\(\)/ {
+    if ($0 ~ /\}[[:space:]]*$/) { print FNR": "$0; next }
+    inm = 1
+  }
+  inm { print FNR": "$0 }
+  inm && /^}/ { inm = 0 }
+' lib/kids.sh)"
+missing_modal=""
+for fn in modal_already_open modal_write_pid modal_close; do
+  grep -q ": $fn(" <<<"$modal_bodies" || missing_modal+=" $fn"
+done
+if [[ -n "$missing_modal" ]]; then
+  bad "trust boundary: lib/kids.sh's modal_* helpers moved (missing:$missing_modal); this guard cannot find them"
+else
+  hits="$(grep -E "$overlay_root_re|$overlay_finish_re" <<<"$modal_bodies" || true)"
+  if [[ -n "$hits" ]]; then
+    bad "trust boundary: a kid overlay pidfile helper names an enforcement command (lib/kids.sh line):"
+    printf '%s\n' "$hits" | sed 's/^/     /'
+  else
+    ok "trust boundary: the kid overlay pidfile helpers name no enforcement command"
+  fi
 fi
 
 echo "trust-boundary-test RESULT: $([[ $fail == 0 ]] && echo PASS || echo FAIL)"
