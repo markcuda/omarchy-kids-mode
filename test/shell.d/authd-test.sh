@@ -576,9 +576,9 @@ def device(name, dev_id, scopes):
 # d2 may decide; d3 may not (the scope comes from the registry, never the frame).
 decision_key = device("d2", "d2", "decide,act")
 nodecide_key = device("d3", "d3", "act")
-app_id = "org.mozilla.firefox"
+app_id = "firefox"
 rid = devices.review_id_for("kid-ada", app_id)
-gone = devices.review_id_for("kid-ada", "com.example.gone")
+gone = devices.review_id_for("kid-ada", "gone")
 seen = "ab" * 32
 now = int(time.time())
 
@@ -618,7 +618,7 @@ devices_py, reviews = sys.argv[1], sys.argv[2]
 spec = importlib.util.spec_from_file_location("kids_devices", devices_py)
 d = importlib.util.module_from_spec(spec); spec.loader.exec_module(d)
 open_dir = os.path.join(reviews, "open")
-rid = d.review_id_for("kid-ada", "org.mozilla.firefox")
+rid = d.review_id_for("kid-ada", "firefox")
 fails = []
 
 def want(ok, what):
@@ -627,7 +627,7 @@ def want(ok, what):
 
 record, reason = d.read_open_review(open_dir, rid)
 want(record is not None and reason == "ok", "an open review reads")
-want(d.read_open_review(open_dir, d.review_id_for("kid-ada", "com.example.gone")) == (None, "no-such-review"),
+want(d.read_open_review(open_dir, d.review_id_for("kid-ada", "gone")) == (None, "no-such-review"),
      "a review that is not there is refused")
 want(d.read_open_review(open_dir, "../../etc/shadow") == (None, "no-such-review"),
      "a path-like review id is refused")
@@ -640,6 +640,11 @@ with open(os.path.join(open_dir, mismatch_id + ".json"), "w") as f:
     json.dump({"kid": "kid-ada", "id": "com.example.other", "now": "aa", "state": "open"}, f)
 want(d.read_open_review(open_dir, mismatch_id)[1] == "no-such-review",
      "a file whose app id does not match the review id is refused")
+kid_id = "kid-dot." + rid.split(".", 1)[1]
+with open(os.path.join(open_dir, kid_id + ".json"), "w") as f:
+    json.dump({"kid": "kid-ada", "id": "firefox", "now": "aa", "state": "open"}, f)
+want(d.read_open_review(open_dir, kid_id)[1] == "no-such-review",
+     "a file whose kid does not match the review id is refused")
 link_id = "kid-ada." + "2" * 16
 os.symlink(os.path.join(open_dir, rid + ".json"), os.path.join(open_dir, link_id + ".json"))
 want(d.read_open_review(open_dir, link_id)[1] == "no-such-review", "a symlinked review is refused")
@@ -695,11 +700,11 @@ def send(name):
 
 
 want(send("review-approve.json"), "ok", "an approve frame applies")
-want("approve kid-ada org.mozilla.firefox --apply" in open(applied).read(), True,
-     "the review command ran with the file's own kid and id")
+want("approve kid-ada firefox --seen " + "ab" * 32 + " --apply" in open(applied).read(), True,
+     "the review command ran with the file's own kid, id, and the signed fingerprint")
 want(send("review-approve.json"), "no replayed-nonce", "the same frame twice is a replay")
 want(send("review-deny.json"), "ok", "a deny frame applies")
-want("deny kid-ada org.mozilla.firefox --apply" in open(applied).read(), True, "the deny verb ran")
+want("deny kid-ada firefox --apply" in open(applied).read(), True, "the deny verb ran")
 want(send("review-changed.json"), "no changed-again",
      "a fingerprint the app did not sign is refused")
 want(send("review-gone.json"), "no no-such-review", "a review that is not open is refused")
@@ -718,13 +723,13 @@ PY
   r="$(send_review "$TMP/review-approve.json")"
   if [[ "$(uname -s)" == "Linux" ]]; then
     check "$r" "ok" "REVIEW: a device's signed review decision is applied"
-    grep -q 'approve kid-ada org.mozilla.firefox --apply' "$REVIEW_APPLIED" &&
-      ok "REVIEW: ran the review command with the review file's own kid and id" ||
-      bad "REVIEW: did not run the review command with the file's kid and id"
+    grep -q 'approve kid-ada firefox --seen abababababababababababababababababababababababababababababababab --apply' "$REVIEW_APPLIED" &&
+      ok "REVIEW: ran the review command with the file's own kid, id, and the signed fingerprint" ||
+      bad "REVIEW: did not run the review command with the file's kid, id and fingerprint"
     check "$(send_review "$TMP/review-approve.json")" "no replayed-nonce" \
       "REVIEW: a replay is refused"
     check "$(send_review "$TMP/review-deny.json")" "ok" "REVIEW: a deny is applied"
-    grep -q 'deny kid-ada org.mozilla.firefox --apply' "$REVIEW_APPLIED" &&
+    grep -q 'deny kid-ada firefox --apply' "$REVIEW_APPLIED" &&
       ok "REVIEW: ran the deny verb the command takes" ||
       bad "REVIEW: did not run deny"
     : >"$REVIEW_APPLIED"

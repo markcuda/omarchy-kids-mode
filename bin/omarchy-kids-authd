@@ -3,7 +3,7 @@
 # omarchy:hidden=true
 """omarchy-kids-authd -- the parent-password verifier (R-SEC-1, R-SEC-2).
 
-A root, socket-activated oracle. Five request shapes, one per connection:
+A root, socket-activated oracle. Six request shapes, one per connection:
 
     VERIFY\n<password>\n               -> "ok" / "no"   (verify, R-SEC-2)
     BOOTSTRAP\n<password>\n           -> "ok" / "no"   (wizard bootstrap)
@@ -542,17 +542,21 @@ def handle_review(header: str, conn: socket.socket, cfg) -> bytes:
     if open_review.get("now") != record.get("seen"):
         return b"no changed-again\n"
     action = "approve" if record.get("decision") == "approve" else "deny"
-    argv = [
-        cfg.review_bin,
-        action,
-        str(open_review.get("kid", "")),
-        str(open_review.get("id", "")),
-        "--apply",
-    ]
+    argv = [cfg.review_bin, action, str(open_review.get("kid", "")), str(open_review.get("id", ""))]
+    # The signed fingerprint rides through to the command, which re-checks it
+    # against the live surface under the same flock scan takes: comparing it here
+    # alone would be re-reading, not locking (rule 4).
+    if action == "approve":
+        argv += ["--seen", str(record.get("seen", ""))]
+    argv.append("--apply")
     try:
         proc = subprocess.run(argv, capture_output=True, timeout=30)
     except (OSError, subprocess.TimeoutExpired):
         return b"no apply failed\n"
+    if proc.returncode == 3:
+        # The command checks the live surface under its lock and exits 3 when the
+        # decider's fingerprint no longer matches it.
+        return b"no changed-again\n"
     if proc.returncode != 0:
         return b"no apply failed\n"
     return b"ok\n"

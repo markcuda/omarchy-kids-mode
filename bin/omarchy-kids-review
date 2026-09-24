@@ -39,7 +39,7 @@ usage() {
 Usage: omarchy-kids-review scan [--kid KID] [--apply]
        omarchy-kids-review list [--kid KID] [--json]
        omarchy-kids-review show <kid> <id>
-       omarchy-kids-review approve <kid> <id> [--apply]
+       omarchy-kids-review approve <kid> <id> [--seen <fingerprint>] [--apply]
        omarchy-kids-review deny <kid> <id> [--apply]
 
 An "approved add-on" is an app this parent added to a kid (apps.extra). `scan`
@@ -294,6 +294,14 @@ cmd_approve() {
   valid_app "$id" || die "approve: bad app id '$id'"
   local fp
   fp="$(fingerprint "$id")"
+  # --seen is the fingerprint the decider was shown (the app signs it). The
+  # compare and the stamp are inside the same flock scan takes, so this is not a
+  # re-read of a value another writer may change between the two (rule 4): a
+  # scan that would rewrite the review waits for this command. If the surface
+  # moved after the decider looked, the review stays open for a fresh decision.
+  if [[ -n "$SEEN" && "$fp" != "$SEEN" ]]; then
+    die "approve: the surface for $kid/$id changed since it was shown" 3
+  fi
   if ((DRY_RUN)); then
     echo "  [dry-run] would stamp $kid/$id = $fp and clear its review"
     return 0
@@ -348,6 +356,8 @@ flock -x 9 || die "could not lock the review directory" 1
 trap 'flock -u 9 2>/dev/null || true; exec 9>&-' EXIT
 want_kid=""
 want_json=""
+# The fingerprint a decider was shown, for approve: see cmd_approve.
+SEEN=""
 args=()
 while (($#)); do
   case "$1" in
@@ -362,6 +372,10 @@ while (($#)); do
     --json)
       want_json=json
       shift
+      ;;
+    --seen)
+      SEEN="${2:?}"
+      shift 2
       ;;
     --dry-run)
       DRY_RUN=1

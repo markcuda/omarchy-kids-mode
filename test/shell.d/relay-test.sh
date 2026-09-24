@@ -67,6 +67,9 @@ with open(os.path.join(reviews, "kid-ada." + "1" * 16 + ".json"), "w") as f:
     json.dump({"kid": "kid-ada", "id": app_id, "state": "open"}, f)
 with open(os.path.join(reviews, "kid-ada." + "2" * 16 + ".json"), "w") as f:
     f.write("{not json")
+# skipped: the name says kid-dot but the record says kid-ada
+with open(os.path.join(reviews, "kid-dot." + rid.split(".", 1)[1] + ".json"), "w") as f:
+    json.dump({"kid": "kid-ada", "id": app_id, "state": "open"}, f)
 with open(os.path.join(reviews, "not-a-review.json"), "w") as f:
     json.dump({"kid": "kid-ada", "id": app_id, "state": "open"}, f)
 

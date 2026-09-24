@@ -19,7 +19,7 @@ resolves any more → the fingerprint is `missing` (the package was removed).
 omarchy-kids-review scan [--kid KID] [--apply]
 omarchy-kids-review list [--kid KID] [--json]
 omarchy-kids-review show <kid> <id>
-omarchy-kids-review approve <kid> <id> [--apply]
+omarchy-kids-review approve <kid> <id> [--seen FINGERPRINT] [--apply]
 omarchy-kids-review deny <kid> <id> [--apply]
 ```
 
@@ -30,6 +30,10 @@ omarchy-kids-review deny <kid> <id> [--apply]
 - `show` prints one review in full — the approved fingerprint against now, and the desktop file's
   `Exec` today — and decides nothing (what a notification's **Check** opens).
 - `approve` re-stamps the current surface and clears its review — the parent accepts the update.
+  `--seen FINGERPRINT` (a sha256, or `missing`) is the surface the decider was shown: it is compared
+  against the live surface under the same lock `scan` takes, so a surface that moved since it was
+  looked at is refused (exit 3) and the review stays open. A device deciding over the relay always
+  passes it; the panel and the notifier, deciding in front of the parent, do not.
 - `deny` asks `omarchy-kids-apps hide <kid> <id>` to hide it again, and only once that succeeds
 drops the stamp and clears the review (a failed hide leaves the review open to retry). The hide
 lands in the kid's launcher at the next sign-in, like every `hide` (`docs/apps.md`).
@@ -63,8 +67,10 @@ record, not enforcement): hiding the app again is the only action, and a kid can
 - **A paired device may decide one over the relay** (R-NOTIFY-12, `docs/relayd.md`): the open
   reviews ride `/v1/state`, and a paired device's **Approve** or **Deny** is a signed `REVIEW` frame
   that `authd` verifies and applies through the same `omarchy-kids-review approve|deny`. The app
-  signs the `now` fingerprint it showed, so a review a later scan replaced is refused
-  (`no changed-again`) rather than decided against a surface the parent never saw. **Check** stays
+  signs the `now` fingerprint it showed (or the `missing` sentinel for a removed add-on), and
+  `approve` re-checks it against the live surface under the scan's own lock, so a surface that moved
+  after the parent looked is refused (`no changed-again`) rather than decided against one they never
+  saw. **Check** stays
   local and read-only: the app shows `was` and `now`, and nothing else.
 - **The scan runs on a timer** (`systemd/omarchy-kids-review.timer`, hourly and five minutes after
   boot, driving `omarchy-kids-review scan --apply`), so an update is detected without the parent

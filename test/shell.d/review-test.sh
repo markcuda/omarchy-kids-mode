@@ -123,6 +123,23 @@ check_contains "$("$BIN" list)" "No add-on needs re-review" "list is empty after
 "$BIN" scan --apply >/dev/null 2>&1
 [[ -f "$OPEN_REVIEW" ]] && fail "a reverted surface reopened the review" || pass "the restamped surface stays quiet"
 
+# --- approve --seen: the fingerprint the decider was shown is pinned ----------
+# The compare and the stamp happen under the command's own lock (rule 4), so a
+# surface that moved after the decider looked is refused, not silently stamped.
+desktop "minecraft seen one"
+"$BIN" scan --apply >/dev/null 2>&1
+[[ -f "$OPEN_REVIEW" ]] || fail "setup: expected a review before the --seen case"
+seen="$(jq -r '.now' "$OPEN_REVIEW")"
+out="$("$BIN" approve kid-ada minecraft --seen "$(printf 'ab%.0s' {1..32})" --apply 2>&1)"
+check_status "$?" 3 "approve refuses a fingerprint that is not the surface now"
+check_contains "$out" "changed since it was shown" "the refusal says the surface moved"
+[[ -f "$OPEN_REVIEW" ]] && pass "a refused approve leaves the review open" ||
+  fail "the refused approve closed the review"
+out="$("$BIN" approve kid-ada minecraft --seen "$seen" --apply 2>&1)"
+check_status "$?" 0 "approve accepts the fingerprint it was shown"
+[[ -f "$OPEN_REVIEW" ]] && fail "a seen approve left the review open" ||
+  pass "a seen approve clears the review"
+
 # --- deny hides the app and clears ----------------------------------------
 desktop "minecraft third"
 "$BIN" scan --apply >/dev/null 2>&1
@@ -159,6 +176,12 @@ rm -f "$APPDIR/minecraft.desktop"
 out="$("$BIN" scan --apply 2>&1)"
 check_contains "$out" "review opened for kid-ada/minecraft" "a removed desktop opens a review"
 check "$(jq -r '.now' "$OPEN_REVIEW")" "missing" "the review says the surface is missing"
+# The app signs that sentinel, so approving a removed add-on must be accepted.
+out="$("$BIN" approve kid-ada minecraft --seen missing --apply 2>&1)"
+check_status "$?" 0 "approve accepts the missing sentinel"
+check "$(jq -r '.minecraft' "$BASELINE")" "missing" "the removed surface is stamped as missing"
+[[ -f "$OPEN_REVIEW" ]] && fail "approving a removed add-on left the review open" ||
+  pass "approving a removed add-on clears its review"
 
 # --- a re-stamp or a removed id closes a stale review ---------------------
 desktop "minecraft final"

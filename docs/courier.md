@@ -18,7 +18,9 @@ nothing.
 ## What it sends
 
 `omarchy-kids-relay-courier [--apply]` reads the root-written state (the same document the LAN relay
-serves), seals it for each paired device with `lib/envelope.py` (`{v, device_id, eph_pub, nonce,
+serves, except the open add-on reviews: the courier's sealed document carries `kids`, `requests` and
+`recent`, not `reviews`, and a review decision is LAN-only for now -- the courier's inbound poll
+carries `DECIDE` frames, not `REVIEW`), seals it for each paired device with `lib/envelope.py` (`{v, device_id, eph_pub, nonce,
 ct}` — X25519 ECDH, HKDF-SHA256, ChaCha20-Poly1305, the device id as associated data), and POSTs the
 envelope: ntfy gets it as the topic body, Gotify as a POST to `/message` with the token in an `X-Gotify-Key`
 header (not the query string, which proxy and access logs keep). Root only; `--apply` is required to

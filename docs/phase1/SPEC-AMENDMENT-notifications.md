@@ -194,8 +194,9 @@ same review reachable from a paired device, over the wire the requests already u
   `{"device_id", "review_id", "decision", "seen", "ts", "nonce"}`
 
   and nothing else: no `request_id`, no `reply`. `decision` is `"approve"` or `"deny"` (the command's
-  own verbs, not `DECIDE`'s `approve`/`decline`); `seen` is the `now` fingerprint the app displayed,
-  1-128 hex characters. The signed bytes are `canonical(record)` (the same
+  own verbs, not `DECIDE`'s `approve`/`decline`); `seen` is the `now` value the app displayed: a
+  64-character lowercase hex sha256, or the literal `"missing"` for a desktop file that no longer
+  resolves (the command's own sentinel, `bin/omarchy-kids-review`). The signed bytes are `canonical(record)` (the same
   `omarchy-kids-decision-v1\n` context). A `DECIDE` record can never verify as a `REVIEW` record or
   the reverse: each has a required key the other forbids (`request_id` / `review_id`). The scope is
   `decide`, taken from the root-owned registry, never the frame. Skew and the per-device nonce ledger
@@ -206,11 +207,16 @@ same review reachable from a paired device, over the wire the requests already u
   `/var/lib/omarchy-kids/reviews/open/<review_id>.json` itself (`O_NOFOLLOW`, a root-owned regular
   file, `state == "open"`) and takes `kid` and `id` from the file. Missing, or any failure, or a kid
   or app id that does not match the review id's parts, is `no no-such-review` (the nonce stays
-  burned). A file whose `now` is not the record's `seen` is `no changed-again`, so the parent decides
-  the surface they looked at rather than one a later scan replaced. It then runs, with a 30-second
-  timeout and no shell, `omarchy-kids-review approve|deny <kid> <id> --apply`; a non-zero exit, a
-  timeout or a spawn failure is `no apply failed` (and a failed deny leaves the review open, the
-  command's own rule, so the app shows it still open).
+  burned). A file whose `now` is not the record's `seen` is `no changed-again`. It then runs, with a
+  30-second timeout and no shell, `omarchy-kids-review approve <kid> <id> --seen <seen> --apply` or
+  `omarchy-kids-review deny <kid> <id> --apply`. The signed fingerprint rides through to `approve`,
+  which re-checks it against the live surface **under the same flock `scan` takes** and exits 3 when
+  they differ; authd maps that to `no changed-again`. Comparing at authd alone would be a re-read and
+  not a lock (rule 4): a `scan` could rewrite `now` between the two. So the parent decides the surface
+  they looked at, and a surface that moved reopens on the next scan. The residual is the microseconds
+  between the command's own `fingerprint` call and its `baseline_set`, which no lock can close. A
+  non-zero exit, a timeout or a spawn failure is `no apply failed`, and a failed deny leaves the
+  review open (the command's own rule).
 
 - R-NOTIFY-12.5 **Check.** Check is local and read-only, as before: on the box
   `omarchy-kids-review show` and the panel; in the app, the row's `was` and `now` and nothing more.

@@ -57,7 +57,10 @@ RE_REQUEST_ID = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\Z")
 # An add-on review's id: the kid, a dot, the first 16 hex of sha256(app id)
 # (bin/omarchy-kids-review's file name). The kid pattern matches valid_kid there.
 RE_REVIEW_ID = re.compile(r"\A[a-z_][a-z0-9_-]*\.[0-9a-f]{16}\Z")
-RE_SEEN = re.compile(r"\A[0-9a-fA-F]{1,128}\Z")
+# The `now` the app signs it was shown: a sha256 fingerprint, or the literal
+# "missing" when the desktop file no longer resolves (bin/omarchy-kids-review's
+# own sentinel), which is exactly what that command writes.
+RE_SEEN = re.compile(r"\A([0-9a-f]{64}|missing)\Z")
 DEVICE_FIELDS = ("id", "name", "platform", "sign_pub", "box_pub", "scopes")
 ALLOWED_KEYS = {"device_id", "request_id", "decision", "reply", "ts", "nonce"}
 DECISIONS = ("approve", "decline")
