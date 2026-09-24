@@ -73,6 +73,17 @@ check "$(grep -c 'tile\.exec\|\["sh", "-c"\]' "$QML" || true)" "0" \
   "shell.qml never evaluates a tile-provided shell command"
 check "$(grep -c 'tile\.installed' "$QML" || true)" "0" \
   "activation does not trust an unvalidated tile state"
+# The line froze live because watchChanges never re-read the file and the
+# daemon's rename-replace can drop the watch; the timer is the backstop, and
+# it must repeat -- a one-shot would freeze again after 2s.
+check_contains "$qml_content" '        Timer {
+            interval: 2000
+            running: true
+            repeat: true
+            onTriggered: timeStatus.reload()
+        }' "shell.qml re-reads the time-left status on a repeating 2s timer"
+check_contains "$qml_content" 'onFileChanged: reload()' \
+  "shell.qml reloads the time-left status on a fileChanged signal"
 
 # issue #43's bug was exactly this: a hardcoded columns count baked into
 # the nav's own `%`/`<` comparisons instead of read from the layout.

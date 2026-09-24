@@ -2215,3 +2215,45 @@ replaced by the box's real four FAILs and what each means. No product code chang
 Still open (recorded for the owner): the four VM FAILs are this box's history, not defects --
 re-running `omarchy-kids-assert` and re-provisioning `kid-ada`'s band group would clear two of
 them but disturbs the session the loop keeps up for dogfooding, so they stay.
+### 2026-09-21, loop iteration: the kid toast didn't fit its own message (live)
+
+Dogfooded the kid-facing Wi-Fi picker -- a surface docs/levels.md listed as entirely unverified. A
+`wifi=parent` kid (the 6-8 default) correctly gets a toast ("Wi-Fi needs a grown-up. Ask them to
+turn it on for you.") and no picker. But the toast rendered wrong: it overlapped the launcher's
+top-right clock, its message interleaving with the `N minutes left` line. `hyprctl layers` showed
+the toast window was **320x32**: `implicitHeight: card.implicitHeight + 32` where `card` is a
+Rectangle with `anchors.fill` and no implicit height of its own, so the wrapped message overflowed
+the window and drew over the clock. Fixed on `fix/toast-clock-overlap` (`a58bbd2`): the window
+sizes from the content Row (`cardContent`), and the top margin goes 96 -> 144 to clear the
+launcher's whole clock block (the time plus the `N minutes left` line) -- 96 had been chosen
+against a wrong clock inset (24, vs the launcher's 32 short / 56 tall). Live-verified at 875x492:
+the window is now 320x98 at y=144 and the clock is clear. The fable review needed two rounds (120
+was 2px short for Level 1 at >=640px tall; the docs claimed the block was "measured" when only the
+window geometry was observed), ending MERGE. docs/time.md updated. Open: on a short screen a 98px
+top-right toast still overlaps the launcher's title/card corner transiently (inherent -- there is
+no free top-right space at 875x492), and the 6 s auto-dismiss and `Qt.quit()` shutdown remain
+unverified (the toast's own timer/quit path).
+
+### 2026-09-21, loop iteration: the launcher's time-left line was frozen (live)
+
+Dogfooded the Time's Up screen on the try-omarchy VM, launching `share/time/timesup.qml` (installed
+from its branch) against a hand-written `grace` status: the card rendered with the fox avatar,
+"Time's up, Ada!", the reason line, a "Closing in N s" countdown that decremented, and the
+highlighted "Ask a grown-up" button, and Enter on it opened the Ask modal over the card. (An
+earlier attempt showed no avatar and the old "Finishing in" wording because the VM's installed
+`timesup.qml` was a stale package build; installing the branch's file fixed both.)
+
+That pass then found a real bug in the launcher: its "N minutes left" line was frozen at the value
+it read when the launcher started -- "41 minutes left" stayed put for half an hour across many
+daemon ticks and a `+10` grant, while the status file's `remaining_seconds` moved (the
+hide-on-grace branch never ran either). Cause: the `FileView` had `watchChanges` but no
+`onFileChanged` reload (FileView does not re-read on a watch signal by itself --
+`share/bar/KidsModule.qml` adds the handler for the same reason), and the daemon publishes the
+status by rename (`lib/time.sh`'s `mktemp` + `mv`), which can drop the watch. Fixed on
+`fix/launcher-time-left-refresh` (`1acc799`, stacked on `fix/toast-clock-overlap` for the shared
+`docs/time.md`): the FileView reloads on `fileChanged`, and a repeating 2s timer is the backstop
+(the ledger ticks every 30s). `launcher-grid-test.sh` pins the whole timer block and the
+`onFileChanged` handler; `docs/time.md` records the finding and drops the stale "the card still
+needs a fresh VM run" note. The fable review found the missing `fileChanged` hook and the unproven
+"the watcher stops" claim, ending MERGE. Live-verified with the final file: the line followed a
+`+10` grant from "73" to "82 minutes left" at the next tick (and "79" to "88" the run before).

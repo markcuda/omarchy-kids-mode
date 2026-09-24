@@ -230,6 +230,9 @@ ShellRoot {
             printErrors: false
             onLoaded: root.readTimeStatus()
             onTextChanged: root.readTimeStatus()
+            // FileView does not re-read the file on a watch signal by itself
+            // (share/bar/KidsModule.qml adds this for the same reason).
+            onFileChanged: reload()
         }
 
         function readTimeStatus() {
@@ -245,6 +248,19 @@ ShellRoot {
                 return
             }
             root.remainingSeconds = Number(status.remaining_seconds)
+        }
+
+        // Re-read on a timer as well as the watch: this line was frozen at
+        // its start value live on 2026-09-21 ("41 minutes left" across many
+        // ticks and a grant) because `watchChanges` never re-read the text,
+        // and the daemon's rename-replace (`lib/time.sh`'s mktemp + `mv`) can
+        // drop the watch for good. The ledger ticks every 30 seconds; 2s
+        // keeps the line, and the hide-on-grace branch, fresh.
+        Timer {
+            interval: 2000
+            running: true
+            repeat: true
+            onTriggered: timeStatus.reload()
         }
 
         Timer {
