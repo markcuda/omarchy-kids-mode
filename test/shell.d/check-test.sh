@@ -612,6 +612,27 @@ assert [c["id"] for c in boot["checks"]] == [
   fi
 fi
 
+# docs/boot.md step 5: machine set parent writes the parent's own "0=" line
+# on any box, so a parent-only file is not a kid slot and must pass.
+printf '0=mark\n' >"$ETC/luks-slots"
+portal_parent_json="$("$BIN" --json)"
+check_eq "$?" 0 "portal mode with only the parent's slot-0 line exits 0"
+check_contains "$portal_parent_json" '"id": "boot:no-kid-luks-slots", "status": "pass"' \
+  "portal mode: a parent-only slot map is not a kid slot"
+rm -f "$ETC/luks-slots"
+
+# A non-root run can't read a root 0600 luks-slots; an existing-but-unreadable
+# file must WARN (cannot verify), never PASS and hide a real kid slot.
+if [[ "$(id -u)" != 0 ]]; then
+  printf '1=kid-ada\n' >"$ETC/luks-slots"
+  chmod 000 "$ETC/luks-slots"
+  portal_unreadable_json="$("$BIN" --json)"
+  check_contains "$portal_unreadable_json" '"id": "boot:no-kid-luks-slots", "status": "warn"' \
+    "portal mode: an unreadable slot map is cannot-verify, not a pass"
+  chmod 644 "$ETC/luks-slots"
+  rm -f "$ETC/luks-slots"
+fi
+
 printf '1=kid-ada\n' >"$ETC/luks-slots"
 mkdir -p "$SCRATCH_ROOT/etc/mkinitcpio.conf.d" "$SCRATCH_ROOT/etc/sddm.conf.d"
 touch "$SCRATCH_ROOT/etc/mkinitcpio.conf.d/omarchy_kids.conf"

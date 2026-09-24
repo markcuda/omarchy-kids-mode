@@ -1882,3 +1882,23 @@ because nothing reads those six exported vars yet -- but it would fail closed if
 ever empty. `session-start-test.sh` asserts the env values but covers neither the missing variable
 nor an empty theme. `bin/omarchy-kids-data`'s browse rows (`read -r t host title visits`) can hit
 the same empty-field shift when a page has no title.
+### 2026-09-21, loop iteration: a portal box's parent-only slot map is not a kid slot (live)
+
+Dogfooding the Level 2 picker, then `omarchy-kids-check --live` (the loop recipe's own flow), turned
+up a real FAIL on a correctly-provisioned portal box: `boot:no-kid-luks-slots` failed although the
+wizard's Apply had run `omarchy-kids-conf machine set parent`, which by design (docs/boot.md step 5,
+docs/conf.md) writes the parent's own `0=<parent>` line to `/etc/omarchy-kids/luks-slots`. The check
+failed on the file's mere existence. Its own test fixture already used a kid entry (`1=kid-ada`) as
+the residue that must fail, so the intent was "no kid slot", not "no file". Fixed on
+`fix/boot-no-kid-luks-slots` (`cbf2697`): `boot_check_no_kid_luks_slots` now fails only on a non-`0`
+entry (`luks_slots_kid_entries`), and WARNs as cannot-verify on an existing but unreadable file (a
+non-root run against the root 0600 map) rather than passing it -- the fail-open the fable review
+caught in round one. `check-test.sh` pins the parent-only pass and the unreadable WARN; docs/check.md
+updated. Full Mac suite 52 files green; live-verified by installing the branch's `lib/check-boot.sh`
+into the VM from the branch and re-running `omarchy-kids-check --live`: `boot:no-kid-luks-slots` now
+PASSes ("maps only the parent's own slot; no kid slot is recorded").
+
+The other `--live` FAILs on the dogfood box are drift, not repo defects and left alone: the manual
+`usermod -aG input,video kid-ada` (the provisioner sets exactly omarchy-kids plus the band group),
+a stale `/etc/omarchy-kids/hyprland` predating the branch's configs, and the firmware-password gate
+that a VM cannot satisfy. `omarchy-kids-assert` in the guest would reconcile the first two.
