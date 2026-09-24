@@ -66,7 +66,7 @@ password survive a reset; everything else falls back to their band.
 | `band` | `3-5` `6-8` `9-12` `13+` | none — required | — |
 | `level` | `1` `2` `3` | band | per band |
 | `web` | `garden` `filtered` `none` | band | per band |
-| `dns` | `cloudflare-family` `cleanbrowsing-family` `custom:<url>` | band | per band |
+| `dns` | `cloudflare-family` `cleanbrowsing-family` `custom:<url>` | band | per band. **Stored, not applied yet:** the rendered Chromium policy always uses the template's Cloudflare family resolver, whatever this says (`share/policy/README.md`, `docs/web.md`) |
 | `budget_min`, `budget_min_weekend` | integer minutes | band | per band |
 | `lights_out`, `lights_out_weekend` | `HH:MM` | band | per band |
 | `wifi` | `parent` `helper` | band | per band |

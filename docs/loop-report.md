@@ -1281,3 +1281,34 @@ introduced here). The symlink is a deliberate bypass shape, so the reproduction 
 untracked private area (`.local/recovery/FINDING-2026-09-22-kid-home-link-PRIVATE.md`) rather than in
 this report, per `SECURITY.md`; the mitigation is on this branch, and the owner may want a private
 advisory for the window before it merges.
+### 2026-09-22, loop iteration: the Safe-search DNS choice does nothing
+
+Dogfooded the box's unit health this time, since a broken daemon is invisible in a session
+screenshot: `systemctl --failed` is empty, `authd` and `wifid` are running, both sockets are
+active, and both timers are waiting. That led to a cadence sweep of the units' own claims, which is
+clean -- the time timer's 30s matches `docs/time.md`, `omarchy-kids-time-ledger`'s header and its
+`--help`, and the ask timer's one minute matches its Description. (The *box's* installed ledger copy
+said "once a minute" -- it is an older package build, the usual dogfood mix, and the union's copy is
+right.)
+
+Then the I-6 pass went after the config schema: all 21 keys in `share/config/schema.toml` are
+documented in `docs/conf.md`, and the three "extra" keys my check flagged are file or machine-level
+names rather than profile keys. Clean at the mention level -- but not at the *applied* level. The
+`dns` key is stored and never read by anything that affects a kid: the wizard records it, and
+`omarchy-kids-web render` reads only the band's `web` mode, so the rendered Chromium policy always
+carries the template's Cloudflare family resolver. Two parent-facing choices therefore promise an
+effect they cannot deliver -- "CleanBrowsing Family | A second safe-search DNS provider" and "Type
+my own" -- which is exactly what I-6 forbids.
+
+Fix on `fix/dns-control-honesty`: those two descriptions now say they are stored for now while the
+policy still uses Cloudflare (the Cloudflare row's description was already true of the effective
+state), and `docs/conf.md`'s `dns` row carries the same note, next to the pointer to
+`share/policy/README.md`, which has said "not wired into `omarchy-kids-web` yet" all along. Wiring
+it properly is not a loop-sized call: the policy file is per band while the key is per kid, so a
+per-kid override cannot be expressed in it at all. That question -- wire it band-level and say so,
+or drop the control -- goes on the owner's decision list as item 7.
+
+One operator lesson, recorded because it cost a stray write: `omarchy-kids-conf set` has no
+dry-run. `DRY_RUN=1 omarchy-kids-conf set kid-ada dns ...` *writes*. The value was restored to the
+band default immediately and has no effect either way, but the loop's habit of prefixing writers
+with `DRY_RUN=1` does not hold for this command.

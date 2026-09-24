@@ -298,9 +298,9 @@ adv_edit_sites() {
 adv_edit_dns() {
   local step="$1" total="$2"
   local -a choices=(
-    "cloudflare-family|Cloudflare Family|Blocks adult content at the DNS level."
-    "cleanbrowsing-family|CleanBrowsing Family|A second safe-search DNS provider."
-    "custom|Type my own|Enter any DNS provider's address."
+    "cloudflare-family|Cloudflare Family|Blocks adult content at the DNS level (the resolver the rendered policy uses)."
+    "cleanbrowsing-family|CleanBrowsing Family|Stored for now; the browser's policy still uses Cloudflare."
+    "custom|Type my own|Stored for now; the browser's policy still uses Cloudflare."
   )
   local preselect current
   current="$(adv_get dns)"
