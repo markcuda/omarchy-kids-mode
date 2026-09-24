@@ -914,3 +914,41 @@ tick. Refinement candidate (not done): on grant, either have the daemon re-tick 
 `status` compare the published `last_tick` against the grant file's mtime and fall back to the
 ledger math when the grant is newer. Enforcement itself is unaffected -- the daemon recomputes from
 the ledger.
+
+### 2026-09-24, owner-gated merge: the parental-notification workstream
+
+Merged `feat/n5-relayd` into `integration/dogfood-2026-09-19` with the owner's explicit
+authorization (merges otherwise stay with the owner's gate). The branch carried the whole N
+workstream, the last 197 commits: the notification design amendment (N-0) and N-1 through N-15 --
+queue visibility and the `open_requests` badge, the kid's answer, the devices CLI and the authd
+`DECIDE`/`REVIEW`/`ACT` frames, the relay and its fence, pairing and the QR, on-demand relay, the
+desktop notifier and the bar actions, the away/tailnet path, the review command and timer, the
+courier with the sealed envelopes and the mailbox, and the parent app (pairing, the request and
+review screens, live feed, notifications, "Recently decided", the keystore seam). Each slice was
+specified (fable 5.1 high), implemented, and reviewed (fable 5.1); the review rounds that found
+blocking defects were fixed and re-confirmed.
+
+The last slice merged on the branch was R-NOTIFY-6, the kid's own copy of a decision: a root-written
+`/var/lib/omarchy-kids/<kid>/decisions/<id>.json` (`0640 root:<kid>` in a `0750 root:<kid>`
+directory, the queue record's decision and nothing else -- never `by`, never `device`), written by
+`ask.py decide` after the record and healed by `collect`, read by `omarchy-kids-ask outcome` for the
+ask overlay's display-only sentence, under a per-kid `decisions` assert lock and the same 90-day
+retention as the queue. Its review returned FIX FIRST on six findings; five were real (the overlay's
+`trim()` ate the empty reply's tab so a replyless decision showed no sentence; the sentence was not
+`Text.PlainText`, so a reply rendered as markup; the "never rewrites a present copy" assertion
+compared identical bytes and could not fail; the amendment claimed a `kids_list` gate and
+"no error" the code does not have; item 7 claimed tests that did not exist), all fixed, and the
+re-review returned MERGE. Two amendment doc-drift follow-ups closed the rest.
+
+Gated before push: `test/all -j 4`, 63 files green, on the merged tree. Integration is at
+`41d63d3`, in sync with `origin`.
+
+Still not built (its own worktree, to be specified separately): the app's mailbox view for the away
+envelopes -- `clients/parent/lib/relay_client.dart` opens them, no view shows them.
+
+Open owner backlog from the dogfooding notes (to be triaged with the owner): speed, bundled kid
+themes, profile-picture choice and previews, the TUI/mascot, the advanced-setup readability, the
+number-to-jump keys, themeable login, mouse user selection on the greeter, the simple desktop's
+shape, a fast "enter kids mode" and a top-level "remove kids", per-band default docs, the
+provisioning hang, kid-made themes, the "open <kid>'s desktop" no-op, blocked out-of-band app
+updates, and folding in the community screen-time work (#12488, #11196).
