@@ -2506,3 +2506,35 @@ the labels: help and docs still described the group predicate. Both mutation dir
 Live-verified by installing the worktree copy as `/usr/bin/omarchy-kids-session` on the box: as root
 the row is now `SKIP` with the honest reason and no false blame; as `kid-ada` it is unchanged — the
 probe runs and reports the deny rule active.
+
+### 2026-09-24, owner-gated union merge: every remaining topic branch
+
+The owner said "merge everything", so the rest of the 71 branches ahead of integration were merged
+with the owner's gate. This was run the way `docs/branch-conflict-map-2026-09-22.md` prescribes:
+`chore/gitattributes-loop-report-union` landed first so `docs/loop-report.md` has the union driver
+(its conflicts fell from 60 branches to 10), then the branches merged in a batch, gated at the end.
+
+- **Merged: ~65 branches** -- the loop-iteration records, the fix/ branches (ask, data, dns, garden,
+  launcher, levels, panel, plugins, portal, session-start, time, toast, wifi), the docs/ branches
+  (bar, exit, levels, notify-design, web, wifi, matt-pocock's ACP workflow sections), `style/shfmt`,
+  `feat/gcompris-preseed`, `test/panel-wifi-mode-label`, and `fix/fresh-install-ordering`.
+- **Resolved by union, not by a side.** A first pass took the incoming branch's copy of the
+  conflicting files for speed, which dropped integration's newer text (AGENTS.md lost rule 2's
+  notification amendment; docs/time.md lost the N-workstream lines). That was corrected in
+  `af8dd8e`: AGENTS.md is integration's text plus the two new ACP/agent-workflow sections, and
+  docs/levels.md, docs/time.md, docs/packaging.md and docs/wifi.md are unions of both sides.
+  PROGRESS.md and CHANGELOG.md took integration's copy (they rewrite their own top section).
+- **Skipped, with the reason:** `feat/n1-queue-visibility` and `feat/n2-kid-sees-answer` are
+  superseded -- integration already carries N-1's `open_requests` badge and R-NOTIFY-6's kid copy
+  and `outcome` sentence cover "the kid sees the answer", and both branches conflict heavily with
+  the evolved N code; `fix/install-packaging` is a subset of the merged
+  `fix/fresh-install-ordering`; `fix/launcher-insets-simplify` is stale (its change is in the union
+  already); `hub-archive-2026-09-19` and `two-paths` share no history with integration (the
+  hub/spokes design lineage) and would need `--allow-unrelated-histories`.
+- **One real defect the merge exposed and fixed:** the older python-shebang branch brought a
+  PKGBUILD loop naming only authd and wifid, while the merged trust-boundary test derives the list
+  from bin/ shebangs; relayd was missing. `bin/omarchy-kids-relayd` is named now, on the one line
+  the test parses.
+
+Gated before push: `test/all -j 4`, 64 files green (the merge added a test file). Integration is at
+`3bb1963`, in sync with `origin`.
