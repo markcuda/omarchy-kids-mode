@@ -18,10 +18,12 @@ shown at all, rather than one that does nothing. See "Not yet" below.)
 
 **2. The login screen (the portal).** One tile per person in the house, yours last. Arrow keys
 move the highlight, Enter picks a tile, then type that person's password (a kid with no password
-gets in on Enter). If the machine is set to go straight in from the disk password — the default —
-whoever's password unlocked the *disk* at power-on lands on their own desktop with no login screen
-at all, once, right after the machine turns on; if it is set to show the portal every time, this
-screen is what you see at every power-on. Every other time — after **Finish** ends someone's turn,
+gets in on Enter). If the machine is set to go straight in from the disk password (`boot=disk`
+in the machine's config), whoever's password unlocked the *disk* at power-on lands on their own
+desktop with no login screen at all, once, right after the machine turns on; if it is set to show
+the portal every time (`boot=portal`), this screen is what you see at every power-on. There is no
+default: it is set by hand (`omarchy-kids-conf machine set boot disk|portal`) — an upgrade keeps
+what the machine had — and the wizard stops rather than guess if it is missing. Every other time — after **Finish** ends someone's turn,
 or if the disk password you typed didn't match anyone's — it's this one.
 
 **3. Time's Up.** When a kid's screen time runs out, their screen shows an owl (or their own
