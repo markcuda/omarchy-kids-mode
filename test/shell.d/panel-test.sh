@@ -380,6 +380,13 @@ check_contains "$(cat "$ARGV_LOG")" "omarchy-kids-conf set kid-ada wifi helper" 
   "real: changing Wi-Fi mode actually calls conf set"
 check_contains "$(cat "$ETC/kids/kid-ada.conf")" "wifi=helper" \
   "real: the Wi-Fi mode is really on disk afterward"
+# The screen's mode line comes from lib/kids.sh's friendly_wifi_mode (live
+# 2026-09-22: a kids.sh that predates that function left it blank with a shell
+# error, so pin the label the pair is supposed to render).
+answers="$(answers_file "kid:kid-ada" wifi back back quit)"
+run_panel "$answers"
+check_contains "$out" "Mode: On their own, safely" \
+  "the Wi-Fi screen shows friendly_wifi_mode's label, not the raw value"
 
 # --- real: reset clears overrides but keeps the account ----------------
 

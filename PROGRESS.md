@@ -64,6 +64,11 @@ numbers for up to a tick.
 leading glyph from `OMARCHY_KIDS_TOAST_ICON`, so the Wi-Fi refusal shows Wi-Fi bars instead of the
 time warning's alarm clock.
 
+**Fixed on a topic branch awaiting merge:** `test/panel-wifi-mode-label` -- a live panel dogfood found
+the Wi-Fi screen's "Mode:" label blank when a `lib/panel-kid.sh` is installed without the
+`lib/kids.sh` that defines `friendly_wifi_mode` (a VM component-skew repair, not a repo defect);
+the test now pins the label.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After
