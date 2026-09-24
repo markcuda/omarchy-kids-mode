@@ -24,9 +24,9 @@ screen — after **Finish** ends someone's turn, or if the disk password you typ
 anyone's — it's this one.
 
 **3. Time's Up.** When a kid's screen time runs out, their screen shows an owl (or their own
-avatar), the time, and two choices: **Ask a grown-up for more time** or **Finish**. Left alone for
-60 seconds, it finishes on its own. "Ask a grown-up" is the same request queue as everything else
-a kid asks for — see "Four things you'll do most" below.
+avatar), the time, a countdown, and one button: **Ask a grown-up for more time**. Left alone for
+60 seconds, it finishes on its own (no button needed for that). "Ask a grown-up" is the same
+request queue as everything else a kid asks for — see "Four things you'll do most" below.
 
 ## The one password rule
 

@@ -48,7 +48,8 @@ notification while the phone is locked but never ride a backup onto a second pho
 app can no longer read (restored from another device, say) is not a dead end: the pairing screen
 offers a reset that clears the device's keys and pairing, and says the computer keeps the old device
 until it is revoked there. All of it is
-widget-tested against a fake relay, a fake connection and a fake store. The device list, the store builds remain — there is nothing to install on a phone yet. The
+widget-tested against a fake relay, a fake connection and a fake store. The device list and the
+store builds remain — there is nothing to install on a phone yet. The
 system-notification adapter (`app/lib/local_notifier.dart`) is the one file that talks to the OS
 plugin; it has not run on any platform here (no `android/`, `ios/` or `macos/` scaffolding is
 committed), so treat it as written-not-proven on every platform, not just the ones it names.
@@ -148,5 +149,5 @@ app reproduces every signature. Run the generator after changing the scheme and 
 The device list (the app pairs and shows its own box; it does not list the box's other devices), the
 away mailbox view, the platform scaffolding and the store builds are the app's own work (N-8/N-12)
 and are not claimed. Two adapters are written but have only been exercised through their seams and
-their memory/no-op fallbacks here — the system keystore (`lib/keystore.dart`'s `FlutterSecureStore`)
+their memory/no-op fallbacks here — the system keystore (`app/lib/keystore.dart`'s `FlutterSecureStore`)
 and the system notifier (`app/lib/local_notifier.dart`); a device build is where they are proven.
