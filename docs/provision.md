@@ -21,6 +21,15 @@ trusted reader in `lib/boot-mode.sh`. Missing or unsafe mode state stops the com
 
 ## `add <display-name> --band <band> [--avatar ID] [--password-stdin | --no-password] [--parent-password-stdin | --parent-password-fd N] [--luks-device DEV]`
 
+**Refused before anything is created or written: a symlink under the new kid's home.** A home can be
+one an earlier account left behind (`remove --keep-home`), and a kid who has had a shell can plant a
+link there. `add` resolves the account name, checks every path it is about to write under that home
+(`kid_home_writable_paths` in `bin/omarchy-kids-provision`) and exits `2` naming the link, rather
+than following it — root never writes or chowns through a kid-planted path (AGENTS.md rule 9). The
+message says the account is gone but its home is still there; removing the leftover home (or just
+the link) and adding again is the remedy. The same step seeds one app's own config for the new kid
+(`docs/apps.md`, "Per-app config we seed at provisioning: GCompris").
+
 1. **Account name** (Appendix B.1): `omarchy-kids-conf slug "<display-name>"` gives the base
    `kid-<slug>`; if a profile already exists for it (`$OMARCHY_KIDS_ETC/kids/<slug>.conf`), or
    `getent passwd` already knows it, `-2`, `-3`, ... is appended until one is free.

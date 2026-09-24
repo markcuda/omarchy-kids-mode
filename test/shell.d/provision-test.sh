@@ -202,6 +202,12 @@ esac
 '
 stub lsblk 'echo "fake0 crypto_LUKS"'
 stub flock
+# The GCompris pre-seed reads the installed app's version (pacman -Q, the same
+# read omarchy-kids-apps does) to write the one marker the app checks; this
+# fixture is the version the 2026-09-22 VM check verified. chown is stubbed so
+# the kid-ownership of the seeded file is asserted rather than attempted.
+stub pacman 'echo "gcompris-qt 26.1-1"'
+stub chown ''
 stub omarchy-provision-user
 stub groupadd
 stub runuser
@@ -319,6 +325,26 @@ else
 fi
 check_not_contains "$(cat "$ARGV_LOG")" "cryptsetup" "portal add makes no LUKS call"
 [[ -e "$ETC/kids/kid-cy.conf" ]] && pass "portal add creates the kid profile" || fail "portal add did not create kid-cy"
+
+# --- GCompris pre-seed (docs/apps.md, the approved proposal) ---------------
+# Configuration, not a lock: kiosk hides the app's own quit/config chrome. The
+# config existing stops the "first time" welcome; lastGCVersionRan stops the
+# post-upgrade changelog and dataset prompt. Both verified live on 2026-09-22;
+# the number is the app's own encoding.
+GC_FILE="$HOMEROOT/home/kid-cy/.config/gcompris/gcompris-qt.conf"
+if [[ -f "$GC_FILE" ]]; then
+  pass "portal add pre-seeds GCompris's config before its first run"
+  check_contains "$(cat "$GC_FILE")" "fullscreen=true" "seeded GCompris config: fullscreen"
+  check_contains "$(cat "$GC_FILE")" "kiosk=true" "seeded GCompris config: kiosk hides the app's quit/config chrome"
+  check_contains "$(cat "$GC_FILE")" "lastGCVersionRan=260100" \
+    "seeded GCompris config: the packaged 26.1 version, encoded the way the app writes it"
+  check_eq "$(kids_file_mode "$GC_FILE")" "644" "seeded GCompris config: mode 0644"
+  check_contains "$(cat "$ARGV_LOG")" \
+    "chown kid-cy:kid-cy $HOMEROOT/home/kid-cy/.config $HOMEROOT/home/kid-cy/.config/gcompris $GC_FILE" \
+    "seeded GCompris config: the file and both directories are handed to the kid (Qt writes its lock and temp file beside it)"
+else
+  fail "portal add must pre-seed GCompris's config"
+fi
 
 : >"$ARGV_LOG"
 out_portal_remove_reject="$("$BIN" remove kid-cy --luks-device /dev/fake0 2>&1)"
@@ -785,6 +811,103 @@ for bad in $'Ada\tLovelace' $'Ada\nLovelace'; do
   check_eq "$st" 2 "add: a display name containing a record-line separator is refused"
   check_contains "$outb" "may not contain" "add: the refusal explains which characters are out"
 done
+
+# --- gcompris_version_number: the app's own number, both branches ----------
+# Rule 2: the function runs against fixtures this block owns, not whatever
+# pacman happens to be on this machine.
+
+VERSTUBS="$TMP/verstubs"
+EMPTYSTUBS="$TMP/emptystubs"
+mkdir -p "$VERSTUBS" "$EMPTYSTUBS"
+ver_fn="$(sed -n '/^gcompris_version_number()/,/^}/p' "$BIN")"
+check_eq "$(bash -c "PATH='$EMPTYSTUBS'; $ver_fn; gcompris_version_number")" "" \
+  "version encoding: no pacman means no marker, not a guess"
+printf '#!/bin/sh\necho "gcompris-qt 26.1-1"\n' >"$VERSTUBS/pacman"
+chmod +x "$VERSTUBS/pacman"
+check_eq "$(bash -c "PATH='$VERSTUBS'; $ver_fn; gcompris_version_number")" "260100" \
+  "version encoding: 26.1 is 260100, the value the app itself wrote on the VM"
+printf '#!/bin/sh\necho "gcompris-qt 26.08-1"\n' >"$VERSTUBS/pacman"
+chmod +x "$VERSTUBS/pacman"
+check_eq "$(bash -c "PATH='$VERSTUBS'; $ver_fn; gcompris_version_number")" "260800" \
+  "version encoding: a leading-zero minor stays decimal instead of aborting the provision"
+
+# --- GCompris pre-seed: leaving the app's own file alone, and refusing a
+#     kid-planted link (rule 9) ---------------------------------------------
+# This adds two more accounts, so it runs last: the checks above compare exact
+# theme.conf.user contents and marker absence, and new kids would perturb them.
+# It owns its fixture too -- the sections above leave the machine in disk mode,
+# which would make these adds ask for the parent passphrase instead.
+
+printf 'parent=mark\nboot=portal\n' >"$ETC/machine.conf"
+chmod 0644 "$ETC/machine.conf"
+
+SEED_SLUG="$("$CONFBIN" slug "Test")"
+SEED_FILE="$HOMEROOT/home/$SEED_SLUG/.config/gcompris/gcompris-qt.conf"
+mkdir -p "$(dirname "$SEED_FILE")"
+printf 'kiosk=false\n# the app wrote this\n' >"$SEED_FILE"
+: >"$ARGV_LOG"
+out_seed="$(printf 'kidpass1\n' | "$BIN" add "Test" --band 6-8 --avatar fox --password-stdin 2>&1)"
+st=$?
+check_eq "$st" 0 "add for a kid whose GCompris config exists still succeeds"
+check_contains "$out_seed" "Done: $SEED_SLUG" "the add really provisioned the account this fixture pre-seeded"
+check_eq "$(cat "$SEED_FILE")" "kiosk=false
+# the app wrote this" "an app-written GCompris config is left exactly as it was"
+check_contains "$out_seed" "left as the app wrote it" "the add says it left that config alone"
+
+# Rule 9: a kid-planted link under a home this command is about to re-provision
+# is refused before anything is created, written or chowned -- a bare `-e` test
+# passes over a dangling link, which is exactly what a kid would plant.
+LINK_SLUG="$("$CONFBIN" slug "Dot")"
+LINK_HOME="$HOMEROOT/home/$LINK_SLUG"
+LINK_TARGET="$HOMEROOT/planted-target"
+mkdir -p "$LINK_HOME" "$LINK_TARGET"
+ln -s "$LINK_TARGET" "$LINK_HOME/.config"
+: >"$ARGV_LOG"
+out_link="$(printf 'kidpass1\n' | "$BIN" add "Dot" --band 6-8 --avatar fox --password-stdin 2>&1)"
+st=$?
+check_eq "$st" 2 "add refuses a kid-planted ~/.config link"
+check_contains "$out_link" "$LINK_HOME/.config is a symlink" "the refusal names the link it will not follow"
+[[ -e "$ETC/kids/kid-dot.conf" ]] && fail "a refused add must not create the profile" ||
+  pass "a refused add creates no profile"
+if [[ -e "$LINK_TARGET/chromium-flags.conf" || -e "$LINK_TARGET/gcompris/gcompris-qt.conf" ||
+  -n "$(grep -E "^chown " "$ARGV_LOG" || true)" ]]; then
+  fail "something was written or chowned through the planted ~/.config link"
+else
+  pass "nothing was written or chowned through the planted ~/.config link"
+fi
+
+# The same one level down, inside a real ~/.config: the account is free again
+# because the refused add created nothing.
+rm -f "$LINK_HOME/.config"
+mkdir -p "$LINK_HOME/.config"
+ln -s "$LINK_TARGET" "$LINK_HOME/.config/gcompris"
+: >"$ARGV_LOG"
+out_link2="$(printf 'kidpass1\n' | "$BIN" add "Dot" --band 6-8 --avatar fox --password-stdin 2>&1)"
+st=$?
+check_eq "$st" 2 "add refuses a kid-planted ~/.config/gcompris link"
+check_contains "$out_link2" "$LINK_HOME/.config/gcompris is a symlink" "the refusal names the nested link"
+[[ -e "$ETC/kids/kid-dot.conf" ]] && fail "the second refused add must not create the profile" ||
+  pass "the second refused add creates no profile"
+[[ -e "$LINK_TARGET/gcompris-qt.conf" ]] && fail "a kid-planted nested link was followed" ||
+  pass "nothing was written through the nested link"
+
+# And at a *file* the fallback writer redirects into, not a directory: a planted
+# link there would be followed by a plain redirect, which is why the list names
+# it too. omarchy-provision-user is removed so that fallback is the one that
+# would run (the section above leaves the stub in place).
+rm -f "$STUBS/omarchy-provision-user"
+rm -f "$LINK_HOME/.config/gcompris"
+mkdir -p "$LINK_HOME/.local/state/omarchy"
+printf 'a line the add must not touch\n' >"$LINK_TARGET/victim"
+ln -s "$LINK_TARGET/victim" "$LINK_HOME/.local/state/omarchy/migrations.log"
+: >"$ARGV_LOG"
+out_link3="$(printf 'kidpass1\n' | "$BIN" add "Dot" --band 6-8 --avatar fox --password-stdin 2>&1)"
+st=$?
+check_eq "$st" 2 "add refuses a kid-planted migrations.log link"
+check_contains "$out_link3" "$LINK_HOME/.local/state/omarchy/migrations.log is a symlink" \
+  "the refusal names the planted file"
+check_eq "$(cat "$LINK_TARGET/victim")" "a line the add must not touch" \
+  "the planted file link was neither truncated nor rewritten"
 
 echo "provision-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc

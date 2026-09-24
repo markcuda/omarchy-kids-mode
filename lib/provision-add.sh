@@ -79,6 +79,21 @@ cmd_add() {
   group="$(group_for_band "$band")"
   gecos_name="$(gecos_name_for_display "$display")"
 
+  # Rule 9: root must never write through a path a kid could have replaced. A
+  # home can be one an earlier account left behind (`remove --keep-home`) after
+  # that kid had a shell in it, and a bare `-e` test passes over a dangling
+  # symlink -- so refuse the whole add here, before it creates anything, rather
+  # than following a planted link later. kid_home_writable_paths is the one list
+  # of what this command writes under a kid's home.
+  local planted kid_path
+  local -a kid_paths=()
+  while IFS= read -r kid_path; do
+    [[ -n "$kid_path" ]] && kid_paths+=("$kid_path")
+  done < <(kid_home_writable_paths "$(home_dir_for "$account")")
+  if ! planted="$(symlinked_kid_path "${kid_paths[@]}")"; then
+    die "add: $planted is a symlink -- refusing to write through it. The account is gone but its home is still there: remove the leftover home (or just the link) and add the kid again" 2
+  fi
+
   local kid_password="" parent_password=""
   if ((want_password)); then
     if ! IFS= read -r kid_password; then
@@ -215,6 +230,12 @@ cmd_add() {
   # (install/remove/update/setup) with the verified user extension. Root-owned
   # and read-only for the kid; it is presentation, not a lock.
   run install_kids_menu_trim "$account"
+
+  # GCompris's own first-run state (docs/apps.md; approved proposal,
+  # docs/research/2026-09-21-gcompris-first-run-and-config-proposal.md). It is
+  # configuration, not a lock: it hides the app's quit/config chrome and its
+  # one-time dialogs. A config the app has already written is left alone.
+  run install_kids_gcompris_config "$account"
 
   # R-DESK, issue #53: the kid's desktop matches the house look at first
   # login -- docs/theming.md. "$CONF_BIN" set is the one writer; nothing here
