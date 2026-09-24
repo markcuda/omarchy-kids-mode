@@ -136,16 +136,15 @@ applying it (R-NOTIFY-4).
 
 `proof` on `/v1/pair` is `HMAC-SHA256(token, sign_pub|box_pub|name)`: the pairing token (the QR's
 credential) never travels, only a proof that the device holds it. The `grant`/`end` routes above are
-the ACT frame's and are not built on this branch; a device learns its scopes and the kids from
-`GET /v1/state`.
+the ACT frame's (§12); a device learns its scopes and the kids from `GET /v1/state`.
 
 Away envelopes (R-NOTIFY-8, N-11: the box-side courier that seals and carries them is built, `docs/courier.md`; the app package opens them (`clients/parent/lib/relay_client.dart`) but its mailbox view is not built) are `{v, device_id, eph_pub, nonce, ct}`: a fresh ephemeral X25519 key does ECDH with the device's `box_pub`, HKDF-SHA256 (salt `omarchy-kids-envelope-v1`, info `x25519-chacha20poly1305`) derives the key, and ChaCha20-Poly1305 seals the document with a 12-byte nonce and the device id as associated data. `lib/envelope.py` seals; the device opens with its private box key; `clients/parent/test-vectors/notify-vectors.json` carries the vectors the app must reproduce. The envelope is confidential, not authenticated: anyone holding the device's public key can seal one, so the app must treat a sealed state document as untrusted display data and never act on it -- the decisions it sends the other way are signed by the device and verified by root. A box identity key (or a timestamp) is a later version's job.
 
 File formats: `/etc/omarchy-kids/devices/<id>.conf` (root 0600: name, platform, both public keys,
 `paired_at`, `paired_by`, scopes, `label_for_kids`); `/run/omarchy-kids/pairing/<id>` (root 0600, the
-single-use pairing record). `/var/lib/omarchy-kids/<kid>/decisions/<id>.json` (0640 root:kid, the
-result the kid's session reads) is **not built on this branch** -- the kid's result is shown by the ask
-overlay instead.
+single-use pairing record). `/var/lib/omarchy-kids/<kid>/decisions/<id>.json` (`0640 root:<kid>` in a
+`0750 root:<kid>` directory, the result the kid's session reads through `omarchy-kids-ask outcome`,
+which the ask overlay shows; §19).
 
 ## 7. AGENTS.md rule 2 and PRIVACY.md
 
