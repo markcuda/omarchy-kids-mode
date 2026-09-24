@@ -26,8 +26,10 @@ A phone or desktop app that pairs with the box, shows a kid's requests with **Ap
 the fingerprint it showed, compare, pair), the request list, and a request screen with Approve,
 Decline and the reply chips. The list follows the box's own feed (`/v1/events`), so a new request
 appears without a refresh; when the feed drops it says so, keeps the last list on screen, and
-retries with a growing delay. All of it is widget-tested against a fake relay and a fake
-connection. The
+retries with a growing delay. The overflow menu offers **Forget this computer**, which clears the
+local pairing so the app can pair again (a box that re-keyed has a pin this app can no longer
+match); it asks first, and says the box keeps its own record until the parent revokes the device
+there. All of it is widget-tested against a fake relay and a fake connection. The
 device list, the platform keystore (the package ships the interface and an in-memory one; the
 platform implementation does not exist yet, so a pairing does not survive a restart), the platform
 notification plumbing and the store builds remain — there is nothing to install on a phone yet.

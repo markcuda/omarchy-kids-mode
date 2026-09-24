@@ -25,6 +25,12 @@ abstract class Keystore {
   /// The pairing result, as JSON: {deviceId, pin, addresses}.
   Future<String?> loadPaired();
   Future<void> savePaired(String json);
+
+  /// Forget the paired box on this device. The box keeps its own record of the
+  /// device until the parent revokes it there; this only clears the local pin,
+  /// the address and the device id, so the app can pair again (a box that
+  /// re-keyed has a pin this app can no longer match).
+  Future<void> clearPaired();
 }
 
 class InMemoryKeystore implements Keystore {
@@ -44,6 +50,8 @@ class InMemoryKeystore implements Keystore {
   Future<String?> loadPaired() async => _paired;
   @override
   Future<void> savePaired(String json) async => _paired = json;
+  @override
+  Future<void> clearPaired() async => _paired = null;
 }
 
 /// The parent's session: one device key, one pinned box, and the actions the UI

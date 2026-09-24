@@ -105,13 +105,22 @@ class _AppRootState extends State<AppRoot> {
     }
   }
 
+  /// Forget the paired box on this device and go back to pairing. The box keeps
+  /// its own record until the parent revokes the device there.
+  Future<void> _forget() async {
+    await widget.keystore.clearPaired();
+    if (!mounted) return;
+    setState(() => _session = null);
+    await _boot();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     final session = _session;
-    if (session != null) return HomeScreen(session: session);
+    if (session != null) return HomeScreen(session: session, onForget: _forget);
     return PairingScreen(
       keystore: widget.keystore,
       connect: widget.connect,

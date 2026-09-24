@@ -3,6 +3,7 @@
 // confirm, pair). The logic itself is tested in the omarchy_kids_parent package.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
@@ -111,6 +112,15 @@ Future<void> pumpHome(WidgetTester tester, FakeRelay relay) async {
 
 final _uri = 'omarchy-kids://pair?v=1&id=dev-1&token=${'a' * 40}&addr=192.168.1.5';
 
+/// A keystore that already holds a pairing, so the app opens on the requests.
+Future<InMemoryKeystore> pairedKeystore() async {
+  final keystore = InMemoryKeystore();
+  await keystore.savePaired(
+    jsonEncode({'deviceId': 'dev-1', 'pin': 'ab' * 32, 'addresses': ['192.168.1.5']}),
+  );
+  return keystore;
+}
+
 Future<void> pumpPairing(WidgetTester tester, {required FakeConnect connect, Keystore? keystore}) async {
   await tester.pumpWidget(MaterialApp(
     home: AppRoot(
@@ -180,6 +190,33 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.text('kid-ada asked for 15 more minutes'), findsOneWidget);
+  });
+
+  testWidgets('a paired app offers to forget the computer, and Cancel keeps it', (tester) async {
+    final keystore = await pairedKeystore();
+    await pumpPairing(tester, connect: FakeConnect(), keystore: keystore);
+    expect(find.text('Requests'), findsOneWidget);
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Forget this computer…'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Requests'), findsOneWidget);
+    expect(await keystore.loadPaired(), isNotNull);
+  });
+
+  testWidgets('Forget clears the pairing and returns to pairing', (tester) async {
+    final keystore = await pairedKeystore();
+    await pumpPairing(tester, connect: FakeConnect(), keystore: keystore);
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Forget this computer…'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Forget'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pair with the computer'), findsOneWidget);
+    expect(await keystore.loadPaired(), isNull);
   });
 
   testWidgets('a slow read does not overwrite a newer event', (tester) async {

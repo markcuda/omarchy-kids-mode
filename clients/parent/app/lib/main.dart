@@ -51,7 +51,12 @@ void main() {
 /// The parent's requests, newest first.
 class HomeScreen extends StatefulWidget {
   final Session session;
-  const HomeScreen({super.key, required this.session});
+
+  /// Forget the box on this device and return to pairing (the app offers it in
+  /// the overflow menu). Null in a test that has no pairing to forget.
+  final Future<void> Function()? onForget;
+
+  const HomeScreen({super.key, required this.session, this.onForget});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -151,6 +156,16 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Requests'),
         actions: [
           IconButton(onPressed: _reload, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
+          if (widget.onForget != null)
+            PopupMenuButton<String>(
+              tooltip: 'More',
+              onSelected: (value) {
+                if (value == 'forget') _confirmForget();
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'forget', child: Text('Forget this computer…')),
+              ],
+            ),
         ],
       ),
       body: state == null
@@ -168,6 +183,26 @@ class _HomeScreenState extends State<HomeScreen> {
   void _reload() {
     _read();
     if (_watch == null) _watchNow();
+  }
+
+  /// Ask before forgetting: it stops this device getting the box's requests, and
+  /// the box keeps its own record until the parent revokes the device there.
+  Future<void> _confirmForget() async {
+    final forget = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Forget this computer?'),
+        content: const Text(
+          'This device stops getting the computer\'s requests until you pair it again. '
+          'The computer keeps the device until you revoke it there.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Forget')),
+        ],
+      ),
+    );
+    if (forget == true) await widget.onForget!();
   }
 
   Widget _requests(BoxState state) {
