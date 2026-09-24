@@ -35,7 +35,7 @@ kids_tree() {
 kids_stub() {
   local path="$1/bin/$2"
   cat >"$path"
-  chmod +x "$path"
+  chmod 0755 "$path" # not +x: a 002 umask would make it 775, which the launcher-map fence refuses
 }
 
 # kids_id_stub DIR ACCOUNT [UID] — `id` for DIR (put DIR on PATH).
@@ -66,7 +66,7 @@ case "\${1:-}" in
   *) exit 1 ;;
 esac
 EOF
-  chmod +x "$dir/id"
+  chmod 0755 "$dir/id"
 }
 
 # kids_set_const FILE NAME VALUE — rewrite a `NAME=<constant>` line in a

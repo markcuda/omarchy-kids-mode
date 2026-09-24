@@ -783,9 +783,10 @@ check "$("$CONF" get kid-ada level)" "1" "import: a CRLF line is accepted"
 #
 # A root-side validator (lib/launcher-map.sh calls it while a kid's launcher map
 # is built), and the only thing that turns a .desktop Exec into the fixed argv
-# the map carries. It resolves programs against the system path, never the
-# caller's PATH: a PATH a kid can set must not choose which binary lands in
-# their map (AGENTS.md rule 9).
+# the map carries. It resolves programs on the session PATH; the caller then
+# refuses anything not root-owned or group/other-writable, which is what keeps a
+# PATH a kid can set from choosing a binary in their map (AGENTS.md rule 9,
+# docs/apps.md).
 
 DESKTOP="$TMP/exec.desktop"
 

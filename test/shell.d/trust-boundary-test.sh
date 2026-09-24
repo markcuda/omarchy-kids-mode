@@ -135,22 +135,23 @@ done
 # the only ones this package may make are systemd's socket-activation contract,
 # read once and then popped (bin/omarchy-kids-authd). A new one fails here.
 PY_ALLOWED=(
-  LISTEN_PID # sd_listen_fds: this process is the systemd-activated one
-  LISTEN_FDS # how many sockets systemd passed
-  LISTEN_FDNAMES
-  # lib/conf.py's desktop-argv resolves a .desktop Exec on the session PATH. That
-  # path is refenced by the caller: lib/launcher-map.sh refuses anything not
-  # root-owned and not group/other-writable, so a kid's PATH can only make a tile
-  # absent, never choose the binary (see docs/apps.md).
-  PATH
+  LISTEN_PID     # sd_listen_fds: this process is the systemd-activated one
+  LISTEN_FDS     # how many sockets systemd passed
+  LISTEN_FDNAMES # same, for wifid's own socket
+  PATH           # lib/conf.py's desktop-argv; its only caller applies the executable fence
 )
-PY_FILES=(lib/*.py bin/omarchy-kids-authd bin/omarchy-kids-relayd bin/omarchy-kids-relay-courier)
+# Every python source the package ships, derived from its shebang (a hand-written
+# list had the courier in and wifid out), plus lib/*.py.
+PY_FILES=(lib/*.py)
+while IFS= read -r f; do PY_FILES+=("$f"); done < <(
+  grep -lE '^#!.*python' bin/omarchy-kids* 2>/dev/null
+)
 py_env_reads=()
 while IFS= read -r name; do
   [[ -n "$name" ]] || continue
   py_env_reads+=("$name")
 done < <(
-  grep -rhoE 'os\.environ(\.get)?\("?\[?"[A-Za-z_][A-Za-z0-9_]*"|getenv\("[A-Za-z_][A-Za-z0-9_]*"' "${PY_FILES[@]}" 2>/dev/null |
+  grep -rhoE 'os\.environ\[?"[A-Za-z_][A-Za-z0-9_]*"|os\.environ\.get\("[A-Za-z_][A-Za-z0-9_]*"|getenv\("[A-Za-z_][A-Za-z0-9_]*"' "${PY_FILES[@]}" 2>/dev/null |
     grep -oE '"[A-Za-z_][A-Za-z0-9_]*"' | tr -d '"' | sort -u
 )
 py_unlisted=0

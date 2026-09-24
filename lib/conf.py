@@ -338,7 +338,7 @@ def cmd_desktop_argv(argv):
 
     def resolve_program(program):
         # Resolved on the session's PATH; the caller (lib/launcher-map.sh) is the
-        # fence: it refuses anything not root-owned and group/other-writable, so a
+        # fence: it refuses anything not root-owned, or group/other-writable, so a
         # PATH a kid can set can make a program absent, never point the map at the
         # kid's own binary (AGENTS.md rule 9 -- see the trust-boundary test's why).
         resolved = shutil.which(program, path=os.environ.get("PATH"))
