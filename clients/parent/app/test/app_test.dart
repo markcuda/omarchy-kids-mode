@@ -398,6 +398,11 @@ void main() {
   });
 
   testWidgets('the section is after the requests list, capped at 20', (tester) async {
+    // A tall view, so all 20 rows are built: a 600px ListView would never mount
+    // the 21st row and the cap assertion would be vacuous.
+    tester.view.physicalSize = const Size(800, 4000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     final relay = FakeRelay(BoxState.fromJson({
       'kids': [
         {'kid': 'kid-ada', 'live': true},
@@ -416,6 +421,7 @@ void main() {
     final headerY = tester.getTopLeft(find.text('Recently decided')).dy;
     expect(requestY, lessThan(headerY), reason: 'the section follows the requests');
     expect(find.text('kid-ada asked to use app24'), findsOneWidget);
+    expect(find.text('kid-ada asked to use app5'), findsOneWidget);
     expect(find.text('kid-ada asked to use app4'), findsNothing,
         reason: 'only the newest 20 of 25 are shown');
   });
