@@ -44,7 +44,7 @@ systemd_addr_expand() {
   for token in $1; do
     case "$token" in
       localhost) out="$out 127.0.0.0/8 ::1/128" ;;
-      link-local) out="$out 169.254.0.0/16 fe80::/64" ;;
+      link-local) out="$out 169.254.0.0/16 fe80::/10" ;;
       multicast) out="$out 224.0.0.0/4 ff00::/8" ;;
       *) out="$out $token" ;;
     esac
@@ -55,7 +55,10 @@ systemd_addr_expand() {
 # addr_set TOKENS — the tokens as a sorted, space-separated set (order and
 # duplicates do not matter to systemd, so they must not matter here).
 addr_set() {
-  printf '%s' "${1-}" | tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ' | sed 's/ $//'
+  # LC_ALL=C: the compare is between two sets this file builds, and it must not
+  # depend on the caller's locale (a C-locale runner would otherwise order
+  # differently and the two sides would never match).
+  printf '%s' "${1-}" | tr ' ' '\n' | sed '/^$/d' | LC_ALL=C sort -u | tr '\n' ' ' | sed 's/ $//'
 }
 
 run_locks_section() {
