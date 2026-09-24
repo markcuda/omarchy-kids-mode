@@ -210,26 +210,29 @@ ignored. `collect` remains root-side and may use its explicit scratch-root test 
 
 ## What's unverified — check in the VM
 
-Everything `share/ask/shell.qml` shares with `share/exit-modal/shell.qml` (`PanelWindow` +
-`WlrLayershell.layer: WlrLayer.Overlay`, `WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive`,
-the `Process`/stdin verifier shape, `Quickshell.execDetached` before `Qt.quit()`) was already
-confirmed live for the exit modal (`docs/exit.md`'s "Verified live" section, 2026-09-02) and is
-reused here unchanged — but this specific file has not itself been run against a real Quickshell.
-Before trusting it in front of a kid:
+`share/ask/shell.qml` itself has run against a real Quickshell in the QEMU test VM: the 2026-09-02
+pass opened it with `omarchy-kids-ask time 15` (the overlay, the kid-words description, the focused
+password field -- see "Verified live" below), and the 2026-09-03 pass drove the current on-the-spot
+grant through `grant`/authd/`apply-grant` after three live fixes (see "Security fix" below). The
+CLI `submit` path, and the ask-collect timer moving a submitted request from the outbox to the root
+queue, were recorded on the try-omarchy VM (2026-09-21, `docs/loop-report.md`). The `PanelWindow` /
+`WlrLayershell` / `Process` / `execDetached` shapes it shares with `share/exit-modal/shell.qml` were
+verified live for the exit modal (`docs/exit.md`). Still to confirm:
 
-1. Open each of `time`/`app`/`plugin`/`site` from a kid session and confirm the modal appears on
-   top, focused, with the right kid-words description.
-2. "A grown-up is here" with the parent's real password: confirm the outbox record is written
-   (`ls $XDG_RUNTIME_DIR/omarchy-kids/ask-outbox/`), then run `omarchy-kids-ask collect --apply`
-   as root and confirm the grant actually lands (allowlist entry, allow.txt, or a time grant).
-3. "A grown-up is here" with a wrong password three times: confirm the shake/hint/30s-lockout
-   behavior (same code path as the exit modal's own, already verified there).
-4. "Ask later": confirm the exact text "Asked. Your grown-up will see it." appears, and that the
-   outbox record is `state: "open"`.
+1. Open `plugin` and `site` from a kid session and confirm the modal shows the right kid-words
+   description. Only `time` is recorded as opened live (2026-09-02).
+2. "A grown-up is here" with the parent's real password, through the current path (password ->
+   authd's `GRANT` -> `omarchy-kids-ask apply-grant`; nothing is written to the outbox): the
+   2026-09-03 live run landed a `time` grant this way. Confirm the app, plugin and site kinds too.
+3. "A grown-up is here" with a wrong password three times: the shake, hint and 30s lockout. The
+   exit modal's identical code shape is also listed as not yet exercised live (`docs/exit.md`).
+4. "Ask later" from the modal's own button: the request written to the outbox, then collected and
+   declined. What is recorded live so far is the CLI `submit` path (`docs/loop-report.md`), not the
+   button.
 5. Esc at any point: confirm nothing is written at all.
-6. Enable `omarchy-kids-ask-collect.timer`, wait past a minute with something sitting open in an
-   outbox from an on-the-spot approval, and confirm it gets applied without anyone touching the
-   panel.
+
+(The on-the-spot "A grown-up is here" path writes no outbox record at all since the 2026-09-03 fix,
+so there is nothing there for the collect timer to pick up.)
 
 ## Verified live (2026-09-02, QEMU test VM)
 
@@ -237,8 +240,11 @@ Before trusting it in front of a kid:
 grown-up", "15 more minutes of screen time", a focused password field, "A grown-up is here"
 and "Ask later". The parent password and Enter wrote the request to the outbox as
 `state: approved`, and within the minute `omarchy-kids-time status` showed "budget 3 + 15
-granted" with the grant file in the kid's usage directory. Not yet exercised live: "Ask later"
-followed by the parent approving from the panel, and the app and site kinds.
+granted" with the grant file in the kid's usage directory. That outbox-`approved` path was removed
+the next day (see "Security fix" below), so what this run still proves is the modal's own render
+and input, not today's grant flow. Not yet exercised live: the parent approving an "Ask later"
+request from the panel, and the app, plugin and site kinds.
+
 ## Security fix, 2026-09-03: root decides, the kid's session only asks
 
 The antagonistic review (`docs/reviews/2026-09-03-antagonistic.md`, S1-S3) found that a kid
