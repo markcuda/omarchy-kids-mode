@@ -81,6 +81,11 @@ parent-only LUKS slot map no longer fails `boot:no-kid-luks-slots` (`fix/boot-no
 live-verified). The packaging fixes are on `fix/install-packaging` (`PKGBUILD` `arch=('any')`,
 `docs/install.md`, the fresh-install ordering).
 
+**Fixed on a topic branch awaiting merge:** `fix/check-unreadable-warns` -- the panel's Machine card
+showed false FAILs ("the parent-unlock line is missing", "does not set DnsOverHttpsMode") for files
+the unprivileged panel simply cannot read; those checks (and the polkit/AccountsService locks) now
+WARN "cannot verify" instead.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After

@@ -1902,3 +1902,29 @@ The other `--live` FAILs on the dogfood box are drift, not repo defects and left
 `usermod -aG input,video kid-ada` (the provisioner sets exactly omarchy-kids plus the band group),
 a stale `/etc/omarchy-kids/hyprland` predating the branch's configs, and the firmware-password gate
 that a VM cannot satisfy. `omarchy-kids-assert` in the guest would reconcile the first two.
+### 2026-09-22, loop iteration: unreadable files were reading as false FAILs
+
+Dogfooded the parent panel live on the VM for the first time (its own answers-file harness). Its
+Machine screen called `pam:parent-unlock:sddm`, `pam:faillock-order:sddm` and `web:doh:6-8` FAIL --
+"the parent-unlock line is missing from /etc/pam.d/sddm", "does not set DnsOverHttpsMode: secure" --
+all three false: the panel runs unprivileged, `/etc/pam.d/sddm` is 0600 root and the web policy is
+0640 `root:omarchy-kids-6-8`, so the checks could not read the files at all. The Machine card's own
+promise is "checks needing root report as warnings", and `account:no-sudo`/`boot:no-kid-luks-slots`
+already WARN correctly, so this was a straight I-6 breach. Fixed on `fix/check-unreadable-warns`:
+each now WARNs "cannot verify: <file> is not readable here", and `lock:polkit-admin`,
+`lock:polkit-deny` and `lock:accountsservice:<kid>` got the same guard through `lock_check`'s own
+exit-2 convention (their dirs are 0755 here so they still PASS, but a 0750/0700 box would have
+shown the same false FAIL). `check-test.sh` chmod-000s the fixtures and asserts each id warns;
+every new assertion fails with its guard reverted. `test/all` green, `shellcheck -x` clean; the
+fable review found two majors (the root-skip guarded on `id -u`, which this suite's PATH stubs, and
+the Locks-section conflation it pushed me to fix defensively) and a minor (mode restore), all
+closed.
+
+Live: installed the three libs from the branch and re-ran the panel as the parent -- the Machine
+card went from "NOT READY -- 7 check(s) failing" to "4", the remaining four all genuine (the box's
+band-group/groups drift, the `lock:hyprland-configs` my earlier L2.lua install invalidated, and
+`firmware:password`), and the three now read "cannot verify: ... is not readable here".
+
+Operator note: completing that install needed a second ~11-minute wait on the guest's
+`pam_faillock` (the install loop's first attempt failed and each retry reset the window); the VM was
+left with the branch libs installed, the kid session up, and the box's four known FAILs.

@@ -11,6 +11,13 @@ pam_faillock_order_check() {
     add_result PAM "pam:faillock-order:$stack" warn "cannot verify: no $file on this box"
     return
   fi
+  # A real /etc/pam.d/sddm is 0600 root, so the unprivileged panel (the way a
+  # parent normally runs this) cannot read it. That is "cannot verify", not
+  # "the marker is missing" (I-6: the panel promises root-needing checks WARN).
+  if [[ ! -r "$file" ]]; then
+    add_result PAM "pam:faillock-order:$stack" warn "cannot verify: $file is not readable here — run with sudo to check this"
+    return
+  fi
   marker="$(posture_parent_unlock_marker)"
   if ! grep -qxF "$marker" "$file"; then
     add_result PAM "pam:faillock-order:$stack" fail "the parent-unlock marker isn't in $file at all — run 'omarchy-kids-assert'"
@@ -51,6 +58,13 @@ pam_parent_unlock_check() {
   file="$(posture_pam_dir)/$stack"
   if [[ ! -f "$file" ]]; then
     add_result PAM "pam:parent-unlock:$stack" warn "cannot verify: no $file on this box"
+    return
+  fi
+  # Unreadable is not missing: a 0600 /etc/pam.d/sddm makes `parent_unlock_ok`'s
+  # grep fail, which used to read as "the parent-unlock line is missing" under
+  # the unprivileged panel (I-6).
+  if [[ ! -r "$file" ]]; then
+    add_result PAM "pam:parent-unlock:$stack" warn "cannot verify: $file is not readable here — run with sudo to check this ($reqs)"
     return
   fi
   if parent_unlock_ok "$stack"; then

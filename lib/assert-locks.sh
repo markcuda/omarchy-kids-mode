@@ -46,7 +46,12 @@ namespace_fix() { posture_add_namespace_lines "$1"; }
 accountsservice_ok() {
   local account="$1" avatar="$2" file
   file="$(posture_accountsservice_dir)/$account"
-  [[ -f "$file" ]] && [[ "$(cat "$file")" == "$(posture_accountsservice_text "$avatar")" ]]
+  [[ -f "$file" ]] || return 1
+  # Exit 2 ("could not look"): /var/lib/AccountsService/users is 0700 root on some
+  # boxes, so the unprivileged panel may see it at all and must WARN, not claim
+  # the lock is broken (I-6; lock_check maps rc 2 to warn).
+  [[ -r "$file" ]] || return 2
+  [[ "$(cat "$file")" == "$(posture_accountsservice_text "$avatar")" ]]
 }
 accountsservice_fix() { posture_write_accountsservice "$1" "$2"; }
 
@@ -133,7 +138,12 @@ polkit_admin_ok() {
   [[ -n "$parent" ]] || return 1
   expected="$(posture_polkit_admin_rule_text "$parent")" || return 1
   file="$(posture_polkit_dir)/40-omarchy-kids.rules"
-  [[ -f "$file" ]] && [[ "$(cat "$file")" == "$expected" ]]
+  [[ -f "$file" ]] || return 1
+  # rc 2 = "could not look": /etc/polkit-1/rules.d is 0750 root:polkitd on some boxes,
+  # so an unprivileged panel must WARN (lock_check maps 2 to warn), not read the
+  # unreadable file as an empty/broken rule (I-6).
+  [[ -r "$file" ]] || return 2
+  [[ "$(cat "$file")" == "$expected" ]]
 }
 polkit_admin_fix() {
   local parent
@@ -145,7 +155,10 @@ polkit_admin_fix() {
 polkit_deny_ok() {
   local file
   file="$(posture_polkit_dir)/41-omarchy-kids-deny.rules"
-  [[ -f "$file" ]] && [[ "$(cat "$file")" == "$(posture_polkit_deny_rule_text)" ]]
+  [[ -f "$file" ]] || return 1
+  # rc 2 = "could not look" (see polkit_admin_ok); warn, not a false FAIL.
+  [[ -r "$file" ]] || return 2
+  [[ "$(cat "$file")" == "$(posture_polkit_deny_rule_text)" ]]
 }
 polkit_deny_fix() { posture_write_polkit_deny_rule; }
 

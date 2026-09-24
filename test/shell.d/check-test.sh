@@ -576,6 +576,45 @@ assert [c["id"] for c in boot["checks"]] == [
   fi
 fi
 
+# --- unreadable files are WARN, not FAIL (I-6) ------------------------
+
+# A real /etc/pam.d/sddm is 0600 root, a real web policy is 0640 root:omarchy-kids-<band>, and
+# /etc/polkit-1/rules.d or /var/lib/AccountsService/users are root-only on some boxes. The
+# unprivileged panel (how a parent normally runs it) can read none of them, and a hidden read
+# failure used to read as "the line is missing" / "does not set DnsOverHttpsMode" / "does not
+# match what omarchy-kids-assert expects". chmod 000 denies even the owner read, so this is
+# testable without root; skip it when the suite runs as root, which ignores the mode bits.
+# $EUID, not `id -u`: this suite's PATH puts an `id` stub first and that stub treats -u as an
+# account name, so `id -u` here is empty and the guard would never skip a root run.
+if [[ "$EUID" != 0 ]]; then
+  PAM_FILE="$SCRATCH_ROOT/etc/pam.d/sddm"
+  POLKIT_DIR="$(posture_polkit_dir)"
+  ACCOUNTS_DIR="$(posture_accountsservice_dir)"
+  targets=("$PAM_FILE" "$CHROMIUM_FILE" "$POLKIT_DIR/40-omarchy-kids.rules" \
+    "$POLKIT_DIR/41-omarchy-kids-deny.rules" "$ACCOUNTS_DIR/kid-ada")
+  saved_modes=()
+  for f in "${targets[@]}"; do saved_modes+=("$(kids_file_mode "$f")"); done
+  chmod 000 "${targets[@]}"
+  unreadable_json="$("$BIN" --json)"
+  check_contains "$unreadable_json" '"id": "pam:parent-unlock:sddm", "status": "warn"' \
+    "an unreadable /etc/pam.d/sddm WARNs instead of claiming the parent-unlock line is missing"
+  check_not_contains "$unreadable_json" '"id": "pam:parent-unlock:sddm", "status": "fail"' \
+    "the parent-unlock check never FAILs only because it cannot read the file"
+  check_contains "$unreadable_json" '"id": "pam:faillock-order:sddm", "status": "warn"' \
+    "an unreadable /etc/pam.d/sddm WARNs on the faillock order too"
+  check_contains "$unreadable_json" '"id": "web:doh:6-8", "status": "warn"' \
+    "an unreadable web policy WARNs instead of claiming DnsOverHttpsMode is unset"
+  check_contains "$unreadable_json" '"id": "lock:polkit-admin", "status": "warn"' \
+    "an unreadable polkit rule WARNs instead of claiming the lock is broken"
+  check_contains "$unreadable_json" '"id": "lock:polkit-deny", "status": "warn"' \
+    "an unreadable polkit deny rule WARNs too"
+  check_contains "$unreadable_json" '"id": "lock:accountsservice:kid-ada", "status": "warn"' \
+    "an unreadable AccountsService file WARNs instead of a false FAIL"
+  for i in "${!targets[@]}"; do chmod "${saved_modes[$i]}" "${targets[$i]}"; done
+else
+  pass "unreadable-file WARN checks skipped (suite runs as root, which bypasses mode bits)"
+fi
+
 conf_set "$ETC/machine.conf" boot portal
 rm -f "$ETC/luks-slots"
 rm -f "$SCRATCH_ROOT/etc/mkinitcpio.conf.d/omarchy_kids.conf"

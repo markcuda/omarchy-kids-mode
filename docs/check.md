@@ -113,6 +113,13 @@ in this technical catalog. It is the one lock in the table that isn't a security
 missing or wrong, a kid still logs in exactly as fenced, just without their picture on the portal
 tile. `lock_check_warn` is the same shape as `lock_check`, used for this one lock only.
 
+A lock whose file exists but is not readable here (the unprivileged panel, which is how a parent
+normally runs this) is a WARN, not a FAIL: `polkit-admin`, `polkit-deny` and `accountsservice:<kid>`
+read rules under `/etc/polkit-1/rules.d` and `/var/lib/AccountsService/users`, which are 0750 or
+0700 root on some boxes, and the `*_ok` functions return `lock_check`'s own exit-2 "could not look"
+code for that case instead of comparing an unreadable file and reporting the lock as broken (I-6).
+The `pam:*` and `parent-unlock:*` locks already landed on the same WARN by way of `grep`'s exit 2.
+
 ### Boot
 
 - `mode` always appears. It passes with the trusted `disk` or `portal` value. Missing, unsafe,
@@ -158,7 +165,10 @@ worth a grown-up noticing.
 names (`omarchy-lock-password` on Omarchy 4.0.2) — WARN, not the misleading PASS
 `parent_unlock_ok` alone would report, when the stack file doesn't exist at all (that function's
 own "ok" there means "nothing to disprove", the right call for a *lock*, the wrong one for a
-*report* that's supposed to say what it verified).
+*report* that's supposed to say what it verified). An unreadable stack file is likewise a WARN, not
+a FAIL: a real `/etc/pam.d/sddm` is 0600 root, so the unprivileged panel (the way a parent normally
+runs this) cannot read it at all, and `parent_unlock_ok`'s `grep` failing there used to read as "the
+parent-unlock line is missing" (I-6). The same guard covers `faillock-order`.
 
 `faillock-order:<stack>` is a genuinely new check, not a restatement: `parent_unlock_ok` only
 confirms the marker and `pam_exec` line are present *somewhere* in the file (`grep -qxF`); it
@@ -178,7 +188,9 @@ best-effort, which only succeeds as root, exactly `docs/assert.md`'s own reasoni
 (wizard, panel, pacman hook), at which point the file is already correct by construction — a
 non-root dev/test run can't make `chown` true no matter what's "really" wrong on the target, so a
 hard FAIL there would be noise about this process's own privilege, not the target's posture), and
-`doh:<band>` (`DnsOverHttpsMode: secure`, R-WEB-2).
+`doh:<band>` (`DnsOverHttpsMode: secure`, R-WEB-2 — WARN, not FAIL, when the policy file is not
+readable here; the unprivileged panel cannot read a 0640 `root:omarchy-kids-<band>` file, and a
+hidden `grep` failure used to read as "does not set DnsOverHttpsMode").
 
 ### Time
 
