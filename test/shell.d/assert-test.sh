@@ -628,13 +628,19 @@ out="$($BIN)"
 check_status "$out" "relay-away" "fixed" "relay-away: a wrong mode reports fixed"
 check_eq "$(kids_file_mode "$AWAY_FILE")" "644" "relay-away: the mode is restored to 0644"
 
-# A foreign drop-in: the lock fails, and the file is left exactly as it was.
+# A foreign drop-in AND a widened away.conf: the lock FAILs, leaves the admin's
+# file exactly as it was, and still repairs the file it owns first (round 1: the
+# foreign check used to return before the rewrite, leaving the fence widened).
+printf 'IPAddressAllow=0.0.0.0/0\n' >"$AWAY_FILE"
 printf '[Service]\nIPAddressAllow=0.0.0.0/0\n' >"$AWAY_DIR/local-admin.conf"
 foreign_before="$(cksum <"$AWAY_DIR/local-admin.conf")"
 out="$($BIN)"
 check_status "$out" "relay-away" "FAIL" "relay-away: a foreign drop-in fails the lock"
 check_eq "$(cksum <"$AWAY_DIR/local-admin.conf")" "$foreign_before" \
   "relay-away: assert never rewrites (or deletes) an admin's file"
+grep -q '^IPAddressAllow=localhost link-local multicast .* 100.64.0.0/10$' "$AWAY_FILE" &&
+  pass "relay-away: the owned drop-in is repaired even beside a foreign one" ||
+  fail "relay-away: a foreign drop-in left the owned file widened"
 rm -f "$AWAY_DIR/local-admin.conf"
 
 # away off (the consent file removed) is ok again.

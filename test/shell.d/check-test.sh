@@ -469,6 +469,29 @@ plain="$(strip_ansi "$("$BIN")")"
 check_contains "$plain" "WARN  lock:relay-fence" "relay-fence: an uninstalled package warns, not fails"
 cp "$ROOT_DIR/systemd/omarchy-kids-relayd.service" "$UNIT_FILE"
 
+# systemd_addr_expand/addr_set are pure: pin the expansion table and the
+# order/duplicate-insensitivity the live fence compare relies on (R-NOTIFY-11.2).
+# The live branch cannot run under a scratch root, so this is where they are owned.
+expand_out="$(
+  cd "$ROOT_DIR/lib" || exit 1
+  source conf.sh
+  source posture.sh
+  source kids.sh
+  source check-locks.sh
+  printf '%s\n' "$(addr_set "$(systemd_addr_expand 'localhost link-local multicast')")"
+)"
+check_eq "$expand_out" "::1/128 127.0.0.0/8 169.254.0.0/16 224.0.0.0/4 fe80::/64 ff00::/8" \
+  "systemd_addr_expand expands the three zone tokens as the spec table says"
+reorder_out="$(
+  cd "$ROOT_DIR/lib" || exit 1
+  source conf.sh
+  source posture.sh
+  source kids.sh
+  source check-locks.sh
+  printf '%s\n' "$(addr_set '10.0.0.0/8 10.0.0.0/8 ::1/128')"
+)"
+check_eq "$reorder_out" "::1/128 10.0.0.0/8" "addr_set ignores order and duplicates"
+
 # --- Boot JSON is selected only by the trusted machine mode -----------
 
 if command -v python3 >/dev/null 2>&1; then

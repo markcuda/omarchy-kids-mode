@@ -52,10 +52,10 @@ systemd_addr_expand() {
   printf '%s\n' "$out"
 }
 
-# addr_set — the tokens as a sorted, space-separated set (order and duplicates
-# do not matter to systemd, so they must not matter here).
+# addr_set TOKENS — the tokens as a sorted, space-separated set (order and
+# duplicates do not matter to systemd, so they must not matter here).
 addr_set() {
-  tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ' | sed 's/ $//'
+  printf '%s' "${1-}" | tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ' | sed 's/ $//'
 }
 
 run_locks_section() {
