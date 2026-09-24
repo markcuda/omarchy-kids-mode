@@ -23,7 +23,10 @@ in the machine's config), whoever's password unlocked the *disk* at power-on lan
 desktop with no login screen at all, once, right after the machine turns on; if it is set to show
 the portal every time (`boot=portal`), this screen is what you see at every power-on. There is no
 default: it is set by hand (`omarchy-kids-conf machine set boot disk|portal`) — an upgrade keeps
-what the machine had — and the wizard stops rather than guess if it is missing. Every other time — after **Finish** ends someone's turn,
+what the machine had — and the wizard stops rather than guess if it is missing. That command only
+records the choice: the disk-mode boot hook is put in place by an upgrade that carried it over, and
+a fresh install's transition is not built yet, so until it is, a fresh install should be set to
+`portal` (the login screen every time). Every other time — after **Finish** ends someone's turn,
 or if the disk password you typed didn't match anyone's — it's this one.
 
 **3. Time's Up.** When a kid's screen time runs out, their screen shows an owl (or their own
