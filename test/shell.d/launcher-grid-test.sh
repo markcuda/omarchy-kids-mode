@@ -92,6 +92,19 @@ check_contains "$qml_content" 'readonly property int targetColumns: 5' \
 check_contains "$qml_content" 'Math.max(minTileWidth, Math.floor(availableWidth / targetColumns))' \
   "cell size is derived from the available screen width, not hardcoded"
 
+# --- the tile label gets the whole tile (live 960x540, 2026-09-22) ---------
+# A fixed box -- the tile minus a 16px inset -- truncated ordinary names on the
+# live frame: "SuperTux" and "SuperTuxKart" both rendered as "Super...", two
+# tiles a six-year-old cannot tell apart by label. The width is now what the
+# name needs, capped by what the cell can hold (the tile is cellWidth-20, so
+# -28 keeps the text inside it).
+check_contains "$qml_content" 'width: Math.min(implicitWidth, grid.cellWidth - 28)' \
+  "a tile label takes as much of the cell as its name needs"
+check "$(grep -cF 'width: Math.min(implicitWidth, grid.cellWidth - 28)' "$QML")" "2" \
+  "both the name and the missing caption use the derived width"
+check "$(grep -cF 'width: parent.parent.width - 16' "$QML")" "0" \
+  "no tile label is back to the fixed inset box that truncated names"
+
 # Icon lookup: resolved through Quickshell's own icon-theme API (the same
 # one omacom/omarchy's shell/services/AppLibrary.qml iconSource() uses),
 # with a rounded-initial fallback when nothing resolves -- never a bare
