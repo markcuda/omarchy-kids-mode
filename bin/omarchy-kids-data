@@ -41,8 +41,8 @@ Usage: omarchy-kids-data <command> [args]
   mine                           "What my grown-ups can see" (K5), run as
                                   the kid the data belongs to.
   retention [--apply]            Prune everything past SPEC.md R-DATA-1's
-                                  retention (usage 1 year, launches and
-                                  requests 90 days; browsing history is
+                                  retention (usage 1 year, launches, requests
+                                  and their decisions 90 days; browsing history is
                                   never pruned here — the browser's own).
                                   DRY_RUN by default: prints what it would
                                   remove.

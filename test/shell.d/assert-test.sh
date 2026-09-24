@@ -768,6 +768,19 @@ check_status "$out" "decisions:kid-ada" "FAIL" "decisions: a symlinked copy fail
   fail "decisions: the symlink was removed or replaced"
 rm -f "$DEC_DIR/evil.json" "$DEC_DIR/1-kid-ada-app.json"
 
+# A symlinked directory is refused, never followed; an unreadable one is a warn.
+rm -rf "$DEC_DIR"
+ln -s /etc "$DEC_DIR"
+out="$($BIN)"
+check_status "$out" "decisions:kid-ada" "FAIL" "decisions: a symlinked directory fails the lock"
+rm -f "$DEC_DIR"
+mkdir -p "$DEC_DIR"
+chmod 0000 "$DEC_DIR"
+out="$($BIN)"
+chmod 0750 "$DEC_DIR"
+check_status "$out" "decisions:kid-ada" "warn" "decisions: an unreadable directory is a warn"
+rmdir "$DEC_DIR"
+
 # --- --quiet on an all-ok tree prints nothing ---------------------------
 
 out="$("$BIN" --quiet)"

@@ -113,7 +113,10 @@ is still needed.
 
 Beyond the LAN, `bin/omarchy-kids-relay-courier` is the only process that may reach out (R-NOTIFY-8):
 it seals the state for each paired device and posts it to the one ntfy or Gotify topic the parent
-named, and carries the app's signed decisions back to `authd`. It is off until the parent configures
+named, and carries the app's signed decisions back to `authd`. Every decision, from the panel, a device
+or the courier, also lands as a root-written copy under the kid's own directory
+(`/var/lib/omarchy-kids/<kid>/decisions/`, R-NOTIFY-6), which the ask overlay shows the next time it
+opens; the kid cannot write it and nothing reads it to act. It is off until the parent configures
 it (`omarchy-kids-notify mailbox`) and sends nothing while notifications are off. See `docs/courier.md`.
 
 ## The desktop notifier (N-9)

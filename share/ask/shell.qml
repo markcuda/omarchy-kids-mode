@@ -122,7 +122,9 @@ PanelWindow {
     // The line is the ask command's tab-separated fields; anything short or odd
     // is ignored, and the reply is plain text (never rich text).
     function outcomeSentence(line) {
-        const parts = line.trim().split("\t")
+        // Strip the trailing newline only: the reply may be empty, and the
+        // line then ends with a tab that trim() would eat with it.
+        const parts = line.replace(/[\r\n]+$/, "").split("\t")
         if (parts.length < 5) return ""
         const thing = parts[0] === "time" && parts[2].length > 0
             ? parts[2] + " more minutes" : parts[1]
@@ -260,6 +262,9 @@ PanelWindow {
                         width: parent.width
                         visible: root.lastOutcome.length > 0 && !root.done
                         text: root.lastOutcome
+                        // A parent's reply rides this line, so it is plain text:
+                        // an angle bracket is an angle bracket (R-NOTIFY-6).
+                        textFormat: Text.PlainText
                         color: theme.caption
                         font.pixelSize: 13
                         wrapMode: Text.WordWrap

@@ -552,6 +552,10 @@ chmod 0755 "$DEC_DIR"
 chmod 0644 "$DEC_DIR/1-kid-ada-app.json"
 plain="$(strip_ansi "$("$BIN")")"
 check_contains "$plain" "FAIL  lock:decisions:kid-ada" "decisions: a world-readable copy fails"
+chmod 0000 "$DEC_DIR"
+plain="$(strip_ansi "$("$BIN")")"
+chmod 0755 "$DEC_DIR"
+check_contains "$plain" "WARN  lock:decisions:kid-ada" "decisions: an unreadable directory warns"
 rm -rf "$DEC_DIR"
 
 # --- Boot JSON is selected only by the trusted machine mode -----------

@@ -721,8 +721,19 @@ rm -f "$copy"
 python3 "$ROOT_DIR/lib/ask.py" sync-decisions "$QUEUE_DIR" >/dev/null 2>&1
 [[ -f "$copy" ]] && pass "sync-decisions writes a missing copy" ||
   fail "sync-decisions did not heal a missing copy"
+# A present copy, even with the wrong bytes, is never rewritten: a rewrite would
+# produce identical bytes, so the fixture must differ to own this.
+printf 'sentinel\n' >"$copy"
 python3 "$ROOT_DIR/lib/ask.py" sync-decisions "$QUEUE_DIR" >/dev/null 2>&1
-check_eq "$(cksum <"$copy")" "$before" "sync-decisions never rewrites a present copy"
+check_eq "$(cat "$copy")" "sentinel" "sync-decisions never rewrites a present copy"
+
+# An open record gets no copy of its own.
+printf '%s\n' '{"kid": "kid-ada", "kind": "app", "what": "x", "asked_at": 1000000023, "state": "open"}' >"$QUEUE_DIR/1000000023-kid-ada-app.json"
+python3 "$ROOT_DIR/lib/ask.py" sync-decisions "$QUEUE_DIR" >/dev/null 2>&1
+[[ -e "$DEC_DIR/1000000023-kid-ada-app.json" ]] &&
+  fail "sync-decisions wrote a copy for an open record" ||
+  pass "sync-decisions writes nothing for an open record"
+rm -f "$QUEUE_DIR/1000000023-kid-ada-app.json"
 
 # The kid-side read: the newest decided request, one tab-separated line. Only
 # the copy under test is left: earlier sections decided requests with real
@@ -741,6 +752,13 @@ out="$("$BIN" outcome)"
 check_eq "$(printf '%s' "$out" | cut -f4)" "declined" "outcome: a malformed newest file is skipped"
 rm -f "$DEC_DIR/9999999999-kid-ada-app.json"
 
+# A copy that is valid but for another account is skipped: the newest one is
+# not the kid's, so the next valid (their own) is read instead.
+printf '%s\n' '{"id": "9999999998-kid-cy-app", "kid": "kid-cy", "kind": "app", "what": "x", "asked_at": 9999999998, "decided_at": 9999999998, "state": "approved"}' >"$DEC_DIR/9999999998-kid-cy-app.json"
+out="$("$BIN" outcome)"
+check_eq "$(printf '%s' "$out" | cut -f4)" "declined" "outcome: another account's newest copy is skipped"
+rm -f "$DEC_DIR/9999999998-kid-cy-app.json"
+
 # An absent directory is nothing at all, exit 0.
 out="$("$BIN" outcome 2>&1)"
 st=$?
@@ -748,6 +766,18 @@ rm -rf "$DEC_DIR"
 out2="$("$BIN" outcome 2>&1)"
 check_eq "$?" "0" "outcome: an absent directory exits 0"
 check_eq "$out2" "" "outcome: an absent directory prints nothing"
+
+# A copy that cannot be written does not undo the decision: the record is still
+# decided, the failure is said out loud, and the exit is 0 (R-NOTIFY-6).
+: >"$DEC_DIR"
+COPY3="1000000024-kid-ada-app"
+printf '%s\n' "{\"kid\": \"kid-ada\", \"kind\": \"app\", \"what\": \"firefox\", \"asked_at\": 1000000024, \"state\": \"open\"}" >"$QUEUE_DIR/$COPY3.json"
+err="$("$BIN" approve "$COPY3" --apply 2>&1 >/dev/null)"
+st=$?
+check_eq "$st" "0" "a failed copy does not fail the decision"
+check_contains "$(cat "$QUEUE_DIR/$COPY3.json")" '"state": "approved"' "the record is decided anyway"
+check_contains "$err" "could not write the kid's copy" "the failed copy is said out loud"
+rm -f "$DEC_DIR" "$QUEUE_DIR/$COPY3.json"
 
 echo "ask-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc
