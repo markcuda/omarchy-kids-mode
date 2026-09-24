@@ -86,11 +86,11 @@ class Session {
 
   Future<BoxState> refresh() => relay.boxState(ts: now(), nonce: newNonce());
 
-  /// Watch the box for changes. Signed when the stream is listened to, not when
-  /// it is created, so a stream held before use is not already stale.
-  Stream<BoxState> watch() async* {
-    yield* relay.boxEvents(ts: now(), nonce: newNonce());
-  }
+  /// Watch the box for changes, signed with a fresh timestamp and nonce at each
+  /// call. The transport's stream is handed straight to the listener: a dropped
+  /// connection, the liveness timeout, or a clean close all reach the UI as they
+  /// happen, with nothing in between to swallow them.
+  Stream<BoxState> watch() => relay.boxEvents(ts: now(), nonce: newNonce());
 
   /// Approve a request, optionally with the parent's own reply line.
   Future<void> approve(String requestId, {String? reply}) => _decide(requestId, 'approve', reply);

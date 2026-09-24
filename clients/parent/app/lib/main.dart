@@ -3,6 +3,7 @@
 // the parent's reply chips) that sign and post through the Session. The logic,
 // the crypto and the transport live in the package beside it and are tested there.
 
+import 'dart:async' show StreamSubscription, Timer;
 import 'dart:io' show Platform;
 
 import 'package:cryptography/cryptography.dart';
@@ -57,62 +58,128 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late Future<BoxState> _state;
+  BoxState? _state;
+  String? _error;
+  StreamSubscription<BoxState>? _watch;
+  Timer? _retry;
+  int _backoff = 1;
 
   @override
   void initState() {
     super.initState();
-    _state = widget.session.refresh();
+    _load();
+    _watchNow();
   }
 
-  void _reload() {
-    setState(() {
-      _state = widget.session.refresh();
+  @override
+  void dispose() {
+    _watch?.cancel();
+    _retry?.cancel();
+    super.dispose();
+  }
+
+  /// One signed read: the first thing the screen shows, and the retry's recovery.
+  Future<void> _load() async {
+    try {
+      final state = await widget.session.refresh();
+      if (!mounted) return;
+      setState(() {
+        _state = state;
+        _error = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      _lost("Can't reach the computer: $error");
+    }
+  }
+
+  /// The box's own feed: a state event whenever anything changes, the first one
+  /// as soon as the connection opens. A dropped connection is said out loud and
+  /// retried; the last known list stays on screen rather than blanking.
+  void _watchNow() {
+    _watch?.cancel();
+    _watch = widget.session.watch().listen(
+      (state) {
+        if (!mounted) return;
+        setState(() {
+          _state = state;
+          _error = null;
+          _backoff = 1;
+        });
+      },
+      onError: (Object error) {
+        if (!mounted) return;
+        _lost("Lost the connection to the computer: $error");
+      },
+      onDone: () {
+        if (!mounted) return;
+        _lost('The connection to the computer closed.');
+      },
+      cancelOnError: true,
+    );
+  }
+
+  void _lost(String message) {
+    setState(() => _error = message);
+    _retry ??= Timer(Duration(seconds: _backoff), () {
+      _retry = null;
+      _backoff = (_backoff * 2).clamp(1, 30);
+      _load();
+      _watchNow();
     });
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Requests'),
-          actions: [IconButton(onPressed: _reload, icon: const Icon(Icons.refresh), tooltip: 'Refresh')],
-        ),
-        body: FutureBuilder<BoxState>(
-          future: _state,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return _Notice(message: "Can't reach the computer: ${snapshot.error}");
-            }
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final requests = snapshot.data!.requests;
-            if (requests.isEmpty) {
-              return const _Notice(message: 'Nothing to answer right now.');
-            }
-            return ListView.separated(
-              itemCount: requests.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, i) {
-                final request = requests[i];
-                return ListTile(
-                  title: Text(describeRequest(request, _kidName(snapshot.data!, request.kid))),
-                  subtitle: Text(request.kind),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () async {
-                    final answered = await Navigator.of(context).push<bool>(
-                      MaterialPageRoute(
-                        builder: (_) => RequestScreen(session: widget.session, request: request),
-                      ),
-                    );
-                    if (answered == true) _reload();
-                  },
-                );
-              },
+  Widget build(BuildContext context) {
+    final state = _state;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Requests'),
+        actions: [
+          IconButton(onPressed: _reload, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
+        ],
+      ),
+      body: state == null
+          ? (_error == null ? const Center(child: CircularProgressIndicator()) : _Notice(message: _error!))
+          : Column(
+              children: [
+                if (_error != null) _Stale(message: _error!),
+                Expanded(child: _requests(state)),
+              ],
+            ),
+    );
+  }
+
+  void _reload() {
+    _load();
+    _watchNow();
+  }
+
+  Widget _requests(BoxState state) {
+    if (state.requests.isEmpty) {
+      return const _Notice(message: 'Nothing to answer right now.');
+    }
+    return ListView.separated(
+      itemCount: state.requests.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (context, i) {
+        final request = state.requests[i];
+        return ListTile(
+          title: Text(describeRequest(request, _kidName(state, request.kid))),
+          subtitle: Text(request.kind),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () async {
+            final answered = await Navigator.of(context).push<bool>(
+              MaterialPageRoute(
+                builder: (_) => RequestScreen(session: widget.session, request: request),
+              ),
             );
+            if (answered == true) _reload();
           },
-        ),
-      );
+        );
+      },
+    );
+  }
 
   /// The kid's display name if the box sent one, else the account.
   String _kidName(BoxState state, String kid) {
@@ -204,5 +271,21 @@ class _Notice extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
         child: Padding(padding: const EdgeInsets.all(24), child: Text(message, textAlign: TextAlign.center)),
+      );
+}
+
+/// The last known list, with the reason it may be out of date said above it.
+class _Stale extends StatelessWidget {
+  final String message;
+  const _Stale({required this.message});
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        color: Theme.of(context).colorScheme.errorContainer,
+        padding: const EdgeInsets.all(12),
+        child: Text(
+          '$message Showing the last update; trying again.',
+          style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+        ),
       );
 }

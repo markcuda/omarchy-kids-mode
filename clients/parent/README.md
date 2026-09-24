@@ -24,7 +24,10 @@ A phone or desktop app that pairs with the box, shows a kid's requests with **Ap
 
 `clients/parent/app` is the Flutter UI over it: pairing (paste the code the computer printed, type
 the fingerprint it showed, compare, pair), the request list, and a request screen with Approve,
-Decline and the reply chips — all widget-tested against a fake relay and a fake connection. The
+Decline and the reply chips. The list follows the box's own feed (`/v1/events`), so a new request
+appears without a refresh; when the feed drops it says so, keeps the last list on screen, and
+retries with a growing delay. All of it is widget-tested against a fake relay and a fake
+connection. The
 device list, the platform keystore (the package ships the interface and an in-memory one; the
 platform implementation does not exist yet, so a pairing does not survive a restart), the platform
 notification plumbing and the store builds remain — there is nothing to install on a phone yet.

@@ -2,6 +2,8 @@
 // chip, the honest states, and pairing (paste the code, type the fingerprint,
 // confirm, pair). The logic itself is tested in the omarchy_kids_parent package.
 
+import 'dart:async';
+
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,14 +18,25 @@ class FakeRelay implements RelayTransport {
   final String pin;
   final List<Map<String, Object?>> decided = [];
   final List<String> paired = [];
+  final List<StreamController<BoxState>> opened = [];
   FakeRelay(this.state, {String? pin}) : pin = pin ?? ('ab' * 32);
+
+  /// The feed the screen is listening to now; a reconnect opens a new one.
+  StreamController<BoxState> get events => opened.last;
+  void emit(BoxState next) => events.add(next);
+  void fail(Object error) => events.addError(error);
+  Future<void> close() => events.close();
 
   @override
   String get pinnedFingerprint => pin;
   @override
   Future<BoxState> boxState({required int ts, required String nonce}) async => state;
   @override
-  Stream<BoxState> boxEvents({required int ts, required String nonce}) => const Stream.empty();
+  Stream<BoxState> boxEvents({required int ts, required String nonce}) {
+    final controller = StreamController<BoxState>.broadcast();
+    opened.add(controller);
+    return controller.stream;
+  }
   @override
   Future<Map<String, dynamic>> pair(String frame) async {
     paired.add(frame);
@@ -144,6 +157,54 @@ void main() {
     await tester.pumpAndSettle();
     expect(relay.decided.single['decision'], 'decline');
     expect(relay.decided.single['reply'], 'After dinner');
+  });
+
+  testWidgets('a change on the box appears without a manual refresh', (tester) async {
+    final relay = FakeRelay(stateWith([
+      {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft', 'asked_at': 1},
+    ]));
+    await pumpHome(tester, relay);
+    expect(find.text('kid-ada asked to use minecraft'), findsOneWidget);
+    relay.emit(stateWith([
+      {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft', 'asked_at': 1},
+      {'id': 'req-2', 'kid': 'kid-ada', 'kind': 'time', 'what': '15', 'minutes': 15, 'asked_at': 2},
+    ]));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('kid-ada asked for 15 more minutes'), findsOneWidget);
+  });
+
+  testWidgets('a transport error is said out loud, and the last list stays', (tester) async {
+    final relay = FakeRelay(stateWith([
+      {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft', 'asked_at': 1},
+    ]));
+    await pumpHome(tester, relay);
+    relay.fail(StateError('the box went away'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Showing the last update'), findsOneWidget);
+    expect(find.text('kid-ada asked to use minecraft'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('a closed feed is said out loud, and the retry reconnects and clears it', (tester) async {
+    final relay = FakeRelay(stateWith([]));
+    await pumpHome(tester, relay);
+    await relay.close();
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Showing the last update'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    expect(relay.opened.length, 2, reason: 'a new feed after the retry');
+    relay.emit(stateWith([
+      {'id': 'req-3', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft', 'asked_at': 3},
+    ]));
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Showing the last update'), findsNothing);
+    expect(find.text('kid-ada asked to use minecraft'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('an unreachable box is an honest message, not a crash or a fake state', (tester) async {
