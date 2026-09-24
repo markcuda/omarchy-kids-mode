@@ -9,10 +9,13 @@ import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omarchy_kids_app/app_root.dart';
+import 'package:omarchy_kids_app/keystore.dart';
 import 'package:omarchy_kids_app/main.dart';
 import 'package:omarchy_kids_parent/relay_transport.dart';
 import 'package:omarchy_kids_parent/session.dart';
 import 'package:omarchy_kids_parent/state_model.dart';
+
+import 'fakes.dart';
 
 class FakeRelay implements RelayTransport {
   BoxState state;
@@ -331,6 +334,25 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(find.textContaining('64-character fingerprint'), findsOneWidget);
+  });
+
+  testWidgets('a pairing is kept, so a later run opens on the requests, not the code', (tester) async {
+    final store = FakeStore();
+    final connect = FakeConnect();
+    await pumpPairing(tester, connect: connect, keystore: SecureKeystore(store));
+    await tester.enterText(find.byType(TextField).at(0), _uri);
+    await tester.enterText(find.byType(TextField).at(1), 'ab' * 32);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pair'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nothing to answer right now.'), findsOneWidget);
+    expect(store.values[SecureKeystore.pairedKey], isNotNull);
+    // A new run of the app with the same store: no code, no fingerprint.
+    await tester.pumpWidget(const SizedBox());
+    await pumpPairing(tester, connect: FakeConnect(), keystore: SecureKeystore(store));
+    expect(find.text('Requests'), findsOneWidget);
+    expect(find.text('Pair with the computer'), findsNothing);
   });
 
   testWidgets('Pair sends the proof to the address the code named, then shows the home screen', (tester) async {

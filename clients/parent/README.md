@@ -29,10 +29,13 @@ appears without a refresh; when the feed drops it says so, keeps the last list o
 retries with a growing delay. The overflow menu offers **Forget this computer**, which clears the
 local pairing so the app can pair again (a box that re-keyed has a pin this app can no longer
 match); it asks first, and says the box keeps its own record until the parent revokes the device
-there. All of it is widget-tested against a fake relay and a fake connection. The
-device list, the platform keystore (the package ships the interface and an in-memory one; the
-platform implementation does not exist yet, so a pairing does not survive a restart), the platform
-notification plumbing and the store builds remain — there is nothing to install on a phone yet.
+there. The pairing and the device's own keys are kept in the system keystore (`flutter_secure_storage`:
+Keychain, Android Keystore, Credential Manager, Secret Service) through a small `SecretStore` seam,
+so a later run opens on the requests without the code; where there is no usable keystore the app
+falls back to memory and the pairing screen says the pairing lasts only for the run. All of it is
+widget-tested against a fake relay, a fake connection and a fake store. The device list, the
+platform notification plumbing and the store builds remain — there is nothing to install on a phone
+yet.
 
 The crypto and the wire frames are proven against the shared vectors byte for byte; the reply chips,
 the pairing-URI parser and the SPKI pin are pinned by the package's own tests (the pin fixture,
@@ -122,5 +125,7 @@ app reproduces every signature. Run the generator after changing the scheme and 
 
 ## What this does not decide
 
-The device list, the platform keystore, the platform notification plumbing, and the store builds are
-the app's own work (N-8/N-12) and are not claimed.
+The device list, the platform notification plumbing, and the store builds are the app's own work
+(N-8/N-12) and are not claimed. The system-keystore adapter (`lib/keystore.dart`'s
+`FlutterSecureStore`) is written but has only been exercised through its seam and its memory
+fallback here; a device build is where it is proven.

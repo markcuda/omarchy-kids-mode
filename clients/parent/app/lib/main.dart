@@ -14,17 +14,19 @@ import 'package:omarchy_kids_parent/state_model.dart';
 import 'package:omarchy_kids_parent/transport.dart';
 
 import 'app_root.dart';
+import 'keystore.dart';
 
-void main() {
-  // In-memory for now: the platform keystore is the remaining work, and until it
-  // exists the pairing does not survive a restart. The screen says so (I-6).
-  final keystore = InMemoryKeystore();
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // The system keystore where it works; a memory-only fallback, said out loud on
+  // the pairing screen, where it does not (I-6).
+  final opened = await openKeystore();
   runApp(
     MaterialApp(
       title: 'Kids Mode',
       theme: ThemeData(colorSchemeSeed: const Color(0xff8fb8ff), useMaterial3: true),
       home: AppRoot(
-        keystore: keystore,
+        keystore: opened.keystore,
         connect: ({
           required String host,
           required int port,
@@ -41,8 +43,7 @@ void main() {
         ),
         name: const String.fromEnvironment('KIDS_DEVICE_NAME', defaultValue: 'parent-phone'),
         platform: Platform.operatingSystem,
-        storageNote:
-            'This build remembers the pairing only while it runs; the platform keystore is still to come.',
+        storageNote: opened.note,
       ),
     ),
   );
