@@ -61,9 +61,11 @@ After:
 - R-NOTIFY-5 Pairing is gated by the parent password through the existing verifier. The pairing code
   is single-use and expires; no device key is established without it.
 - R-NOTIFY-6 A kid learns the outcome through a root-written file under their own directory
-  (`/var/lib/omarchy-kids/<kid>/`; **not built on this branch** — the ask overlay shows the result
-  instead, Appendix H's file section says so). The kid session holds no credential to the relay and
-  gains no new way to act.
+  (`/var/lib/omarchy-kids/<kid>/decisions/<id>.json`, `0640 root:<kid>` in a `0750 root:<kid>`
+  directory, a copy of the queue record's decision and nothing else; §19). The ask overlay shows the
+  newest one when it opens. The kid session holds no credential to the relay and gains no new way to
+  act: the file is read, never written, by anything a kid runs, and the queue record stays the
+  decision of record (R-NOTIFY-4).
 - R-NOTIFY-7 The queue is not world-readable: `/var/lib/omarchy-kids/queue/` is `0750
   root:omarchy-parents` and each record is `0640`. `omarchy-kids-ask list` reads for root or a
   member of `omarchy-parents`; `omarchy-kids --requests` works for the parent.
@@ -74,9 +76,11 @@ After:
   its scope is refused.
 - R-NOTIFY-10 Every parent-facing label states what is enforced and what is not: the fence ("home
   network only"), the relay's inability to decide, and the platform limit on background delivery.
-- R-NOTIFY-11 `omarchy-kids-assert` re-asserts the devices directory and conf modes and the units
-  list on every update. Re-asserting the relay's address fence, and a `omarchy-kids-check` row for
-  the relay and the devices (only the `units` row exists), are not built on this branch.
+- R-NOTIFY-11 `omarchy-kids-assert` re-asserts, on every update and every boot, the devices
+  directory and conf modes, the units list, and the away drop-in that widens the relay's fence
+  (R-NOTIFY-11.1). It never rewrites the packaged unit that carries the fence itself.
+  `omarchy-kids-check` has a row for the fence, a row for the away drop-in and a row for the devices,
+  each stating what it proves and what it cannot (R-NOTIFY-11.2, R-TRUST-2).
 - R-NOTIFY-12 Update re-approval rides the same system: when an approved add-on's surface set or
   exec changes, the parent is notified and may approve, deny, or **check** it (Check shows what
   changed and decides nothing; it is not an onboard agent that assesses the change, `docs/review.md`).
