@@ -117,12 +117,14 @@ minutes (`docs/devices.md`).
 
 ## Away envelopes (N-11)
 
-The box-side away delivery **is** built (`docs/courier.md`); the app that opens the envelope is not,
-so the format is pinned for it: a state
+The box-side away delivery **is** built (`docs/courier.md`), and the app package opens the envelope
+(`lib/relay_client.dart`'s `openStateEnvelope`); what is missing is the app's mailbox view — it reads
+the box over the relay, not the parent's own ntfy/Gotify server. The format is pinned for that view:
+a state
 document is sealed for one device with a fresh ephemeral X25519 key, ECDH against the device's
 `box_pub`, HKDF-SHA256 (salt `omarchy-kids-envelope-v1`, info `x25519-chacha20poly1305`), then
 ChaCha20-Poly1305 with a random 12-byte nonce and the device id as associated data. The envelope is
-`{v, device_id, eph_pub, nonce, ct}`. The app opens it with its private box key; `lib/envelope.py`
+`{v, device_id, eph_pub, nonce, ct}`. The view opens it with the device's private box key; `lib/envelope.py`
 is the box side, and the vectors carry a worked example (recipient key, ephemeral key, nonce,
 envelope) the app must open and reproduce.
 

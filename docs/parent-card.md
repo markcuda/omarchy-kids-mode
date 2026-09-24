@@ -61,14 +61,18 @@ computer, if you've set that up — `systemctl restart sddm` there is the gentle
 **Desktop notifications.** With the Kids Mode bar widget on, `omarchy-kids-bar notify-enable` shows
 each request on your own desktop with **Approve** and **Decline** (`docs/notify.md`). The panel's
 **Notifications** screen turns the device side on or off, pairs a device, and lists or revokes the
-paired ones. The phone app itself is **not built yet**, so a pairing window is ready for it but there
-is nothing on the phone side to scan yet.
+paired ones. The phone app is in this repository (`clients/parent`) and does the same from the other
+side: pair, approve or decline a request, approve or deny a changed add-on, give more time or end a
+session, and read what was decided in the last day. **There is no installable build yet** — the
+platform scaffolding and the store builds are not committed — so a pairing window is what you pair
+*to* rather than *from* until that lands.
 
 ## What's not built yet
 
 See `docs/install.md`'s "What isn't ready yet" for the full, current list — the short version:
-**Pause** (switching back without closing a kid's apps), and the firmware/BIOS password (see
-below), which Kids Mode can't set for you.
+**Pause** (switching back without closing a kid's apps), an **installable build of the phone app**
+(the source is here; nothing to put on a phone yet), and the firmware/BIOS password (see below),
+which Kids Mode can't set for you.
 
 ## The firmware password (this part is on you)
 

@@ -53,17 +53,18 @@ restamps it, or when a `deny` hides it. Nothing here is a lock (I-3 exempts noth
 record, not enforcement): hiding the app again is the only action, and a kid cannot reach any of it
 (root-owned, outside every home).
 
-## What is not built yet
+## How a parent meets one
 
 - **"Check it" is a look, not an agent.** The notification's third action, **Check**, opens
   `omarchy-kids-review show` in a terminal: what changed (the approved fingerprint against now) and
   the desktop file's `Exec` today. It decides nothing — it is not an onboard agent that assesses the
   change; the parent, or their own assistant reading that output, does.
-- **Surfacing: the desktop notifier shows a review, the panel does not yet.** With notifications on,
+- **Surfacing: the desktop notifier and the panel both show it.** With notifications on,
   `omarchy-kids-notify-watch` posts one notification per open review (a changed surface, or one that
   was removed), with **Approve**, **Deny** and **Check**; those run `omarchy-kids-bar
   review-approve|review-deny|review-check` (`docs/notify.md`). The count rides `status.json` as `reviews`. The panel has its own **Reviews** screen (`docs/panel.md`, P7): one row per review with
-  **Approve**, **Deny** and **Check**. `omarchy-kids-review list` is the command-line view.
+  **Approve**, **Deny** and **Check**. `omarchy-kids-review list` is the command-line view, and the
+  phone app lists the same reviews over the relay.
 - **A paired device may decide one over the relay** (R-NOTIFY-12, `docs/relayd.md`): the open
   reviews ride `/v1/state`, and a paired device's **Approve** or **Deny** is a signed `REVIEW` frame
   that `authd` verifies and applies through the same `omarchy-kids-review approve|deny`. The app

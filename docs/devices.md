@@ -44,10 +44,11 @@ omarchy-kids-devices pair-start [--id ID] [--scopes decide,act] [--address ADDR]
 ## Scopes (R-NOTIFY-9)
 
 A device carries `decide` (approve or decline a request) and/or `act` (grant time or end a session
-with no open request). **`decide` is enforced today**: `authd`'s DECIDE frame refuses a decision
-from a device whose scopes lack it. `act` is defined by the spec but its ACT frame is not built on
-this branch, so a device may carry the `act` scope and still cannot act with it yet -- the scope is
-stored and re-checked, not yet a control.
+with no open request). **Both are enforced**: `authd`'s DECIDE frame refuses a decision from a
+device whose scopes lack `decide`, and its ACT frame refuses a grant or an end from one whose scopes
+lack `act` (R-NOTIFY-13, `docs/notify.md`). A device paired with one scope alone gets
+`no scope-missing` on the other frame; the scope is read from the root-owned registry, never from
+the frame.
 
 ## How a decision is verified (R-NOTIFY-4)
 
