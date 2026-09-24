@@ -7,8 +7,10 @@
 # screen_machine — P4. Runs `omarchy-kids-check --json` on every draw and
 # shows the verdict plus every FAIL and WARN line in full. Read-only: it
 # never fixes anything, and a FAIL detail names the assert command or the
-# step a grown-up must take (docs/check.md). The panel runs unprivileged,
-# so checks that need root report as warnings; the card says so.
+# step a grown-up must take (docs/check.md). The panel normally runs
+# unprivileged, so checks that need root report as warnings; the card says so
+# for exactly that case -- a parent who launched it with sudo gets no such
+# warnings, and the line would be a false claim about that run (I-6).
 screen_machine() {
   while true; do
     local json check_rc=0 verdict fails warns passes skips total generated
@@ -16,6 +18,7 @@ screen_machine() {
     : "$check_rc" # 1=warn, 2=fail: the check's verdict, never a screen failure
     if [[ -z "$json" ]] ||
       ! printf '%s' "$json" | jq -e '(.verdict|type=="string") and (.sections|type=="array")' >/dev/null 2>&1; then
+      # shellcheck disable=SC2034 # read by panel_notice_lines (bin/omarchy-kids-panel) after this returns
       PANEL_NOTICE="Could not read the safety report from omarchy-kids-check."
       return 0
     fi
@@ -49,7 +52,9 @@ screen_machine() {
       esac
     done < <(jq -r '.sections[].checks[]? | select(.status=="fail" or .status=="warn") | [.id, .status, .detail] | join("\u001f")' <<<"$json")
     facts+=("" "$passes passed, $skips skipped, run $generated.")
-    facts+=("Loaded without root; checks needing root report as warnings.")
+    # Only when it is true: with root, the checks that need it ran, so there is
+    # nothing to explain and the line would misdescribe the run (I-6).
+    is_root || facts+=("Loaded without root; checks needing root report as warnings.")
     panel_notice_lines facts
 
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
