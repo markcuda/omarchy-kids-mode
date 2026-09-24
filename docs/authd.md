@@ -145,7 +145,7 @@ bash test/shell.d/authd-test.sh
 or as part of the full suite with `test/all`.
 ## The GRANT request type (2026-09-03)
 
-The daemon answers five request shapes, one per connection. Ordinary verification uses the
+The daemon answers seven request shapes, one per connection. Ordinary verification uses the
 explicit `VERIFY` frame. The wizard's `BOOTSTRAP` frame adds the caller-identity check. The third
 is `GRANT <json-request-line>\n<password>\n`, and it exists because an "Ask a grown-up" approval
 cannot be an exit code from a process the kid owns (review S1). Root does all of it here: it
@@ -161,8 +161,13 @@ the open review file, refuses `no changed-again` unless the file's `now` is the 
 signed it had seen, and runs `omarchy-kids-review approve <kid> <id> --seen <fp> --apply` or
 `omarchy-kids-review deny <kid> <id> --apply`. `approve` re-checks that fingerprint against the live
 surface under the lock `scan` takes and exits 3 when it differs, which authd maps to
-`no changed-again` -- so the pin is a lock, not a second read (rule 4). The fifth is
-`DECIDE <json-frame>\n`, a paired
+`no changed-again` -- so the pin is a lock, not a second read (rule 4). The next is
+`ACT <json-frame>\n` (R-NOTIFY-13): a paired device's grant or end. The relay account or root may
+present it; the device's signature is verified with the `act` scope, then root re-validates the
+target as a provisioned kid account (never the parent, root or a system account) and runs
+`omarchy-kids-time grant <account> <minutes>` or `omarchy-kids-exit --finish --kid <account>` -- no
+terminal, no password. The same action the bar reaches through `sudo` (R-BAR-2), the other way in.
+The next is `DECIDE <json-frame>\n`, a paired
 device's signed decision (R-NOTIFY-4): only the relay account (`--relay-user`) or root may send it (the away courier runs as root and
 carries the app's signed decision; both only carry it, root verifies here),
 `lib/devices.py` verifies the Ed25519 signature, skew, nonce and the fixed `decide` scope as root,

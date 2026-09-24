@@ -29,6 +29,7 @@ import hashlib
 import hmac
 import json
 import os
+import pwd
 import re
 import secrets
 import stat
@@ -69,6 +70,14 @@ DECISIONS = ("approve", "decline")
 # authd refuses when the open review no longer carries it.
 ALLOWED_REVIEW_KEYS = {"device_id", "review_id", "decision", "seen", "ts", "nonce"}
 REVIEW_DECISIONS = ("approve", "deny")
+# An ACT (R-NOTIFY-13): a paired device's grant or end, the bar's two actions
+# without the password. The account is a kid account, never the parent or root.
+RE_KID_ACCOUNT = re.compile(r"\A[a-z_][a-z0-9_-]*\Z")
+ALLOWED_ACT_KEYS = {"device_id", "account", "action", "minutes", "ts", "nonce"}
+ACTIONS = ("grant", "end")
+# The same bound the ask path uses (lib/ask.py's MAX_MINUTES): a grant is more
+# screen time today, not a new policy.
+MAX_GRANT_MINUTES = 1440
 
 
 class LedgerError(Exception):
@@ -180,6 +189,52 @@ def valid_review_record(record):
     if not isinstance(ts, int) or isinstance(ts, bool):
         return False
     return True
+
+
+def valid_act_record(record):
+    """True only for the exact ACT shape (R-NOTIFY-13.2)."""
+    if not isinstance(record, dict) or set(record) - ALLOWED_ACT_KEYS:
+        return False
+    if record.get("action") not in ACTIONS:
+        return False
+    if not isinstance(record.get("device_id"), str) or not RE_DEVICE_ID.match(record["device_id"]):
+        return False
+    if not isinstance(record.get("account"), str) or not RE_KID_ACCOUNT.match(record["account"]):
+        return False
+    minutes = record.get("minutes")
+    if record["action"] == "grant":
+        if not isinstance(minutes, int) or isinstance(minutes, bool):
+            return False
+        if minutes < 1 or minutes > MAX_GRANT_MINUTES:
+            return False
+    elif "minutes" in record:
+        # An end has no minutes: a key the shape forbids must not be smuggled in.
+        return False
+    nonce = record.get("nonce")
+    if not isinstance(nonce, str) or not nonce or len(nonce) > MAX_NONCE:
+        return False
+    ts = record.get("ts")
+    if not isinstance(ts, int) or isinstance(ts, bool):
+        return False
+    return True
+
+
+def kid_account_ok(etc_dir, account):
+    """True only for a real, provisioned kid account (R-NOTIFY-13.3).
+
+    Shape, then a non-root non-system uid, then a root-owned profile file -- the
+    same "provisioned kid" test the ask path uses. The parent's own account has
+    no profile there, so naming it is refused like any other non-kid.
+    """
+    if not isinstance(account, str) or not RE_KID_ACCOUNT.match(account):
+        return False
+    try:
+        entry = pwd.getpwnam(account)
+    except KeyError:
+        return False
+    if entry.pw_uid == 0 or entry.pw_uid < 1000:
+        return False
+    return os.path.isfile(os.path.join(etc_dir, "kids", f"{account}.conf"))
 
 
 def review_id_for(kid, app_id):
@@ -294,6 +349,12 @@ def verify_review_decision(etc_dir, ledger, record, signature_b64, now, scope="d
     """A review decision (R-NOTIFY-12): the same signer, order and nonce rules as
     a request decision, over the review record shape instead."""
     return _verify_signed(etc_dir, ledger, record, signature_b64, now, scope, valid_review_record)
+
+
+def verify_act(etc_dir, ledger, record, signature_b64, now, scope="act"):
+    """An ACT (R-NOTIFY-13): the `act` scope, the same signer, order and nonce
+    rules as a decision, over the grant/end record shape."""
+    return _verify_signed(etc_dir, ledger, record, signature_b64, now, scope, valid_act_record)
 
 
 def _verify_signed(etc_dir, ledger, record, signature_b64, now, scope, valid):

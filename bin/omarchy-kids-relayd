@@ -241,6 +241,48 @@ class Relay:
                 return await self.reply(writer, 502, {"error": "authd unreachable"})
             return await self.reply(writer, 200 if reply == "ok" else 403, {"reply": reply})
 
+        if path.startswith("/v1/kids/") and method == "POST" and (
+            path.endswith("/grant") or path.endswith("/end")
+        ):
+            # R-NOTIFY-13: a paired device's grant or end. Authenticated like a
+            # decision; the relay checks only the route's own shape (the account
+            # is a kid account, the signed record names that account and the
+            # route's action, and a grant's minutes are in range) and carries the
+            # body verbatim to authd, which verifies the signature and applies it.
+            ok, reason = self.authorized(method, path, headers, body)
+            if not ok:
+                return await self.reply(writer, 403, {"error": reason})
+            action = "grant" if path.endswith("/grant") else "end"
+            account = path[len("/v1/kids/") : -(len(action) + 1)]
+            try:
+                frame = json.loads(body)
+            except ValueError:
+                return await self.reply(writer, 400, {"error": "malformed"})
+            record = frame.get("record") if isinstance(frame, dict) else None
+            if (
+                not isinstance(record, dict)
+                or "signature" not in frame
+                or str(record.get("account", "")) != account
+                or record.get("action") != action
+            ):
+                return await self.reply(writer, 400, {"error": "malformed"})
+            minutes = record.get("minutes")
+            if action == "grant":
+                if (
+                    not isinstance(minutes, int)
+                    or isinstance(minutes, bool)
+                    or minutes < 1
+                    or minutes > self.devices.MAX_GRANT_MINUTES
+                ):
+                    return await self.reply(writer, 400, {"error": "malformed"})
+            elif "minutes" in record:
+                return await self.reply(writer, 400, {"error": "malformed"})
+            loop = asyncio.get_running_loop()
+            reply = await loop.run_in_executor(None, self.relay.forward_act, self.args.auth_sock, body)
+            if reply is None:
+                return await self.reply(writer, 502, {"error": "authd unreachable"})
+            return await self.reply(writer, 200 if reply == "ok" else 403, {"reply": reply})
+
         return await self.reply(writer, 404, {"error": "not found"})
 
     async def serve_events(self, writer):

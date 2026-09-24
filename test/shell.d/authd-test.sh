@@ -606,6 +606,35 @@ frames = {
                                           "decision": "approve", "ts": int(time.time()),
                                           "nonce": "r6"}, "signature": "AA=="},
 }
+
+# ---- ACT (R-NOTIFY-13): grant and end -------------------------------------
+act_key = device("d6", "d6", "act")
+decide_only_key = device("d7", "d7", "decide")
+# The profile kid_account_ok looks for (authd validates the target before it acts).
+os.makedirs(os.path.join(etc, "kids"), exist_ok=True)
+with open(os.path.join(etc, "kids", "kid-ada.conf"), "w") as f:
+    f.write("name=Ada\nband=6-8\n")
+
+def act_frame(key, dev_id, account, action, nonce, minutes=None):
+    rec = {"device_id": dev_id, "account": account, "action": action,
+           "ts": int(time.time()), "nonce": nonce}
+    if minutes is not None:
+        rec["minutes"] = minutes
+    sig = base64.b64encode(key.sign(devices.canonical(rec))).decode()
+    return {"record": rec, "signature": sig}
+
+frames.update({
+    "act-grant.json": act_frame(act_key, "d6", "kid-ada", "grant", "a1", 15),
+    "act-end.json": act_frame(act_key, "d6", "kid-ada", "end", "a2"),
+    "act-root.json": act_frame(act_key, "d6", "root", "grant", "a3", 15),
+    "act-scope.json": act_frame(decide_only_key, "d7", "kid-ada", "grant", "a4", 15),
+    "act-zero.json": act_frame(act_key, "d6", "kid-ada", "grant", "a5", 0),
+    "act-end-minutes.json": act_frame(act_key, "d6", "kid-ada", "end", "a6", 15),
+    "act-replay.json": act_frame(act_key, "d6", "kid-ada", "grant", "a1", 15),
+    "act-malformed.json": {"record": {"device_id": "d6", "request_id": "req-1",
+                                      "decision": "approve", "ts": int(time.time()),
+                                      "nonce": "a7"}, "signature": "AA=="},
+})
 for name, obj in frames.items():
     with open(os.path.join(tmp, name), "w") as f:
         json.dump(obj, f, separators=(",", ":"))
@@ -710,13 +739,49 @@ want(send("review-changed.json"), "no changed-again",
 want(send("review-gone.json"), "no no-such-review", "a review that is not open is refused")
 want(send("review-scope.json"), "no scope-missing", "a device without the decide scope is refused")
 want(send("review-malformed.json"), "no malformed", "a request record cannot ride REVIEW")
+
+# ---- ACT (R-NOTIFY-13): grant and end, from the handler called directly -----
+# The target check is stubbed to one account so the grant/end wiring is covered
+# on any platform; devices-test.sh covers the real kid_account_ok rules. The
+# real check is still exercised unpatched, below.
+act_log = os.path.join(tmp, "act-applied.log")
+fake_act = os.path.join(tmp, "fake-act")
+with open(fake_act, "w") as f:
+    f.write("#!/bin/bash\nprintf '%s\\n' \"$*\" >> " + act_log + "\n")
+os.chmod(fake_act, 0o755)
+cfg.time_bin = fake_act
+cfg.exit_bin = fake_act
+real_kid_check = devices.kid_account_ok
+devices.kid_account_ok = lambda etc_dir, account: account == "kid-ada"
+open(act_log, "w").close()
+
+
+def send_act(name):
+    with open(os.path.join(tmp, name)) as f:
+        frame = json.load(f)
+    return authd.handle_act("ACT " + json.dumps(frame, separators=(",", ":")), None, cfg).decode().strip()
+
+
+want(send_act("act-grant.json"), "ok", "a grant frame applies")
+want("grant kid-ada 15" in open(act_log).read(), True, "granted through omarchy-kids-time")
+want(send_act("act-grant.json"), "no replayed-nonce", "the same action twice is a replay")
+want(send_act("act-end.json"), "ok", "an end frame applies")
+want("--finish --kid kid-ada" in open(act_log).read(), True, "ended through omarchy-kids-exit --finish")
+want(send_act("act-root.json"), "no not-a-kid", "the parent/root is never a target")
+want("grant root" in open(act_log).read(), False, "a refused target ran nothing")
+want(send_act("act-scope.json"), "no scope-missing", "a decide-only device cannot act")
+want(send_act("act-zero.json"), "no malformed", "minutes out of range is refused")
+want(send_act("act-end-minutes.json"), "no malformed", "an end carrying minutes is refused")
+want(send_act("act-malformed.json"), "no malformed", "a request record cannot ride ACT")
+want(real_kid_check(etc, "root"), False, "kid_account_ok refuses root")
+devices.kid_account_ok = real_kid_check
 print("; ".join(fails))
 sys.exit(1 if fails else 0)
 PY
   then
-    ok "REVIEW: the handler applies, replays and refuses as specified (direct call)"
+    ok "REVIEW+ACT: the handlers apply, replay and refuse as specified (direct call)"
   else
-    bad "REVIEW: the direct handler checks failed"
+    bad "REVIEW+ACT: the direct handler checks failed"
   fi
   start_daemon
   : >"$REVIEW_APPLIED"

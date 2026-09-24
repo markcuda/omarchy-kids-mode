@@ -134,5 +134,51 @@ check_eq "$?" "2" "pair-start refuses a bad address"
 "$BIN" pair-start --id d10 --apply >/dev/null 2>&1
 check_eq "$?" "2" "pair-start refuses an already-paired id"
 
+# --- the ACT record shape and the kid-account test (R-NOTIFY-13) ----------
+# The module functions the authd ACT frame relies on, without a daemon.
+python3 - "$DIR/lib/devices.py" "$ETC" <<'PY'
+import importlib.util, os, pwd, sys
+devices_py, etc = sys.argv[1], sys.argv[2]
+spec = importlib.util.spec_from_file_location("kids_devices", devices_py)
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+fails = []
+
+def check(cond, label):
+    print(("PASS  " if cond else "FAIL  ") + label)
+    if not cond:
+        fails.append(label)
+
+base = {"device_id": "d1", "account": "kid-ada", "ts": 1, "nonce": "n"}
+check(d.valid_act_record(dict(base, action="grant", minutes=15)), "a grant record is valid")
+check(d.valid_act_record(dict(base, action="end")), "an end record is valid")
+check(not d.valid_act_record(dict(base, action="end", minutes=15)), "an end carrying minutes is refused")
+check(not d.valid_act_record(dict(base, action="grant")), "a grant without minutes is refused")
+check(not d.valid_act_record(dict(base, action="grant", minutes=0)), "minutes 0 is refused")
+check(not d.valid_act_record(dict(base, action="grant", minutes=1441)), "minutes 1441 is refused")
+check(not d.valid_act_record(dict(base, action="grant", minutes="15")), "a string minutes is refused")
+check(not d.valid_act_record(dict(base, action="grant", minutes=True)), "a bool minutes is refused")
+check(not d.valid_act_record(dict(base, action="pause")), "a pause action is refused")
+check(not d.valid_act_record(dict(base, action="grant", minutes=15, request_id="r")),
+      "an extra key is refused")
+check(not d.valid_record(dict(base, action="grant", minutes=15)),
+      "an ACT record cannot be a request decision")
+
+me = pwd.getpwuid(os.getuid()).pw_name
+check(not d.kid_account_ok(etc, me), "an account with no profile is not a kid")
+os.makedirs(os.path.join(etc, "kids"), exist_ok=True)
+with open(os.path.join(etc, "kids", me + ".conf"), "w") as f:
+    f.write("band=6-8\n")
+if os.getuid() >= 1000:
+    check(d.kid_account_ok(etc, me), "a provisioned non-root account is a kid")
+check(not d.kid_account_ok(etc, "root"), "root is never a kid")
+check(not d.kid_account_ok(etc, "no-such-account-xyz"), "an unknown account is not a kid")
+check(not d.kid_account_ok(etc, "Kid!"), "a bad-shaped account is not a kid")
+check(not d.kid_account_ok(etc, "../etc/passwd"), "a path-like account is not a kid")
+print("; ".join(fails))
+sys.exit(1 if fails else 0)
+PY
+check_eq "$?" "0" "the ACT record shape and the kid-account test hold (R-NOTIFY-13)"
+
 echo "devices-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc

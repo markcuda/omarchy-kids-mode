@@ -42,12 +42,13 @@ nothing from it (`docs/notify.md`).
 | `GET /v1/events` | The same document as a Server-Sent Events stream: a `state` event per change and a heartbeat when nothing changes. A stream is authenticated once at connect, so a device revoked while it holds one keeps receiving state until the relay stops; its next request is refused. |
 | `GET /v1/avatars/<name>` | One kid avatar from `--share`; a traversal is a 404. |
 | `POST /v1/requests/<id>/decision` | Forwards the signed decision frame to `authd`'s DECIDE socket and returns its one-line reply. The relay does not apply it (R-NOTIFY-2). |
+| `POST /v1/kids/<account>/grant` and `POST /v1/kids/<account>/end` | A paired device's grant or end (R-NOTIFY-13). The relay checks only the route's own shape (the account is a kid account, the signed record names that account and the route's action, and a grant's minutes are 1..1440) and carries the body verbatim as an `ACT` frame to authd, which verifies the signature with the `act` scope, checks the target is a provisioned kid, and runs the command as root. The relay does not check the account exists and never acts (R-NOTIFY-2). |
 | `POST /v1/reviews/<review-id>/decision` | The same, for an add-on review (R-NOTIFY-12): it checks only the route's own shape and carries a `REVIEW` frame to authd, which re-reads the review file, refuses a fingerprint the app did not sign, and runs `omarchy-kids-review approve\|deny`. The relay does not open the review file and never decides. |
 
 A decision is applied only after root verifies a signature from a paired, unrevoked device and the
 `decide` scope (R-NOTIFY-9), through the same path the panel uses (R-NOTIFY-4); `docs/devices.md` and
-`docs/authd.md` have the details. There is no action route yet (`act`/the ACT frame), so the relay
-carries decisions only.
+`docs/authd.md` have the details. An action (R-NOTIFY-13) is applied the same way with the `act`
+scope: the relay checks only the route's own shape and carries the body to authd as an `ACT` frame.
 
 ## The fence
 

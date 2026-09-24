@@ -200,6 +200,60 @@ try:
     check(code == 200 and json.loads(body)["reply"] == "ok", "a review POST is forwarded to authd")
     code, _ = request("POST", rev_path, {}, rev_frame.encode())
     check(code == 403, "an unsigned review POST is refused at the relay")
+
+    # R-NOTIFY-13: a grant and an end ride the same path, with their own record.
+    act_rec = {"device_id": "d1", "account": "kid-ada", "action": "grant",
+               "minutes": 15, "ts": int(time.time()), "nonce": "act-1"}
+    act_sig = base64.b64encode(dev_key.sign(devices.canonical(act_rec))).decode()
+    act_frame = json.dumps({"record": act_rec, "signature": act_sig})
+    granth_path = "/v1/kids/kid-ada/grant"
+    try:
+        os.unlink(auth_sock)
+    except OSError:
+        pass
+    ready_act = threading.Event()
+    threading.Thread(target=fake_authd, args=(ready_act,), daemon=True).start()
+    if not ready_act.wait(30):
+        raise RuntimeError("the act stub did not start")
+    code, body = request("POST", granth_path,
+                         signed_headers(granth_path, act_frame.encode(), method="POST"), act_frame.encode())
+    check(code == 200 and json.loads(body)["reply"] == "ok", "a grant POST is forwarded to authd")
+    code, _ = request("POST", granth_path, {}, act_frame.encode())
+    check(code == 403, "an unsigned grant POST is refused at the relay")
+    # A record naming another account, or the wrong action, is refused before authd.
+    other_account = json.dumps({"record": dict(act_rec, account="kid-dot"), "signature": act_sig})
+    code, _ = request("POST", granth_path,
+                      signed_headers(granth_path, other_account.encode(), method="POST"), other_account.encode())
+    check(code == 400, "a grant naming another account is refused before authd")
+    wrong_action = json.dumps({"record": dict(act_rec, action="end", minutes=None), "signature": act_sig})
+    code, _ = request("POST", granth_path,
+                      signed_headers(granth_path, wrong_action.encode(), method="POST"), wrong_action.encode())
+    check(code == 400, "an end record on the grant route is refused before authd")
+    zero = json.dumps({"record": dict(act_rec, minutes=0), "signature": act_sig})
+    code, _ = request("POST", granth_path,
+                      signed_headers(granth_path, zero.encode(), method="POST"), zero.encode())
+    check(code == 400, "minutes out of range is refused before authd")
+    # end
+    end_rec = {"device_id": "d1", "account": "kid-ada", "action": "end",
+               "ts": int(time.time()), "nonce": "act-2"}
+    end_sig = base64.b64encode(dev_key.sign(devices.canonical(end_rec))).decode()
+    end_frame = json.dumps({"record": end_rec, "signature": end_sig})
+    end_path = "/v1/kids/kid-ada/end"
+    try:
+        os.unlink(auth_sock)
+    except OSError:
+        pass
+    ready_end = threading.Event()
+    threading.Thread(target=fake_authd, args=(ready_end,), daemon=True).start()
+    if not ready_end.wait(30):
+        raise RuntimeError("the end stub did not start")
+    code, body = request("POST", end_path,
+                         signed_headers(end_path, end_frame.encode(), method="POST"), end_frame.encode())
+    check(code == 200 and json.loads(body)["reply"] == "ok", "an end POST is forwarded to authd")
+    end_with_minutes = json.dumps({"record": dict(end_rec, minutes=15), "signature": end_sig})
+    code, _ = request("POST", end_path,
+                      signed_headers(end_path, end_with_minutes.encode(), method="POST"), end_with_minutes.encode())
+    check(code == 400, "an end record carrying minutes is refused before authd")
     bad_id_path = "/v1/reviews/not-a-review/decision"
     code, _ = request("POST", bad_id_path,
                       signed_headers(bad_id_path, rev_frame.encode(), method="POST"), rev_frame.encode())

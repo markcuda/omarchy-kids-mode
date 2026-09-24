@@ -399,12 +399,12 @@ GET  /v1/state                      -> {kids:[...], requests:[open...], recent:[
 GET  /v1/events                     SSE: one `state` event per change, plus a heartbeat
 POST /v1/requests/<id>/decision     {record:{...}, signature}
 POST /v1/reviews/<review-id>/decision {record:{device_id,review_id,decision,seen,ts,nonce}, signature}  scope decide
-POST /v1/kids/<account>/grant       {minutes, signed:{...}}      scope act
-POST /v1/kids/<account>/end         {signed:{...}}               scope act
+POST /v1/kids/<account>/grant       {record:{device_id,account,action:"grant",minutes,ts,nonce}, signature}  scope act
+POST /v1/kids/<account>/end         {record:{device_id,account,action:"end",ts,nonce}, signature}            scope act
 GET  /v1/avatars/<id>.svg
 ```
 
-Authenticated requests carry `X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<sig>`; state changes carry an inner `signed` object that root re-verifies (R-NOTIFY-4). `proof` on `/v1/pair` is `HMAC-SHA256(token, sign_pub|box_pub|name)`, so the pairing token never travels; the `grant`/`end` routes are the ACT frame's and are not built yet.
+Authenticated requests carry `X-Kids-Device: <id>` and `X-Kids-Sig: <ts>.<nonce>.<sig>`; state changes carry an inner `signed` object that root re-verifies (R-NOTIFY-4). `proof` on `/v1/pair` is `HMAC-SHA256(token, sign_pub|box_pub|name)`, so the pairing token never travels; the `grant`/`end` routes are the ACT frame's (R-NOTIFY-13: a paired device with the `act` scope runs `omarchy-kids-time grant` or `omarchy-kids-exit --finish --kid` as root, with no terminal and no parent password; the account must be a provisioned kid, never the parent).
 
 Away envelopes (R-NOTIFY-8, N-11: the box-side courier that seals and carries them is built, `docs/courier.md`; the app package opens them (`clients/parent/lib/relay_client.dart`) but its mailbox view is not built) are `{v, device_id, eph_pub, nonce, ct}`: a fresh ephemeral X25519 key does ECDH with the device's `box_pub`, HKDF-SHA256 (salt `omarchy-kids-envelope-v1`, info `x25519-chacha20poly1305`) derives the key, and ChaCha20-Poly1305 seals the document with a 12-byte nonce and the device id as associated data. `lib/envelope.py` seals; the device opens with its private box key; `clients/parent/test-vectors/notify-vectors.json` carries the vectors the app must reproduce. The envelope is confidential, not authenticated: anyone holding the device's public key can seal one, so the app must treat a sealed state document as untrusted display data and never act on it -- the decisions it sends the other way are signed by the device and verified by root. A box identity key (or a timestamp) is a later version's job.
 

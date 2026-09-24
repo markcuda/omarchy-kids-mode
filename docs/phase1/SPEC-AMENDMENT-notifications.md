@@ -233,3 +233,96 @@ POST /v1/reviews/<review-id>/decision {record:{device_id,review_id,decision,seen
 directory 0750 root:omarchy-parents): `{kid, id, was, now, detected_at, state:"open"}`, root-written
 by `omarchy-kids-review scan`, deleted by a successful approve or deny. The relay reads it; only root
 decides on it.
+
+## 11. The ACT frame (exact)
+
+Appendix H names two routes, `grant` and `end`, and marks them not built. R-BAR-2 says the bar's
+"give more time" and "end session" go through a polkit-gated helper with the parent password. This
+is the other way in: a paired device with the `act` scope, whose signature is the authentication,
+reaching the same two root commands the bar reaches, with no terminal and no password.
+
+- R-NOTIFY-13.1 **Routes.** `POST /v1/kids/<account>/grant`, body `{record:{...}, signature}`, and
+  `POST /v1/kids/<account>/end`, body `{record:{...}, signature}`. (Appendix H's `{minutes,
+  signed:{...}}` sketch is replaced by this: `minutes` lives inside the signed record and nowhere
+  else, so an unsigned copy cannot disagree with the signed one.) The relay authenticates the caller
+  exactly as a request decision does (`X-Kids-Device`, `X-Kids-Sig` over method, path and body); a
+  failure is `403 {"error": <reason>}`. It then requires, before anything is forwarded:
+  `<account>` matches `^[a-z_][a-z0-9_-]*$`; the body parses to an object whose `record` is an
+  object and which has a `signature`; `record.account` is a string equal to the path account;
+  `record.action` is `"grant"` on the grant route and `"end"` on the end route; on the grant route
+  `record.minutes` is a JSON integer (not a bool, not a string, not a float) in `1..1440`; on the
+  end route the `minutes` key is absent. Anything else is `400 {"error": "malformed"}`. The relay
+  does not read the device's scopes, the kids directory, `status.json` or the time files, and it
+  does not check that the account is a kid: it forwards the body verbatim as `ACT <json>\n` to
+  authd. `502` on a transport failure; otherwise authd's reply passes through (`200 {"reply":
+  "ok"}`, else `403 {"reply": "no <reason>"}`). The relay never acts (R-NOTIFY-2).
+
+- R-NOTIFY-13.2 **Frame and record.** The prefix is `ACT `. Who may present it is who may present
+  `DECIDE` (the relay account, or root); the courier does not carry it on this branch, so an ACT is
+  LAN-only. The signed record is exactly
+
+  `{"device_id", "account", "action", "minutes", "ts", "nonce"}` for a grant, and
+  `{"device_id", "account", "action", "ts", "nonce"}` for an end,
+
+  and nothing else: no `request_id`, no `review_id`, no `reply`. `action` is `"grant"` or `"end"`;
+  `minutes` is required for `grant` and forbidden for `end`, an integer in `1..1440` (the same
+  `MAX_MINUTES` the ask path uses: a grant is more screen time today, not a new policy);
+  `account` matches `^[a-z_][a-z0-9_-]*$`. The signed bytes are `canonical(record)` (the same
+  `omarchy-kids-decision-v1\n` context). An ACT record can never verify as a `DECIDE` or `REVIEW`
+  record or the reverse: each has a required key the others forbid (`action` / `request_id` /
+  `review_id`). The scope is `act`, taken from the root-owned registry, never the frame; a device
+  paired with `decide` alone is refused `scope-missing` (R-NOTIFY-9). Skew (`SKEW_SECONDS`) and the
+  per-device nonce ledger are the same, so one nonce cannot be spent once as a decision and once as
+  an action. The refusals are `verify_decision`'s, in the same order, and nothing touches the ledger
+  until the signature is good.
+
+- R-NOTIFY-13.3 **Apply.** After verification, authd (root) validates the target itself, before any
+  command runs: `account` must match the shape again, must not be `root`, must not be the account
+  of any uid below 1000, and `/etc/omarchy-kids/kids/<account>.conf` must be a regular file (the
+  same test the ask path uses for "a provisioned kid account"). The parent's own account is never a
+  target: it has no profile there, and a signed ACT naming it is `no not-a-kid` (I-1). Any failure
+  of these is `no not-a-kid`, one reason for all of them, and the nonce stays burned. For a grant
+  `minutes` is re-checked as an integer in `1..1440` (`no malformed` otherwise). It then runs, with
+  a 30-second timeout and no shell, `omarchy-kids-time grant <account> <minutes>` for a grant, or
+  `omarchy-kids-exit --finish --kid <account>` for an end. `omarchy-kids-time grant` validates the
+  minutes but not the account, which is why authd validates the account before it; `omarchy-kids-exit`
+  resolves the account with `id -u` and refuses an unknown one, and is never replaced by a direct
+  `loginctl` call. A non-zero exit, a timeout or a spawn failure is `no apply failed`. A grant
+  adds to today's one-off grant in `/run/omarchy-kids/time/<account>.json` and is picked up by the
+  next ledger tick; it does not itself unlock a locked screen faster than that tick. An end asks
+  each of the account's Hyprland instances to exit and, if none is found or none goes away, falls
+  back to `loginctl terminate-user`, which ends every session the account has (the command's own
+  rule, `docs/exit.md`); authd does not check `status.json` for whether the kid is live, because a
+  re-read of that file would not be a lock (rule 4).
+
+- R-NOTIFY-13.4 **What it is not.** An ACT is not a kid's request: it writes no queue record, has
+  no `request_id`, appears in neither `requests` nor `recent`, and `omarchy-kids-ask list` never
+  shows it. It is not the polkit/password path: no prompt is shown, no parent password is read, and
+  the bar's own rows keep going through `sudo` as before. It cannot pause: there is no `"pause"`
+  action (pause is not available, `omarchy-kids-exit --pause`), and an action value other than
+  `grant` or `end` is `malformed`. It cannot push lights-out, change a budget, or grant tomorrow: a
+  grant extends today's budget only (R-TIME-4). It cannot target the parent, root or any system
+  account (R-NOTIFY-13.3). A device with the `decide` scope alone cannot present it. The app labels
+  the two buttons by what they do: "more time today" and "end session", never "pause".
+
+- R-NOTIFY-13.5 **Idle rule.** A grant or an end never holds the relay up: `is_needed` is
+  unchanged. Both are one-shot; a live kid already holds the relay up on their own, and a grant for a
+  kid who is not live, or an end after the session has gone, leaves nothing to wait for. The applied
+  result is visible on the next `state` event (`minutes_left`, or the kid's `live` flag going
+  false) and is never carried in a separate document.
+
+## 12. Appendix H, amended
+
+Replace the two `scope act` lines with:
+
+```text
+POST /v1/kids/<account>/grant       {record:{device_id,account,action:"grant",minutes,ts,nonce}, signature}  scope act
+POST /v1/kids/<account>/end         {record:{device_id,account,action:"end",ts,nonce}, signature}            scope act
+```
+
+and strike "the `grant`/`end` routes above are the ACT frame's and are not built on this branch".
+The relay forwards either body as `ACT <json>\n`; authd verifies the signature against the
+root-owned registry with scope `act`, checks the account is a provisioned kid, and runs
+`omarchy-kids-time grant` or `omarchy-kids-exit --finish --kid` as root. No file is written by the
+frame itself; the grant lands in `/run/omarchy-kids/time/<account>.json` through the time
+command's own writer.

@@ -129,6 +129,12 @@ facts. Its output remains `lights-out at HH:MM` or `budget runs out at HH:MM` on
 `grant` adds to a *separate* `usage/<day>.grant` file and remains root-only. The root tick is the
 only code that recomputes budget, lights-out, and enforcement state.
 
+A paired device holding the `act` scope reaches the same `grant` through the relay and authd
+(R-NOTIFY-13, `docs/notify.md`): `authd` verifies the device's signature, checks the target is a
+provisioned kid account, and runs `omarchy-kids-time grant <account> <minutes>` as root -- the same
+writer, with no terminal and no parent password. A grant over the wire is still today only, 1..1440
+minutes.
+
 `daemon` polls every 30 s (`OMARCHY_KIDS_TIME_POLL_INTERVAL`) while *this session*
 The daemon remains for compatibility with existing logged-in sessions. It reads only the current
 account's validated root document. It compares the root-published `warnings_fired` list with the

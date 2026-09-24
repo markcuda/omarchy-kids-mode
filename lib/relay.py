@@ -161,6 +161,15 @@ def forward_review(auth_sock, frame_json, timeout=30.0):
     return _forward(auth_sock, b"REVIEW ", frame_json, timeout)
 
 
+def forward_act(auth_sock, frame_json, timeout=30.0):
+    """Send `ACT <json>\n` to authd and return its reply line.
+
+    R-NOTIFY-13: the frame is the app's signed grant or end. As with DECIDE,
+    authd verifies and applies it; the relay only carries it.
+    """
+    return _forward(auth_sock, b"ACT ", frame_json, timeout)
+
+
 def forward_pair(auth_sock, frame_json, timeout=30.0):
     """Send `PAIR <json>\\n` to authd and return its reply line.
 

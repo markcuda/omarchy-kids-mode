@@ -3,13 +3,14 @@
 # omarchy:hidden=true
 """omarchy-kids-authd -- the parent-password verifier (R-SEC-1, R-SEC-2).
 
-A root, socket-activated oracle. Six request shapes, one per connection:
+A root, socket-activated oracle. Seven request shapes, one per connection:
 
     VERIFY\n<password>\n               -> "ok" / "no"   (verify, R-SEC-2)
     BOOTSTRAP\n<password>\n           -> "ok" / "no"   (wizard bootstrap)
     GRANT <json-request>\n<password>\n -> "ok" / "no <reason>"
     DECIDE <json-frame>\n              -> "ok" / "no <reason>"  (a paired device, R-NOTIFY-4)
     REVIEW <json-frame>\n              -> "ok" / "no <reason>"  (an add-on review, R-NOTIFY-12)
+    ACT <json-frame>\n                -> "ok" / "no <reason>"  (grant/end time, R-NOTIFY-13)
     PAIR <json-frame>\n                -> "ok" / "no <reason>"  (pair a device, R-NOTIFY-5)
 
 The second is the *only* way an "Ask a grown-up" request is ever granted
@@ -69,6 +70,12 @@ DECIDE_PREFIX = "DECIDE "
 # record. Only the relay account or root may send it; root verifies it, re-reads
 # the open review file, and only then runs the approve or deny as root.
 REVIEW_PREFIX = "REVIEW "
+# A paired device's signed grant or end (R-NOTIFY-13). One line: ACT <json>\n,
+# the same {record, signature} shape as DECIDE over a grant/end record. Only the
+# relay account or root may send it; root verifies it, checks the target is a
+# provisioned kid, and runs the time or exit command as root -- no terminal, no
+# parent password.
+ACT_PREFIX = "ACT "
 # A parent pairs a device (R-NOTIFY-5). One line: PAIR <json>\n, where the json
 # is {id, name, platform, sign_pub, box_pub, proof}. Only the relay may send it;
 # root verifies the single-use pairing proof and registers the device.
@@ -80,6 +87,8 @@ DEFAULT_DEVICES_BIN = "/usr/bin/omarchy-kids-devices"
 DEFAULT_PAIRING_DIR = "/run/omarchy-kids/pairing"
 DEFAULT_REVIEWS_DIR = "/var/lib/omarchy-kids/reviews/open"
 DEFAULT_REVIEW_BIN = "/usr/bin/omarchy-kids-review"
+DEFAULT_TIME_BIN = "/usr/bin/omarchy-kids-time"
+DEFAULT_EXIT_BIN = "/usr/bin/omarchy-kids-exit"
 
 _LIBCRYPT = None
 
@@ -562,6 +571,54 @@ def handle_review(header: str, conn: socket.socket, cfg) -> bytes:
     return b"ok\n"
 
 
+def handle_act(header: str, conn: socket.socket, cfg) -> bytes:
+    """A paired device's signed grant or end (R-NOTIFY-13).
+
+    Same presenter and verification as DECIDE, then root checks the target is a
+    real provisioned kid (never the parent, root or a system account) and runs
+    the bar's own command as root: no terminal, no password. The device's
+    signature, with the `act` scope the parent gave it, is the whole of the
+    authorisation.
+    """
+    if cfg.devices is None or cfg.ledger is None:
+        return b"no devices unavailable\n"
+    if not may_present_decide(peer_uid(conn), cfg.relay_uid):
+        return b"no not the relay\n"
+    try:
+        frame = json.loads(header[len(ACT_PREFIX) :])
+        record = frame["record"]
+        signature = frame["signature"]
+    except (ValueError, KeyError, TypeError):
+        return b"no malformed\n"
+    ok, reason = cfg.devices.verify_act(cfg.etc, cfg.ledger, record, signature, int(time.time()), "act")
+    if not ok:
+        return b"no " + reason.encode("utf-8", "replace") + b"\n"
+    account = record.get("account", "")
+    # The target is re-validated here, before any command runs: a signed value is
+    # still a value from outside the box (rule 9). One reason for all failures.
+    if not cfg.devices.kid_account_ok(cfg.etc, account):
+        return b"no not-a-kid\n"
+    if record.get("action") == "grant":
+        argv = [cfg.time_bin, "grant", account, str(record.get("minutes"))]
+    else:
+        argv = [cfg.exit_bin, "--finish", "--kid", account]
+    try:
+        proc = subprocess.run(argv, capture_output=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return b"no apply failed\n"
+    if proc.returncode != 0:
+        return b"no apply failed\n"
+    # One journal line (stderr lands in the journal under systemd). The device
+    # id, the account, the action and the minutes; never the signature or nonce.
+    verb = "granted" if record.get("action") == "grant" else "ended"
+    minutes = f" {record.get('minutes')} minute(s)" if record.get("action") == "grant" else ""
+    print(
+        f"omarchy-kids-authd: device {record.get('device_id', '')} {verb} {account}{minutes}",
+        file=sys.stderr,
+    )
+    return b"ok\n"
+
+
 def read_candidate_line(
     conn: socket.socket, buf: bytearray, max_line: int = MAX_LINE
 ) -> "tuple[bytes | None, bool]":
@@ -612,6 +669,9 @@ def handle_client(conn: socket.socket, cfg, limiter: RateLimiter, slot=None):
             elif header.startswith(DECIDE_PREFIX):
                 # One line: the signed decision carries its own signature.
                 reply = handle_decide(header, conn, cfg)
+            elif header.startswith(ACT_PREFIX):
+                # One line, like DECIDE: the signature is in the frame.
+                reply = handle_act(header, conn, cfg)
             elif header.startswith(REVIEW_PREFIX):
                 # One line, like DECIDE: the signature is in the frame.
                 reply = handle_review(header, conn, cfg)
@@ -707,6 +767,16 @@ def parse_args(argv):
         help="Path to omarchy-kids-review (REVIEW: approves or denies the review)",
     )
     parser.add_argument(
+        "--time-bin",
+        default=DEFAULT_TIME_BIN,
+        help="Path to omarchy-kids-time (ACT: grants more time today)",
+    )
+    parser.add_argument(
+        "--exit-bin",
+        default=DEFAULT_EXIT_BIN,
+        help="Path to omarchy-kids-exit (ACT: ends the kid's session)",
+    )
+    parser.add_argument(
         "--relay-user",
         default=RELAY_USER,
         help="Account whose uid may present a DECIDE frame (the LAN relay; root may too)",
@@ -729,6 +799,8 @@ class Config:
         self.nonce_ledger = args.nonce_ledger
         self.reviews_dir = args.reviews_dir
         self.review_bin = args.review_bin
+        self.time_bin = args.time_bin
+        self.exit_bin = args.exit_bin
         # Filled in by main() for the DECIDE path; None means fail closed.
         self.devices = None
         self.ledger = None

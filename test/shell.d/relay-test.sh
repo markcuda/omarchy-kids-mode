@@ -111,7 +111,11 @@ def fake_authd(reply, ready):
 def exchange(prefix, payload, reply_bytes):
     """One stub round-trip, retried: a starved parallel run had surfaced as a
     one-off failure here (0/20 alone), so the check is the exchange, not luck."""
-    fn = {"PAIR": relay.forward_pair, "REVIEW": relay.forward_review}.get(prefix, relay.forward_decide)
+    fn = {
+        "PAIR": relay.forward_pair,
+        "REVIEW": relay.forward_review,
+        "ACT": relay.forward_act,
+    }.get(prefix, relay.forward_decide)
     for _ in range(3):
         try:
             os.unlink(sock_path)
@@ -150,6 +154,14 @@ check(seen and seen[-1].startswith("REVIEW "), "forward_review sends the REVIEW 
 
 reply = exchange("REVIEW", '{"record":{}}', b"no changed-again\n")
 check(reply == "no changed-again", "forward_review passes a refusal back verbatim")
+
+# --- forward_act: a grant or an end is carried to authd ---------------------
+reply = exchange("ACT", '{"record":{"account":"kid-ada","action":"grant","minutes":15},"signature":"x"}', b"ok\n")
+check(reply == "ok", "forward_act returns authd's reply")
+check(seen and seen[-1].startswith("ACT "), "forward_act sends the ACT frame")
+
+reply = exchange("ACT", '{"record":{}}', b"no not-a-kid\n")
+check(reply == "no not-a-kid", "forward_act passes a refusal back verbatim")
 
 check(relay.forward_decide(os.path.join(tmp, "none.sock"), "{}") is None,
       "forward_decide is None when authd is unreachable")

@@ -73,7 +73,11 @@ ignored the request, not the normal path.
 
 `--finish --kid <account>` (root only) is the same idea run from outside the session — the
 parent's bar widget's "end session" action (issue #37, `bin/omarchy-kids-bar end`) and any future
-panel end-session action call `sudo omarchy-kids-exit --finish --kid <account>`, never `loginctl`
+panel end-session action call `sudo omarchy-kids-exit --finish --kid <account>`, never `loginctl`.
+A paired device holding the `act` scope reaches the same command through the relay and authd
+(R-NOTIFY-13): `authd` verifies the device's signature and that the target is a provisioned kid
+account, then runs this command as root -- no terminal and no password, and never `loginctl`
+directly
 directly, for exactly the crash risk above. This process has no session id, `XDG_RUNTIME_DIR`, or
 `HYPRLAND_INSTANCE_SIGNATURE` for `<account>`'s session — those live in that session's own
 environment, not this one's — so it finds them on disk instead: every directory under
