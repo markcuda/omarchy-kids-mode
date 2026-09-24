@@ -38,10 +38,11 @@ nothing from it (`docs/notify.md`).
 | Method and path | What it does |
 | --- | --- |
 | `POST /v1/pair` | Carries a pairing frame (`id`, `name`, `platform`, `sign_pub`, `box_pub`, `proof`) to `authd`'s PAIR frame, which verifies the single-use proof and registers the device (R-NOTIFY-5). The relay never reads the root-only pairing record (R-NOTIFY-2). |
-| `GET /v1/state` | The state document (`lib/relay.py`'s `build_state`: kids, open requests, recent decisions) from the root-written `status.json` and the queue. |
+| `GET /v1/state` | The state document (`lib/relay.py`'s `build_state`: kids, open requests, recent decisions, open add-on reviews) from the root-written `status.json`, the queue and the reviews directory (R-NOTIFY-12). |
 | `GET /v1/events` | The same document as a Server-Sent Events stream: a `state` event per change and a heartbeat when nothing changes. A stream is authenticated once at connect, so a device revoked while it holds one keeps receiving state until the relay stops; its next request is refused. |
 | `GET /v1/avatars/<name>` | One kid avatar from `--share`; a traversal is a 404. |
 | `POST /v1/requests/<id>/decision` | Forwards the signed decision frame to `authd`'s DECIDE socket and returns its one-line reply. The relay does not apply it (R-NOTIFY-2). |
+| `POST /v1/reviews/<review-id>/decision` | The same, for an add-on review (R-NOTIFY-12): it checks only the route's own shape and carries a `REVIEW` frame to authd, which re-reads the review file, refuses a fingerprint the app did not sign, and runs `omarchy-kids-review approve\|deny`. The relay does not open the review file and never decides. |
 
 A decision is applied only after root verifies a signature from a paired, unrevoked device and the
 `decide` scope (R-NOTIFY-9), through the same path the panel uses (R-NOTIFY-4); `docs/devices.md` and

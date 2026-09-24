@@ -29,7 +29,7 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 python3 - "$DIR" "$TMP" <<'PY'
-import base64, datetime, importlib.util, ipaddress, itertools, json, os, socket, ssl, subprocess, sys, threading, time
+import base64, datetime, hashlib, importlib.util, ipaddress, itertools, json, os, socket, ssl, subprocess, sys, threading, time
 
 root, tmp = sys.argv[1], sys.argv[2]
 fails = []
@@ -103,12 +103,19 @@ status = os.path.join(tmp, "status.json")
 queue = os.path.join(tmp, "queue"); os.makedirs(queue, exist_ok=True)
 with open(status, "w") as f:
     json.dump({"generated_at": "x", "kids": [{"kid": "kid-ada", "live": True}]}, f)
+# One open add-on review, so the state's reviews list is proven, not just present.
+reviews = os.path.join(tmp, "reviews", "open"); os.makedirs(reviews, exist_ok=True)
+review_id = "kid-ada." + hashlib.sha256(b"org.mozilla.firefox").hexdigest()[:16]
+with open(os.path.join(reviews, review_id + ".json"), "w") as f:
+    json.dump({"kid": "kid-ada", "id": "org.mozilla.firefox", "was": "aa" * 32,
+               "now": "bb" * 32, "detected_at": 5, "state": "open"}, f)
 
 probe = socket.socket(); probe.bind(("127.0.0.1", 0)); port = probe.getsockname()[1]; probe.close()
 ready = threading.Event(); threading.Thread(target=fake_authd, args=(ready,), daemon=True).start(); ready.wait(30)
 proc = subprocess.Popen([sys.executable, os.path.join(root, "bin", "omarchy-kids-relayd"),
                          "--bind", "127.0.0.1", "--port", str(port), "--cert", cert_path, "--key", key_path,
                          "--devices-json", devices_json, "--status", status, "--queue", queue, "--auth-sock", auth_sock,
+                         "--reviews", reviews,
                          "--nonce-ledger", os.path.join(tmp, "nonces.json"), "--share", os.path.join(root, "share"),
                          "--lib", os.path.join(root, "lib")],
                         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
@@ -140,6 +147,8 @@ try:
     check(code == 200 and json.loads(body)["kids"][0]["kid"] == "kid-ada",
           "a signed read is served over TLS (R-NOTIFY-1)")
     check("recent" in json.loads(body), "the state document carries recent (Appendix H)")
+    check([r["id"] for r in json.loads(body)["reviews"]] == [review_id],
+          "the state document carries the open add-on review (R-NOTIFY-12)")
 
     code, _ = request("GET", "/v1/state", {})
     check(code == 403, "an unsigned read is refused")
@@ -170,6 +179,35 @@ try:
     check(code == 200 and json.loads(body)["reply"] == "ok", "a decision POST is forwarded to authd")
     code, _ = request("POST", "/v1/requests/req-1/decision", {}, frame.encode())
     check(code == 403, "an unsigned decision POST is refused at the relay (P1)")
+
+    # R-NOTIFY-12: a review decision rides the same path, with its own record.
+    rev_id = "kid-ada." + "a" * 16
+    rev_rec = {"device_id": "d1", "review_id": rev_id, "decision": "approve",
+               "seen": "ab" * 32, "ts": int(time.time()), "nonce": "rev-1"}
+    rev_sig = base64.b64encode(dev_key.sign(devices.canonical(rev_rec))).decode()
+    rev_frame = json.dumps({"record": rev_rec, "signature": rev_sig})
+    rev_path = "/v1/reviews/" + rev_id + "/decision"
+    try:
+        os.unlink(auth_sock)
+    except OSError:
+        pass
+    ready_rev = threading.Event()
+    threading.Thread(target=fake_authd, args=(ready_rev,), daemon=True).start()
+    if not ready_rev.wait(30):
+        raise RuntimeError("the review stub did not start")
+    code, body = request("POST", rev_path,
+                         signed_headers(rev_path, rev_frame.encode(), method="POST"), rev_frame.encode())
+    check(code == 200 and json.loads(body)["reply"] == "ok", "a review POST is forwarded to authd")
+    code, _ = request("POST", rev_path, {}, rev_frame.encode())
+    check(code == 403, "an unsigned review POST is refused at the relay")
+    bad_id_path = "/v1/reviews/not-a-review/decision"
+    code, _ = request("POST", bad_id_path,
+                      signed_headers(bad_id_path, rev_frame.encode(), method="POST"), rev_frame.encode())
+    check(code == 400, "a path that is not a review id is refused before authd")
+    other = json.dumps({"record": dict(rev_rec, review_id="kid-ada." + "b" * 16), "signature": rev_sig})
+    code, _ = request("POST", rev_path,
+                      signed_headers(rev_path, other.encode(), method="POST"), other.encode())
+    check(code == 400, "a record naming another review is refused before authd")
 
     # Pairing is pre-auth and carried to authd (R-NOTIFY-5): the single-use token
     # in the frame is the credential, verified by root.

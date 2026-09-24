@@ -156,3 +156,74 @@ background push in v1).
 - Any data beyond the request and status fields this appendix names.
 - A kid session reaching the relay with any credential.
 - Pairing without the parent password.
+
+## 9. R-NOTIFY-12 over the relay (exact)
+
+R-NOTIFY-12 says an add-on change notifies the parent and they may approve, deny, or check it. The
+box side is `omarchy-kids-review`; the panel and the desktop notifier read it locally. This makes the
+same review reachable from a paired device, over the wire the requests already use.
+
+- R-NOTIFY-12.1 **State.** The `/v1/state` document gains `reviews`, the open add-on reviews. One row
+  per file in `/var/lib/omarchy-kids/reviews/open/` whose name is exactly `<kid>.<16 lowercase
+  hex>.json`, read through the relay's `omarchy-parents` membership:
+
+  `{"id": "<kid>.<hash>", "kid": "...", "app": "<app id>", "was": "<hex>", "now": "<hex>",
+  "detected_at": <int>}`
+
+  `id` is the review id (the file name without `.json`); `app` is the record's own `id`; `was` and
+  `now` are the surface fingerprints as written. Rows are in file-name order. Best-effort, like
+  `requests`: a missing directory is `[]`, and a file that does not parse to an object, whose
+  `state` is not `"open"`, whose `kid` is not the name's kid part, or whose
+  `sha256(app)[:16]` is not the name's hash part, is skipped. A row never carries a token, a
+  decision, a path or a desktop-file body. A change to the directory is a state change (one `state`
+  event). An open review does **not** hold the relay up: `is_needed` is unchanged, so a review can
+  stay open for days while the relay still exits when idle (R-NOTIFY-1).
+
+- R-NOTIFY-12.2 **Route.** `POST /v1/reviews/<review-id>/decision`, body `{record:{...},
+  signature}`. The relay authenticates the caller exactly as a request decision does; a failure is
+  `403 {"error": <reason>}`. It requires `<review-id>` to match `^[a-z_][a-z0-9_-]*\.[0-9a-f]{16}$`
+  and the body to parse to an object whose `record` is an object with `record.review_id` equal to the
+  path id and which has a `signature`; anything else is `400 {"error": "malformed"}`. It does not open
+  the review file, compare fingerprints or read the device's scopes: it forwards the body verbatim as
+  `REVIEW <json>\n` to authd. `502` on a transport failure; otherwise authd's reply passes through
+  (`200 {"reply": "ok"}`, else `403 {"reply": "no <reason>"}`). The relay never decides (R-NOTIFY-2).
+
+- R-NOTIFY-12.3 **Frame and record.** The prefix is `REVIEW `. Who may present it is who may present
+  `DECIDE` (the relay account, or root). The signed record is exactly
+
+  `{"device_id", "review_id", "decision", "seen", "ts", "nonce"}`
+
+  and nothing else: no `request_id`, no `reply`. `decision` is `"approve"` or `"deny"` (the command's
+  own verbs, not `DECIDE`'s `approve`/`decline`); `seen` is the `now` fingerprint the app displayed,
+  1-128 hex characters. The signed bytes are `canonical(record)` (the same
+  `omarchy-kids-decision-v1\n` context). A `DECIDE` record can never verify as a `REVIEW` record or
+  the reverse: each has a required key the other forbids (`request_id` / `review_id`). The scope is
+  `decide`, taken from the root-owned registry, never the frame. Skew and the per-device nonce ledger
+  are the same, so one nonce cannot be spent once as a decision and once as a review. The refusals are
+  `verify_decision`'s, in the same order.
+
+- R-NOTIFY-12.4 **Apply.** After verification, authd (root) re-reads
+  `/var/lib/omarchy-kids/reviews/open/<review_id>.json` itself (`O_NOFOLLOW`, a root-owned regular
+  file, `state == "open"`) and takes `kid` and `id` from the file. Missing, or any failure, or a kid
+  or app id that does not match the review id's parts, is `no no-such-review` (the nonce stays
+  burned). A file whose `now` is not the record's `seen` is `no changed-again`, so the parent decides
+  the surface they looked at rather than one a later scan replaced. It then runs, with a 30-second
+  timeout and no shell, `omarchy-kids-review approve|deny <kid> <id> --apply`; a non-zero exit, a
+  timeout or a spawn failure is `no apply failed` (and a failed deny leaves the review open, the
+  command's own rule, so the app shows it still open).
+
+- R-NOTIFY-12.5 **Check.** Check is local and read-only, as before: on the box
+  `omarchy-kids-review show` and the panel; in the app, the row's `was` and `now` and nothing more.
+  There is no review-diff route, no frame and no decision behind Check.
+
+## 10. Appendix H, added
+
+```text
+GET  /v1/state                       -> {kids, requests, recent, reviews:[open add-on reviews]}
+POST /v1/reviews/<review-id>/decision {record:{device_id,review_id,decision,seen,ts,nonce}, signature}  scope decide
+```
+
+`/var/lib/omarchy-kids/reviews/open/<kid>.<sha256(app)[:16]>.json` (0640 root:omarchy-parents, the
+directory 0750 root:omarchy-parents): `{kid, id, was, now, detected_at, state:"open"}`, root-written
+by `omarchy-kids-review scan`, deleted by a successful approve or deny. The relay reads it; only root
+decides on it.

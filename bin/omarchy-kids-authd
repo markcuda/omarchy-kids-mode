@@ -9,6 +9,7 @@ A root, socket-activated oracle. Five request shapes, one per connection:
     BOOTSTRAP\n<password>\n           -> "ok" / "no"   (wizard bootstrap)
     GRANT <json-request>\n<password>\n -> "ok" / "no <reason>"
     DECIDE <json-frame>\n              -> "ok" / "no <reason>"  (a paired device, R-NOTIFY-4)
+    REVIEW <json-frame>\n              -> "ok" / "no <reason>"  (an add-on review, R-NOTIFY-12)
     PAIR <json-frame>\n                -> "ok" / "no <reason>"  (pair a device, R-NOTIFY-5)
 
 The second is the *only* way an "Ask a grown-up" request is ever granted
@@ -63,6 +64,11 @@ VERIFY_PREFIX = "VERIFY"
 # it, and only root verifies and applies it. The decision always needs the
 # "decide" scope; the scope is never taken from the (unsigned) frame.
 DECIDE_PREFIX = "DECIDE "
+# A paired device's signed add-on review decision (R-NOTIFY-12). One line:
+# REVIEW <json>\n, the same {record, signature} shape as DECIDE over a review
+# record. Only the relay account or root may send it; root verifies it, re-reads
+# the open review file, and only then runs the approve or deny as root.
+REVIEW_PREFIX = "REVIEW "
 # A parent pairs a device (R-NOTIFY-5). One line: PAIR <json>\n, where the json
 # is {id, name, platform, sign_pub, box_pub, proof}. Only the relay may send it;
 # root verifies the single-use pairing proof and registers the device.
@@ -72,6 +78,8 @@ RELAY_USER = "omarchy-kids-relay"
 DEFAULT_NONCE_LEDGER = "/var/lib/omarchy-kids/devices/nonces.json"
 DEFAULT_DEVICES_BIN = "/usr/bin/omarchy-kids-devices"
 DEFAULT_PAIRING_DIR = "/run/omarchy-kids/pairing"
+DEFAULT_REVIEWS_DIR = "/var/lib/omarchy-kids/reviews/open"
+DEFAULT_REVIEW_BIN = "/usr/bin/omarchy-kids-review"
 
 _LIBCRYPT = None
 
@@ -500,6 +508,56 @@ def handle_decide(header: str, conn: socket.socket, cfg) -> bytes:
     return b"ok\n"
 
 
+def handle_review(header: str, conn: socket.socket, cfg) -> bytes:
+    """A paired device's signed add-on review decision (R-NOTIFY-12).
+
+    Same presenter and verification as DECIDE, then root re-reads the open review
+    file itself and refuses unless the file's `now` is the fingerprint the app
+    signed it had seen. The command does the rest: approve stamps the baseline
+    and clears the review, deny hides the app and clears it only if the hide
+    worked.
+    """
+    if cfg.devices is None or cfg.ledger is None:
+        return b"no devices unavailable\n"
+    if not may_present_decide(peer_uid(conn), cfg.relay_uid):
+        return b"no not the relay\n"
+    try:
+        frame = json.loads(header[len(REVIEW_PREFIX) :])
+        record = frame["record"]
+        signature = frame["signature"]
+    except (ValueError, KeyError, TypeError):
+        return b"no malformed\n"
+    ok, reason = cfg.devices.verify_review_decision(
+        cfg.etc, cfg.ledger, record, signature, int(time.time()), "decide"
+    )
+    if not ok:
+        return b"no " + reason.encode("utf-8", "replace") + b"\n"
+    review_id = record["review_id"]
+    open_review, reason = cfg.devices.read_open_review(cfg.reviews_dir, review_id)
+    if open_review is None:
+        return b"no " + reason.encode("utf-8", "replace") + b"\n"
+    # The parent decides the surface they looked at: the app signs the `now` it
+    # showed, and a review a later scan replaced is refused rather than applied
+    # to a fingerprint the parent never saw.
+    if open_review.get("now") != record.get("seen"):
+        return b"no changed-again\n"
+    action = "approve" if record.get("decision") == "approve" else "deny"
+    argv = [
+        cfg.review_bin,
+        action,
+        str(open_review.get("kid", "")),
+        str(open_review.get("id", "")),
+        "--apply",
+    ]
+    try:
+        proc = subprocess.run(argv, capture_output=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return b"no apply failed\n"
+    if proc.returncode != 0:
+        return b"no apply failed\n"
+    return b"ok\n"
+
+
 def read_candidate_line(
     conn: socket.socket, buf: bytearray, max_line: int = MAX_LINE
 ) -> "tuple[bytes | None, bool]":
@@ -550,6 +608,9 @@ def handle_client(conn: socket.socket, cfg, limiter: RateLimiter, slot=None):
             elif header.startswith(DECIDE_PREFIX):
                 # One line: the signed decision carries its own signature.
                 reply = handle_decide(header, conn, cfg)
+            elif header.startswith(REVIEW_PREFIX):
+                # One line, like DECIDE: the signature is in the frame.
+                reply = handle_review(header, conn, cfg)
             elif header.startswith(PAIR_PREFIX):
                 # One line: the pairing proof carries its own secret.
                 reply = handle_pair(header, conn, cfg)
@@ -632,6 +693,16 @@ def parse_args(argv):
         help="Path to the device-decision nonce ledger (DECIDE: replay refusal)",
     )
     parser.add_argument(
+        "--reviews-dir",
+        default=DEFAULT_REVIEWS_DIR,
+        help="Path to the open add-on reviews (REVIEW: re-read before applying)",
+    )
+    parser.add_argument(
+        "--review-bin",
+        default=DEFAULT_REVIEW_BIN,
+        help="Path to omarchy-kids-review (REVIEW: approves or denies the review)",
+    )
+    parser.add_argument(
         "--relay-user",
         default=RELAY_USER,
         help="Account whose uid may present a DECIDE frame (the LAN relay; root may too)",
@@ -652,6 +723,8 @@ class Config:
         self.devices_bin = args.devices_bin
         self.pairing_dir = args.pairing_dir
         self.nonce_ledger = args.nonce_ledger
+        self.reviews_dir = args.reviews_dir
+        self.review_bin = args.review_bin
         # Filled in by main() for the DECIDE path; None means fail closed.
         self.devices = None
         self.ledger = None
@@ -668,8 +741,8 @@ def main(argv=None) -> int:
     cfg = Config(args)
     limiter = RateLimiter()
 
-    # The DECIDE path needs lib/devices.py and a shared nonce ledger. A missing
-    # module or ledger leaves cfg.devices None, so every DECIDE fails closed.
+    # The DECIDE and REVIEW paths need lib/devices.py and a shared nonce ledger. A
+    # missing module or ledger leaves cfg.devices None, so both fail closed.
     try:
         cfg.devices = load_devices_module(cfg.lib)
         cfg.ledger = cfg.devices.NonceLedger(cfg.nonce_ledger)

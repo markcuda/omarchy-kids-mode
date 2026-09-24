@@ -144,7 +144,7 @@ class Relay:
             ok, reason = self.authorized(method, path, headers, body)
             if not ok:
                 return await self.reply(writer, 403, {"error": reason})
-            state = self.relay.build_state(self.args.status, self.args.queue)
+            state = self.relay.build_state(self.args.status, self.args.queue, self.args.reviews)
             return await self.reply(writer, 200, state)
 
         if path == "/v1/events" and method == "GET":
@@ -213,6 +213,34 @@ class Relay:
                 return await self.reply(writer, 502, {"error": "authd unreachable"})
             return await self.reply(writer, 200 if reply == "ok" else 403, {"reply": reply})
 
+        if path.startswith("/v1/reviews/") and path.endswith("/decision") and method == "POST":
+            # R-NOTIFY-12: the same authentication as a request decision, then a
+            # REVIEW frame carried to authd, which verifies and applies it. The
+            # relay does not open the review file, compare fingerprints or read
+            # the device's scopes -- authd does all of that (R-NOTIFY-2).
+            ok, reason = self.authorized(method, path, headers, body)
+            if not ok:
+                return await self.reply(writer, 403, {"error": reason})
+            review_id = path[len("/v1/reviews/") : -len("/decision")]
+            if not self.relay.RE_REVIEW_ID.match(review_id):
+                return await self.reply(writer, 400, {"error": "malformed"})
+            try:
+                frame = json.loads(body)
+            except ValueError:
+                return await self.reply(writer, 400, {"error": "malformed"})
+            record = frame.get("record") if isinstance(frame, dict) else None
+            if (
+                not isinstance(record, dict)
+                or str(record.get("review_id", "")) != review_id
+                or "signature" not in frame
+            ):
+                return await self.reply(writer, 400, {"error": "malformed"})
+            loop = asyncio.get_running_loop()
+            reply = await loop.run_in_executor(None, self.relay.forward_review, self.args.auth_sock, body)
+            if reply is None:
+                return await self.reply(writer, 502, {"error": "authd unreachable"})
+            return await self.reply(writer, 200 if reply == "ok" else 403, {"reply": reply})
+
         return await self.reply(writer, 404, {"error": "not found"})
 
     async def serve_events(self, writer):
@@ -229,7 +257,7 @@ class Relay:
         last = None
         last_beat = time.monotonic()
         while True:
-            state = self.relay.build_state(self.args.status, self.args.queue)
+            state = self.relay.build_state(self.args.status, self.args.queue, self.args.reviews)
             body = json.dumps(state, sort_keys=True)
             if body != last:
                 writer.write(f"event: state\ndata: {body}\n\n".encode("utf-8"))
@@ -300,6 +328,11 @@ def parse_args(argv):
     parser.add_argument("--devices-json", default="/run/omarchy-kids/devices.json")
     parser.add_argument("--status", default="/run/omarchy-kids/status.json")
     parser.add_argument("--queue", default="/var/lib/omarchy-kids/queue")
+    parser.add_argument(
+        "--reviews",
+        default="/var/lib/omarchy-kids/reviews/open",
+        help="Open add-on reviews (R-NOTIFY-12); the relay reads them, never decides",
+    )
     parser.add_argument("--auth-sock", default="/run/omarchy-kids/auth.sock")
     parser.add_argument("--nonce-ledger", default="/run/omarchy-kids/relay/nonces.json")
     parser.add_argument("--share", default="/usr/share/omarchy-kids")

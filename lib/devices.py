@@ -54,9 +54,18 @@ MAX_NONCE = 128
 
 RE_DEVICE_ID = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._-]{0,62}\Z")
 RE_REQUEST_ID = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\Z")
+# An add-on review's id: the kid, a dot, the first 16 hex of sha256(app id)
+# (bin/omarchy-kids-review's file name). The kid pattern matches valid_kid there.
+RE_REVIEW_ID = re.compile(r"\A[a-z_][a-z0-9_-]*\.[0-9a-f]{16}\Z")
+RE_SEEN = re.compile(r"\A[0-9a-fA-F]{1,128}\Z")
 DEVICE_FIELDS = ("id", "name", "platform", "sign_pub", "box_pub", "scopes")
 ALLOWED_KEYS = {"device_id", "request_id", "decision", "reply", "ts", "nonce"}
 DECISIONS = ("approve", "decline")
+# A review decision (R-NOTIFY-12): the same signer and rules, a different record.
+# `seen` is the surface fingerprint the app displayed (the review file's `now`);
+# authd refuses when the open review no longer carries it.
+ALLOWED_REVIEW_KEYS = {"device_id", "review_id", "decision", "seen", "ts", "nonce"}
+REVIEW_DECISIONS = ("approve", "deny")
 
 
 class LedgerError(Exception):
@@ -148,6 +157,67 @@ def valid_record(record):
     return True
 
 
+def valid_review_record(record):
+    """True only for the exact review-decision shape (R-NOTIFY-12)."""
+    if not isinstance(record, dict) or set(record) - ALLOWED_REVIEW_KEYS:
+        return False
+    if record.get("decision") not in REVIEW_DECISIONS:
+        return False
+    if not isinstance(record.get("device_id"), str) or not RE_DEVICE_ID.match(record["device_id"]):
+        return False
+    if not isinstance(record.get("review_id"), str) or not RE_REVIEW_ID.match(record["review_id"]):
+        return False
+    seen = record.get("seen")
+    if not isinstance(seen, str) or not RE_SEEN.match(seen):
+        return False
+    nonce = record.get("nonce")
+    if not isinstance(nonce, str) or not nonce or len(nonce) > MAX_NONCE:
+        return False
+    ts = record.get("ts")
+    if not isinstance(ts, int) or isinstance(ts, bool):
+        return False
+    return True
+
+
+def review_id_for(kid, app_id):
+    """The review id: kid, a dot, the first 16 hex of sha256(app id).
+
+    The file name bin/omarchy-kids-review writes; authd checks the open file's
+    own kid and app id against it, so a decision names the review it saw.
+    """
+    return f"{kid}.{hashlib.sha256(app_id.encode('utf-8')).hexdigest()[:16]}"
+
+
+def read_open_review(reviews_dir, review_id):
+    """(record, reason): the open review file, or None and why.
+
+    The file is opened as a root-owned regular file (O_NOFOLLOW, never a planted
+    symlink) and must still be `state: "open"`, with a kid and app id that match
+    the review id's two parts. Every failure is the same reason: the caller is
+    either the relay account or root, and a specific reason would tell a paired
+    device which reviews exist.
+    """
+    kid, _, _digest = review_id.partition(".")
+    try:
+        text = _open_regular(os.path.join(reviews_dir, review_id + ".json"))
+    except (UnsafePath, OSError):
+        return None, "no-such-review"
+    if text is None:
+        return None, "no-such-review"
+    try:
+        record = json.loads(text)
+    except ValueError:
+        return None, "no-such-review"
+    if not isinstance(record, dict) or record.get("state") != "open":
+        return None, "no-such-review"
+    app_id = record.get("id")
+    if record.get("kid") != kid or not isinstance(app_id, str):
+        return None, "no-such-review"
+    if review_id_for(kid, app_id) != review_id:
+        return None, "no-such-review"
+    return record, "ok"
+
+
 class NonceLedger:
     """A seen-nonce set with a TTL, persisted to one root-owned file.
 
@@ -214,9 +284,24 @@ class NonceLedger:
 
 def verify_decision(etc_dir, ledger, record, signature_b64, now, scope="decide"):
     """(ok, reason). Fail closed: any doubt is a refusal."""
+    return _verify_signed(etc_dir, ledger, record, signature_b64, now, scope, valid_record)
+
+
+def verify_review_decision(etc_dir, ledger, record, signature_b64, now, scope="decide"):
+    """A review decision (R-NOTIFY-12): the same signer, order and nonce rules as
+    a request decision, over the review record shape instead."""
+    return _verify_signed(etc_dir, ledger, record, signature_b64, now, scope, valid_review_record)
+
+
+def _verify_signed(etc_dir, ledger, record, signature_b64, now, scope, valid):
+    """The shared checks: shape, scope from the registry, skew, signature, nonce.
+
+    Fail closed, and in this order: nothing here touches the ledger until the
+    signature is good, so an unauthenticated guess cannot burn a real nonce.
+    """
     if not HAVE_CRYPTO:
         return False, "crypto-unavailable"
-    if not valid_record(record):
+    if not valid(record):
         return False, "malformed"
     device = load_device(etc_dir, record["device_id"])
     if device is None:

@@ -1,11 +1,11 @@
 """lib/relay.py -- the LAN relay's non-network core (R-NOTIFY-1/2).
 
-`build_state` makes the /v1/state document from the root-written status.json and
-the queue; `forward_decide` hands a signed decision frame to authd's DECIDE
-socket and returns its one-line reply; `is_needed` and `needs_stopping` decide
-what counts as Kids Mode being in use and when the relay may stop. The relay
-never decides (R-NOTIFY-2): it reads the parent-readable sources and forwards to
-root, nothing more.
+`build_state` makes the /v1/state document from the root-written status.json, the
+queue and the open add-on reviews; `forward_decide` and `forward_review` hand a
+signed frame to authd's socket and return its one-line reply; `is_needed` and
+`needs_stopping` decide what counts as Kids Mode being in use and when the relay
+may stop. The relay never decides (R-NOTIFY-2): it reads the parent-readable
+sources and forwards to root, nothing more.
 
 Stdlib only -- verification and the decision are root's, in lib/devices.py and
 lib/ask.py. The relay is not a lock; it may stop at any time without weakening a
@@ -13,13 +13,22 @@ fence.
 """
 
 import glob
+import hashlib
 import json
 import os
+import re
 import socket
 import time
 
 QUEUE_SUFFIX = ".json"
 RECENT_SECONDS = 24 * 3600
+# The open add-on reviews (R-NOTIFY-12): one root-written file per review, named
+# <kid>.<16 hex of sha256(app id)>.json. The relay reads them (group
+# omarchy-parents) and may not decide on them.
+REVIEW_SUFFIX = ".json"
+RE_REVIEW_NAME = re.compile(r"\A(?P<kid>[a-z_][a-z0-9_-]*)\.(?P<digest>[0-9a-f]{16})\Z")
+# The route's own shape check, before anything is forwarded (R-NOTIFY-12).
+RE_REVIEW_ID = re.compile(r"\A[a-z_][a-z0-9_-]*\.[0-9a-f]{16}\Z")
 
 
 def _read_json(path):
@@ -42,8 +51,50 @@ def _request_row(path, record):
     }
 
 
-def build_state(status_path, queue_dir, now=None):
-    """The /v1/state document (Appendix H): kids, open requests, recent decisions.
+def _review_row(name, record):
+    return {
+        "id": name,
+        "kid": record.get("kid", ""),
+        "app": record.get("id", ""),
+        "was": record.get("was", ""),
+        "now": record.get("now", ""),
+        "detected_at": record.get("detected_at"),
+    }
+
+
+def _open_reviews(reviews_dir):
+    """The open reviews, in file-name order (R-NOTIFY-12).
+
+    Best-effort, like the queue: a missing directory is empty. A file whose name
+    is not <kid>.<16 hex>.json, whose record is not an object, whose state is not
+    "open", or whose own kid/app id do not match the name is skipped -- the state
+    may not describe a review that is not there. No row carries a token, a path
+    or a desktop-file body.
+    """
+    rows = []
+    if not reviews_dir:
+        return rows
+    for path in sorted(glob.glob(os.path.join(reviews_dir, "*" + REVIEW_SUFFIX))):
+        name = os.path.basename(path)[: -len(REVIEW_SUFFIX)]
+        match = RE_REVIEW_NAME.match(name)
+        if match is None:
+            continue
+        record = _read_json(path)
+        if record is None or record.get("state") != "open":
+            continue
+        app_id = record.get("id")
+        if record.get("kid") != match.group("kid") or not isinstance(app_id, str):
+            continue
+        digest = hashlib.sha256(app_id.encode("utf-8")).hexdigest()[:16]
+        if digest != match.group("digest"):
+            continue
+        rows.append(_review_row(name, record))
+    return rows
+
+
+def build_state(status_path, queue_dir, reviews_dir=None, now=None):
+    """The /v1/state document (Appendix H): kids, open requests, recent decisions,
+    open add-on reviews.
 
     Best-effort: a missing source is an empty list.
     """
@@ -72,6 +123,7 @@ def build_state(status_path, queue_dir, now=None):
         "kids": kids,
         "requests": requests,
         "recent": recent,
+        "reviews": _open_reviews(reviews_dir),
     }
 
 
@@ -98,6 +150,15 @@ def forward_decide(auth_sock, frame_json, timeout=30.0):
     authd verifies the frame itself, so the relay only carries it.
     """
     return _forward(auth_sock, b"DECIDE ", frame_json, timeout)
+
+
+def forward_review(auth_sock, frame_json, timeout=30.0):
+    """Send `REVIEW <json>\n` to authd and return its reply line.
+
+    R-NOTIFY-12: the frame is the app's signed review decision. As with DECIDE,
+    authd verifies and applies it; the relay only carries it.
+    """
+    return _forward(auth_sock, b"REVIEW ", frame_json, timeout)
 
 
 def forward_pair(auth_sock, frame_json, timeout=30.0):

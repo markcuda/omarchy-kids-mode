@@ -154,12 +154,17 @@ parses the request, runs it through `lib/ask.py`'s `validate_grant` (loaded by p
 the request's `kid`, confirms that kid has a profile under `--etc`, and only then spends a
 `crypt(3)` on the password. Everything that can be refused without the password is refused
 first. On success it runs `<--ask-bin> apply-grant --kid ... --apply` with a fixed argv list, so
-the "do the thing" code has exactly one home. The fourth is `DECIDE <json-frame>\n`, a paired
+the "do the thing" code has exactly one home. The fourth is `REVIEW <json-frame>\n` (R-NOTIFY-12),
+the same shape as `DECIDE` over a review record: the relay account or root may present it, the
+device's signature is verified against the registry with the `decide` scope, and root then re-reads
+the open review file, refuses `no changed-again` unless the file's `now` is the fingerprint the app
+signed it had seen, and runs `omarchy-kids-review approve|deny <kid> <id> --apply`. The fifth is
+`DECIDE <json-frame>\n`, a paired
 device's signed decision (R-NOTIFY-4): only the relay account (`--relay-user`) or root may send it (the away courier runs as root and
 carries the app's signed decision; both only carry it, root verifies here),
 `lib/devices.py` verifies the Ed25519 signature, skew, nonce and the fixed `decide` scope as root,
 and on success root runs `<--ask-bin> approve|decline <id> --by device:<id> --apply`, which refuses
-an already-decided record. The fifth is `PAIR <json-frame>\n` (R-NOTIFY-5): again only the relay may
+an already-decided record. The next is `PAIR <json-frame>\n` (R-NOTIFY-5): again only the relay may
 send it, `lib/devices.py` reads the single-use pairing record (`--pairing-dir`), checks the
 HMAC-SHA256 proof over the device's keys and name against the expiry, then registers the device
 through `<--devices-bin> add` and consumes the record -- and only then, so a failure to register

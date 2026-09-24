@@ -427,6 +427,16 @@ sys.stdout.write(s.recv(4096).decode(errors="replace").strip())
 PY
 }
 
+send_review() { # frame-file -> reply, trimmed
+  python3 - "$SOCK" "$1" <<'PY'
+import socket, sys
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); s.settimeout(5)
+s.connect(sys.argv[1])
+s.sendall(b"REVIEW " + open(sys.argv[2], "rb").read() + b"\n")
+sys.stdout.write(s.recv(4096).decode(errors="replace").strip())
+PY
+}
+
 # A record of every apply-grant the daemon asks for, so we can prove it
 # asked for none of the ones it should have refused.
 APPLIED="$TMP/applied.log"
@@ -443,6 +453,13 @@ printf '%s\n' "\$*" >> "$DEV_APPLIED"
 EOF
 chmod +x "$TMP/fake-devices"
 : >"$DEV_APPLIED"
+REVIEW_APPLIED="$TMP/review-applied.log"
+cat >"$TMP/fake-review" <<EOF
+#!/bin/bash
+printf '%s\n' "\$*" >> "$REVIEW_APPLIED"
+EOF
+chmod +x "$TMP/fake-review"
+: >"$REVIEW_APPLIED"
 
 start_daemon() {
   local parent="${1:-$PARENT}" relay="${2:-$(id -un)}"
@@ -452,6 +469,7 @@ start_daemon() {
   python3 "$AUTHD" --socket "$SOCK" --shadow "$SHADOW" --parent "$parent" \
     --etc "$ETC" --lib "$DIR/lib" --ask-bin "$TMP/fake-ask" \
     --devices-bin "$TMP/fake-devices" --pairing-dir "$TMP/pairing" \
+    --reviews-dir "$TMP/reviews/open" --review-bin "$TMP/fake-review" \
     --nonce-ledger "$TMP/nonces.json" --relay-user "$relay" &
   DAEMON_PID=$!
   for _ in $(seq 1 50); do
@@ -539,6 +557,190 @@ PY
   fi
   start_daemon "$PARENT" "no-such-relay-account"
   check "$(send_decide "$TMP/decide-frame.json")" "no not the relay" "DECIDE: an unresolved relay account is refused"
+
+  # ---- REVIEW: a device's signed add-on review decision (R-NOTIFY-12) ----
+  python3 - "$DIR/lib/devices.py" "$ETC" "$TMP" <<'PY'
+import base64, importlib.util, json, os, sys, time
+devices_py, etc, tmp = sys.argv[1], sys.argv[2], sys.argv[3]
+spec = importlib.util.spec_from_file_location("kids_devices", devices_py)
+devices = importlib.util.module_from_spec(spec); spec.loader.exec_module(devices)
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+def device(name, dev_id, scopes):
+    key = Ed25519PrivateKey.generate()
+    pub = base64.b64encode(key.public_key().public_bytes_raw()).decode()
+    with open(os.path.join(etc, "devices", name + ".conf"), "w") as f:
+        f.write(f"id={dev_id}\nname=Phone\nplatform=android\nsign_pub={pub}\nbox_pub={pub}\nscopes={scopes}\n")
+    return key
+
+# d2 may decide; d3 may not (the scope comes from the registry, never the frame).
+decision_key = device("d2", "d2", "decide,act")
+nodecide_key = device("d3", "d3", "act")
+app_id = "org.mozilla.firefox"
+rid = devices.review_id_for("kid-ada", app_id)
+gone = devices.review_id_for("kid-ada", "com.example.gone")
+seen = "ab" * 32
+now = int(time.time())
+
+def write_review(review_id, now_fp):
+    os.makedirs(os.path.join(tmp, "reviews", "open"), exist_ok=True)
+    with open(os.path.join(tmp, "reviews", "open", review_id + ".json"), "w") as f:
+        json.dump({"kid": "kid-ada", "id": app_id, "was": "aa" * 32, "now": now_fp,
+                   "detected_at": now, "state": "open"}, f)
+
+def frame(key, dev_id, review_id, decision, seen_fp, nonce):
+    rec = {"device_id": dev_id, "review_id": review_id, "decision": decision,
+           "seen": seen_fp, "ts": int(time.time()), "nonce": nonce}
+    sig = base64.b64encode(key.sign(devices.canonical(rec))).decode()
+    return {"record": rec, "signature": sig}
+
+write_review(rid, seen)  # the review the parent looked at, still at `seen`
+frames = {
+    "review-approve.json": frame(decision_key, "d2", rid, "approve", seen, "r1"),
+    "review-deny.json": frame(decision_key, "d2", rid, "deny", seen, "r2"),
+    "review-changed.json": frame(decision_key, "d2", rid, "approve", "cd" * 32, "r3"),
+    "review-gone.json": frame(decision_key, "d2", gone, "approve", seen, "r4"),
+    "review-scope.json": frame(nodecide_key, "d3", rid, "approve", seen, "r5"),
+    # A request decision's record: the wrong shape, so it can never ride REVIEW.
+    "review-malformed.json": {"record": {"device_id": "d2", "request_id": "req-1",
+                                          "decision": "approve", "ts": int(time.time()),
+                                          "nonce": "r6"}, "signature": "AA=="},
+}
+for name, obj in frames.items():
+    with open(os.path.join(tmp, name), "w") as f:
+        json.dump(obj, f, separators=(",", ":"))
+PY
+  # The open-review file rules are pure and platform-free: check them here, so
+  # they are covered wherever the suite runs, not only where SO_PEERCRED is.
+  if python3 - "$DIR/lib/devices.py" "$TMP/reviews" <<'PY'
+import importlib.util, json, os, sys
+devices_py, reviews = sys.argv[1], sys.argv[2]
+spec = importlib.util.spec_from_file_location("kids_devices", devices_py)
+d = importlib.util.module_from_spec(spec); spec.loader.exec_module(d)
+open_dir = os.path.join(reviews, "open")
+rid = d.review_id_for("kid-ada", "org.mozilla.firefox")
+fails = []
+
+def want(ok, what):
+    if not ok:
+        fails.append(what)
+
+record, reason = d.read_open_review(open_dir, rid)
+want(record is not None and reason == "ok", "an open review reads")
+want(d.read_open_review(open_dir, d.review_id_for("kid-ada", "com.example.gone")) == (None, "no-such-review"),
+     "a review that is not there is refused")
+want(d.read_open_review(open_dir, "../../etc/shadow") == (None, "no-such-review"),
+     "a path-like review id is refused")
+closed_id = "kid-ada." + "0" * 16
+with open(os.path.join(open_dir, closed_id + ".json"), "w") as f:
+    json.dump({"kid": "kid-ada", "id": "x", "now": "aa", "state": "closed"}, f)
+want(d.read_open_review(open_dir, closed_id)[1] == "no-such-review", "a closed review is refused")
+mismatch_id = "kid-ada." + "1" * 16
+with open(os.path.join(open_dir, mismatch_id + ".json"), "w") as f:
+    json.dump({"kid": "kid-ada", "id": "com.example.other", "now": "aa", "state": "open"}, f)
+want(d.read_open_review(open_dir, mismatch_id)[1] == "no-such-review",
+     "a file whose app id does not match the review id is refused")
+link_id = "kid-ada." + "2" * 16
+os.symlink(os.path.join(open_dir, rid + ".json"), os.path.join(open_dir, link_id + ".json"))
+want(d.read_open_review(open_dir, link_id)[1] == "no-such-review", "a symlinked review is refused")
+print("; ".join(fails))
+sys.exit(1 if fails else 0)
+PY
+  then
+    ok "REVIEW: the open-review file rules hold (open, missing, path-like, closed, mismatch, symlink)"
+  else
+    bad "REVIEW: the open-review file rules failed"
+  fi
+  # The handler called directly, with the peer check patched to root, so the
+  # verify-and-apply path is covered where SO_PEERCRED is not (this dev box).
+  if python3 - "$AUTHD" "$DIR/lib/devices.py" "$ETC" "$TMP" <<'PY'
+import importlib.machinery, importlib.util, json, os, sys
+authd_path, devices_py, etc, tmp = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+loader = importlib.machinery.SourceFileLoader("kids_authd", authd_path)
+spec = importlib.util.spec_from_loader("kids_authd", loader)
+authd = importlib.util.module_from_spec(spec); loader.exec_module(authd)
+spec2 = importlib.util.spec_from_file_location("kids_devices", devices_py)
+devices = importlib.util.module_from_spec(spec2); spec2.loader.exec_module(devices)
+
+
+class Cfg:
+    pass
+
+
+cfg = Cfg()
+cfg.devices = devices
+cfg.ledger = devices.NonceLedger(os.path.join(tmp, "direct-nonces.json"))
+cfg.etc = etc
+cfg.reviews_dir = os.path.join(tmp, "reviews", "open")
+cfg.review_bin = os.path.join(tmp, "fake-review")
+cfg.relay_uid = None
+# The fake review bin appends its argv to this file (see $REVIEW_APPLIED above).
+applied = os.path.join(tmp, "review-applied.log")
+open(applied, "w").close()
+authd.peer_uid = lambda conn: 0  # root may present a REVIEW
+
+fails = []
+
+
+def want(got, want_value, what):
+    if got != want_value:
+        fails.append(f"{what}: want {want_value!r}, got {got!r}")
+
+
+def send(name):
+    with open(os.path.join(tmp, name)) as f:
+        frame = json.load(f)
+    line = "REVIEW " + json.dumps(frame, separators=(",", ":"))
+    return authd.handle_review(line, None, cfg).decode().strip()
+
+
+want(send("review-approve.json"), "ok", "an approve frame applies")
+want("approve kid-ada org.mozilla.firefox --apply" in open(applied).read(), True,
+     "the review command ran with the file's own kid and id")
+want(send("review-approve.json"), "no replayed-nonce", "the same frame twice is a replay")
+want(send("review-deny.json"), "ok", "a deny frame applies")
+want("deny kid-ada org.mozilla.firefox --apply" in open(applied).read(), True, "the deny verb ran")
+want(send("review-changed.json"), "no changed-again",
+     "a fingerprint the app did not sign is refused")
+want(send("review-gone.json"), "no no-such-review", "a review that is not open is refused")
+want(send("review-scope.json"), "no scope-missing", "a device without the decide scope is refused")
+want(send("review-malformed.json"), "no malformed", "a request record cannot ride REVIEW")
+print("; ".join(fails))
+sys.exit(1 if fails else 0)
+PY
+  then
+    ok "REVIEW: the handler applies, replays and refuses as specified (direct call)"
+  else
+    bad "REVIEW: the direct handler checks failed"
+  fi
+  start_daemon
+  : >"$REVIEW_APPLIED"
+  r="$(send_review "$TMP/review-approve.json")"
+  if [[ "$(uname -s)" == "Linux" ]]; then
+    check "$r" "ok" "REVIEW: a device's signed review decision is applied"
+    grep -q 'approve kid-ada org.mozilla.firefox --apply' "$REVIEW_APPLIED" &&
+      ok "REVIEW: ran the review command with the review file's own kid and id" ||
+      bad "REVIEW: did not run the review command with the file's kid and id"
+    check "$(send_review "$TMP/review-approve.json")" "no replayed-nonce" \
+      "REVIEW: a replay is refused"
+    check "$(send_review "$TMP/review-deny.json")" "ok" "REVIEW: a deny is applied"
+    grep -q 'deny kid-ada org.mozilla.firefox --apply' "$REVIEW_APPLIED" &&
+      ok "REVIEW: ran the deny verb the command takes" ||
+      bad "REVIEW: did not run deny"
+    : >"$REVIEW_APPLIED"
+    check "$(send_review "$TMP/review-changed.json")" "no changed-again" \
+      "REVIEW: a review whose fingerprint moved since the app looked is refused"
+    check "$(wc -l <"$REVIEW_APPLIED" | tr -d ' ')" "0" \
+      "REVIEW: a changed-again applied nothing"
+    check "$(send_review "$TMP/review-gone.json")" "no no-such-review" \
+      "REVIEW: a decision for a review that is not open is refused"
+    check "$(send_review "$TMP/review-scope.json")" "no scope-missing" \
+      "REVIEW: a device without the decide scope is refused"
+    check "$(send_review "$TMP/review-malformed.json")" "no malformed" \
+      "REVIEW: a request-decision record cannot ride REVIEW"
+  else
+    check "$r" "no not the relay" "REVIEW: without SO_PEERCRED it fails closed"
+  fi
 
   # PAIR: a single-use proof registers a device (R-NOTIFY-5)
   python3 - "$DIR/lib/devices.py" "$TMP/pairing" "$TMP/pair-frame.json" <<'PY'

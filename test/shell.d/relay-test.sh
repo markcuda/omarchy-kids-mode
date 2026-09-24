@@ -51,6 +51,38 @@ check(state["requests"][0]["minutes"] == 15, "build_state carries the request fi
 empty = relay.build_state(os.path.join(tmp, "nope.json"), os.path.join(tmp, "nope"))
 check(empty["kids"] == [] and empty["requests"] == [], "build_state is empty when the sources are missing")
 
+# --- build_state: open add-on reviews (R-NOTIFY-12) -------------------------
+import hashlib
+reviews = os.path.join(tmp, "reviews", "open")
+os.makedirs(reviews, exist_ok=True)
+app_id = "org.mozilla.firefox"
+rid = "kid-ada." + hashlib.sha256(app_id.encode()).hexdigest()[:16]
+with open(os.path.join(reviews, rid + ".json"), "w") as f:
+    json.dump({"kid": "kid-ada", "id": app_id, "was": "aa" * 32, "now": "bb" * 32,
+               "detected_at": 7, "state": "open"}, f)
+# skipped: closed, a digest that does not match the app id, junk, a stray name
+with open(os.path.join(reviews, "kid-ada." + "0" * 16 + ".json"), "w") as f:
+    json.dump({"kid": "kid-ada", "id": "com.example.x", "state": "closed"}, f)
+with open(os.path.join(reviews, "kid-ada." + "1" * 16 + ".json"), "w") as f:
+    json.dump({"kid": "kid-ada", "id": app_id, "state": "open"}, f)
+with open(os.path.join(reviews, "kid-ada." + "2" * 16 + ".json"), "w") as f:
+    f.write("{not json")
+with open(os.path.join(reviews, "not-a-review.json"), "w") as f:
+    json.dump({"kid": "kid-ada", "id": app_id, "state": "open"}, f)
+
+state = relay.build_state(status, queue, reviews)
+check(len(state["reviews"]) == 1 and state["reviews"][0]["id"] == rid,
+      "build_state lists only the open review, with its review id")
+check(state["reviews"][0]["app"] == app_id and state["reviews"][0]["kid"] == "kid-ada",
+      "build_state carries the review's kid and app id")
+check(state["reviews"][0]["was"] == "aa" * 32 and state["reviews"][0]["now"] == "bb" * 32,
+      "build_state carries the fingerprints the app shows")
+check(state["reviews"][0]["detected_at"] == 7, "build_state carries when the change was detected")
+check(relay.build_state(status, queue)["reviews"] == [],
+      "no reviews dir argument means no reviews, not an error")
+check(relay.build_state(status, queue, os.path.join(tmp, "nope"))["reviews"] == [],
+      "a missing reviews dir is empty, never an error")
+
 # --- forward_decide --------------------------------------------------------
 sock_path = os.path.join(tmp, "auth.sock")
 seen = []
@@ -76,7 +108,7 @@ def fake_authd(reply, ready):
 def exchange(prefix, payload, reply_bytes):
     """One stub round-trip, retried: a starved parallel run had surfaced as a
     one-off failure here (0/20 alone), so the check is the exchange, not luck."""
-    fn = relay.forward_pair if prefix == "PAIR" else relay.forward_decide
+    fn = {"PAIR": relay.forward_pair, "REVIEW": relay.forward_review}.get(prefix, relay.forward_decide)
     for _ in range(3):
         try:
             os.unlink(sock_path)
@@ -107,6 +139,14 @@ check(reply == "no replayed-nonce", "forward_decide passes a refusal back verbat
 reply = exchange("PAIR", '{"id":"d2","proof":"p"}', b"ok\n")
 check(reply == "ok", "forward_pair returns authd's reply")
 check(seen and seen[-1].startswith("PAIR "), "forward_pair sends the PAIR frame")
+
+# --- forward_review: a review decision is carried to authd ------------------
+reply = exchange("REVIEW", '{"record":{"review_id":"kid-ada." + "a" * 16},"signature":"x"}', b"ok\n")
+check(reply == "ok", "forward_review returns authd's reply")
+check(seen and seen[-1].startswith("REVIEW "), "forward_review sends the REVIEW frame")
+
+reply = exchange("REVIEW", '{"record":{}}', b"no changed-again\n")
+check(reply == "no changed-again", "forward_review passes a refusal back verbatim")
 
 check(relay.forward_decide(os.path.join(tmp, "none.sock"), "{}") is None,
       "forward_decide is None when authd is unreachable")
