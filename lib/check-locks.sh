@@ -27,7 +27,7 @@ relay_fence_ok() {
     [[ "$fragment" == "$unit" ]] || return 1
     allow="$(systemctl show "$RELAY_UNIT_NAME" -p IPAddressAllow --value 2>/dev/null || true)"
     deny="$(systemctl show "$RELAY_UNIT_NAME" -p IPAddressDeny --value 2>/dev/null || true)"
-    [[ "$deny" == "any" ]] || return 1
+    deny_is_any "$deny" || return 1
     want="$(systemd_addr_expand "$RELAY_LAN_ALLOW")"
     # The CGNAT range only if the parent's away drop-in is there (N-10).
     [[ -f "$(relay_away_file)" ]] && want="$want $RELAY_CGNAT"
@@ -53,6 +53,12 @@ systemd_addr_expand() {
     esac
   done
   printf '%s\n' "$out"
+}
+
+# deny_is_any VALUE — true when systemd's deny is "any": the keyword itself, or
+# the two catch-all prefixes systemd expands it to and `systemctl show` prints.
+deny_is_any() {
+  [[ "$1" == "any" ]] || [[ "$(addr_set "$1")" == "$(addr_set '0.0.0.0/0 ::/0')" ]]
 }
 
 # addr_reduce TOKENS — drop a prefix another prefix on the same side covers, for

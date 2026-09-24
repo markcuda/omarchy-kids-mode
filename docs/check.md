@@ -74,7 +74,7 @@ fence lives in the package's own unit file, and assert never rewrites a packaged
 verify-only — the unit file is present, root-owned, with exactly the packaged allow line and
 `IPAddressDeny=any` in its `[Service]` section, and, live and without `--root`,
 `systemctl show … -p FragmentPath` names that same file (a full override in `/etc/systemd/system`
-shadows it and fails), the effective deny is `any`, and the effective allow set — over systemd's own
+shadows it and fails), the effective deny is `any` (systemd reports it as the two catch-all prefixes `0.0.0.0/0 ::/0`, which is accepted), and the effective allow set — over systemd's own
 expansion of `localhost`/`link-local`/`multicast`, compared as a set — is exactly the packaged list
 plus the CGNAT range if and only if the parent's `away.conf` is there. Absent unit (the package is
 not installed) is a WARN. A FAIL means "reinstall `omarchy-kids` and remove any drop-in you did not

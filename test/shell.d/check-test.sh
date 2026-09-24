@@ -500,6 +500,15 @@ reduce_out="$(
   printf '%s\n' "$(addr_reduce 'fe80::/10 fe80::/64 ::1/128')"
 )"
 check_eq "$reduce_out" "::1/128 fe80::/10" "addr_reduce drops the covered fe80::/64"
+deny_any="$(
+  cd "$ROOT_DIR/lib" || exit 1
+  source conf.sh
+  source posture.sh
+  source kids.sh
+  source check-locks.sh
+  deny_is_any any && deny_is_any '0.0.0.0/0 ::/0' && ! deny_is_any '10.0.0.0/8' && echo yes
+)"
+check_eq "$deny_any" "yes" "deny_is_any accepts the keyword and systemd's expansion, and nothing else"
 
 # --- Boot JSON is selected only by the trusted machine mode -----------
 
