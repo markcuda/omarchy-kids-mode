@@ -94,9 +94,7 @@ wifi helper`.
 
 Bound to `Super+Shift+W` at every level. `picker` checks the profile itself before ever launching
 Quickshell: a `parent`-mode (or profile-less) kid gets a small toast (`share/time/toast.qml`,
-reused from the screen-time warnings, but with `OMARCHY_KIDS_TOAST_ICON` set to the Wi-Fi bars so
-the glyph matches the words rather than the time toast's clock) saying Wi-Fi needs a grown-up, and
-the command exits without
+reused from the screen-time warnings) saying Wi-Fi needs a grown-up, and the command exits without
 opening anything (I-6: the bind existing is not the same claim as the bind doing anything). A
 `helper`-mode kid gets the real picker: arrow keys through nearby networks (from `omarchy-kids-wifi
 list`), Enter to join (a password field appears first if the network needs one), Esc to back out
@@ -185,17 +183,23 @@ bash test/shell.d/wifi-test.sh
   `SO_PEERCRED` — this only runs on Linux at all (guarded in `main()`), and this repo was written
   without a Linux box with NetworkManager, systemd socket activation, or a kid account to test
   against.
-- `share/wifi/shell.qml`'s network-dependent parts: the overlay, its `omarchy-kids-wifi list`
-  Process and stdout read-back, the empty state, `Try again` and Esc were verified live 2026-09-22
-  (see the Verified-live note below), so they are no longer open; everything that needs a real
-  network -- the populated list's signal/security/`inUse` fields, the password step, and the join
-  outcome messages -- still has not run. Two pieces carry over from `share/exit-modal/shell.qml`,
-  verified live there 2026-09-02 (`PanelWindow` + `WlrLayershell.layer: WlrLayer.Overlay` +
+- `share/wifi/shell.qml` has now run against a real Quickshell (try-omarchy VM, 2026-09-21, the
+  file installed from the branch): the picker's layer surface loaded and rendered its empty state
+  over the desktop -- "Wi-Fi", "No networks found", the accent-bordered "Try again" button, "Enter
+  try again · Esc close" -- so the `PanelWindow`/layer shape and the `omarchy-kids-wifi list`
+  Process ran (returning an empty list). Still unverified: a **non-empty** list (the
+  `Process.stdout`/`SplitParser` line-reading path -- no other file in this repo reads a command's
+  stdout back), the join and password flows, Esc/close (no key was sent), and the `Super+Shift+W`
+  bind reaching the picker. Two pieces carry over from `share/exit-modal/shell.qml`, verified live
+  there 2026-09-02 (`PanelWindow` + `WlrLayershell.layer: WlrLayer.Overlay` +
   `WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive`; `Quickshell.Io.Process` with
   `stdinEnabled`/`write()`, flipping `stdinEnabled = false` rather than a `closeStdin()` call to
-  signal EOF). Also flagged, not fixed: `nmcli`'s terse (`-t`) output is `:`-delimited and escapes
-  a literal `:` inside a field with a backslash; the picker's naive `split(":")` does not unescape
-  that, so an SSID containing a colon parses wrong (rare in practice).
+  signal EOF). Also flagged, not fixed: `nmcli`'s terse (`-t`) output
+  is `:`-delimited and escapes a literal `:` inside a field with a backslash; the picker's naive
+  `split(":")` does not unescape that, so an SSID containing a colon parses wrong (rare in
+  practice).
+- The `Super+Shift+W` bind actually reaching Hyprland, and the picker actually hiding (Esc/close) —
+  its showing was seen on the VM (above).
 - `nmcli connection add type wifi con-name kids-<ssid> autoconnect no …` actually creating a *new*
   connection (not silently reusing/renaming an existing bare-named one) on a real NetworkManager,
   `wifi-sec.psk` actually authenticating, and `ipv4.ignore-auto-dns`/`ipv6.ignore-auto-dns` being
@@ -208,19 +212,8 @@ bash test/shell.d/wifi-test.sh
 default `wifi = parent`, `status` and `list` are refused with the kid-worded message (exit 3).
 With `wifi = helper`, `status` lists the connections through the root helper, `list` returns an
 empty OK, and `join TestNet` fails with NetworkManager's "No Wi-Fi device found", which is the
-VM telling the truth. The picker overlay, a real join with `ignore-auto-dns`, `forget`, and the
-captive-portal window need the laptop's wireless card.
-
-### The picker overlay, live (2026-09-22, same VM, still no wireless device)
-
-With `wifi = helper`, `Super+Shift+W` reached Hyprland and `omarchy-kids-wifi picker` opened
-`share/wifi/shell.qml` under a real Quickshell over the Level 2 tiled windows: the overlay drew
-with its dim background, the `omarchy-kids-wifi list` Process ran and its stdout was read back
-(empty), the "No networks found" empty state rendered with "Try again" focused and the footer
-"Enter try again · Esc close", Enter re-ran the list (still empty, no error), and Esc closed the
-process. So the layer/keyboard shape, the Process stdout read-back, and the empty/retry/close
-paths are confirmed; the populated network list, the password step and the join outcomes still
-need the laptop's wireless card. The profile was set back to `parent` afterwards.
+VM telling the truth. A real join with `ignore-auto-dns`, `forget`, and the captive-portal window
+need the laptop's wireless card (the picker overlay itself was seen on the VM, above).
 ## The daemon no longer echoes the Wi-Fi password (2026-09-03)
 
 `run_nmcli` raised `Failed(f"nmcli {' '.join(args)}: {exc}")` on an `OSError` or a timeout, and
