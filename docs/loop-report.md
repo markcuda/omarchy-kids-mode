@@ -1409,3 +1409,38 @@ files were hand-copied in the first place), and `pacman -U` of a fresh build the
 `conflicting files: /usr/lib/omarchy-kids/panel-machine.sh exists in filesystem` because the
 installed package predates files later hand-copied from branches. `docs/packaging.md`'s open item
 now records all of it, including that the `hyprland-configs` alarm is the check doing its job.
+### 2026-09-22, loop iteration: two sources for the garden, and the keys nothing reads
+
+Dogfooded the parent's data view this time: `omarchy-kids-data launches/sites/summary kid-ada` and
+the kid's own `mine`. The record matches the loop's actual activity to the minute (chromium at
+10:49, blinken at 09:52, gcompris three times around 08:00), and `sites` was empty only because the
+browser checks so far had used a scratch profile or hit the block page -- so the Web tile was driven
+to an allowlisted site, pbskids.org, which loaded normally and then appeared as `pbskids.org -- PBS
+KIDS` in `sites` and in `summary`'s top sites. The garden's positive path works, and the evidence
+trail is honest. (Two observations, neither a defect: Chromium shows its own "Install" affordance on
+such a page -- the installed app stays under the same policy and never reaches the kid's root-owned
+manifest; and `sites` prints one line per visit row, so a host with a redirect shows twice, which is
+what docs/data.md says it does.)
+
+Then the I-6 pass took the schema question one level deeper: not just "is every settable key
+documented" (it is, `docs/conf.md` and `share/config/schema.toml` agree on all 21) but "does
+anything read it". Most do -- and the sweep found the ones that don't and the reason a text-based
+test cannot be written for it: the two heavy consumers read keys through a *variable*
+(`lib/time.sh`'s `key=budget_min`, `lib/session-manifest.sh`'s `get "$account" "$key"`), so no grep
+can tell a read from a name in a string. The honest conclusion is stated in the branch: a test was
+drafted, found unsound for that reason, and dropped rather than shipped as false confidence.
+
+What the sweep did produce: the band's starter garden is written in two files with no generator
+between them, and they had drifted -- `share/packs/6-8.toml`'s `[garden].sites` listed three hosts
+while `share/policy/lists/6-8.txt`, which is what `omarchy-kids-web render` turns into the live
+URLAllowlist, allowed six (9-12: five against seven). The pack's own comment said those hosts "become
+the URLAllowlist", which was simply not true. Both packs are now aligned up to the live list (no
+site lost), the comment says which file the policy actually renders, and every `sites`-adjacent
+surface now says the key is stored and not applied: `docs/conf.md`'s row, and the wizard's editor
+prompt. A new test, `test/shell.d/garden-lists-test.sh`, compares the two lists per band so they
+cannot drift quietly again (it fails on a one-line difference; 3-5 stays empty and 13+ is excluded
+because SPEC R-WEB-3 says a filtered band adds no URL list, which its file says itself).
+
+`apps.show_missing` also surfaced: the union lost its only reader (the box runs
+`fix/show-missing-regression`, which restores it), so a missing app's tile is no longer omitted by
+default. That branch is at the gate; nothing here duplicates it.

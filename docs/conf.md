@@ -74,7 +74,7 @@ password survive a reset; everything else falls back to their band.
 | `menu` | `trimmed` `full` | band | per band (trimmed for bands 3-5, 6-8 and 9-12; full for 13+). Provisioning reads it: a trimmed kid gets the omarchy-menu user extension that hides install/remove/update/setup on a Level 3 desktop (`share/menu/omarchy-kids-trimmed.jsonc`, R-DESK-4). The wizard offers no row for it (`docs/wizard.md`) |
 | `theme` | id from the system themes dir (`$OMARCHY_PATH/themes`) | parent-theme — required | — (`omarchy-kids-provision add` sets it to the parent's current theme; `docs/theming.md`) |
 | `allowlist` | comma-separated launcher ids | band's pack | the full starter pack |
-| `sites` | comma-separated hosts | band's pack | the band's `[garden]` list |
+| `sites` | comma-separated hosts | band's pack | the band's `[garden]` list. **Stored, not applied yet:** the rendered Chromium policy's allowlist comes from `share/policy/lists/<band>.txt` plus sites a parent has approved (`allow.txt`), so editing this value changes nothing today; `test/shell.d/garden-lists-test.sh` keeps the pack's list and the policy's identical (owner decision item 7) |
 | `password` | `set` `none` | global | `set` |
 | `onboarded` | `yes` `no` | global | `no` |
 
