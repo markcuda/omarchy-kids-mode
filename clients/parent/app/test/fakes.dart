@@ -26,3 +26,14 @@ class FakeStore implements SecretStore {
     values.remove(key);
   }
 }
+
+/// A store that accepts writes, drops them, and reads back nothing -- the shape
+/// of a keystore that is present but not usable, which the probe must notice.
+class DroppingStore implements SecretStore {
+  @override
+  Future<String?> read(String key) async => null;
+  @override
+  Future<void> write(String key, String value) async {}
+  @override
+  Future<void> delete(String key) async {}
+}

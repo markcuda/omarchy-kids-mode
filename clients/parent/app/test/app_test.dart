@@ -355,6 +355,27 @@ void main() {
     expect(find.text('Pair with the computer'), findsNothing);
   });
 
+  testWidgets('a stored key the app cannot read is not a dead end: Reset clears it', (tester) async {
+    final store = FakeStore();
+    store.values[SecureKeystore.signKey] = base64.encode(List.filled(31, 1));
+    store.values[SecureKeystore.pairedKey] = jsonEncode({
+      'deviceId': 'dev-1',
+      'pin': 'ab' * 32,
+      'addresses': ['192.168.1.5'],
+    });
+    final keystore = SecureKeystore(store);
+    await pumpPairing(tester, connect: FakeConnect(), keystore: keystore);
+    expect(find.textContaining("Couldn't open the session"), findsOneWidget);
+    await tester.tap(find.text('Trouble? Reset this device'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reset'));
+    await tester.pumpAndSettle();
+    expect(await keystore.loadSignSeed(), isNull);
+    expect(await keystore.loadPaired(), isNull);
+    expect(find.text('Pair with the computer'), findsOneWidget);
+    expect(find.textContaining("Couldn't open the session"), findsNothing);
+  });
+
   testWidgets('Pair sends the proof to the address the code named, then shows the home screen', (tester) async {
     final connect = FakeConnect();
     await pumpPairing(tester, connect: connect);

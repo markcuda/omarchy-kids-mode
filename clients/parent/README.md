@@ -32,7 +32,12 @@ match); it asks first, and says the box keeps its own record until the parent re
 there. The pairing and the device's own keys are kept in the system keystore (`flutter_secure_storage`:
 Keychain, Android Keystore, Credential Manager, Secret Service) through a small `SecretStore` seam,
 so a later run opens on the requests without the code; where there is no usable keystore the app
-falls back to memory and the pairing screen says the pairing lasts only for the run. All of it is
+falls back to memory and the pairing screen says the pairing lasts only for the run. On Apple
+platforms the keychain policy is first-unlock, this-device-only, so the keys open for a background
+notification while the phone is locked but never ride a backup onto a second phone. A stored key the
+app can no longer read (restored from another device, say) is not a dead end: the pairing screen
+offers a reset that clears the device's keys and pairing, and says the computer keeps the old device
+until it is revoked there. All of it is
 widget-tested against a fake relay, a fake connection and a fake store. The device list, the
 platform notification plumbing and the store builds remain — there is nothing to install on a phone
 yet.

@@ -50,6 +50,13 @@ class SecureKeystore implements Keystore {
   @override
   Future<void> clearPaired() => _store.delete(pairedKey);
 
+  @override
+  Future<void> reset() async {
+    await _store.delete(signKey);
+    await _store.delete(boxKey);
+    await _store.delete(pairedKey);
+  }
+
   Future<List<int>?> _loadSeed(String key, String which) async {
     final stored = await _store.read(key);
     if (stored == null) return null;
@@ -79,29 +86,40 @@ class SecureKeystore implements Keystore {
 /// throws; [openKeystore] falls back and the pairing screen says the pairing will
 /// not survive a restart.
 class FlutterSecureStore implements SecretStore {
-  static const _options = AndroidOptions(encryptedSharedPreferences: true);
+  // Android: EncryptedSharedPreferences. Apple: readable after the first unlock
+  // (a background notification must be openable while the phone is locked) and
+  // **this device only**, so the keys never ride an encrypted backup onto a
+  // second phone -- two devices cannot share one identity the box cannot revoke
+  // one of. Apple's `synchronizable` stays false for the same reason.
+  static const _android = AndroidOptions(encryptedSharedPreferences: true);
+  static const _apple = KeychainAccessibility.first_unlock_this_device;
+  static const _ios = IOSOptions(accessibility: _apple);
+  static const _macos = MacOsOptions(accessibility: _apple);
+
   final FlutterSecureStorage _storage;
   FlutterSecureStore([FlutterSecureStorage? storage])
       : _storage = storage ?? const FlutterSecureStorage();
 
   @override
-  Future<String?> read(String key) => _storage.read(key: key, aOptions: _options);
+  Future<String?> read(String key) =>
+      _storage.read(key: key, aOptions: _android, iOptions: _ios, mOptions: _macos);
 
   @override
-  Future<void> write(String key, String value) =>
-      _storage.write(key: key, value: value, aOptions: _options);
+  Future<void> write(String key, String value) => _storage.write(
+      key: key, value: value, aOptions: _android, iOptions: _ios, mOptions: _macos);
 
   @override
-  Future<void> delete(String key) => _storage.delete(key: key, aOptions: _options);
+  Future<void> delete(String key) =>
+      _storage.delete(key: key, aOptions: _android, iOptions: _ios, mOptions: _macos);
 }
 
 /// The device's keystore for this run: the OS store when it can keep a value,
 /// an in-memory one when it cannot. Returns the keystore and, when it fell back,
 /// the note the pairing screen shows.
-Future<({Keystore keystore, String? note})> openKeystore() async {
+Future<({Keystore keystore, String? note})> openKeystore({SecretStore Function()? makeStore}) async {
   const probe = 'device.probe';
   try {
-    final store = FlutterSecureStore();
+    final store = (makeStore ?? FlutterSecureStore.new)();
     await store.write(probe, 'ok');
     final read = await store.read(probe);
     await store.delete(probe);

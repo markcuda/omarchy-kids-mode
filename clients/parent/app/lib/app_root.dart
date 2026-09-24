@@ -31,8 +31,8 @@ class AppRoot extends StatefulWidget {
   final String name;
   final String platform;
 
-  /// An honest note about where the pairing is kept, for a build whose keystore
-  /// does not persist yet (the platform keystore is still to come).
+  /// An honest note about where the pairing is kept, for a build that fell back
+  /// to memory because the system keystore was not usable.
   final String? storageNote;
 
   const AppRoot({
@@ -114,6 +114,15 @@ class _AppRootState extends State<AppRoot> {
     await _boot();
   }
 
+  /// The escape from a stored key the app can no longer read: clear the seeds and
+  /// the pairing, so this device pairs again as a new one.
+  Future<void> _resetKeys() async {
+    await widget.keystore.reset();
+    if (!mounted) return;
+    setState(() => _session = null);
+    await _boot();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -128,6 +137,9 @@ class _AppRootState extends State<AppRoot> {
       platform: widget.platform,
       storageNote: widget.storageNote,
       bootError: _error,
+      // A boot error is a stored-key error (the network is only touched later),
+      // so offer the way out from here as well as from the requests screen.
+      onResetKeys: _error == null ? null : _resetKeys,
       onPaired: (_) => _boot(),
     );
   }

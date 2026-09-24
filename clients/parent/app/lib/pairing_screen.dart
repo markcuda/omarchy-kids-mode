@@ -17,6 +17,10 @@ class PairingScreen extends StatefulWidget {
   final String platform;
   final String? storageNote;
   final String? bootError;
+
+  /// Offered only when boot failed: clear a stored key the app cannot read and
+  /// pair afresh. Null when there is nothing to recover from.
+  final Future<void> Function()? onResetKeys;
   final void Function(PairingResult) onPaired;
 
   const PairingScreen({
@@ -28,6 +32,7 @@ class PairingScreen extends StatefulWidget {
     required this.onPaired,
     this.storageNote,
     this.bootError,
+    this.onResetKeys,
   });
 
   @override
@@ -166,7 +171,45 @@ class _PairingScreenState extends State<PairingScreen> {
           const SizedBox(height: 16),
           Text(widget.storageNote!, style: Theme.of(context).textTheme.bodySmall),
         ],
+        if (widget.onResetKeys != null) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: _busy ? null : _confirmReset,
+              child: const Text('Trouble? Reset this device'),
+            ),
+          ),
+        ],
       ];
+
+  /// Ask, then clear this device's keys and pairing. The box keeps the old device
+  /// record until the parent revokes it there.
+  Future<void> _confirmReset() async {
+    final reset = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset this device?'),
+        content: const Text(
+          'This clears the keys this device made and its pairing. The computer keeps the old '
+          'device until you revoke it there, and this device will pair again as a new one.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Reset')),
+        ],
+      ),
+    );
+    if (reset == true) {
+      await widget.onResetKeys!();
+      if (mounted) {
+        setState(() {
+          _confirming = false;
+          _error = null;
+        });
+      }
+    }
+  }
 
   List<Widget> _confirm() {
     final pin = _pin!;
