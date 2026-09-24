@@ -1647,3 +1647,25 @@ longest two keep a distinguishable elision ("KTuber...", "SuperT..."), and "More
 "More a..." instead of "More ...". `test/shell.d/launcher-grid-test.sh` pins the derivation, that
 both labels use it, and that the fixed inset box is gone; reverting the QML fails all three
 assertions. Suite green.
+### 2026-09-22, loop iteration: a bad conf read, two opaque lines, and a fail-open edge
+
+Dogfooded the VM first and hit a live case: an earlier install of a bare `bin/omarchy-kids-conf`
+(before the PKGBUILD's `SCHEMA` sed) made the root ledger tick fail from 01:49 to 01:50 with
+`conf.py: no such file: /usr/share/config/schema.toml` and
+`/usr/lib/omarchy-kids/time.sh: line 81: 10#: invalid integer constant`. The second came from an
+empty lights-out reaching `time_minutes_since_midnight`'s base-10 arithmetic; the kid's session
+briefly showed Time's Up and then self-dismissed when the tick succeeded again after the conf was
+fixed (the grant file's mtime never changed -- no grant happened, the log's "more time granted"
+wording is the daemon's generic dismissal line). Fixed the diagnostics on
+`fix/time-read-diagnostics`: `time_conf` names a failed read, and
+`time_minutes_since_midnight` refuses a non-HH:MM value with a sentence (same pattern as
+`validate_lights_out`), both leaving every valid input and every enforcement decision untouched.
+`test/all` green (52 files, five skips), `shellcheck -x` clean; fable review nothing blocking, and
+its one behaviour-changing suggestion (a `[[ -z ]]` branch in `time_conf`, which would have turned
+an empty budget from fail-closed into a stale-state fail-open) was dropped.
+
+The review also confirmed the deeper gap: a persistently broken conf aborts the tick before it
+writes state, so the last published state stays in force and `time:timer` only proves the timer is
+active. That fail-open window is already on record as ticket W2
+(`docs/research/2026-09-19-per-app-limits-and-weekly-caps-proposal.md`) and is now written into
+`docs/time.md` too; it needs the owner's W2 decision, not a unilateral enforcement change.

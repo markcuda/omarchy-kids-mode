@@ -47,6 +47,14 @@ the skipped live checks "warnings". Every remaining item needs the owner or hard
 amendment, GCompris proposal, packaging, Level 2 verification, favorites/recents, W2's fail-open
 decision, Level 3 menu-trim on a real box). 27 topic branches await the owner's gate.
 
+**Fixed on a topic branch awaiting merge:** `fix/time-read-diagnostics` -- an unreadable budget or
+lights-out now fails the root ledger tick with a named message instead of bash's `10#` error (the
+tick still aborts, as before; no enforcement decision changes).
+
+**Waiting on the owner:** ticket W2 (`docs/research/2026-09-19-per-app-limits-and-weekly-caps-proposal.md`)
+-- a persistently broken conf leaves the time tick fail-open (last state stays in force; `time:timer`
+only proves the timer is active). `docs/time.md` now records it.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After
