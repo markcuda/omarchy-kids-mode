@@ -1962,3 +1962,25 @@ MERGE after the type guard. Live-verified from the branch on the VM with an inva
 `sites` exits 2 with one line (`data.py: could not read '...' as a Chromium History db: Could not
 decode to UTF-8 column 'title' ...`), no traceback, and the temp copy is removed; the fixture was
 cleaned up afterwards.
+
+### 2026-09-21, loop iteration: a grant silently truncated the kid's data screen (live)
+
+Dogfooded the parent panel live on the VM (main menu, kid screen, Data screen all render with real
+data), then read the Data screen's own output. Two bugs in `omarchy-kids-data`, both triggered by a
+kid who has ever been granted time (a `<day>.grant` sibling next to the `<day>` usage file):
+
+- `find_usage_days` returned its last loop iteration's status, and `.grant` sorts after its day, so
+  it returned 1; the caller's `earliest="$(find_usage_days ... | sort | head -1)"` then aborted the
+  command under `set -euo pipefail`. Live: `omarchy-kids-data mine` (the kid's own "what my
+  grown-ups can see" screen) printed only its intro and stopped before "Since:" -- the kid saw no
+  date and no last-day summary. Fixed on `fix/data-grants-in-summary` (`6b2ff21`, stacked on
+  `fix/data-corrupt-history-traceback`): the function now returns 0.
+- the summary budget line printed the base budget only, so with a grant it read "budget 60, 105
+  left" (impossible-looking). It now names the top-up, matching `omarchy-kids-time status`.
+
+`data-test.sh` writes a `.grant` fixture and asserts the budget wording; the existing `mine`
+assertions (Since date, last-day summary, minutes) now also catch the abort. Full Mac suite 52
+files green; fable review MERGE. Live-verified from the branch: `mine` now prints "Since:
+2026-09-21 / Your last day's summary (2026-09-21): minutes used: 338", and the summary line reads
+"budget 60 + 375 granted, 97 left". No other glob loop in `omarchy-kids-data`/`lib/data.sh` has the
+same last-iteration-status shape (the review checked each).
