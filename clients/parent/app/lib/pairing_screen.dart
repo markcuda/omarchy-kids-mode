@@ -18,8 +18,9 @@ class PairingScreen extends StatefulWidget {
   final String? storageNote;
   final String? bootError;
 
-  /// Offered only when boot failed: clear a stored key the app cannot read and
-  /// pair afresh. Null when there is nothing to recover from.
+  /// Clear a stored key the app cannot read and pair afresh. Always offered here:
+  /// a key the app cannot read is only found at boot or at a pairing, and both
+  /// land on this screen.
   final Future<void> Function()? onResetKeys;
   final void Function(PairingResult) onPaired;
 
