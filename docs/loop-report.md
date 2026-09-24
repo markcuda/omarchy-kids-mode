@@ -1944,6 +1944,21 @@ after the C0 hardening. Live-verified from the branch on the VM with a fixture H
 no-title row renders "(no title) (2 visits)" (not a shifted count) and an ESC title prints as
 plain text (`evil [2Ktitle`); the fixture was removed afterwards.
 
-Follow-up noted by the review, not on this branch: a title whose bytes are not valid UTF-8 makes
-`lib/data.py`'s `fetchall()` raise outside any handler, a traceback instead of the exit-2 one-liner
-the docstring promises (a loud error, not a silent or forged one).
+Follow-up from that pass, fixed here: a title whose bytes are not valid UTF-8 makes `lib/data.py`'s
+`fetchall()` raise outside any handler, a traceback instead of the exit-2 one-liner the docstring
+promises (a loud error, not a silent or forged one).
+
+### 2026-09-21, loop iteration: a malformed History is exit 2, not a traceback (live)
+
+Fixed that follow-up on `fix/data-corrupt-history-traceback` (`e199945`, stacked on
+`fix/data-browse-empty-title` -- same file and functions): `_fetch_rows` now catches the fetch
+error and validates each row's column types before use (a TEXT `last_visit_time`, a TEXT
+`visit_count` or a BLOB `url` were the same uncaught `TypeError`/`AttributeError`), dying with the
+docstring's one-line exit 2; a non-str `title` is coerced to empty; and `cmd_sites`/`cmd_summary`
+drop the temporary History copy before that exit. The fable review found the wrong-type
+paths in round one; the test builds an invalid-UTF-8 fixture and a wrong-typed column fixture for
+each of the three columns, asserting exit 2 with no traceback. Full Mac suite 52 files green; review
+MERGE after the type guard. Live-verified from the branch on the VM with an invalid-UTF-8 History:
+`sites` exits 2 with one line (`data.py: could not read '...' as a Chromium History db: Could not
+decode to UTF-8 column 'title' ...`), no traceback, and the temp copy is removed; the fixture was
+cleaned up afterwards.

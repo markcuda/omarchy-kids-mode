@@ -126,6 +126,7 @@ USAGE_DIR="$ROOT/var/lib/omarchy-kids/kid-ada/usage"
 # states a page controls) to pin the row parse and the control stripping.
 make_history() {
   local db="$1"
+  rm -f "$db" "$db-wal" "$db-shm"
   python3 - "$db" <<'PY'
 import sqlite3, sys, datetime
 db = sys.argv[1]
@@ -147,6 +148,47 @@ rows = [
 conn.executemany(
     "INSERT INTO urls (url, title, visit_count, last_visit_time) VALUES (?, ?, ?, ?)", rows
 )
+conn.commit()
+conn.close()
+PY
+}
+
+# make_corrupt_history PYFILE [KIND] — a History db a corrupt/foreign file
+# could produce. KIND utf8 (default) puts bytes in a title that are not
+# valid UTF-8; KIND types stores a non-integer last_visit_time. Either way a
+# read must be the documented exit 2 one-liner, never a Python traceback.
+make_corrupt_history() {
+  local db="$1" kind="${2:-utf8}"
+  rm -f "$db" "$db-wal" "$db-shm"
+  python3 - "$db" "$kind" <<'PY'
+import sqlite3, sys
+db, kind = sys.argv[1], sys.argv[2]
+conn = sqlite3.connect(db)
+conn.execute(
+    "CREATE TABLE urls (id INTEGER PRIMARY KEY, url TEXT, title TEXT, "
+    "visit_count INTEGER, last_visit_time INTEGER)"
+)
+if kind == "ts":
+    conn.execute(
+        "INSERT INTO urls (url, title, visit_count, last_visit_time) "
+        "VALUES ('https://bad.example/', 'Bad', 1, 'garbage')"
+    )
+elif kind == "count":
+    conn.execute(
+        "INSERT INTO urls (url, title, visit_count, last_visit_time) "
+        "VALUES ('https://bad.example/', 'Bad', 'many', 13300000000000000)"
+    )
+elif kind == "url":
+    # A BLOB, not an INTEGER: TEXT affinity would coerce an integer to text.
+    conn.execute(
+        "INSERT INTO urls (url, title, visit_count, last_visit_time) "
+        "VALUES (x'00ff', 'Bad', 1, 13300000000000000)"
+    )
+else:
+    conn.execute(
+        "INSERT INTO urls (url, title, visit_count, last_visit_time) "
+        "VALUES ('https://bad.example/', CAST(x'fffe' AS TEXT), 1, 13300000000000000)"
+    )
 conn.commit()
 conn.close()
 PY
@@ -291,6 +333,26 @@ check_contains "$out" "needs root" "sites: explains why it refused"
 out="$(KIDS_TEST_UID=0 "$DATA" sites kid-ada)"
 check_contains "$out" "wikipedia.org" "sites: root reads it too"
 
+# A corrupt History (invalid UTF-8 in a TEXT column) must be the documented
+# exit 2 one-liner, never a Python traceback.
+make_corrupt_history "$HISTORY"
+out="$(KIDS_TEST_ACCOUNT=kid-ada "$DATA" sites kid-ada 2>&1)"
+corrupt_status=$?
+check_status "$corrupt_status" 2 "sites: a malformed History db exits 2"
+check_contains "$out" "could not read" "sites: the malformed-db failure says why"
+check_not_contains "$out" "Traceback" "sites: the malformed-db failure is never a Python traceback"
+
+# A wrong-typed column (INTEGER affinity does not stop a TEXT value, etc.)
+# is the same "malformed database" promise, for each column the row uses.
+for kind in ts count url; do
+  make_corrupt_history "$HISTORY" "$kind"
+  out="$(KIDS_TEST_ACCOUNT=kid-ada "$DATA" sites kid-ada 2>&1)"
+  corrupt_type_status=$?
+  check_status "$corrupt_type_status" 2 "sites: a wrong-typed '$kind' column exits 2"
+  check_not_contains "$out" "Traceback" "sites: a wrong-typed '$kind' column is never a Python traceback"
+done
+make_history "$HISTORY" # restore the good fixture for the sections below
+
 echo
 
 # =========================================================================
@@ -339,6 +401,15 @@ check_contains "$out" "minutes used: 5" "summary: minutes still show with no pri
 out="$(OMARCHY_KIDS_NOW="2026-09-02 10:00:00" "$DATA" summary kid-ada)"
 check_contains "$out" "history_visible=no" "summary: history_visible=no explains itself, needs no root check at all"
 "$CONF" set kid-ada history_visible yes >/dev/null
+
+# summary's own top-sites read of a corrupt History must also be the exit 2
+# one-liner, not a traceback.
+make_corrupt_history "$HISTORY"
+out="$(KIDS_TEST_ACCOUNT=kid-ada OMARCHY_KIDS_NOW="2026-09-02 10:00:00" "$DATA" summary kid-ada 2>&1)"
+corrupt_summary_status=$?
+check_status "$corrupt_summary_status" 2 "summary: a malformed History db exits 2, not a traceback"
+check_not_contains "$out" "Traceback" "summary: the malformed-db failure is never a Python traceback"
+make_history "$HISTORY"
 
 echo
 
