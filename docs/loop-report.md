@@ -1705,3 +1705,18 @@ overlay (a grab at the ledger tick catches the desktop instead -- the daemon is 
 The branch card renders "Enter Ask a grown-up" centred under the Ask button and fits the console;
 evidence `timesup-keyhint-2026-09-22.png` in `.local/media/`. The autologin drop-in was removed
 after the pass and the owner's session is back on the console.
+### 2026-09-22, loop iteration: the toast icon belonged to another message
+
+Dogfooded the VM first: kid-ada at Level 2; pressed `Super+Shift+W` (the kid Wi-Fi bind) with the
+Wi-Fi setting `parent`, and got the refusal toast -- but beside "Wi-Fi needs a grown-up" it wore
+the time warning's alarm clock. `share/time/toast.qml`, shared with `omarchy-kids-wifi`, hardcoded
+⏰. Fixed on `fix/toast-icon-match`: the overlay reads `OMARCHY_KIDS_TOAST_ICON` (default ⏰), the
+time command exports ⏰, and the wifi command exports the Wi-Fi bars 📶. The value is display-only
+(it reaches a QML `Text`, never code or a check), so it joins `OMARCHY_KIDS_TOAST_TEXT` on the
+trust-boundary allowlist with that why. `wifi-test.sh` gained a Quickshell stub that pins the glyph
+and the whole message, `time-test.sh`'s stub now logs the icon so the clock stays pinned,
+`test/all` green (52 files, five skips), `shellcheck -x` clean, fable review nothing blocking
+(three minors closed, including the overlay's own stale header). Live: installed the three files
+from the branch and pressed `Super+Shift+W` again -- the refusal toast now shows the Wi-Fi bars
+(rendered, not tofu) where the clock used to be. The ⏰ default is unchanged and pinned by the time
+tests (and the clock toast was live-verified in earlier iterations).

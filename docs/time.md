@@ -159,7 +159,9 @@ state produces no display action.
 clock (`share/launcher/shell.qml`) — a 96px top margin instead of the clock's 24px, clearing its
 roughly 40px height (issue #40; UNVERIFIED, see "What's unverified" below) — auto-dismiss (6 s, down
 from 8 s), **no keyboard grab** — deliberately not layer-shell-exclusive, so a kid mid-task never
-loses focus to it.
+loses focus to it. Its leading glyph comes from `OMARCHY_KIDS_TOAST_ICON` (default the alarm clock,
+set by `omarchy-kids-time`'s own `show_toast`); the Wi-Fi notice that reuses this overlay passes
+the Wi-Fi bars instead, so no message wears a clock that contradicts it.
 
 `share/time/timesup.qml` is full-screen and keyboard-exclusive (the same `PanelWindow` +
 `WlrLayershell` pattern as `share/exit-modal/shell.qml`). It reads the fixed root-state path,

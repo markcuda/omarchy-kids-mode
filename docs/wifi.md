@@ -94,7 +94,9 @@ wifi helper`.
 
 Bound to `Super+Shift+W` at every level. `picker` checks the profile itself before ever launching
 Quickshell: a `parent`-mode (or profile-less) kid gets a small toast (`share/time/toast.qml`,
-reused from the screen-time warnings) saying Wi-Fi needs a grown-up, and the command exits without
+reused from the screen-time warnings, but with `OMARCHY_KIDS_TOAST_ICON` set to the Wi-Fi bars so
+the glyph matches the words rather than the time toast's clock) saying Wi-Fi needs a grown-up, and
+the command exits without
 opening anything (I-6: the bind existing is not the same claim as the bind doing anything). A
 `helper`-mode kid gets the real picker: arrow keys through nearby networks (from `omarchy-kids-wifi
 list`), Enter to join (a password field appears first if the network needs one), Esc to back out

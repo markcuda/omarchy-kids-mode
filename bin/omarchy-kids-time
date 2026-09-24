@@ -112,7 +112,8 @@ show_toast() {
   local text="$1"
   modal_already_open "$TOAST_PIDFILE" && return 0
   install -d -m 0700 "$RUN"
-  OMARCHY_KIDS_TOAST_TEXT="$text" "$QUICKSHELL_BIN" -p "$TOAST_QML" >/dev/null 2>&1 &
+  OMARCHY_KIDS_TOAST_TEXT="$text" OMARCHY_KIDS_TOAST_ICON="⏰" \
+    "$QUICKSHELL_BIN" -p "$TOAST_QML" >/dev/null 2>&1 &
   modal_write_pid "$TOAST_PIDFILE" "$!"
   disown 2>/dev/null || true
   log "toast: $text"

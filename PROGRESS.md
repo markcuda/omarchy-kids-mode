@@ -60,6 +60,10 @@ status` counts a grant made since the last published tick at once (it falls back
 while today's grant file is newer than the runtime document), instead of showing the pre-grant
 numbers for up to a tick.
 
+**Fixed on a topic branch awaiting merge:** `fix/toast-icon-match` -- the shared kid toast takes its
+leading glyph from `OMARCHY_KIDS_TOAST_ICON`, so the Wi-Fi refusal shows Wi-Fi bars instead of the
+time warning's alarm clock.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After

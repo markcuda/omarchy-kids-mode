@@ -428,13 +428,36 @@ st=$?
 check_status "$st" 1 "wifi list: wifi=helper passes require_helper, then fails (exit 1) with no daemon running"
 check_contains "$out" "no reply" "wifi list: 'no reply' message when the socket doesn't exist"
 
-# picker: no Quickshell on PATH in this test environment either way, so
-# only the refusal path (before it would try to exec quickshell at all)
-# is checked here -- the real overlay is VM-only (docs/wifi.md).
+# picker: no Quickshell stub or toast.qml in $SHARE_C yet, so the refusal path
+# below falls back to a stderr message. The block after it installs both to
+# observe the exported toast environment; the real overlay is VM-only
+# (docs/wifi.md).
 out="$(run_wifi_c kid-parent picker)"
 st=$?
 check_status "$st" 3 "wifi picker: refuses (exit 3) for wifi=parent"
 check_contains "$out" "grown-up" "wifi picker: falls back to a stderr message when Quickshell isn't available"
+
+# The refusal toast must wear a Wi-Fi glyph, not the time toast's alarm clock
+# (live finding 2026-09-22: the shared overlay hardcoded the clock). The line
+# above took the stderr path because this section's Quickshell stub is absent
+# and SHARE_C has no toast.qml; give it both so the exported icon is observable.
+mkdir -p "$SHARE_C/time"
+cp "$DIR/share/time/toast.qml" "$SHARE_C/time/toast.qml"
+cat >"$STUBS_C/quickshell" <<EOF
+#!/bin/bash
+printf 'text=%s icon=%s\n' "\$OMARCHY_KIDS_TOAST_TEXT" "\$OMARCHY_KIDS_TOAST_ICON" >>"$TMP_C/toast.log"
+EOF
+chmod +x "$STUBS_C/quickshell"
+run_wifi_c kid-parent picker >/dev/null 2>&1
+for _ in 1 2 3 4 5; do
+  [[ -s "$TMP_C/toast.log" ]] && break
+  sleep 1
+done
+toast_log="$(cat "$TMP_C/toast.log" 2>/dev/null)"
+check_contains "$toast_log" "text=Wi-Fi needs a grown-up. Ask them to turn it on for you." \
+  "wifi picker: refusal toast carries the whole message"
+check_contains "$toast_log" "icon=📶" \
+  "wifi picker: refusal toast wears the Wi-Fi glyph, not the time alarm clock"
 
 trap - EXIT
 cleanup_c

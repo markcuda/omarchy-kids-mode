@@ -1,6 +1,8 @@
-// toast.qml -- the small top-right "N minutes left" warning (SPEC.md
-// R-TIME-3), loaded by bin/omarchy-kids-time's show_toast. Deliberately NOT
-// keyboard-exclusive (that's timesup.qml's job) -- see docs/time.md.
+// toast.qml -- the small top-right kid notice (SPEC.md R-TIME-3): it carries
+// the time command's "N minutes left" warning and, with its own leading glyph
+// (OMARCHY_KIDS_TOAST_ICON), the Wi-Fi refusal bin/omarchy-kids-wifi shows.
+// Deliberately NOT keyboard-exclusive (that's timesup.qml's job) -- see
+// docs/time.md.
 
 import QtQuick
 import Quickshell
@@ -33,6 +35,11 @@ PanelWindow {
     visible: true
 
     property string message: Quickshell.env("OMARCHY_KIDS_TOAST_TEXT") || ""
+    // Which plain glyph leads the card. The time warning's alarm clock is the
+    // default; a caller whose words are not about time (the Wi-Fi notice)
+    // names its own, so the icon never contradicts the message beside it
+    // (I-6; live finding: a Wi-Fi refusal wore the clock).
+    property string icon: Quickshell.env("OMARCHY_KIDS_TOAST_ICON") || "⏰"
 
     // Auto-dismiss after 6s (issue #40 tightened this from the original
     // 8s) -- overridable only for a future test harness; there is no
@@ -61,10 +68,12 @@ PanelWindow {
 
             // A plain glyph, not an icon asset: this repo ships no icon
             // font/svg set of its own for UI chrome (only
-            // share/avatars/*.svg, which are per-kid, not decorative).
+            // share/avatars/*.svg, which are per-kid, not decorative). The
+            // caller picks it (root.icon), so a time warning and a Wi-Fi
+            // notice each show a glyph that matches their own words.
             Text {
                 font.family: theme.fontFamily
-                text: "⏰" // alarm clock
+                text: root.icon
                 font.pixelSize: 28
                 color: theme.warning
             }
