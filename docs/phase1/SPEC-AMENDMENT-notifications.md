@@ -349,3 +349,37 @@ R-NOTIFY says the parent is notified; on the box that is `omarchy-kids-notify-wa
 Replace "and the platform limit on background delivery" with:
 
 > and the app's own delivery limit: it notifies only while it is open and its feed is connected, nothing arrives while it is not running, and a tap opens the screen that decides rather than deciding itself (R-NOTIFY-14).
+
+## 15. R-NOTIFY-11 (exact)
+
+R-NOTIFY-11 becomes:
+
+> - R-NOTIFY-11 `omarchy-kids-assert` re-asserts, on every update and every boot, the devices directory and conf modes, the units list, and the away drop-in that widens the relay's fence (R-NOTIFY-11.1). It never rewrites the packaged unit that carries the fence itself. `omarchy-kids-check` has a row for the fence, a row for the away drop-in and a row for the devices, each stating what it proves and what it cannot (R-NOTIFY-11.2, R-TRUST-2).
+
+and strike "Re-asserting the relay's address fence, and a `omarchy-kids-check` row for the relay and the devices (only the `units` row exists), are not built on this branch."
+
+- R-NOTIFY-11.1 **The `relay-away` lock.** One new machine-level lock, id `relay-away`, asserted next to `units` and `devices` on both the no-kids path and the full path. It owns exactly `/etc/systemd/system/omarchy-kids-relayd.service.d/away.conf` and the directory that holds it, and nothing else. The fence itself is `[Service]` of `/usr/lib/systemd/system/omarchy-kids-relayd.service` (`IPAddressAllow=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 fc00::/7 fe80::/10`, `IPAddressDeny=any`, R-NOTIFY-1); that file is the package's, and no lock ever writes it. The drop-in's presence is the parent's consent (N-10): the lock never creates it and never deletes it, and the only thing it ever writes is the one text below, byte for byte:
+
+  ```text
+  # Kids Mode: "Away from home: my own VPN" (N-10), written by
+  # omarchy-kids-notify away tailnet. Extends the relay's fence to the CGNAT range
+  # Tailscale uses, so a device on the parent's own tailnet can reach it. "away off"
+  # removes this file. The LAN list is repeated so this file is correct whether
+  # systemd merges IPAddressAllow or replaces the unit's.
+  [Service]
+  IPAddressAllow=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 fc00::/7 fe80::/10 100.64.0.0/10
+  ```
+
+  `ok` is: the directory is absent, or it is a directory (not a symlink), root-owned, `0755`, and `away.conf` is absent; or `away.conf` is a regular file (not a symlink), root-owned, `0644`, and its content is exactly the text above. Any other `*.conf` in that directory is a `fail` of this lock, printed by path, whether or not it names `IPAddress*`: a second drop-in is where a widened or replaced fence would live, and assert cannot tell an admin's file from an attacker's. It returns `2` only when the directory exists and cannot be read.
+
+  `fix` is: if the directory exists, set it to root `0755`; if `away.conf` exists, rewrite it to the text above through a temporary file in the same directory and `mv -f`, then `chmod 0644`; then, on a live system only (no `--root`), `systemctl daemon-reload` and `try-restart omarchy-kids-relayd.service`, so the running fence is the file's and not a stale one. A foreign `*.conf` is not this lock's to repair: `fix` does not remove, rename or rewrite it and returns `1`, so the run ends non-zero and the pacman hook says so on every update until a human removes the file or accepts a failing assert. `fix` never creates `away.conf` (that would be consent the parent did not give) and never deletes it (that would revoke consent the parent did give; `omarchy-kids-notify away off` is the only remover).
+
+- R-NOTIFY-11.2 **The check rows.** Three rows under Locks, each through assert's `*_ok` only (`lock_check`; no `*_fix` is ever called by check):
+
+  - `lock:relay-fence`, verify-only. `relay_fence_ok` requires `/usr/lib/systemd/system/omarchy-kids-relayd.service` to be a root-owned regular file whose `[Service]` section carries exactly one `IPAddressAllow=` line equal to the packaged list and exactly one `IPAddressDeny=any` line. On a live system it also reads `systemctl show omarchy-kids-relayd.service -p IPAddressAllow -p IPAddressDeny` and requires the effective allow set (systemd expands `localhost`, `link-local` and `multicast` to their prefixes; the comparison is over that expansion, as a set) to be exactly the packaged list when `away.conf` is absent, or the packaged list plus `100.64.0.0/10` when it is present, and the effective deny to be `any`. Absent file (the package is not installed here) is `2`, a warn. A fail is not `lock_check`'s standard text: it says "the relay's fence differs from what the package installed; reinstall `omarchy-kids` (a packaged file, which `omarchy-kids-assert` never rewrites) and remove any drop-in you did not write", because there is no assert lock behind this row. Proves: the packaged fence is intact and, live, that what systemd applies is that fence, plus the away range if and only if the parent's consent file is present. Cannot: that the relay is running, that the fence is a firewall (it binds one unit's sockets; it is not `nftables` and covers no other process), or that the unit was not replaced by someone with root who also replaced the package's copy.
+  - `lock:relay-away`, through `relay_away_ok`, repairable, so the standard fail text names `omarchy-kids-assert`. Proves: the away drop-in is absent (the relay is fenced to the LAN) or is exactly the consent file, root `0644`, and no other drop-in sits beside it. Cannot: that the parent, rather than anyone with root, put it there; that the relay has been reloaded since it was written (the fence row's live check is what shows that); that any tailnet exists or that a device on it is one the parent paired.
+  - `lock:devices`, through `devices_ok`, repairable, standard fail text. Proves: `/etc/omarchy-kids/devices` is absent or is a root-owned `0750` directory whose every `*.conf` is root-owned `0600`. Cannot: that a record parses, that its keys belong to the parent's device, that a device the parent revoked is gone, or that any record has ever been used.
+
+  `docs/assert.md`'s lock table gains `relay-away`; `docs/check.md`'s Locks section gains the three rows with the proves/cannot text above, and its `relay-fence` entry says in so many words that a fail there is a reinstall, not an assert.
+
+- R-NOTIFY-11.3 **What none of this proves.** The fence is the unit's, not the machine's: `IPAddressAllow`/`IPAddressDeny` bind the relay's sockets and nothing else, and no row claims a firewall. An intact fence says nothing about whether the relay is up: a stopped relay delivers nothing and passes every row (the `units` row covers enabled and active, not that a connection would succeed). A held SSE stream is authenticated once at connect (R-NOTIFY-3): a device revoked, or a drop-in removed, after the connect keeps the stream it already holds until the relay restarts or the stream drops, and no row can see that stream. Every one of these files is root-owned, so anyone with root can change any of them, and assert then restores only what it owns: `away.conf`'s content and modes, the devices modes; not the packaged unit, not a foreign drop-in, not the registry's contents. The rows say "matches what `omarchy-kids-assert` expects" and never "the relay is reachable only from home".

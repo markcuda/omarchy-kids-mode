@@ -146,6 +146,8 @@ main() {
     assert_one "units" units_ok units_fix
     # devices is machine-level too (R-NOTIFY-3): absent is fine, wrong is not.
     assert_one "devices" devices_ok devices_fix
+    # relay-away (R-NOTIFY-11.1): the away drop-in, if the parent consents to one.
+    assert_one "relay-away" relay_away_ok relay_away_fix
     [[ "$QUIET" -eq 1 ]] || echo "omarchy-kids-assert: no kids provisioned; nothing else to assert"
     [[ "$ANY_FAIL" -eq 0 ]] || exit 1
     exit 0
@@ -189,6 +191,8 @@ main() {
   assert_one "units" units_ok units_fix
   # devices (R-NOTIFY-3): the paired-device registry stays root-owned.
   assert_one "devices" devices_ok devices_fix
+  # relay-away (R-NOTIFY-11.1): the away drop-in, if the parent consents to one.
+  assert_one "relay-away" relay_away_ok relay_away_fix
   assert_one "parent-group" parent_group_ok parent_group_fix
 
   assert_one "hyprland-configs" hyprland_ok hyprland_fix

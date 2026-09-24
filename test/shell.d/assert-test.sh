@@ -591,6 +591,50 @@ check_status "$out" "devices" "fixed" "devices: broken modes report fixed (R-NOT
 check_eq "$(kids_file_mode "$DEV_DIR")" "750" "devices: directory is mode 0750 (R-NOTIFY-3)"
 check_eq "$(kids_file_mode "$DEV_DIR/d1.conf")" "600" "devices: record is mode 0600 (R-NOTIFY-3)"
 
+# --- the away drop-in: the relay's fence (R-NOTIFY-11.1) -------------------
+
+AWAY_DIR="$SCRATCH_ROOT/etc/systemd/system/omarchy-kids-relayd.service.d"
+AWAY_FILE="$AWAY_DIR/away.conf"
+UNIT_DIR="$SCRATCH_ROOT/usr/lib/systemd/system"
+UNIT_FILE="$UNIT_DIR/omarchy-kids-relayd.service"
+mkdir -p "$UNIT_DIR"
+printf '[Service]\nIPAddressAllow=localhost\nIPAddressDeny=any\n' >"$UNIT_FILE"
+unit_before="$(cksum <"$UNIT_FILE")"
+
+# Absent: ok, and assert must not create it (presence is the parent's consent).
+out="$($BIN)"
+check_status "$out" "relay-away" "ok" "relay-away: no drop-in is ok (the base fence applies)"
+[[ -e "$AWAY_FILE" ]] && fail "relay-away: assert created a consent file" ||
+  pass "relay-away: assert never creates the drop-in"
+
+# Present with the wrong content and mode: fixed to the exact bytes.
+mkdir -p "$AWAY_DIR"
+printf 'IPAddressAllow=0.0.0.0/0\n' >"$AWAY_FILE"
+chmod 0666 "$AWAY_FILE"
+out="$($BIN)"
+check_status "$out" "relay-away" "fixed" "relay-away: an altered drop-in reports fixed"
+check_eq "$(kids_file_mode "$AWAY_FILE")" "644" "relay-away: the drop-in is mode 0644"
+grep -q '^IPAddressAllow=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 fc00::/7 fe80::/10 100.64.0.0/10$' "$AWAY_FILE" &&
+  pass "relay-away: the drop-in carries the LAN list plus the CGNAT range" ||
+  fail "relay-away: the drop-in content is wrong"
+check_eq "$(cksum <"$UNIT_FILE")" "$unit_before" "relay-away: the packaged unit was not touched (I-7)"
+
+# A foreign drop-in: the lock fails, and the file is left exactly as it was.
+printf '[Service]\nIPAddressAllow=0.0.0.0/0\n' >"$AWAY_DIR/local-admin.conf"
+foreign_before="$(cksum <"$AWAY_DIR/local-admin.conf")"
+out="$($BIN)"
+check_status "$out" "relay-away" "FAIL" "relay-away: a foreign drop-in fails the lock"
+check_eq "$(cksum <"$AWAY_DIR/local-admin.conf")" "$foreign_before" \
+  "relay-away: assert never rewrites (or deletes) an admin's file"
+rm -f "$AWAY_DIR/local-admin.conf"
+
+# away off (the consent file removed) is ok again.
+rm -f "$AWAY_FILE"
+out="$($BIN)"
+check_status "$out" "relay-away" "ok" "relay-away: removing the consent file is ok"
+[[ "$(cksum <"$UNIT_FILE")" == "$unit_before" ]] && pass "relay-away: the unit is still untouched" ||
+  fail "relay-away: a packaged file changed"
+
 # --- --quiet on an all-ok tree prints nothing ---------------------------
 
 out="$("$BIN" --quiet)"

@@ -354,6 +354,9 @@ ln -sf /usr/lib/systemd/system/omarchy-kids-ask-collect.timer "$SCRATCH_ROOT/etc
 ln -sf /usr/lib/systemd/system/omarchy-kids-time.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-time.timer"
 ln -sf /usr/lib/systemd/system/omarchy-kids-review.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-review.timer"
 ln -sf /usr/lib/systemd/system/omarchy-kids-relay-courier.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-relay-courier.timer"
+# The relay's own unit, so its fence row has something to verify (R-NOTIFY-11.2).
+mkdir -p "$SCRATCH_ROOT/usr/lib/systemd/system"
+cp "$ROOT_DIR/systemd/omarchy-kids-relayd.service" "$SCRATCH_ROOT/usr/lib/systemd/system/omarchy-kids-relayd.service"
 
 mkdir -p "$ETC/hyprland"
 cp "$SHARE"/hyprland/*.lua "$ETC/hyprland/"
@@ -446,6 +449,25 @@ if command -v python3 >/dev/null 2>&1; then
 else
   pass "--json: skipped the python3 structural parse (no python3 on this box)"
 fi
+
+# --- the relay fence and the notification stores (R-NOTIFY-11.2) --------
+
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "PASS  lock:relay-fence" "relay-fence: the packaged fence passes"
+check_contains "$plain" "PASS  lock:relay-away" "relay-away: no drop-in passes (the base fence applies)"
+check_contains "$plain" "PASS  lock:devices" "devices: the registry passes"
+UNIT_FILE="$SCRATCH_ROOT/usr/lib/systemd/system/omarchy-kids-relayd.service"
+cp "$UNIT_FILE" "$UNIT_FILE.good"
+sed -i.bak '/^IPAddressDeny=any$/d' "$UNIT_FILE"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "FAIL  lock:relay-fence" "relay-fence: a fence line gone from the unit fails"
+check_contains "$plain" "reinstall" "relay-fence: the fail says reinstall, not assert (I-7)"
+cp "$UNIT_FILE.good" "$UNIT_FILE"
+rm -f "$UNIT_FILE.good" "$UNIT_FILE.bak"
+rm -f "$UNIT_FILE"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "WARN  lock:relay-fence" "relay-fence: an uninstalled package warns, not fails"
+cp "$ROOT_DIR/systemd/omarchy-kids-relayd.service" "$UNIT_FILE"
 
 # --- Boot JSON is selected only by the trusted machine mode -----------
 

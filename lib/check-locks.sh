@@ -6,6 +6,31 @@
 
 # --- Locks (every omarchy-kids-assert lock, via its *_ok function only) ----
 
+# relay-fence (R-NOTIFY-11.2) — CHECK-ONLY: there is no assert lock behind this
+# row, because the fence lives in the package's own unit and assert never rewrites
+# a packaged file (I-7). A fail here is a reinstall, not an assert; lock_check's
+# standard fail text names assert, so the row uses lock_check_relay_fence.
+relay_fence_ok() {
+  local unit allow deny
+  unit="$(relay_unit_file)"
+  [[ -f "$unit" && ! -L "$unit" ]] || return 2 # the package is not installed here
+  [[ "$(grep -c "^IPAddressAllow=$RELAY_LAN_ALLOW\$" "$unit" 2>/dev/null)" == 1 ]] || return 1
+  [[ "$(grep -c '^IPAddressDeny=any$' "$unit" 2>/dev/null)" == 1 ]] || return 1
+  if [[ -z "$(posture_root)" ]] && command -v systemctl >/dev/null 2>&1; then
+    deny="$(systemctl show "$RELAY_UNIT_NAME" -p IPAddressDeny --value 2>/dev/null || true)"
+    allow="$(systemctl show "$RELAY_UNIT_NAME" -p IPAddressAllow --value 2>/dev/null || true)"
+    [[ -z "$allow" && -z "$deny" ]] && return 2 # not loaded here
+    [[ "$deny" == "any" ]] || return 1
+    # The CGNAT range only if the parent's away drop-in is there (N-10).
+    if [[ -f "$(relay_away_file)" ]]; then
+      [[ "$allow" == *"$RELAY_CGNAT"* ]] || return 1
+    else
+      [[ "$allow" != *"$RELAY_CGNAT"* ]] || return 1
+    fi
+  fi
+  return 0
+}
+
 run_locks_section() {
   local boot_mode="${1:-}" acct band avatar name n dir cf bt kids_count
   kids_count="$(kid_conf_count)"
@@ -45,6 +70,10 @@ run_locks_section() {
   done
 
   lock_check units units_ok
+  # The relay's fence and the two notification stores (R-NOTIFY-11.2).
+  lock_check_relay_fence relay-fence relay_fence_ok
+  lock_check relay-away relay_away_ok
+  lock_check devices devices_ok
   lock_check hyprland-configs hyprland_ok
 
   dir="$(chromium_dir)"

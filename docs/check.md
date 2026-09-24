@@ -67,6 +67,20 @@ function only; a FAIL points at `docs/assert.md`'s own table for what the lock p
 fix does, rather than repeating that here. The three boot-owned lock checks appear only in trusted
 `boot=disk` mode. Portal and invalid mode never inspect the UKI or Limine.
 
+Three rows go beyond the "one line per assert lock" rule (R-NOTIFY-11.2). `lock:devices` and
+`lock:relay-away` are the assert locks above (registry modes; the away drop-in), standard shape.
+`lock:relay-fence` has **no assert lock behind it**: the relay's `IPAddressAllow`/`IPAddressDeny`
+fence lives in the package's own unit file, and assert never rewrites a packaged file (I-7). It is
+verify-only — the unit file is present, root-owned, with exactly the packaged allow line and
+`IPAddressDeny=any`, and, live and without `--root`, what `systemctl show` reports is that same fence
+plus the CGNAT range if and only if the parent's `away.conf` is there. Absent unit (the package is
+not installed) is a WARN. A FAIL means "reinstall `omarchy-kids` and remove any drop-in you did not
+write", **not** "run `omarchy-kids-assert`", so this one row says so itself rather than reusing
+`lock_check`'s standard text. What it proves: the packaged fence is intact and systemd applies it
+(plus the away range only with the parent's consent). What it cannot: that the relay is running,
+that the fence is a firewall (it binds one unit's sockets, not the machine), or that someone with
+root has not replaced the packaged copy too.
+
 **One exception, not a FAIL:** `face:<account>` (the SDDM avatar icon, issue #39) is a WARN even
 in this technical catalog. It is the one lock in the table that isn't a security fence at all —
 missing or wrong, a kid still logs in exactly as fenced, just without their picture on the portal
