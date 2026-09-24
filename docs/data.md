@@ -152,9 +152,11 @@ all, since `omarchy-kids-data` already refuses to touch Chromium in that case.
 - **Level 2/3 app launches aren't recorded at all** — only Level 1 tiles are (see above). A future
   issue would need either a real Omarchy launch hook or a menu-extension-side log call, neither of
   which exists yet.
-- **The Level 1 `kids-data` tile is unverified against a real session** — no Quickshell/terminal
-  integration in this repo has run against one yet (same caveat every other
-  `share/launcher/shell.qml` feature carries — see that file's own header).
+- **The `kids-data` tile is unverified against a real session** — the launcher itself now runs live
+  (its grid, picker and app tiles were exercised on the VM 2026-09-21/22), but this tile is offered
+  only to bands 9-12 and 13+, and the loop's kid is 6-8, so its floating-terminal launch
+  (`omarchy-launch-floating-terminal-with-presentation omarchy-kids-data mine`) has not been
+  pressed. It uses the same helper the bar's `grant`/`end` do (docs/bar.md).
 - **No export command.** A parent who wants a copy of a kid's recorded data today reads it through
   the panel or runs `omarchy-kids-data summary`/`launches`/`sites` themselves and copies the output;
   there's no `--json`/`--csv` flag.

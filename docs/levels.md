@@ -257,6 +257,28 @@ another look:
    2026-09-21 Level 3 pass saw no `omarchy-provision-first-run`, `udiskie` or migration line in
    the kid's journal. Whether an `omarchy-sudo-passwordless` keybind exists at all remains
    unconfirmed on a real box.
+When this checklist was first written the repo had two of Omarchy's real
+`default.hypr.bindings.*` files to check syntax against (`bindings-tiling.lua`,
+`bindings-utilities.lua`) and a handful of other `default.hypr.*` files, but no live Hyprland and
+no `default.hypr.bindings.applications` (where terminal launching and, per Appendix E,
+"omarchy-sudo-passwordless" are presumably bound). Levels 1 and 2 have since run live (see the
+live-status note above); what is left here is the Level 3 set, which needs the VM or a real
+Omarchy 4.0.2 box to close out:
+
+1. **The exact Level 3 terminal-launching bind(s).** L3.lua unbinds `SUPER + RETURN` on the
+   near-universal Hyprland/tiling-WM convention that Super+Return opens a terminal — not
+   confirmed against Omarchy's actual bindings. Run `omarchy-menu-keybindings` or `hyprctl binds`
+   on a real box and correct the list in `share/hyprland/L3.lua` (there may be more than one
+   terminal-launching bind, e.g. a second terminal or a file manager, also gated by
+   `menu=trimmed`).
+2. **`omarchy-sudo-passwordless`.** Deliberately not touched. It may not be a keybind at all —
+   `default.hypr.autostart` (the file this repo calls `hypr-autostart.lua`) calls
+   `omarchy-provision-first-run` on every `hyprland.start`, which sounds like a more likely place
+   for a first-run passwordless-sudo convenience to live than a key someone presses. If that's
+   right, Level 3 requiring `default.hypr.omarchy` re-runs that provisioning for the kid too,
+   which the Appendix G bypass matrix ("Kid runs sudo → No grant") says must never happen. This
+   needs confirming on a real box, and probably belongs to whatever issue owns
+   `omarchy-provision-first-run` or Level 3 session hardening, not this one.
 3. **`fullscreen = true` as a windowrule.** Modeled on the one confirmed boolean windowrule flag
    in the reference material (`{ no_focus = true }` in `default.hypr.windows`). Could be
    `{ fullscreen = "1" }` or something dispatcher-shaped instead: the Level 1/2 pass did not

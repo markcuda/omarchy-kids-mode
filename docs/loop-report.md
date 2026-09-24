@@ -2382,3 +2382,93 @@ conventions mechanically: every bash command in `bin/` has `#!/bin/bash`, `set -
 Python verifier ("a tiny Python or Perl helper") for both. Every tracked file's mode matches its
 kind once the executable set is read correctly (`bin/`, the `initcpio/` hook scripts, `scripts/`,
 `test/live/`, `test/phase1/`, `test/all`). Nothing to fix.
+
+### 2026-09-22, loop iteration: two stale "never run live" claims, retracted
+
+Dogfooded (session healthy; 46 PASS plus the box's four known FAILs) and swept the live docs for the
+claim class that found real defects twice before -- assertions that something has never run against
+a real Hyprland/Quickshell. Two were stale:
+
+- `docs/data.md` called the `kids-data` tile's lack of verification "the same caveat every other
+  `share/launcher/shell.qml` feature carries", but the launcher runs live now (its grid, picker and
+  app tiles were exercised on the VM 2026-09-21/22). The tile is offered only to bands 9-12 and 13+,
+  and the loop's kid is 6-8, so it is that tile's *turn* that is missing, not the file's
+  verification.
+- `docs/levels.md`'s open-questions intro said "no live Hyprland, no Quickshell", contradicting the
+  same doc's live-status paragraph (Levels 1 and 2 verified live); it now reads as the historical
+  position it was, and says the Level 3 items are what still needs the VM or a real box.
+
+Fixed on `docs/stale-launcher-claims`, stacked on `docs/fix-doc-references` (the same two files);
+`test/all` green. Left alone as uncertain: `docs/time.md` says the repo "has never run against a
+real `systemd-logind`", yet the VM's ledger tick parses real `loginctl` output every 30s (one
+property per call, not the four-property form the doc names) -- whether that closes the item, or the
+lock transition is still the open part, needs a closer look before changing the text.
+
+### 2026-09-22, loop iteration: a docs claim is only as good as the branch it was observed on
+
+Dogfooded (session healthy; the box's four known FAILs) and took on `docs/time.md`'s "What's
+unverified" section, written before the VM ever ran the time engine. My first draft moved most items
+to "verified live" -- and the fable review blocked it: the evidence I leaned on was gathered against
+**branch** files, not this branch's. This branch still has the 96px toast margin (the live check of
+it found the window sitting over the clock; `fix/toast-clock-overlap` raises it to 144), the
+`FileView` with no `onFileChanged` reload (the time-left line was recorded frozen across ticks and a
+grant on `fix/launcher-time-left-refresh`, which fixes and live-verified it), and no recorded
+`LockedHint=yes` lock engagement (`fix/time-lock-engagement`; only `finish` ran live). One new claim
+("the card dismissed after a grant") also misread a log line that fires at the *next* session start.
+
+The corrected change keeps this branch's unverified list, adds a method note (the VM runs installed
+branch files, so read every live claim with the branch it was observed on -- `docs/loop-report.md`),
+points each item at the branch holding the evidence, and keeps exactly one claim verified: the
+tick's own `loginctl` calls (they run against the VM's real logind every 30 s, one property per
+call, and the usage accounting depends on parsing them -- the docs used to say the repo had never
+run against a real logind, and named a four-property form the code does not use). Also fixed the
+"Issue #40's fix" paragraph's closing claim that none of its three items had run live.
+
+Lesson worth keeping: the loop's live evidence is branch-specific. Any future doc-currency edit here
+must say which branch a "verified" claim belongs to, or it becomes a false claim on integration --
+the same "label claims" rule, one level up.
+
+### 2026-09-22, loop iteration: a repo-side record for the daemon's survival
+
+Closes the one major the fable review left open on the `docs/time.md` change: that doc's unverified
+list asks whether a background `&`'d `omarchy-kids-time daemon` survives
+`omarchy-kids-session-start`'s `exec`, and the only evidence was a VM session log a reader cannot
+see. Recorded here so the doc can cite it: the VM's `/run/user/1001/omarchy-kids/session-1001.log`
+shows (lines quoted) the daemon started and still logging toasts hours later:
+`2026-09-22T02:19:18-0400 starting omarchy-kids-time daemon for 'kid-ada'`, then
+`2026-09-22T02:39:49-0400 toast: 10 minutes left`, `...T03:09:51-0400 toast: 10 minutes left`,
+`...T03:14:21-0400 toast: 5 minutes left`, `...T03:18:51-0400 toast: 1 minute left` (no daemon was
+launched by hand in that session). So it does survive the `exec`; nothing in
+`test/shell.d/session-start-test.sh` asserts it (its time stub exits 0), which is the part still
+open.
+
+### 2026-09-22, loop iteration: three time.md sentences re-scoped, and what is still entangled
+
+A re-review of the `docs/time.md` change found three sentences the first pass had left or made
+wrong, now corrected: the Ask-modal sentence at `docs/time.md:161` and its list bullet say the
+over-Time's-Up case *was* watched, against a hand-written `grace` status (`share/time/timesup.qml`,
+`share/ask/` and `session-start` are byte-identical to this branch's, so that observation applies
+here); the "Issue #40" paragraph's closing sentence no longer claims the warnings never ran (that
+code is this branch's and did fire 10/5/1 on 2026-09-22); and the `loginctl` item now says the call
+form is read from this branch's source rather than observed on the VM (which ledger build its ticks
+ran is not recorded). Left for the branches that own them: `docs/time.md:138-140` and
+`share/time/toast.qml:25-26` still say the 96px margin clears a roughly 40px clock, which
+`fix/toast-clock-overlap` changes and must correct with it, and `fix/launcher-time-left-refresh`
+owns the frozen-watch record.
+
+### 2026-09-22, loop iteration: the branch-owned doc corrections, checked
+
+Dogfooded (session healthy; the box's four known FAILs). Followed up last round's "left for the
+branch that owns them" note and confirmed `fix/toast-clock-overlap` does carry them: its
+`share/time/toast.qml` comment explains the 144px margin (the arithmetic and the 2026-09-21 finding
+that the 96px window sat over the clock), and its `docs/time.md` already has the corrected margin
+paragraph and unverified bullet. No action there.
+
+Spot-checked six code-fix branches for the same shape (a behaviour change without the doc that
+describes it): `fix/launcher-time-left-refresh` (docs/time.md), `fix/show-missing-regression`
+(docs/apps.md, docs/conf.md, docs/levels.md), `fix/panel-apps-not-installed` (docs/panel.md) and
+`fix/ask-list-empty-minutes-shift` (docs/ask.md, docs/panel.md) all carry their doc updates;
+`fix/session-start-manifest-fields` and `fix/data-browse-empty-title` are code/test-only, and their
+changes are internal enough that no doc describes the old behaviour they change. Nothing actionable
+this round: the docs' remaining stale claims are owned by the branches that fix the code they
+describe, and merge with them.
