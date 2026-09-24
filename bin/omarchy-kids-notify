@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Turn the parent's device notifications on or off, and manage the paired devices
-# omarchy:args=<enable|disable|status|pair|devices|rename|scopes|revoke|away|mailbox> ...
+# omarchy:args=<enable|disable|status|pair|publish|list|devices|rename|scopes|revoke|away|away-status|mailbox|mailbox-status|pair-start> ...
 # omarchy:hidden=true
 # The parent's side of the notification system (R-NOTIFY-1/3/5): the relay's
 # certificate, and the paired devices. Root only; DRY_RUN=1 prints the plan.
@@ -50,6 +50,9 @@ Usage: omarchy-kids-notify enable [--host NAME] [--rekey] [--apply]
        omarchy-kids-notify rename <id> <name> [--apply]
        omarchy-kids-notify scopes <id> decide[,act] [--apply]
        omarchy-kids-notify revoke <id> [--apply]
+       omarchy-kids-notify publish [--apply]
+       omarchy-kids-notify list [--json]
+       omarchy-kids-notify pair-start [--apply]
 
 Turns the parent's device notifications on or off (R-NOTIFY-1): `enable` mints
 the relay's self-signed certificate (the parent's devices pin its SPKI

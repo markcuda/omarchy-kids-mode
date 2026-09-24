@@ -136,7 +136,7 @@ screen_notify() {
     local -a choices=()
     if ((read_ok)); then
       if ((on)); then
-        choices+=("pair|Pair a device|Start a pairing window for the parent app (not built yet)")
+        choices+=("pair|Pair a device|Start a pairing window; the parent app (clients/parent) pastes the code and checks the fingerprint")
         choices+=("disable|Turn off notifications|Revokes every paired device")
       else
         choices+=("enable|Turn on notifications|Mints the relay's certificate")
