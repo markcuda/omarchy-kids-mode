@@ -11,6 +11,7 @@ screen), and one command to prune it once it's past its retention window.
 | Active minutes per day | `/var/lib/omarchy-kids/<kid>/usage/<day>` — `lib/time.sh`'s own tree, R-TIME-1 | 1 year | `omarchy-kids-data summary`/`retention` (this issue only reads/prunes it — the ledger itself is docs/time.md's) |
 | App launches (Level 1 tiles only) | `/var/lib/omarchy-kids/<kid>/launches.log` | 90 days | `omarchy-kids-data launches`/`summary`/`retention` |
 | Ask-a-parent requests | `/var/lib/omarchy-kids/queue/*.json` (Appendix D, `lib/ask.py`) | 90 days | `omarchy-kids-data retention` prunes it; docs/panel.md/docs/ask.md read it |
+| The kid's own copy of each decided request | `/var/lib/omarchy-kids/<kid>/decisions/<id>.json` (R-NOTIFY-6, `lib/ask.py`) | 90 days, with the queue | `omarchy-kids-ask outcome`, which the ask overlay shows (docs/ask.md) |
 | Browsing history | the kid's own `~/.config/chromium/Default/History` (Chromium's own SQLite db) | the browser's own retention — R-WEB-2 already sets `SavingBrowserHistoryDisabled: false` and `AllowDeletingBrowserHistory: false`, so this package never prunes it | `omarchy-kids-data sites`/`summary`, gated by `history_visible` (below) |
 
 **Never recorded, anywhere in this package (R-DATA-2):** keystrokes, screenshots, file contents,
@@ -38,8 +39,8 @@ omarchy-kids-data retention [--apply]
 - **`mine`** is K5, "What my grown-ups can see" (Appendix A): run as the kid, it explains exactly
   R-DATA-1 for that kid, in plain words, plus their last day's summary. See "The kid's screen"
   below for how it's reached.
-- **`retention`** prunes usage days older than 1 year, `launches.log` lines and queue records older
-  than 90 days. Root only. `DRY_RUN` is the default shape everywhere else in this package
+- **`retention`** prunes usage days older than 1 year, `launches.log` lines, queue records and their
+  kid copies older than 90 days. Root only. `DRY_RUN` is the default shape everywhere else in this package
   (AGENTS.md rule 8) — `retention` alone (no `--apply`) prints what it would remove; `--apply` makes
   it real. **Never touches the Chromium History db** — that's the browser's own retention, not this
   package's to manage (I-2/I-6).

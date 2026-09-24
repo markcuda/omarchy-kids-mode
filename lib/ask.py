@@ -28,6 +28,8 @@ Usage:
     ask.py list-open DIR [--kid KID]
     ask.py reopen PATH --kid KID
     ask.py validate --kid K --kind KIND --what WHAT [--minutes N]
+    ask.py sync-decisions QUEUE_DIR
+    ask.py outcome <kid>/decisions            (the kid's own copy; display only)
 
 Exit 0 on success. Exit 2 for a bad argument or unreadable file, exit 3
 for "already decided" (decide only) -- never a Python traceback.
@@ -35,6 +37,7 @@ for "already decided" (decide only) -- never a Python traceback.
 import glob
 import fcntl
 import grp
+import pwd
 import json
 import os
 import re
@@ -174,6 +177,198 @@ def write_atomic(path, record):
     os.replace(tmp, path)
 
 
+def _kid_group_gid(kid):
+    """The kid account's primary gid, or None (R-NOTIFY-6: their own copies are
+    readable by the kid's own group and by no other account). Only root resolves
+    and applies ownership, as every ownership check in this package does: a
+    non-root test build writes the copy owned by whoever ran it."""
+    if os.geteuid() != 0:
+        return None
+    try:
+        return pwd.getpwnam(kid).pw_gid
+    except KeyError:
+        return None
+
+
+def _data_root(queue_path):
+    """<varlib>/queue/<id>.json -> <varlib>: the kid copies live beside queue/."""
+    return os.path.dirname(os.path.dirname(os.path.abspath(queue_path)))
+
+
+def kid_decision_path(queue_path, kid):
+    name = os.path.basename(queue_path)
+    if name.endswith(".json"):
+        name = name[: -len(".json")]
+    return os.path.join(_data_root(queue_path), kid, "decisions", name + ".json")
+
+
+def _kid_copy(record, name):
+    """(copy, reason): the kid's own copy of a decision (R-NOTIFY-6), the queue
+    record's own values and nothing else. `by` and `device` stay off it: they
+    name where a decision was signed, not who signed it."""
+    kid = record.get("kid")
+    state = record.get("state")
+    if not valid_account(kid) or state not in ("approved", "declined"):
+        return None, "not a decision for an account"
+    asked = valid_epoch(record.get("asked_at"))
+    decided = valid_epoch(record.get("decided_at"))
+    if asked is None or decided is None:
+        return None, "malformed timestamps"
+    copy = {
+        "id": name,
+        "kid": kid,
+        "kind": record.get("kind"),
+        "what": record.get("what"),
+        "asked_at": asked,
+        "state": state,
+        "decided_at": decided,
+    }
+    minutes = record.get("minutes")
+    if isinstance(minutes, int) and not isinstance(minutes, bool):
+        copy["minutes"] = minutes
+    reply = record.get("reply")
+    if isinstance(reply, str) and reply:
+        copy["reply"] = reply
+    return copy, "ok"
+
+
+def write_kid_copy(queue_path, record):
+    """Write the kid's own copy of a decision, (ok, reason). A failure is said
+    out loud by the caller and never fails the decision: the queue record is the
+    decision of record, and `sync-decisions` heals a missing copy."""
+    name = os.path.basename(queue_path)
+    if name.endswith(".json"):
+        name = name[: -len(".json")]
+    copy, reason = _kid_copy(record, name)
+    if copy is None:
+        return False, reason
+    path = kid_decision_path(queue_path, copy["kid"])
+    directory = os.path.dirname(path)
+    try:
+        if os.geteuid() == 0:
+            gid = _kid_group_gid(copy["kid"])
+            if gid is None:
+                return False, f"no account '{copy['kid']}'"
+        else:
+            gid = None
+        os.makedirs(directory, mode=0o750, exist_ok=True)
+        os.chmod(directory, 0o750)
+        if gid is not None:
+            os.chown(directory, 0, gid)
+        tmp = f"{path}.{os.getpid()}.tmp"
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(copy, f, sort_keys=True)
+            f.write("\n")
+        os.chmod(tmp, 0o640)
+        if gid is not None:
+            os.chown(tmp, 0, gid)
+        os.replace(tmp, path)
+    except OSError as e:
+        return False, e.strerror or str(e)
+    return True, "ok"
+
+
+def _read_valid_decision(path, account, name):
+    """The copy at PATH if every field is valid for ACCOUNT, else None. Every
+    field a kid can read is validated here, at read time (nothing a kid could
+    write is trusted)."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            record = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(record, dict):
+        return None
+    if record.get("kid") != account:
+        return None
+    if record.get("id") != name or not RE_ID.match(str(record.get("id", ""))):
+        return None
+    kind = record.get("kind")
+    if kind not in KINDS:
+        return None
+    minutes = record.get("minutes")
+    if kind == "time":
+        if validate_grant(account, kind, record.get("what", ""), minutes) is not None:
+            return None
+    elif validate_grant(account, kind, record.get("what", "")) is not None:
+        return None
+    if record.get("state") not in ("approved", "declined"):
+        return None
+    if valid_epoch(record.get("asked_at")) is None or valid_epoch(record.get("decided_at")) is None:
+        return None
+    reply = record.get("reply")
+    if reply is not None and (
+        not isinstance(reply, str) or len(reply) > MAX_REPLY or any(not c.isprintable() for c in reply)
+    ):
+        return None
+    return record
+
+
+def cmd_sync_decisions(argv):
+    """Write the kid copy of every decided queue record that lacks one
+    (R-NOTIFY-6): the heal for a `decide` whose copy failed, run by `collect`.
+    A present copy is never rewritten; an open record and an account that no
+    longer resolves are skipped."""
+    if len(argv) != 1:
+        die("sync-decisions: needs QUEUE_DIR")
+    queue_dir = argv[0]
+    for path in sorted(glob.glob(os.path.join(queue_dir, "*.json"))):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                record = json.load(f)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(record, dict) or record.get("state") not in ("approved", "declined"):
+            continue
+        kid = record.get("kid")
+        if not valid_account(kid):
+            continue
+        if os.path.exists(kid_decision_path(path, kid)):
+            continue
+        ok, reason = write_kid_copy(path, record)
+        if not ok:
+            print(
+                f"ask.py: could not write the kid's copy of {os.path.basename(path)}: {reason}",
+                file=sys.stderr,
+            )
+
+
+def cmd_outcome(argv):
+    """The newest decided request in the kid's own directory, one tab-separated
+    line, or nothing (R-NOTIFY-6). Display only: it prints what the file says
+    and nothing else, and an unreadable or malformed file is skipped."""
+    if len(argv) != 1:
+        die("outcome: needs DIR")
+    directory = argv[0]
+    if not os.path.exists(directory):
+        return
+    account = os.path.basename(os.path.dirname(os.path.abspath(directory)))
+    try:
+        names = sorted(n for n in os.listdir(directory) if n.endswith(".json"))
+    except OSError:
+        die("outcome: cannot read your decisions directory", 1)
+    for name in reversed(names):
+        record = _read_valid_decision(os.path.join(directory, name), account, name[: -len(".json")])
+        if record is None:
+            continue
+        minutes = ""
+        if record.get("kind") == "time":
+            minutes = str(record["minutes"])
+        print(
+            "\t".join(
+                [
+                    str(record.get("kind", "")),
+                    str(record.get("what", "")),
+                    minutes,
+                    str(record.get("state", "")),
+                    str(record.get("reply", "")),
+                ]
+            )
+        )
+        return
+
+
 def parse_kv_args(argv, flags):
     """Pulls --flag value pairs out of argv (any order); returns (dict,
     leftover positional args). `flags` is the set of recognized --names
@@ -286,6 +481,16 @@ def cmd_decide(argv):
             if reply is not None:
                 record["reply"] = reply
             write_atomic(path, record)
+            # R-NOTIFY-6: the kid's own copy, after the record that *is* the
+            # decision. Best effort: a failure is said out loud and the decision
+            # stands; `omarchy-kids-ask collect`'s sync-decisions heals it.
+            ok, reason = write_kid_copy(path, record)
+            if not ok:
+                print(
+                    "ask.py: decided; could not write the kid's copy of "
+                    f"{os.path.basename(path)}: {reason}",
+                    file=sys.stderr,
+                )
         finally:
             fcntl.flock(lf, fcntl.LOCK_UN)
 
@@ -429,6 +634,8 @@ COMMANDS = {
     "decide": cmd_decide,
     "show": cmd_show,
     "list-open": cmd_list_open,
+    "sync-decisions": cmd_sync_decisions,
+    "outcome": cmd_outcome,
 }
 
 

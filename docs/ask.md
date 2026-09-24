@@ -82,6 +82,15 @@ previews what it would collect; `--apply` (or `DRY_RUN=0`) does it for real. Run
 whenever a parent is looking, and by `systemd/omarchy-kids-ask-collect.timer` every minute
 otherwise (see below).
 
+### `outcome` — kid-side, display only
+
+The newest decided request in **this account's own** directory, one tab-separated line
+(`kind`, `what`, `minutes`, `state`, `reply`), or nothing when there is none (R-NOTIFY-6). It
+resolves the account as `id -un` and the directory as a constant (`/var/lib/omarchy-kids/<account>/decisions`),
+never an argument or an environment value; the modal reads it once when it opens and shows a
+sentence ("Last time your grown-up said yes to 15 more minutes."). It decides nothing and it cannot
+read another kid's directory (`0750`, the kid's own group). See "The kid's copy" below.
+
 ### `list [<kid>]` — root or omarchy-parents
 
 Every **open** (undecided) request, all kids or one, one line each: id, kid, kind, what (minutes
@@ -89,6 +98,18 @@ for `time`), and when it was asked. Nothing decided ever shows here — that's t
 one-keystroke panel. The command runs for root or a member of `omarchy-parents` (the parent), and
 creates nothing: an absent queue reads as no open requests, and a queue the caller cannot open is an
 error rather than an empty answer (R-NOTIFY-7).
+
+### The kid's copy
+
+Every decision — from the panel, the bar, the desktop notifier, a paired device or the courier —
+also lands a copy under the kid's own directory: `/var/lib/omarchy-kids/<kid>/decisions/<id>.json`,
+`0640 root:<kid>` in a `0750 root:<kid>` directory, the queue record's own values and nothing else
+(no `by`, no `device`; R-NOTIFY-6). `ask.py decide` writes it after the queue record that *is* the
+decision, so no reader ever finds a copy whose record is still open; a copy that fails to write
+(the account gone, the disk full) leaves the decision standing and prints one line on stderr, and
+root's `collect` heals it on its next run (`ask.py sync-decisions`). It is a copy the kid can read,
+not a channel: nothing reads it to decide or act, the queue record stays the decision of record,
+and `omarchy-kids-data retention` prunes it with the queue (90 days).
 
 ### `approve <id>` / `decline <id>` — root
 
@@ -165,8 +186,9 @@ considered and rejected before landing on the one shipped here:
   rule 8 (never assume, always verify) is warning against.
 
 What shipped instead: the modal writes the decided record into the kid's outbox and says so
-honestly — "Got it! ... will be ready very soon", never "Done" — and `omarchy-kids-ask collect`
-is what actually performs it, the next time it runs. That is:
+honestly — **"Got it! <thing> is ready now."** once `grant` returned 0 (root applied it before it
+did), and **"Asked. Your grown-up will see it."** for "Ask later" — never "Done", and `omarchy-kids-ask collect`
+is what actually performs a later one, the next time it runs. That is:
 
 - **Immediately**, if a parent happens to be at the panel (the panel is expected to call `collect
   --apply` itself whenever it's open, or a parent can run it by hand).

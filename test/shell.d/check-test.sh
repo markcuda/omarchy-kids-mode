@@ -542,6 +542,18 @@ chmod 0750 "$QUEUE_DIR"
 check_contains "$plain" "WARN  lock:queue" "queue: an unreadable directory warns, not fails"
 rm -rf "$QUEUE_DIR"
 
+# --- the kid's own copies of decisions (R-NOTIFY-6) --------------------
+DEC_DIR="$SCRATCH_ROOT/var/lib/omarchy-kids/kid-ada/decisions"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "PASS  lock:decisions:kid-ada" "decisions: absent passes"
+mkdir -p "$DEC_DIR"
+printf '{}' >"$DEC_DIR/1-kid-ada-app.json"
+chmod 0755 "$DEC_DIR"
+chmod 0644 "$DEC_DIR/1-kid-ada-app.json"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "FAIL  lock:decisions:kid-ada" "decisions: a world-readable copy fails"
+rm -rf "$DEC_DIR"
+
 # --- Boot JSON is selected only by the trusted machine mode -----------
 
 if command -v python3 >/dev/null 2>&1; then

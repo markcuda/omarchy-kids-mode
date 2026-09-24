@@ -458,8 +458,11 @@ check_not_contains "$out" "hunter2" "grant: the typed password is never echoed"
 ASK_QML="$ROOT_DIR/share/ask/shell.qml"
 check_not_contains "$(cat "$ASK_QML")" '"--state"' \
   "share/ask/shell.qml never passes --state (review S1)"
-check_not_contains "$(cat "$ASK_QML")" '"approved"' \
-  "share/ask/shell.qml never writes the word approved"
+check_not_contains "$(cat "$ASK_QML")" '"approve"' \
+  "share/ask/shell.qml never calls approve"
+check_not_contains "$(cat "$ASK_QML")" '"decline"' \
+  "share/ask/shell.qml never calls decline"
+# It does compare the ask command's own outcome words (R-NOTIFY-6), a read."
 check_contains "$(cat "$ASK_QML")" '"grant"' \
   "share/ask/shell.qml goes through the root grant path instead"
 
@@ -678,6 +681,73 @@ check_eq "$?" "2" "approve --by device:../x is refused"
 check_contains "$(cat "$dev_rec2")" '"state": "open"' "a refused decision leaves the record open"
 python3 "$ROOT_DIR/lib/ask.py" decide "$dev_rec2" --state approved --by device >/dev/null 2>&1
 check_eq "$?" "2" "decide --by device without --device is refused"
+
+# =====================================================================
+# R-NOTIFY-6: the kid's own copy of a decision
+# =====================================================================
+#
+# Every decision lands a copy beside the queue, under the kid's own directory,
+# so the ask overlay can show the newest one. The record is the decision; the
+# copy is derived, written after it and never by/device.
+
+COPY_ID="1000000021-kid-ada-app"
+COPY_REC="$QUEUE_DIR/$COPY_ID.json"
+DEC_DIR="$VARLIB_ROOT/var/lib/omarchy-kids/kid-ada/decisions"
+rm -rf "$DEC_DIR"
+cat >"$COPY_REC" <<'EOF'
+{"kid": "kid-ada", "kind": "app", "what": "firefox", "asked_at": 1000000021, "state": "open"}
+EOF
+"$BIN" approve "$COPY_ID" --apply >/dev/null 2>&1
+copy="$DEC_DIR/$COPY_ID.json"
+[[ -f "$copy" ]] && pass "the kid's copy is written on a decision" ||
+  fail "no kid copy was written"
+check_eq "$(kids_file_mode "$copy")" "640" "the kid's copy is 0640"
+check_contains "$(cat "$copy")" '"state": "approved"' "the copy carries the decision"
+check_contains "$(cat "$copy")" '"id": "1000000021-kid-ada-app"' "the copy carries its id"
+check_not_contains "$(cat "$copy")" '"by"' "the copy carries no by"
+check_not_contains "$(cat "$copy")" '"device"' "the copy carries no device"
+
+# A decline with a reply: the reply rides the copy, and nothing else does.
+COPY2="1000000022-kid-ada-time"
+printf '%s\n' "{\"kid\": \"kid-ada\", \"kind\": \"time\", \"what\": \"15\", \"minutes\": 15, \"asked_at\": 1000000022, \"state\": \"open\"}" >"$QUEUE_DIR/$COPY2.json"
+"$BIN" decline "$COPY2" --reply "After dinner" --apply >/dev/null 2>&1
+copy2="$DEC_DIR/$COPY2.json"
+check_contains "$(cat "$copy2")" '"reply": "After dinner"' "the copy carries the parent's reply"
+check_contains "$(cat "$copy2")" '"minutes": 15' "the copy carries the request's minutes"
+
+# sync-decisions heals a missing copy and never rewrites a present one.
+before="$(cksum <"$copy")"
+rm -f "$copy"
+python3 "$ROOT_DIR/lib/ask.py" sync-decisions "$QUEUE_DIR" >/dev/null 2>&1
+[[ -f "$copy" ]] && pass "sync-decisions writes a missing copy" ||
+  fail "sync-decisions did not heal a missing copy"
+python3 "$ROOT_DIR/lib/ask.py" sync-decisions "$QUEUE_DIR" >/dev/null 2>&1
+check_eq "$(cksum <"$copy")" "$before" "sync-decisions never rewrites a present copy"
+
+# The kid-side read: the newest decided request, one tab-separated line. Only
+# the copy under test is left: earlier sections decided requests with real
+# timestamps, and the newest by name is what the modal shows.
+find "$DEC_DIR" -type f -name '*.json' ! -name "$COPY2.json" -delete
+out="$("$BIN" outcome)"
+check_eq "$(printf '%s' "$out" | cut -f1)" "time" "outcome: the newest decision's kind"
+check_eq "$(printf '%s' "$out" | cut -f2)" "15" "outcome: its what"
+check_eq "$(printf '%s' "$out" | cut -f3)" "15" "outcome: its minutes (time)"
+check_eq "$(printf '%s' "$out" | cut -f4)" "declined" "outcome: its state"
+check_eq "$(printf '%s' "$out" | cut -f5)" "After dinner" "outcome: its reply"
+
+# A malformed newest file is skipped for the next valid one.
+printf 'not json\n' >"$DEC_DIR/9999999999-kid-ada-app.json"
+out="$("$BIN" outcome)"
+check_eq "$(printf '%s' "$out" | cut -f4)" "declined" "outcome: a malformed newest file is skipped"
+rm -f "$DEC_DIR/9999999999-kid-ada-app.json"
+
+# An absent directory is nothing at all, exit 0.
+out="$("$BIN" outcome 2>&1)"
+st=$?
+rm -rf "$DEC_DIR"
+out2="$("$BIN" outcome 2>&1)"
+check_eq "$?" "0" "outcome: an absent directory exits 0"
+check_eq "$out2" "" "outcome: an absent directory prints nothing"
 
 echo "ask-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc

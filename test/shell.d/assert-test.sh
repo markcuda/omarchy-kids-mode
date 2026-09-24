@@ -745,6 +745,29 @@ chmod 0750 "$QUEUE_DIR"
 check_status "$out" "queue" "warn" "queue: an unreadable directory is a warn"
 rmdir "$QUEUE_DIR"
 
+# --- the kid's own copies of decisions (R-NOTIFY-6) -----------------------
+DEC_DIR="$SCRATCH_ROOT/var/lib/omarchy-kids/kid-ada/decisions"
+out="$($BIN)"
+check_status "$out" "decisions:kid-ada" "ok" "decisions: absent is ok (nothing decided yet)"
+[[ -e "$DEC_DIR" ]] && fail "decisions: assert created the directory" ||
+  pass "decisions: assert never creates it"
+
+mkdir -p "$DEC_DIR"
+printf '{}' >"$DEC_DIR/1-kid-ada-app.json"
+chmod 0755 "$DEC_DIR"
+chmod 0644 "$DEC_DIR/1-kid-ada-app.json"
+out="$($BIN)"
+check_status "$out" "decisions:kid-ada" "fixed" "decisions: wrong modes report fixed"
+check_eq "$(kids_file_mode "$DEC_DIR")" "750" "decisions: the directory is 0750"
+check_eq "$(kids_file_mode "$DEC_DIR/1-kid-ada-app.json")" "640" "decisions: the copy is 0640"
+
+ln -sf /etc/passwd "$DEC_DIR/evil.json"
+out="$($BIN)"
+check_status "$out" "decisions:kid-ada" "FAIL" "decisions: a symlinked copy fails the lock"
+[[ -L "$DEC_DIR/evil.json" ]] && pass "decisions: the symlink is left alone" ||
+  fail "decisions: the symlink was removed or replaced"
+rm -f "$DEC_DIR/evil.json" "$DEC_DIR/1-kid-ada-app.json"
+
 # --- --quiet on an all-ok tree prints nothing ---------------------------
 
 out="$("$BIN" --quiet)"

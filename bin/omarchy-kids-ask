@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Ask a grown-up for more time, an app, a plugin, or a site
-# omarchy:args=<time|app|plugin|site|submit|collect|list|approve|decline> ...
+# omarchy:args=<time|app|plugin|site|submit|outcome|collect|list|approve|decline> ...
 # The kid asks (time/app/plugin/site); root collects, verifies, and applies (SPEC.md R-ASK-1..3, Appendix D).
 # See docs/ask.md for the outbox/queue design and every judgment call.
 set -euo pipefail
@@ -23,6 +23,10 @@ RUN="/run/user/$(id -u)/omarchy-kids"
 RUN_USER_ROOT=/run/user
 KIDS_DIR="$ETC/kids"
 QUEUE_DIR="$SYSROOT/var/lib/omarchy-kids/queue"
+# The data root the kid's own copy of a decision lives under (R-NOTIFY-6): beside
+# the queue, root-written, readable by the kid's own group. A constant, never an
+# argument or an environment value.
+VARLIB="$SYSROOT/var/lib/omarchy-kids"
 OUTBOX_DIR="$RUN/ask-outbox"
 MODAL_QML="$SHARE/ask/shell.qml"
 MODAL_PIDFILE="$RUN/ask-modal.pid"
@@ -52,9 +56,10 @@ Usage: omarchy-kids-ask time <minutes>
        omarchy-kids-ask plugin <plugin-id>
        omarchy-kids-ask site <host>
        omarchy-kids-ask submit <kind> <what> [--minutes N]
+       omarchy-kids-ask outcome                 # the newest decision in your own directory
        omarchy-kids-ask grant <kind> <what> [--minutes N]   (password on stdin)
        omarchy-kids-ask apply-grant --kid K --kind KIND --what W [--minutes N] --apply
-       omarchy-kids-ask collect [--apply]
+       omarchy-kids-ask collect [--apply]       # also heals a missing kid copy (R-NOTIFY-6)
        omarchy-kids-ask list [<kid>]            # root or a member of omarchy-parents
        omarchy-kids-ask approve <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
        omarchy-kids-ask decline <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
@@ -407,6 +412,9 @@ cmd_collect() {
   done
 
   if [[ "$DRY_RUN" == "0" ]]; then
+    # R-NOTIFY-6: a decision whose kid copy failed (a full disk, an account that
+    # did not resolve then) gets one here. A present copy is never rewritten.
+    "$KIDS_PY" "$ASKPY" sync-decisions "$QUEUE_DIR" || true
     echo "omarchy-kids-ask: collect: $collected request(s) collected, $skipped dropped"
   else
     echo "omarchy-kids-ask: collect: $collected request(s) would be collected (dry-run; pass --apply for real)"
@@ -480,6 +488,16 @@ cmd_apply_grant() {
 }
 
 # --- root: list / approve / decline ---------------------------------------
+
+# cmd_outcome -- kid-side, display only (R-NOTIFY-6): the newest decided request
+# in this account's own directory, or nothing. It decides nothing and it cannot
+# read another kid's (0750, their own group).
+cmd_outcome() {
+  (($# == 0)) || die "outcome: takes no arguments"
+  local account
+  account="$(id -un)"
+  "$KIDS_PY" "$ASKPY" outcome "$VARLIB/$account/decisions"
+}
 
 cmd_list() {
   is_root || in_parent_group || die "list: root or a member of omarchy-parents only" 1
@@ -649,6 +667,7 @@ main() {
     plugin) cmd_plugin "$@" ;;
     site) cmd_site "$@" ;;
     submit) cmd_submit "$@" ;;
+    outcome) cmd_outcome "$@" ;;
     grant) cmd_grant "$@" ;;
     apply-grant) cmd_apply_grant "$@" ;;
     collect) cmd_collect "$@" ;;

@@ -102,6 +102,12 @@ parent group; not that any record is valid or open, that `collect` runs, or that
 record while its mode was wrong. A warn is the directory being unreadable to this run, which is what
 a run outside `omarchy-parents` sees.
 
+`lock:decisions:<account>` is the assert lock of the same name (R-NOTIFY-6), standard shape and
+standard fail text. It proves only that each provisioned kid's `decisions` directory is absent or
+closed to everyone but root and that kid, one row per kid; not that a copy matches its record, that
+every decided record has one, or that the kid saw it. A warn is a directory being unreadable to this
+run.
+
 **One exception, not a FAIL:** `face:<account>` (the SDDM avatar icon, issue #39) is a WARN even
 in this technical catalog. It is the one lock in the table that isn't a security fence at all —
 missing or wrong, a kid still logs in exactly as fenced, just without their picture on the portal

@@ -170,6 +170,8 @@ main() {
     assert_one "gecos:$account" gecos_ok gecos_fix "$account" "$name"
     assert_one "face:$account" face_ok face_fix "$account" "$avatar"
     assert_one "groups:$account" groups_ok groups_fix "$account" "$band"
+    # decisions (R-NOTIFY-6): the kid's own copies of their decided requests.
+    assert_one "decisions:$account" decisions_ok decisions_fix "$account"
     assert_one "theme:$account" theme_ok theme_fix "$account"
     assert_one "launcher-map:$account" launcher_lock_ok launcher_lock_fix "$account"
     assert_one "session-manifest:$account" session_manifest_lock_ok session_manifest_lock_fix "$account"

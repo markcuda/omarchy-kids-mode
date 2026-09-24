@@ -104,6 +104,7 @@ run_locks_section() {
     lock_check "gecos:$acct" gecos_ok "$acct" "$name"
     lock_check_warn "face:$acct" face_ok "$acct" "$avatar"
     lock_check "groups:$acct" groups_ok "$acct" "$band"
+    lock_check "decisions:$acct" decisions_ok "$acct"
   done < <(kids_list "$KIDS_DIR")
 
   lock_check polkit-admin polkit_admin_ok

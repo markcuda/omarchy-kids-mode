@@ -88,6 +88,22 @@ mode_rec="$(vmroot "stat -c '%a %U %G' /var/lib/omarchy-kids/queue/$REQ_ID.json"
   ok "the record rewrite left it 640 root omarchy-parents" ||
   fail "record modes after the decision are '$mode_rec'"
 
+# R-NOTIFY-6: the kid's own copy of the decision, and the kid reading it. The
+# root branch of write_kid_copy's chown cannot be proven off-box.
+dec_dir="/var/lib/omarchy-kids/$LIVE_KID1_ACCOUNT/decisions"
+mode_dec="$(vmroot "stat -c '%a %U %G' $dec_dir" | tr -s '[:space:]' ' ' | sed 's/ $//')"
+mode_copy="$(vmroot "stat -c '%a %U %G' $dec_dir/$REQ_ID.json" | tr -s '[:space:]' ' ' | sed 's/ $//')"
+[[ "$mode_dec" == "750 root $LIVE_KID1_ACCOUNT" ]] &&
+  ok "the kid's decisions directory is 750 root:$LIVE_KID1_ACCOUNT" ||
+  fail "decisions directory modes are '$mode_dec'"
+[[ "$mode_copy" == "640 root $LIVE_KID1_ACCOUNT" ]] &&
+  ok "the kid's copy is 640 root:$LIVE_KID1_ACCOUNT" ||
+  fail "the kid's copy modes are '$mode_copy'"
+out_line="$(vmroot "runuser -l $LIVE_KID1_ACCOUNT -c 'omarchy-kids-ask outcome'" | tr -d '\r')"
+[[ "$out_line" == *$'\tapproved'* ]] &&
+  ok "the kid reads the outcome in their own session ($out_line)" ||
+  fail "the kid's outcome did not read approved: '$out_line'"
+
 shot 70-notify-approve || fail "screenshot failed"
 
 # Leave the box as it was: drop the request record and its lock, then revoke the device and

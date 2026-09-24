@@ -410,6 +410,36 @@ relay_reload() {
   systemctl try-restart "$RELAY_UNIT_NAME" >/dev/null 2>&1 || true
 }
 
+# decisions (R-NOTIFY-6): each kid's own copy of their decided requests, written
+# by ask.py decide and healed by collect. Modes and ownership only: never creates,
+# removes, rewrites or regenerates a copy, never reads one.
+decisions_dir() { printf '%s/var/lib/omarchy-kids/%s/decisions' "$(posture_root)" "$1"; }
+
+decisions_ok() {
+  local kid="$1" dir file group
+  dir="$(decisions_dir "$kid")"
+  if [[ ! -e "$dir" && ! -L "$dir" ]]; then return 0; fi
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  [[ -r "$dir" && -x "$dir" ]] || return 2
+  group="$(id -gn "$kid" 2>/dev/null)" || return 1
+  time_metadata_dir_ok "$dir" 750 "$group" || return 1
+  while IFS= read -r -d '' file; do
+    time_metadata_file_ok "$file" 640 "$group" || return 1
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -name '*.json' -print0 2>/dev/null)
+}
+
+decisions_fix() {
+  local kid="$1" dir file group
+  dir="$(decisions_dir "$kid")"
+  [[ -e "$dir" || -L "$dir" ]] || return 0
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  group="$(id -gn "$kid" 2>/dev/null)" || return 1
+  time_metadata_dir_fix "$dir" 750 "$group" || return 1
+  while IFS= read -r -d '' file; do
+    time_metadata_file_fix "$file" 640 "$group" || return 1
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -name '*.json' -print0 2>/dev/null)
+}
+
 # queue (R-NOTIFY-7): what a kid asked for and how it was decided is for root and the
 # parent group, not every local account. The kid's own write path is its 0700 outbox;
 # root's collect moves the record into this queue. Modes and ownership only: the lock
