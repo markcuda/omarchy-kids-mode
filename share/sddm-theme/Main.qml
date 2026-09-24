@@ -208,6 +208,19 @@ Rectangle {
         keyScope.forceActiveFocus() // the closed password field would otherwise keep the arrows
     }
 
+    // I-6: the footer names a key only when that key acts on this box. Left/right
+    // need a second tile to move to, Enter needs a tile at all (with none, the
+    // status line says no accounts are visible), and the greeter may
+    // refuse power-off -- sddm.canPowerOff gates the chord's own handler too.
+    function keyHelpText() {
+        if (root.passwordMode) return "Enter Sign in    ·    Esc Back"
+        var parts = []
+        if (root.users.length > 1) parts.push("← → Choose")
+        if (root.users.length > 0) parts.push("Enter Sign in")
+        if (sddm.canPowerOff) parts.push("Ctrl+Shift+P Power off")
+        return parts.join("    ·    ")
+    }
+
     // Enter on the highlighted tile (R-LOGIN-2/4): "no password" profiles
     // (3-5 band only, R-SEC-3) log in immediately with an empty password;
     // every other tile opens the password field under it instead.
@@ -422,8 +435,7 @@ Rectangle {
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottomMargin: 24
-        text: root.passwordMode ? "Enter Sign in    ·    Esc Back"
-                                : "← → Choose    ·    Enter Sign in    ·    Ctrl+Shift+P Power off"
+        text: root.keyHelpText()
         color: root.colMuted
         font.family: root.fontFam
         font.pixelSize: 16

@@ -3,12 +3,15 @@
 # R-SEC-3, I-5, I-7; issue #14): share/sddm-theme/{metadata.desktop,
 # theme.conf,Main.qml}, the twelve share/avatars/*.svg, PKGBUILD's
 # install of the theme, and lib/posture.sh's/omarchy-kids-assert's
-# theme-selection drop-in. Nothing here runs SDDM, Qt, or qmllint --
-# there is no SDDM/Qt install on this machine (see the UNTESTED header
-# in Main.qml) -- so every check is either a text/grep check, a
-# bash -n/python3 xml.etree parse, or exercises lib/posture.sh's shell
-# functions directly against a scratch tree (never the real /etc, per
-# AGENTS.md rule 8).
+# theme-selection drop-in. Nothing here runs SDDM or Qt -- this machine
+# has neither (Main.qml's header points at docs/portal.md for the
+# unverified list) -- so every check is
+# either a text/grep check, a bash -n/python3 xml.etree parse, or
+# exercises lib/posture.sh's shell functions directly against a scratch
+# tree (never the real /etc, per AGENTS.md rule 8). The one exception is
+# Main.qml's syntax, which qmllint checks when a Qt6 toolchain is present
+# (on Arch it lives in /usr/lib/qt6/bin) and which is skipped, loudly,
+# when it is not.
 set -uo pipefail
 
 # shellcheck source=test/shell.d/lib.sh
@@ -129,6 +132,63 @@ print(s.count('{'), s.count('}'), s.count('('), s.count(')'))
       fail "Main.qml missing the wording: $needle"
     fi
   done
+
+  # I-6: every hint names a key that acts on this box. Arrows need a second
+  # tile to move to, Enter needs a tile at all, and SDDM may refuse power-off,
+  # so each hint must sit behind its own guard inside keyHelpText() -- and
+  # nowhere else in the file, which would make it unconditional again.
+  keyhelp_fn="$(sed -n '/function keyHelpText/,/^    }/p' "$MAIN_QML")"
+  arrow_gated=no
+  enter_gated=no
+  power_gated=no
+  hint_gate_line() { # BODY GUARD_TEXT HINT_TEXT -- yes when HINT_TEXT sits on a line at or after GUARD_TEXT
+    local guard hint
+    guard="$(grep -nF "$2" <<<"$1" | cut -d: -f1)"
+    hint="$(grep -nF "$3" <<<"$1" | cut -d: -f1)"
+    [[ -n "$guard" && -n "$hint" && "$guard" -le "$hint" ]] && echo yes || echo no
+  }
+  arrow_gated="$(hint_gate_line "$keyhelp_fn" 'root.users.length > 1' '"← → Choose"')"
+  enter_gated="$(hint_gate_line "$keyhelp_fn" 'root.users.length > 0' '"Enter Sign in"')"
+  power_gated="$(hint_gate_line "$keyhelp_fn" 'sddm.canPowerOff' '"Ctrl+Shift+P Power off"')"
+  if [[ "$arrow_gated" == yes && "$enter_gated" == yes && "$power_gated" == yes ]]; then
+    pass "keyHelpText gates each hint behind the condition that makes the key act"
+  else
+    fail "keyHelpText offers a hint with no guard (arrows=$arrow_gated enter=$enter_gated power=$power_gated)"
+  fi
+  # The footer must come from keyHelpText() at all: counts are of the phrase,
+  # not the quoted literal, so a restored hardcoded footer (with the function
+  # left behind as dead code) is caught too.
+  keyhelp_binding="$(grep -cF 'text: root.keyHelpText()' "$MAIN_QML")"
+  arrows_file="$(grep -cF '← → Choose' "$MAIN_QML")"
+  arrows_fn="$(grep -cF '← → Choose' <<<"$keyhelp_fn")"
+  chord_file="$(grep -cF 'Ctrl+Shift+P Power off' "$MAIN_QML")"
+  chord_fn="$(grep -cF 'Ctrl+Shift+P Power off' <<<"$keyhelp_fn")"
+  enter_file="$(grep -cF 'Enter Sign in' "$MAIN_QML")"
+  enter_fn="$(grep -cF 'Enter Sign in' <<<"$keyhelp_fn")"
+  if [[ "$keyhelp_binding" == 1 && "$arrows_file" == "$arrows_fn" && "$arrows_fn" == 1 &&
+    "$chord_file" == "$chord_fn" && "$chord_fn" == 1 &&
+    "$enter_file" == "$enter_fn" && "$enter_fn" -ge 2 ]]; then
+    pass "the footer is keyHelpText() and every hint phrase lives only inside it"
+  else
+    fail "a hint phrase also appears outside keyHelpText, or the footer does not use it (binding=$keyhelp_binding arrows=$arrows_fn/$arrows_file chord=$chord_fn/$chord_file enter=$enter_fn/$enter_file)"
+  fi
+
+  # The greeter is the one surface no screenshot on this project's dogfood VM
+  # can reach (try-omarchy logs its owner in at the image level), so at least
+  # its syntax is machine-checked wherever a qmllint exists; the pass line
+  # prints the tool's own version so a wrong-major one is visible. On Arch the
+  # Qt6 lint is /usr/lib/qt6/bin/qmllint, which is not on PATH.
+  qmllint="$(command -v qmllint 2>/dev/null || true)"
+  [[ -n "$qmllint" ]] || { [[ -x /usr/lib/qt6/bin/qmllint ]] && qmllint="/usr/lib/qt6/bin/qmllint"; }
+  if [[ -n "$qmllint" ]]; then
+    if out="$("$qmllint" "$MAIN_QML" 2>&1)"; then
+      pass "Main.qml passes qmllint ($("$qmllint" --version 2>/dev/null | head -1))"
+    else
+      fail "Main.qml fails qmllint: $(tail -3 <<<"$out")"
+    fi
+  else
+    echo "SKIP qmllint syntax check: no qmllint on PATH or at /usr/lib/qt6/bin"
+  fi
 
   # R-LOGIN-1: parent identified as NOT kid-<slug>, and rendered
   # smaller than a kid tile.
