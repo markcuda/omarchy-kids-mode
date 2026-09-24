@@ -518,10 +518,12 @@ check_contains "$plain" "PASS  lock:relay-tls" "relay-tls: absent passes"
 check_contains "$plain" "PASS  lock:courier-conf" "courier-conf: absent passes"
 mkdir -p "$RELAY_DIR"
 printf 'key' >"$RELAY_DIR/key.pem"
+chmod 0750 "$RELAY_DIR" # the directory is right, so the key's mode is what fails
 chmod 0644 "$RELAY_DIR/key.pem"
 plain="$(strip_ansi "$("$BIN")")"
 check_contains "$plain" "FAIL  lock:relay-tls" "relay-tls: a world-readable key fails"
-check_contains "$plain" "omarchy-kids-assert" "relay-tls: the fail points at assert (repairable)"
+check_contains "$plain" "does not match what omarchy-kids-assert expects" \
+  "relay-tls: the fail carries assert's own wording (repairable)"
 rm -rf "$RELAY_DIR"
 
 # --- Boot JSON is selected only by the trusted machine mode -----------

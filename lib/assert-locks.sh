@@ -436,10 +436,10 @@ relay_tls_ok() {
   [[ -d "$dir" && ! -L "$dir" ]] || return 1
   [[ -r "$dir" && -x "$dir" ]] || return 2
   time_metadata_dir_ok "$dir" 750 omarchy-parents || return 1
-  for entry in "$dir"/*; do
-    [[ -e "$entry" || -L "$entry" ]] || continue
+  # find (not a glob): a hidden loose copy of the key is the shape this catches.
+  while IFS= read -r -d '' entry; do
     relay_tls_entry "$entry" time_metadata_file_ok || return 1
-  done
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
 }
 
 relay_tls_fix() {
@@ -448,10 +448,9 @@ relay_tls_fix() {
   [[ -e "$dir" || -L "$dir" ]] || return 0
   [[ -d "$dir" && ! -L "$dir" ]] || return 1
   time_metadata_dir_fix "$dir" 750 omarchy-parents || return 1
-  for entry in "$dir"/*; do
-    [[ -e "$entry" || -L "$entry" ]] || continue
+  while IFS= read -r -d '' entry; do
     relay_tls_entry "$entry" time_metadata_file_fix || foreign=1
-  done
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
   [[ "$foreign" -eq 0 ]] || return 1 # a foreign copy is left for a human
   return 0
 }

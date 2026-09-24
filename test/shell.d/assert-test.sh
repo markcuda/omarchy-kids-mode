@@ -677,18 +677,18 @@ check_eq "$(kids_file_mode "$RELAY_DIR/key.pem")" "640" "relay-tls: key.pem is 0
 check_status "$out" "courier-conf" "fixed" "courier-conf: a wrong mode reports fixed"
 check_eq "$(kids_file_mode "$COURIER_CONF")" "600" "courier-conf: the mailbox file is 0600"
 
-# A loose copy of the key beside the real one: FAIL, left exactly as it was, and
-# the file the lock owns is still repaired first.
-printf 'key' >"$RELAY_DIR/key.pem.bak"
-chmod 0600 "$RELAY_DIR/key.pem.bak"
-foreign_before="$(cksum <"$RELAY_DIR/key.pem.bak")"
+# A loose copy of the key beside the real one -- hidden, the shape a glob would
+# miss: FAIL, left exactly as it was, and the file the lock owns is still repaired.
+printf 'key' >"$RELAY_DIR/.key.pem.bak"
+chmod 0600 "$RELAY_DIR/.key.pem.bak"
+foreign_before="$(cksum <"$RELAY_DIR/.key.pem.bak")"
 chmod 0666 "$RELAY_DIR/key.pem"
 out="$($BIN)"
 check_status "$out" "relay-tls" "FAIL" "relay-tls: a foreign copy fails the lock"
 check_eq "$(kids_file_mode "$RELAY_DIR/key.pem")" "640" "relay-tls: the owned key is still repaired"
-check_eq "$(cksum <"$RELAY_DIR/key.pem.bak")" "$foreign_before" \
-  "relay-tls: the foreign copy is left untouched"
-rm -f "$RELAY_DIR/key.pem.bak"
+check_eq "$(cksum <"$RELAY_DIR/.key.pem.bak")" "$foreign_before" \
+  "relay-tls: the hidden foreign copy is left untouched"
+rm -f "$RELAY_DIR/.key.pem.bak"
 out="$($BIN)"
 check_status "$out" "relay-tls" "ok" "relay-tls: ok again once the foreign copy is gone"
 
@@ -1015,6 +1015,24 @@ check_contains "$out2" "nothing else to assert" "no profiles, not quiet: names w
 #     disables them again, still needs the package's own units back) ----
 
 check_status "$out2" "units" "ok" "no profiles: units is still checked (not skipped) with zero kids"
+check_status "$out2" "relay-tls" "ok" "no profiles: relay-tls is still checked with zero kids"
+check_status "$out2" "courier-conf" "ok" "no profiles: courier-conf is still checked with zero kids"
+
+# The secret-holding locks are fixed on the zero-kids path too (a leaked key
+# still impersonates the relay to a device paired before the first kid).
+mkdir -p "$SCRATCH_ROOT/etc/omarchy-kids/relay"
+printf 'key' >"$SCRATCH_ROOT/etc/omarchy-kids/relay/key.pem"
+printf 'transport=ntfy\nurl=https://x\ntopic=y\n' >"$SCRATCH_ROOT/etc/omarchy-kids/courier.conf"
+chmod 0777 "$SCRATCH_ROOT/etc/omarchy-kids/relay"
+chmod 0666 "$SCRATCH_ROOT/etc/omarchy-kids/relay/key.pem" "$SCRATCH_ROOT/etc/omarchy-kids/courier.conf"
+out4="$(OMARCHY_KIDS_ETC="$EMPTY_ETC" "$BIN")"
+check_status "$out4" "relay-tls" "fixed" "no profiles: relay-tls is fixed with zero kids"
+check_status "$out4" "courier-conf" "fixed" "no profiles: courier-conf is fixed with zero kids"
+check_eq "$(kids_file_mode "$SCRATCH_ROOT/etc/omarchy-kids/relay/key.pem")" "640" \
+  "no profiles: the key is 0640 after the fix"
+check_eq "$(kids_file_mode "$SCRATCH_ROOT/etc/omarchy-kids/courier.conf")" "600" \
+  "no profiles: the mailbox file is 0600 after the fix"
+rm -rf "$SCRATCH_ROOT/etc/omarchy-kids/relay" "$SCRATCH_ROOT/etc/omarchy-kids/courier.conf"
 
 BOOT_LOGIN_LINK="$SCRATCH_ROOT/etc/systemd/system/multi-user.target.wants/omarchy-kids-boot-login.service"
 rm -f "$BOOT_LOGIN_LINK"
