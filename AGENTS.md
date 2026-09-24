@@ -11,29 +11,47 @@ per kid, the parent never restricted, one parent password. This is the one repos
 project; the design records are `CORE.md`, `SPOKES.md` and `research/` here, plus
 `PATH-SANDBOX.md`/`PATH-INSTALLER.md` on the `two-paths` branch.
 
-## Build philosophy (owner, 2026-09-22)
+## Default workflow (owner, 2026-09-22)
 
-These sit under the invariants below, never over them.
+Every piece of work runs this loop, in this repo:
 
-1. **User experience reigns supreme. "It just works" — always.** Every surface must wow the parent
-   and the kid: native-looking, responsive, obvious, keyboard-complete, and correct the first time
-   and every time. Foolproof is the floor, not the ceiling. A screen that needs a manual, a README,
-   or a second try is not done.
-2. **Lean into the most robust, full-featured build; no holds barred.** We have the tokens to
-   burn. When a choice exists between the smaller thing and the complete, delightful, well-tested
-   thing, build the complete one — as long as it keeps the invariants and the trust boundary. Turn
-   vague tickets into real specs; turn "later" into "now"; find the design that makes the parent
-   say "incredible" without ever crossing I-1..I-11.
+1. **Spec and tickets — fable 5.1 at high effort.** Use the Matt Pocock engineering skills
+   (`/to-spec`, then `/to-tickets`); the spec is the source of truth and each ticket is
+   tracer-bullet sized with its blockers declared. See "Agent skills" below.
+2. **Implement — DS4.1 flash (deepseek).** `/implement` drives `/tdd` at the pre-agreed seams:
+   small, deliberate steps, red-green-refactor, one vertical slice at a time.
+3. **Review — fable 5.1.** `/code-review` on both axes (Standards and Spec). Root,
+   trust-boundary and security changes also get the independent adversarial review this file
+   already requires. Nothing commits unreviewed, and the implementer never reviews its own work.
+
+Then `test/all`, then the VM live checks the spec names (rule 11). This is the default; say so in a
+ticket if you deviate.
+
+## Agent skills
+
+The Matt Pocock engineering skills are installed globally (`npx skills@latest add mattpocock/skills
+-a opencode -a claude-code -g`, 38 skills; `/setup-matt-pocock-skills` was run once for this repo).
+
+### Issue tracker
+
+Issues and specs are GitHub issues in `markcuda/omarchy-kids-mode`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`.
+See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context; `SPEC.md`, `AGENTS.md` and `docs/*.md` are the domain model today. See
+`docs/agents/domain.md`.
 
 ## Rules that override everything
 
 1. **The parent's account is never restricted** (spec I-1). If your change touches the parent's
    session, home, browser, or DNS, stop.
-2. **Nothing about a child leaves the machine, except to a device the parent paired or a server the
-   parent named, and only when notifications are on** (I-2 as amended, 2026-09-22). The only
-   processes that may open a network connection are the package manager, the DoH template inside the
-   kids browser policy, `omarchy-kids-relayd` on the LAN, and `omarchy-kids-relay-courier` to the
-   parent's own server. (R-NOTIFY; `docs/phase1/SPEC-AMENDMENT-notifications.md`.)
+2. **Nothing about a child leaves the machine** (I-2). No network calls from anything but the
+   package manager and the DoH template inside the kids browser policy.
 3. **Locks are root-owned and live outside every home** (I-3). Never make a plugin, a dotfile, or
    anything user-writable responsible for enforcement.
 4. **Fail closed at kid login, fail safe in early boot** (I-4, I-9).
