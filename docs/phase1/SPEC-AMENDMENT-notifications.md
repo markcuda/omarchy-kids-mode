@@ -47,7 +47,9 @@ After:
 - R-NOTIFY-2 The relay never decides. A request decision is authenticated and applied by root
   (`omarchy-kids-authd` / `omarchy-kids-ask`) through the same `apply_record` path the panel uses; an
   add-on review decision and an action (grant/end) are authenticated the same way and then run the
-  command the panel's own row runs (`omarchy-kids-review`, `omarchy-kids-time`, `omarchy-kids-exit`).
+  same command the parent's own surfaces run (the panel's review and screen-time rows and the bar's
+  end row: `omarchy-kids-review approve|deny`, `omarchy-kids-time grant`, `omarchy-kids-exit
+  --finish`).
   A compromised relay can, at worst, stop delivering notifications.
 - R-NOTIFY-3 The device registry is root-owned under `/etc/omarchy-kids/devices/`. Each record holds
   a device's public keys, its scopes and its pairing provenance. Revocation is a root write and
