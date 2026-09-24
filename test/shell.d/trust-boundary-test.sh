@@ -133,12 +133,12 @@ done
 # The OMARCHY_KIDS_* scan above also matches python (os.environ.get / getenv).
 # A non-namespaced environment read is the same hazard under a plain name, and
 # the only ones this package may make are systemd's socket-activation contract,
-# read once and then popped (bin/omarchy-kids-authd). A new one fails here.
+# read once and then popped (bin/omarchy-kids-authd and bin/omarchy-kids-wifid).
+# A new one fails here.
 PY_ALLOWED=(
-  LISTEN_PID     # sd_listen_fds: this process is the systemd-activated one
-  LISTEN_FDS     # how many sockets systemd passed
-  LISTEN_FDNAMES # same, for wifid's own socket
-  PATH           # lib/conf.py's desktop-argv; its only caller applies the executable fence
+  LISTEN_PID # sd_listen_fds: these are the systemd-activated daemons
+  LISTEN_FDS # how many sockets systemd passed
+  PATH       # lib/conf.py's desktop-argv; its only caller applies the executable fence
 )
 # Every python source the package ships, derived from its shebang (a hand-written
 # list had the courier in and wifid out), plus lib/*.py.
