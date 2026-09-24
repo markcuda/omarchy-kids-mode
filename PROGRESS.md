@@ -55,6 +55,11 @@ tick still aborts, as before; no enforcement decision changes).
 -- a persistently broken conf leaves the time tick fail-open (last state stays in force; `time:timer`
 only proves the timer is active). `docs/time.md` now records it.
 
+**Fixed on a topic branch awaiting merge:** `fix/time-status-fresh-grant` -- `omarchy-kids-time
+status` counts a grant made since the last published tick at once (it falls back to the ledger math
+while today's grant file is newer than the runtime document), instead of showing the pre-grant
+numbers for up to a tick.
+
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,
 install rules, "components are file sets") is untracked in `.local/VM-DOGFOOD.md`. After

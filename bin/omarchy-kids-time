@@ -65,7 +65,11 @@ cmd_status() {
   granted="$(time_granted_minutes "$kid" "$day")"
   budget="$(time_budget_minutes "$kid" "$weekend")" || die "no budget configured for '$kid'"
   file="$(time_state_file "$kid")"
-  if time_state_read "$file" && [[ "$(jq -r '.logical_day' "$file")" == "$day" ]]; then
+  # The published document is today's and fresh: use its seconds. A grant made
+  # since the last tick is newer than the document, so fall through to the
+  # ledger math rather than showing a pre-grant "0 min left" for up to a tick.
+  if time_state_read "$file" && [[ "$(jq -r '.logical_day' "$file")" == "$day" ]] &&
+    ! time_grant_newer_than "$kid" "$day" "$file"; then
     remaining="$(jq -r '.remaining_seconds / 60 | floor' "$file")"
     read -r kind at <<<"$(time_state_boundary "$file")"
   else

@@ -192,6 +192,20 @@ time_grant_add() {
   time_write_int "$file" "$((cur + add))"
 }
 
+# time_grant_newer_than KID DAY STATE_FILE — true when today's grant file is
+# newer than the last published root tick. That document's remaining seconds
+# were computed before the grant, so a just-made grant is invisible in it
+# until the root ledger tick's next pass (30 s); status then keeps the parent-facing
+# numbers by falling back to the read-only ledger math (docs/time.md). The
+# published document is never rewritten here: enforcement still recomputes
+# from the ledger.
+time_grant_newer_than() {
+  local grant state
+  grant="$(time_grant_file "$1" "$2")"
+  state="$3"
+  [[ -f "$grant" && "$grant" -nt "$state" ]]
+}
+
 # time_remaining_minutes KID DAY WEEKEND — budget + grant - used, floored at 0.
 time_remaining_minutes() {
   local kid="$1" day="$2" weekend="$3" budget used granted remaining

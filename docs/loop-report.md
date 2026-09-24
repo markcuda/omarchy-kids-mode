@@ -1669,3 +1669,22 @@ writes state, so the last published state stays in force and `time:timer` only p
 active. That fail-open window is already on record as ticket W2
 (`docs/research/2026-09-19-per-app-limits-and-weekly-caps-proposal.md`) and is now written into
 `docs/time.md` too; it needs the owner's W2 decision, not a unilateral enforcement change.
+### 2026-09-22, loop iteration: a fresh grant shows in status at once
+
+Dogfooded the VM first (kid-ada at Level 2, session healthy, `omarchy-kids-check --live` all PASS
+except the expected `firmware:password` on a VM), then took the refinement the 2026-09-21 "a grant
+shows in status after the daemon's next tick" entry had left open. `omarchy-kids-time status` now
+keeps the published document only while it is also newer than today's grant file, so a grant a
+parent just made counts at once instead of showing "0 min left" (or an old boundary) until the
+root ledger tick's next pass. The document is not rewritten and enforcement is unchanged: the root
+tick still recomputes from the ledger and acts. `time-test.sh` covers the three states (fresh
+document, a grant newer than the tick, a tick since the grant) and fails without the guard;
+`test/all` green (52 files, five environment skips), `shellcheck -x` clean, and the fable reviewer
+found nothing blocking (six minors closed). Branch `fix/time-status-fresh-grant`.
+
+Live on the VM after installing `/usr/bin/omarchy-kids-time` and `/usr/lib/omarchy-kids/time.sh`
+from the branch (never the integration copies): status read the fresh published document ("7 min
+left", boundary 01:00); a root `grant kid-ada 10` made the grant file newer than the document
+(00:53:08 vs 00:53:02), and the very next status counted it at once ("18 min left", boundary
+01:11) instead of holding the pre-grant 7 until the next pass. The kid session stayed up and
+healthy.
