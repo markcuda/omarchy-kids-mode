@@ -282,14 +282,17 @@ reaching the same two root commands the bar reaches, with no terminal and no pas
   same test the ask path uses for "a provisioned kid account"). The parent's own account is never a
   target: it has no profile there, and a signed ACT naming it is `no not-a-kid` (I-1). Any failure
   of these is `no not-a-kid`, one reason for all of them, and the nonce stays burned. For a grant
-  `minutes` is re-checked as an integer in `1..1440` (`no malformed` otherwise). It then runs, with
+  `minutes` is an integer in `1..1440` enforced by the record shape before the signature is checked
+  (`no malformed` otherwise), and it reaches the command as its decimal digits. It then runs, with
   a 30-second timeout and no shell, `omarchy-kids-time grant <account> <minutes>` for a grant, or
   `omarchy-kids-exit --finish --kid <account>` for an end. `omarchy-kids-time grant` validates the
   minutes but not the account, which is why authd validates the account before it; `omarchy-kids-exit`
   resolves the account with `id -u` and refuses an unknown one, and is never replaced by a direct
   `loginctl` call. A non-zero exit, a timeout or a spawn failure is `no apply failed`. A grant
-  adds to today's one-off grant in `/run/omarchy-kids/time/<account>.json` and is picked up by the
-  next ledger tick; it does not itself unlock a locked screen faster than that tick. An end asks
+  adds to today's one-off grant in `/var/lib/omarchy-kids/<account>/usage/<day>.grant` (the writer
+  `lib/time.sh`'s `time_grant_add` uses, `docs/time.md`) and is picked up by the next tick, which
+  re-publishes `/run/omarchy-kids/time/<account>.json`; the grant itself does not unlock a locked
+  screen faster than that tick. An end asks
   each of the account's Hyprland instances to exit and, if none is found or none goes away, falls
   back to `loginctl terminate-user`, which ends every session the account has (the command's own
   rule, `docs/exit.md`); authd does not check `status.json` for whether the kid is live, because a
@@ -324,5 +327,5 @@ and strike "the `grant`/`end` routes above are the ACT frame's and are not built
 The relay forwards either body as `ACT <json>\n`; authd verifies the signature against the
 root-owned registry with scope `act`, checks the account is a provisioned kid, and runs
 `omarchy-kids-time grant` or `omarchy-kids-exit --finish --kid` as root. No file is written by the
-frame itself; the grant lands in `/run/omarchy-kids/time/<account>.json` through the time
-command's own writer.
+frame itself; the grant lands in `/var/lib/omarchy-kids/<account>/usage/<day>.grant` through the
+time command's own writer (`lib/time.sh`), and the tick re-publishes the runtime state.

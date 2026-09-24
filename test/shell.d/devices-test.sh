@@ -169,6 +169,13 @@ check(not d.kid_account_ok(etc, me), "an account with no profile is not a kid")
 os.makedirs(os.path.join(etc, "kids"), exist_ok=True)
 with open(os.path.join(etc, "kids", me + ".conf"), "w") as f:
     f.write("band=6-8\n")
+# A profile for root and for a real system account: the profile is there, so only
+# the uid guard can refuse them (delete the guard and these fail).
+for system in ("root", "daemon"):
+    if pwd.getpwnam(system).pw_uid < 1000:
+        with open(os.path.join(etc, "kids", system + ".conf"), "w") as f:
+            f.write("band=6-8\n")
+        check(not d.kid_account_ok(etc, system), f"a profile does not make '{system}' a kid")
 if os.getuid() >= 1000:
     check(d.kid_account_ok(etc, me), "a provisioned non-root account is a kid")
 check(not d.kid_account_ok(etc, "root"), "root is never a kid")

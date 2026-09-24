@@ -220,6 +220,12 @@ try:
     check(code == 200 and json.loads(body)["reply"] == "ok", "a grant POST is forwarded to authd")
     code, _ = request("POST", granth_path, {}, act_frame.encode())
     check(code == 403, "an unsigned grant POST is refused at the relay")
+    bad_account_path = "/v1/kids/Kid!/grant"
+    bad_account_frame = json.dumps({"record": dict(act_rec, account="Kid!"), "signature": act_sig})
+    code, _ = request("POST", bad_account_path,
+                      signed_headers(bad_account_path, bad_account_frame.encode(), method="POST"),
+                      bad_account_frame.encode())
+    check(code == 400, "an account that is not a kid account is refused before authd")
     # A record naming another account, or the wrong action, is refused before authd.
     other_account = json.dumps({"record": dict(act_rec, account="kid-dot"), "signature": act_sig})
     code, _ = request("POST", granth_path,

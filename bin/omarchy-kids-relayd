@@ -254,6 +254,8 @@ class Relay:
                 return await self.reply(writer, 403, {"error": reason})
             action = "grant" if path.endswith("/grant") else "end"
             account = path[len("/v1/kids/") : -(len(action) + 1)]
+            if not self.devices.RE_KID_ACCOUNT.match(account):
+                return await self.reply(writer, 400, {"error": "malformed"})
             try:
                 frame = json.loads(body)
             except ValueError:
