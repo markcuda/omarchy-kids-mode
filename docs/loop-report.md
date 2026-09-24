@@ -1688,3 +1688,20 @@ left", boundary 01:00); a root `grant kid-ada 10` made the grant file newer than
 (00:53:08 vs 00:53:02), and the very next status counted it at once ("18 min left", boundary
 01:11) instead of holding the pre-grant 7 until the next pass. The kid session stayed up and
 healthy.
+### 2026-09-22, loop iteration: the Time's Up card names the key that asks
+
+Live: the Time's Up card (login at 15:41 with the day's budget spent) had one action and a
+pointer-clickable button, but no key hint -- unlike the portal, the app picker, the Wi-Fi picker,
+the plugins shelf and the exit/Ask modals, every one of which names its key (I-5). The card is up
+only for its countdown, so a kid who cannot find Enter loses the one thing the screen offers
+(`c09637a`): a centred "Enter Ask a grown-up" line under the button. The `FocusScope` already
+handled Return/Enter; `time-test.sh` now pins the hint and both handlers, which is what stops the
+wording and the handlers drifting apart.
+
+The prior iteration was cut off here, so the pass was re-run: installed the branch `timesup.qml`,
+granted to about two minutes of remaining so the budget would expire on a fresh session, logged the
+kid in, and waited for a real `grace` state to appear and the daemon's next 30 s poll to launch the
+overlay (a grab at the ledger tick catches the desktop instead -- the daemon is a separate poller).
+The branch card renders "Enter Ask a grown-up" centred under the Ask button and fits the console;
+evidence `timesup-keyhint-2026-09-22.png` in `.local/media/`. The autologin drop-in was removed
+after the pass and the owner's session is back on the console.

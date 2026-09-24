@@ -739,6 +739,13 @@ check_contains "$(cat "$DIR/share/time/timesup.qml")" "It's bedtime." \
   "timesup: has bedtime words for a lights-out stop"
 check_contains "$(cat "$DIR/share/time/timesup.qml")" '"Closing in "' \
   "timesup: counts down in plain words"
+# I-5: one action, and it says which key works. The card is only up for the
+# countdown, so a kid who cannot find the key loses the chance to ask.
+check_contains "$(cat "$DIR/share/time/timesup.qml")" '"Enter Ask a grown-up"' \
+  "timesup: names the key that asks, like every other kid surface"
+for handler in Keys.onReturnPressed Keys.onEnterPressed; do
+  check_contains "$(cat "$DIR/share/time/timesup.qml")" "$handler" "timesup: handles $handler"
+done
 
 "$CONF" reset kid-ada >/dev/null
 unset XDG_SESSION_ID
