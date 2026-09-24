@@ -26,7 +26,7 @@ class LocalNotifier implements Notifier {
   static bool get supported => const {'android', 'ios', 'macos'}.contains(Platform.operatingSystem);
 
   @override
-  Future<bool> initialize({required void Function(NoticeTap tap) onTap}) async {
+  Future<NoticeStatus> initialize({required void Function(NoticeTap tap) onTap}) async {
     _onTap = onTap;
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     // Ask for nothing at initialize: the permission is requested once after
@@ -52,7 +52,7 @@ class LocalNotifier implements Notifier {
         ?.requestPermissions(alert: true, badge: false, sound: true);
     // A null answer means the platform did not ask (already decided, or no
     // permission model): only an explicit false is a refusal.
-    final granted = androidGranted != false && iosGranted != false && macosGranted != false;
+    final refused = androidGranted == false || iosGranted == false || macosGranted == false;
     // A tap that launched the app (it was not running): deliver it once per
     // process; the row opens when the first document carries it.
     if (!_launchDelivered) {
@@ -61,7 +61,7 @@ class LocalNotifier implements Notifier {
       if (launch?.didNotificationLaunchApp == true && tap != null) onTap(tap);
       _launchDelivered = true;
     }
-    return granted;
+    return refused ? NoticeStatus.refused : NoticeStatus.granted;
   }
 
   void _dispatch(NotificationResponse response) {

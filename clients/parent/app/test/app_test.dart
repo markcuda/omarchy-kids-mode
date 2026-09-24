@@ -157,9 +157,16 @@ BoxState stateWith(List<Map<String, Object?>> requests) => BoxState.fromJson({
       'requests': requests,
     });
 
-Future<void> pumpHome(WidgetTester tester, FakeRelay relay, {Notifier? notifier}) async {
+Future<void> pumpHome(
+  WidgetTester tester,
+  FakeRelay relay, {
+  Notifier? notifier,
+  String? noticeNote,
+}) async {
   await tester.pumpWidget(
-    MaterialApp(home: HomeScreen(session: await sessionWith(relay), notifier: notifier)),
+    MaterialApp(
+      home: HomeScreen(session: await sessionWith(relay), notifier: notifier, noticeNote: noticeNote),
+    ),
   );
   await tester.pumpAndSettle();
 }
@@ -285,12 +292,31 @@ void main() {
         reason: 'forgetting drops the old feed, not just the pin');
   });
 
-  testWidgets('a refused permission says so instead of the optimistic note', (tester) async {
-    final notifier = FakeNotifier()..granted = false;
-    await pumpHome(tester, FakeRelay(stateWith([])), notifier: notifier);
+  testWidgets('a refused permission says so instead of the note it was given', (tester) async {
+    final notifier = FakeNotifier()..status = NoticeStatus.refused;
+    await pumpHome(
+      tester,
+      FakeRelay(stateWith([])),
+      notifier: notifier,
+      noticeNote: 'Notifies while the app is open.',
+    );
     await tester.pumpAndSettle();
     expect(find.textContaining('Notifications are off'), findsOneWidget);
-    expect(find.textContaining('Notifies while the app is open'), findsNothing);
+    expect(find.textContaining('Notifies while the app is open.'), findsNothing);
+  });
+
+  testWidgets('a platform with no adapter keeps the note that says so', (tester) async {
+    final notifier = FakeNotifier()..status = NoticeStatus.unsupported;
+    await pumpHome(
+      tester,
+      FakeRelay(stateWith([])),
+      notifier: notifier,
+      noticeNote: 'This platform has no notifications in this build.',
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('no notifications in this build'), findsOneWidget);
+    expect(find.textContaining('Notifications are off'), findsNothing,
+        reason: 'there is no setting to turn on');
   });
 
   testWidgets('Forget clears the notifications too', (tester) async {

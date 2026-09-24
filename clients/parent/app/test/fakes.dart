@@ -54,12 +54,12 @@ class FakeNotifier implements Notifier {
   final cancels = <({String kind, String id})>[];
   int cancelAlls = 0;
   void Function(NoticeTap)? onTap;
-  bool granted = true;
+  NoticeStatus status = NoticeStatus.granted;
 
   @override
-  Future<bool> initialize({required void Function(NoticeTap tap) onTap}) async {
+  Future<NoticeStatus> initialize({required void Function(NoticeTap tap) onTap}) async {
     this.onTap = onTap;
-    return granted;
+    return status;
   }
   @override
   Future<void> show({

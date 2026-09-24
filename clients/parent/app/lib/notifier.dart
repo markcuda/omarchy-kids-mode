@@ -35,14 +35,19 @@ NoticeTap? parseNoticePayload(String? payload) {
   }
 }
 
+/// What the platform said when asked. `unsupported` is not a refusal: this build
+/// has no adapter for the platform, so there is no setting a parent could turn on
+/// and the screen must not pretend there is one (I-6).
+enum NoticeStatus { granted, refused, unsupported }
+
 /// What the app raises a notification through. The app passes its platform
 /// adapter; a test passes a fake that records the calls.
 abstract class Notifier {
   /// Prepare the platform (permission, tap handler) once. `onTap` is called with
-  /// a notification the parent tapped, while the app is alive. Returns whether
-  /// the platform will actually raise one (a refused permission is false), so the
-  /// screen can say the truth instead of the optimistic default.
-  Future<bool> initialize({required void Function(NoticeTap tap) onTap});
+  /// a notification the parent tapped, while the app is alive. Returns what the
+  /// platform said, so the screen can say the truth instead of the optimistic
+  /// default.
+  Future<NoticeStatus> initialize({required void Function(NoticeTap tap) onTap});
 
   /// Raise (or replace) the notification for one row.
   Future<void> show({
@@ -71,7 +76,8 @@ class NoopNotifier implements Notifier {
   const NoopNotifier();
 
   @override
-  Future<bool> initialize({required void Function(NoticeTap tap) onTap}) async => false;
+  Future<NoticeStatus> initialize({required void Function(NoticeTap tap) onTap}) async =>
+      NoticeStatus.unsupported;
 
   @override
   Future<void> show({

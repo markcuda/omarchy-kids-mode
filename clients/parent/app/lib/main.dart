@@ -111,11 +111,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final notifier = widget.notifier;
     if (notifier != null) {
       _notice = NoticeFeed(notifier);
-      unawaited(notifier.initialize(onTap: _onNoticeTap).then((granted) {
-        if (!granted && mounted) {
+      unawaited(notifier.initialize(onTap: _onNoticeTap).then((status) {
+        if (status == NoticeStatus.refused && mounted) {
           setState(() => _noticeNote =
               'Notifications are off for this app in your system settings. Open the app to see what is waiting.');
         }
+        // unsupported keeps the note main() passed: this build has no adapter, so
+        // there is no setting to blame (I-6).
       }));
     }
     // The feed carries the whole state on connect, so the read is only there to
