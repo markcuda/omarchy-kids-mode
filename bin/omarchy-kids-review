@@ -1,0 +1,398 @@
+#!/bin/bash
+# omarchy:summary=Re-review an approved add-on whose surface set or exec changed
+# omarchy:args=<scan|list|show|approve|deny> ...
+# R-NOTIFY-12: when a parent approves an app for a kid (apps.extra), that app's
+# desktop file -- the kid's launcher surface and the app's Exec -- is stamped.
+# `scan` re-reads it (a package update) and, when it changed, opens one review the
+# parent can approve, deny, or have checked; the notification system surfaces open
+# reviews (docs/review.md). Root only; DRY_RUN=1 prints the plan (AGENTS.md rule 8).
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+LIB="$DIR/lib"
+[[ -f "$LIB/kids.sh" ]] || LIB=/usr/lib/omarchy-kids
+# shellcheck source=lib/kids.sh
+source "$LIB/kids.sh"
+
+ETC=/etc/omarchy-kids
+SYSROOT=""
+KIDS_DIR="$ETC/kids"
+REVIEW_DIR="$SYSROOT/var/lib/omarchy-kids/reviews"
+BASELINE_DIR="$REVIEW_DIR/baseline"
+OPEN_DIR="$REVIEW_DIR/open"
+# The surface search the launcher uses (lib/launcher-map.sh hardcodes the same
+# two). A build-time constant, never an environment read: this decides which file
+# root hashes and stamps as trusted (AGENTS.md rule 9).
+APPLICATIONS_DIRS="/usr/share/applications:/usr/local/share/applications"
+CONF_BIN="$(kids_bin conf "$DIR")"
+APPS_BIN="$(kids_bin apps "$DIR")"
+DRY_RUN=1
+BASELINE_WARNED=""
+
+die() {
+  echo "omarchy-kids-review: $1" >&2
+  exit "${2:-2}"
+}
+
+usage() {
+  cat <<'EOF'
+Usage: omarchy-kids-review scan [--kid KID] [--apply]
+       omarchy-kids-review list [--kid KID] [--json]
+       omarchy-kids-review show <kid> <id>
+       omarchy-kids-review approve <kid> <id> [--seen <fingerprint>] [--apply]
+       omarchy-kids-review deny <kid> <id> [--apply]
+
+An "approved add-on" is an app this parent added to a kid (apps.extra). `scan`
+stamps any it has not seen before, and opens a review for one whose desktop file
+-- its launcher surface and its Exec -- changed since it was stamped (a package
+update). The parent then `approve`s the new surface, or `deny`s it, which hides
+the app again. `list` shows the open reviews and `show` prints one in full -- what
+changed, and the desktop file's Exec now -- so a parent (or their own agent) can
+check it before deciding. Root only; DRY_RUN=1 prints the plan (--apply makes it
+real).
+EOF
+}
+
+# find_desktop_file ID -> the system .desktop path for ID (same match as
+# omarchy-kids-apps), or nothing.
+find_desktop_file() {
+  local id="$1" needle dir f base base_lc
+  needle="$(printf '%s' "$id" | tr '[:upper:]' '[:lower:]')"
+  local -a dirs
+  IFS=':' read -ra dirs <<<"$APPLICATIONS_DIRS"
+  for dir in "${dirs[@]+"${dirs[@]}"}"; do
+    [[ -d "$dir" ]] || continue
+    for f in "$dir"/*.desktop; do
+      [[ -e "$f" ]] || continue
+      base="$(basename "$f" .desktop)"
+      base_lc="$(printf '%s' "$base" | tr '[:upper:]' '[:lower:]')"
+      if [[ "$base_lc" == *"$needle"* ]]; then
+        printf '%s\n' "$f"
+        return 0
+      fi
+    done
+  done
+  return 1
+}
+
+# fingerprint ID -> the sha256 of its .desktop (surface + Exec), or "missing"
+# when no desktop file resolves any more (the package was removed).
+fingerprint() {
+  local id="$1" path
+  if ! path="$(find_desktop_file "$id")"; then
+    echo "missing"
+    return 0
+  fi
+  "$KIDS_PY" -c 'import hashlib, sys
+print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$path"
+}
+
+require_jq() { command -v jq >/dev/null 2>&1 || die "jq is required"; }
+
+# The account shape and the launcher-id shape omarchy-kids-conf enforces on
+# apps.extra; checked here too, so every caller -- the panel, the bar, a
+# notification callback -- gets one refusal.
+valid_kid() { [[ "$1" =~ ^[a-z_][a-z0-9_-]*$ ]]; }
+valid_app() { [[ "$1" =~ ^[a-z0-9_-]+$ ]]; }
+
+# _chgrp_parents PATH -- best-effort group omarchy-parents, so the parent's tools
+# (the panel, a future review screen) read what root writes, like every other
+# omarchy-kids store.
+_chgrp_parents() { chgrp omarchy-parents "$1" 2>/dev/null || true; }
+
+# baseline_get KID ID -> the stamped fingerprint, or empty.
+baseline_get() {
+  local kid="$1" id="$2"
+  local file="$BASELINE_DIR/$kid.json"
+  [[ -s "$file" ]] || return 0
+  jq -r --arg id "$id" '.[$id] // empty' "$file" 2>/dev/null || true
+}
+
+# baseline_set KID ID FP -- stamp (or restamp) one app, atomically.
+baseline_set() {
+  local kid="$1" id="$2" fp="$3"
+  local file="$BASELINE_DIR/$kid.json" tmp
+  install -d -m 0750 "$BASELINE_DIR"
+  _chgrp_parents "$BASELINE_DIR"
+  tmp="$(mktemp "$BASELINE_DIR/.$kid.XXXXXX")"
+  if [[ -s "$file" ]]; then
+    # A corrupt baseline is not worth failing the scan over: start it fresh, but
+    # say so -- its apps are being re-stamped without a review.
+    if ! jq --arg id "$id" --arg fp "$fp" '.[$id] = $fp' "$file" >"$tmp" 2>/dev/null; then
+      if ((! BASELINE_WARNED)); then
+        echo "omarchy-kids-review: $file is unreadable; restamping its apps" >&2
+        BASELINE_WARNED=1
+      fi
+      jq -n --arg id "$id" --arg fp "$fp" '{($id): $fp}' >"$tmp"
+    fi
+  else
+    jq -n --arg id "$id" --arg fp "$fp" '{($id): $fp}' >"$tmp"
+  fi
+  chmod 0640 "$tmp"
+  _chgrp_parents "$tmp"
+  mv -f "$tmp" "$file"
+}
+
+# baseline_drop KID ID -- forget a stamp, so a later `scan` re-baselines it.
+baseline_drop() {
+  local kid="$1" id="$2"
+  local file="$BASELINE_DIR/$kid.json" tmp
+  [[ -s "$file" ]] || return 0
+  tmp="$(mktemp "$BASELINE_DIR/.$kid.XXXXXX")"
+  jq --arg id "$id" 'del(.[$id])' "$file" >"$tmp" 2>/dev/null || {
+    rm -f "$tmp"
+    return 0
+  }
+  chmod 0640 "$tmp"
+  _chgrp_parents "$tmp"
+  mv -f "$tmp" "$file"
+}
+
+# A kid and an app id may both contain '-', so the review file name is the
+# account plus a hash of the id: distinct reviews cannot collide.
+open_review_path() {
+  printf '%s/%s.%s.json' "$OPEN_DIR" "$1" \
+    "$("$KIDS_PY" -c 'import hashlib, sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])' "$2")"
+}
+
+open_review() {
+  local kid="$1" id="$2" old="$3" new="$4" file tmp
+  install -d -m 0750 "$OPEN_DIR"
+  _chgrp_parents "$OPEN_DIR"
+  file="$(open_review_path "$kid" "$id")"
+  tmp="$(mktemp "$OPEN_DIR/.$kid-$id.XXXXXX")"
+  jq -n --arg kid "$kid" --arg id "$id" --arg old "$old" --arg new "$new" \
+    --argjson at "$(date +%s)" \
+    '{kid: $kid, id: $id, was: $old, now: $new, detected_at: $at, state: "open"}' >"$tmp"
+  chmod 0640 "$tmp"
+  _chgrp_parents "$tmp"
+  mv -f "$tmp" "$file"
+}
+
+close_review() { rm -f "$(open_review_path "$1" "$2")"; }
+
+# extra_ids KID -- the apps.extra ids, one per line.
+extra_ids() {
+  local kid="$1" extra
+  extra="$("$CONF_BIN" get "$kid" apps.extra 2>/dev/null || true)"
+  local -a arr
+  IFS=',' read -ra arr <<<"$extra"
+  local id
+  for id in "${arr[@]+"${arr[@]}"}"; do
+    [[ -n "$id" ]] && printf '%s\n' "$id"
+  done
+}
+
+cmd_scan() {
+  require_jq
+  local only_kid="${1:-}" kid id fp base changed=0
+  for kid in $(kids_list "$KIDS_DIR"); do
+    [[ -z "$only_kid" || "$kid" == "$only_kid" ]] || continue
+    while IFS= read -r id; do
+      [[ -n "$id" ]] || continue
+      fp="$(fingerprint "$id")"
+      base="$(baseline_get "$kid" "$id")"
+      if [[ -z "$base" ]]; then
+        if ((DRY_RUN)); then
+          echo "  [dry-run] would stamp $kid/$id = $fp"
+        else
+          baseline_set "$kid" "$id" "$fp"
+          close_review "$kid" "$id" # a re-stamp after a deny must not leave a stale review
+        fi
+      elif [[ "$base" != "$fp" ]]; then
+        changed=1
+        if ((DRY_RUN)); then
+          echo "  [dry-run] would open a review for $kid/$id ($base -> $fp)"
+        else
+          open_review "$kid" "$id" "$base" "$fp"
+          echo "omarchy-kids-review: review opened for $kid/$id (surface or exec changed)"
+        fi
+      else
+        ((DRY_RUN)) || close_review "$kid" "$id"
+      fi
+    done < <(extra_ids "$kid")
+    # A review for an id the parent removed from apps.extra is no longer actionable.
+    local file
+    for file in "$OPEN_DIR"/*.json; do
+      [[ -e "$file" ]] || continue
+      [[ "$(jq -r '.kid' "$file")" == "$kid" ]] || continue
+      if ! extra_ids "$kid" | grep -qxF "$(jq -r '.id' "$file")"; then
+        if ((DRY_RUN)); then
+          echo "  [dry-run] would close a stale review for $(jq -r '.id' "$file")"
+        else
+          rm -f "$file"
+        fi
+      fi
+    done
+  done
+  ((changed)) || echo "omarchy-kids-review: nothing needs reviewing"
+}
+
+cmd_list() {
+  require_jq
+  local only_kid="${1:-}" json="${2:-}" file kid
+  local -a rows=()
+  for file in "$OPEN_DIR"/*.json; do
+    [[ -e "$file" ]] || continue
+    kid="$(jq -r '.kid' "$file")"
+    [[ -z "$only_kid" || "$kid" == "$only_kid" ]] || continue
+    rows+=("$file")
+  done
+  if [[ "$json" == json ]]; then
+    if ((${#rows[@]} == 0)); then
+      echo "[]"
+    else
+      jq -s '.' "${rows[@]}"
+    fi
+    return 0
+  fi
+  if ((${#rows[@]} == 0)); then
+    echo "No add-on needs re-review."
+    return 0
+  fi
+  local id
+  for file in "${rows[@]}"; do
+    id="$(jq -r '.id' "$file")"
+    kid="$(jq -r '.kid' "$file")"
+    printf '%s/%s — surface or exec changed\n' "$kid" "$id"
+  done
+}
+
+cmd_show() {
+  require_jq
+  local kid="${1:-}" id="${2:-}"
+  [[ -n "$kid" && -n "$id" ]] || die "show: needs <kid> <id>"
+  valid_kid "$kid" || die "show: bad kid '$kid'"
+  valid_app "$id" || die "show: bad app id '$id'"
+  local file
+  file="$(open_review_path "$kid" "$id")"
+  if [[ ! -f "$file" ]]; then
+    echo "omarchy-kids-review: no open review for $kid/$id"
+    return 0
+  fi
+  echo "Add-on review: $kid/$id"
+  printf '  detected:         %s\n' "$(jq -r '.detected_at' "$file")"
+  printf '  approved surface: %s\n' "$(jq -r '.was' "$file")"
+  printf '  now:              %s\n' "$(jq -r '.now' "$file")"
+  local path
+  if path="$(find_desktop_file "$id")"; then
+    printf '  desktop file:     %s\n' "$path"
+    echo "  Exec:"
+    grep -E '^Exec=' "$path" 2>/dev/null | sed 's/^/    /' || echo "    (no Exec line)"
+  else
+    echo "  desktop file:     (none resolves any more — the package may be gone)"
+  fi
+  echo
+  echo "Approve to accept this surface, or deny to hide the app."
+}
+
+cmd_approve() {
+  require_jq
+  local kid="${1:-}" id="${2:-}"
+  [[ -n "$kid" && -n "$id" ]] || die "approve: needs <kid> <id>"
+  valid_kid "$kid" || die "approve: bad kid '$kid'"
+  valid_app "$id" || die "approve: bad app id '$id'"
+  local fp
+  fp="$(fingerprint "$id")"
+  # --seen is the fingerprint the decider was shown (the app signs it). The
+  # compare and the stamp are inside the same flock scan takes, so this is not a
+  # re-read of a value another writer may change between the two (rule 4): a
+  # scan that would rewrite the review waits for this command. If the surface
+  # moved after the decider looked, the review stays open for a fresh decision.
+  if [[ -n "$SEEN" && "$fp" != "$SEEN" ]]; then
+    die "approve: the surface for $kid/$id changed since it was shown" 3
+  fi
+  if ((DRY_RUN)); then
+    echo "  [dry-run] would stamp $kid/$id = $fp and clear its review"
+    return 0
+  fi
+  baseline_set "$kid" "$id" "$fp"
+  close_review "$kid" "$id"
+  echo "omarchy-kids-review: approved the new surface for $kid/$id"
+}
+
+cmd_deny() {
+  require_jq
+  local kid="${1:-}" id="${2:-}"
+  [[ -n "$kid" && -n "$id" ]] || die "deny: needs <kid> <id>"
+  valid_kid "$kid" || die "deny: bad kid '$kid'"
+  valid_app "$id" || die "deny: bad app id '$id'"
+  if ((DRY_RUN)); then
+    echo "  [dry-run] would hide $id for $kid and clear its review"
+    return 0
+  fi
+  # Drop the record only once the hide really happened: a failed hide with the
+  # review cleared would report the deny done and leave nothing to retry (I-6).
+  if ! "$APPS_BIN" hide "$kid" "$id" --apply >/dev/null 2>&1; then
+    die "deny: hiding $kid/$id failed; the review is left open to retry" 1
+  fi
+  baseline_drop "$kid" "$id"
+  close_review "$kid" "$id"
+  echo "omarchy-kids-review: denied $kid/$id; it is hidden (the launcher drops it at the next sign-in, docs/apps.md)"
+}
+
+[[ $# -ge 1 ]] || {
+  usage >&2
+  exit 2
+}
+cmd="$1"
+shift
+case "$cmd" in
+  -h | --help)
+    usage
+    exit 0
+    ;;
+esac
+is_root || die "root only (the stamps and the app's surface are root-owned)"
+# One writer at a time: scan's compare-and-stamp must not interleave with an
+# approve or deny (rule 4). An flock the kernel releases, like the repo's other
+# bash locks (lib/kids.sh's luks lock); a concurrent run waits, never fails.
+install -d -m 0750 "$REVIEW_DIR"
+_chgrp_parents "$REVIEW_DIR"
+exec 9>"$REVIEW_DIR/.lock" || die "could not open the review lock" 1
+chmod 0640 "$REVIEW_DIR/.lock"
+_chgrp_parents "$REVIEW_DIR/.lock"
+flock -x 9 || die "could not lock the review directory" 1
+trap 'flock -u 9 2>/dev/null || true; exec 9>&-' EXIT
+want_kid=""
+want_json=""
+# The fingerprint a decider was shown, for approve: see cmd_approve.
+SEEN=""
+args=()
+while (($#)); do
+  case "$1" in
+    --apply)
+      DRY_RUN=0
+      shift
+      ;;
+    --kid)
+      want_kid="${2:?}"
+      shift 2
+      ;;
+    --json)
+      want_json=json
+      shift
+      ;;
+    --seen)
+      SEEN="${2:?}"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    *)
+      args+=("$1")
+      shift
+      ;;
+  esac
+done
+
+case "$cmd" in
+  scan) cmd_scan "$want_kid" ;;
+  list) cmd_list "$want_kid" "$want_json" ;;
+  show) cmd_show "${args[@]+"${args[@]}"}" ;;
+  approve) cmd_approve "${args[@]+"${args[@]}"}" ;;
+  deny) cmd_deny "${args[@]+"${args[@]}"}" ;;
+  *) die "unknown command: '$cmd' (see --help)" ;;
+esac

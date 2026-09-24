@@ -42,18 +42,30 @@ GUM_LOG="$TMP/gum.log"
 cat >"$STUBS/gum" <<'EOF'
 #!/bin/bash
 # Fake gum: records every call (argv, space-joined) to $GUM_LOG, and for
-# `style` prints back everything after the literal "--" separator -- one
-# line per text argument, same as real gum style with lib/tui.sh's calls.
+# `style` echoes the text it is given. lib/tui.sh pipes a card body on stdin
+# (so a secret such as P6's pairing code never reaches argv), so `style`
+# reads stdin when it has no text after the literal "--" separator; both
+# paths are recorded, so a check can look for the body either way.
 LOG="${GUM_LOG:?GUM_LOG must be set}"
 printf '%s\n' "$*" >>"$LOG"
 case "${1:-}" in
     style)
         shift
         seen=0
+        text=()
         for a in "$@"; do
-            if [[ $seen == 1 ]]; then printf '%s\n' "$a"; fi
+            if [[ $seen == 1 ]]; then text+=("$a"); fi
             [[ "$a" == "--" ]] && seen=1
         done
+        if ((${#text[@]} == 0)); then
+            while IFS= read -r line; do text+=("$line"); done
+        fi
+        if ((${#text[@]})); then
+            printf '%s\n' "${text[@]}"
+            # Also record argv and the body on one line, so a check can prove
+            # the body belongs to this very call (the card), not another.
+            printf '%s %s\n' "$*" "${text[*]}" >>"$LOG"
+        fi
         ;;
     *)
         if [[ -n "${GUM_BLOCK_UNTIL:-}" ]]; then
@@ -552,7 +564,7 @@ out="$(
   kid_facts=("Ada — band 6-8" "17m used / 0m left today")
   tui_screen_choose "Ada" 1 1 0 "" kid_choices "time" "" kid_facts 2>/dev/null
 )" </dev/null
-card_call="$(grep -- '--border rounded' "$GUM_LOG" | head -1)"
+card_call="$(grep -- '--border rounded' "$GUM_LOG" | head -2)"
 check_contains "$card_call" "Ada — band 6-8" "tui_screen_choose: card mode puts the body inside the card"
 check_contains "$card_call" "17m used / 0m left today" "tui_screen_choose: every body line is in that same card"
 

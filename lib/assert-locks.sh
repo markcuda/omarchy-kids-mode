@@ -318,6 +318,216 @@ time_metadata_fix() {
   done < <(kids_list "$KIDS_DIR")
 }
 
+# devices (R-NOTIFY-3): the paired-device registry is root-owned, 0750 with
+# 0600 records. Absent is fine (no device paired yet); present must be right.
+devices_ok() {
+  local dir file
+  dir="$(posture_root)/etc/omarchy-kids/devices"
+  [[ ! -e "$dir" && ! -L "$dir" ]] || time_metadata_dir_ok "$dir" 750 || return 1
+  for file in "$dir"/*.conf; do
+    [[ -e "$file" || -L "$file" ]] || continue
+    time_metadata_file_ok "$file" 600 || return 1
+  done
+}
+devices_fix() {
+  local dir file
+  dir="$(posture_root)/etc/omarchy-kids/devices"
+  [[ -e "$dir" || -L "$dir" ]] || return 0 # nothing paired: nothing to fix
+  time_metadata_dir_fix "$dir" 750 || return 1
+  for file in "$dir"/*.conf; do
+    [[ -e "$file" || -L "$file" ]] || continue
+    time_metadata_file_fix "$file" 600 || return 1
+  done
+}
+
+# relay-away (R-NOTIFY-11.1): the one drop-in that may widen the relay's fence.
+# The fence itself is the package's unit and no lock ever writes it (I-7); this
+# lock owns only the drop-in the parent's "away from home" consent wrote, and
+# never creates it or deletes it (presence is the consent, N-10). A second
+# *.conf in the directory is where a widened or replaced fence would live, and
+# assert cannot tell an admin's file from an attacker's, so it fails rather than
+# deleting one.
+relay_unit_file() { printf '%s/usr/lib/systemd/system/%s' "$(posture_root)" "$RELAY_UNIT_NAME"; }
+relay_away_dir() { printf '%s/etc/systemd/system/%s.d' "$(posture_root)" "$RELAY_UNIT_NAME"; }
+relay_away_file() { printf '%s/away.conf' "$(relay_away_dir)"; }
+
+relay_away_ok() {
+  local dir file
+  dir="$(relay_away_dir)"
+  if [[ ! -e "$dir" && ! -L "$dir" ]]; then return 0; fi
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  [[ -r "$dir" && -x "$dir" ]] || return 2
+  for file in "$dir"/*.conf; do
+    [[ -e "$file" || -L "$file" ]] || continue
+    [[ "$file" == "$(relay_away_file)" ]] || return 1 # a foreign drop-in
+  done
+  time_metadata_dir_ok "$dir" 755 || return 1
+  file="$(relay_away_file)"
+  [[ ! -e "$file" && ! -L "$file" ]] && return 0 # no away: the base fence applies
+  time_metadata_file_ok "$file" 644 || return 1
+  [[ "$(cat "$file" 2>/dev/null)" == "$(relay_away_conf_text)" ]]
+}
+
+relay_away_fix() {
+  local dir file foreign tmp
+  dir="$(relay_away_dir)"
+  [[ -e "$dir" || -L "$dir" ]] || return 0 # nothing to re-assert
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  time_metadata_dir_fix "$dir" 755 || return 1
+  file="$(relay_away_file)"
+  if [[ -e "$file" || -L "$file" ]]; then
+    [[ -f "$file" && ! -L "$file" ]] || return 1
+    tmp="$file.$$"
+    relay_away_conf_text >"$tmp" || return 1
+    chmod 0644 "$tmp" || {
+      rm -f "$tmp"
+      return 1
+    }
+    time_metadata_owner_fix "$tmp"
+    mv -f "$tmp" "$file" || {
+      rm -f "$tmp"
+      return 1
+    }
+    # The running fence must be the file's, not the stale one (N-10).
+    relay_reload
+  fi
+  # A foreign drop-in is not this lock's to repair, but the file it owns has been
+  # rewritten first: a widened away.conf must not stay widened while a second file
+  # sits beside it. The lock still FAILs (assert never deletes an admin's file).
+  for foreign in "$dir"/*.conf; do
+    [[ -e "$foreign" || -L "$foreign" ]] || continue
+    [[ "$foreign" == "$file" ]] || return 1
+  done
+  return 0
+}
+
+# relay_reload — the running fence must be the file's, not a stale one. Only on a
+# live system (a scratch tree has no systemd); best effort, like the notify side.
+relay_reload() {
+  [[ -z "$(posture_root)" ]] || return 0
+  command -v systemctl >/dev/null 2>&1 || return 0
+  systemctl daemon-reload >/dev/null 2>&1 || true
+  systemctl try-restart "$RELAY_UNIT_NAME" >/dev/null 2>&1 || true
+}
+
+# decisions (R-NOTIFY-6): each kid's own copy of their decided requests, written
+# by ask.py decide and healed by collect. Modes and ownership only: never creates,
+# removes, rewrites or regenerates a copy, never reads one.
+decisions_dir() { printf '%s/var/lib/omarchy-kids/%s/decisions' "$(posture_root)" "$1"; }
+
+decisions_ok() {
+  local kid="$1" dir file group
+  dir="$(decisions_dir "$kid")"
+  if [[ ! -e "$dir" && ! -L "$dir" ]]; then return 0; fi
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  [[ -r "$dir" && -x "$dir" ]] || return 2
+  group="$(id -gn "$kid" 2>/dev/null)" || return 1
+  time_metadata_dir_ok "$dir" 750 "$group" || return 1
+  while IFS= read -r -d '' file; do
+    time_metadata_file_ok "$file" 640 "$group" || return 1
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -name '*.json' -print0 2>/dev/null)
+}
+
+decisions_fix() {
+  local kid="$1" dir file group
+  dir="$(decisions_dir "$kid")"
+  [[ -e "$dir" || -L "$dir" ]] || return 0
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  group="$(id -gn "$kid" 2>/dev/null)" || return 1
+  time_metadata_dir_fix "$dir" 750 "$group" || return 1
+  while IFS= read -r -d '' file; do
+    time_metadata_file_fix "$file" 640 "$group" || return 1
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -name '*.json' -print0 2>/dev/null)
+}
+
+# queue (R-NOTIFY-7): what a kid asked for and how it was decided is for root and the
+# parent group, not every local account. The kid's own write path is its 0700 outbox;
+# root's collect moves the record into this queue. Modes and ownership only: the lock
+# never creates a record, removes one, rewrites one or reads one.
+queue_dir() { printf '%s/var/lib/omarchy-kids/queue' "$(posture_root)"; }
+
+queue_ok() {
+  local dir file
+  dir="$(queue_dir)"
+  if [[ ! -e "$dir" && ! -L "$dir" ]]; then return 0; fi
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  [[ -r "$dir" && -x "$dir" ]] || return 2
+  time_metadata_dir_ok "$dir" 750 omarchy-parents || return 1
+  while IFS= read -r -d '' file; do
+    time_metadata_file_ok "$file" 640 omarchy-parents || return 1
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -name '*.json' -print0 2>/dev/null)
+}
+
+queue_fix() {
+  local dir file
+  dir="$(queue_dir)"
+  [[ -e "$dir" || -L "$dir" ]] || return 0
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  time_metadata_dir_fix "$dir" 750 omarchy-parents || return 1
+  while IFS= read -r -d '' file; do
+    time_metadata_file_fix "$file" 640 omarchy-parents || return 1
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -name '*.json' -print0 2>/dev/null)
+}
+
+# relay-tls and courier-conf (R-NOTIFY-11.4): the two files that hold secrets.
+# relay dir/key.pem is the private half of every paired device's pin; courier.conf
+# carries the parent's Gotify token (or ntfy reply topic). The locks own modes and
+# ownership only: they never open either file, never create one, never remove one,
+# and never read a byte.
+relay_dir() { printf '%s/etc/omarchy-kids/relay' "$(posture_root)"; }
+courier_conf_file() { printf '%s/etc/omarchy-kids/courier.conf' "$(posture_root)"; }
+
+# _relay_tls_entry ENTRY FIX -- one entry: cert.pem/key.pem at their modes, or a
+# foreign name (never repaired; a loose copy of the key is what this catches).
+relay_tls_entry() {
+  local entry="$1" fix="$2"
+  case "$(basename "$entry")" in
+    cert.pem) "$fix" "$entry" 644 omarchy-parents ;;
+    key.pem) "$fix" "$entry" 640 omarchy-parents ;;
+    *) return 1 ;;
+  esac
+}
+
+relay_tls_ok() {
+  local dir entry
+  dir="$(relay_dir)"
+  if [[ ! -e "$dir" && ! -L "$dir" ]]; then return 0; fi
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  [[ -r "$dir" && -x "$dir" ]] || return 2
+  time_metadata_dir_ok "$dir" 750 omarchy-parents || return 1
+  # find (not a glob): a hidden loose copy of the key is the shape this catches.
+  while IFS= read -r -d '' entry; do
+    relay_tls_entry "$entry" time_metadata_file_ok || return 1
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
+}
+
+relay_tls_fix() {
+  local dir entry foreign=0
+  dir="$(relay_dir)"
+  [[ -e "$dir" || -L "$dir" ]] || return 0
+  [[ -d "$dir" && ! -L "$dir" ]] || return 1
+  time_metadata_dir_fix "$dir" 750 omarchy-parents || return 1
+  while IFS= read -r -d '' entry; do
+    relay_tls_entry "$entry" time_metadata_file_fix || foreign=1
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
+  [[ "$foreign" -eq 0 ]] || return 1 # a foreign copy is left for a human
+  return 0
+}
+
+courier_conf_ok() {
+  local file
+  file="$(courier_conf_file)"
+  [[ ! -e "$file" && ! -L "$file" ]] && return 0
+  time_metadata_file_ok "$file" 600 || return 1
+}
+
+courier_conf_fix() {
+  local file
+  file="$(courier_conf_file)"
+  [[ -e "$file" || -L "$file" ]] || return 0
+  time_metadata_file_fix "$file" 600 || return 1
+}
+
 # units (R-BOOT-3, R-SEC-2): enabled or the autologin drop-in never
 # gets written. KIDS_UNITS/SOCKETS/TIMERS come from lib/kids.sh, shared
 # with bin/omarchy-kids-wizard's Apply-time enable --now (issue #46).

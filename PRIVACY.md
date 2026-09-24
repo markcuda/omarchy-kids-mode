@@ -33,11 +33,14 @@ enforces or could tamper with (I-3). The only people who can read it:
 
 - **The parent**, through the panel (`omarchy-kids-time status`, `docs/panel.md`'s Home and Kid
   screens) — the same numbers the ledger recorded, nothing added.
-- **The kid themselves**, on their own "What my grown-ups can see" screen at every login
-  (R-DATA-3) — see "In kid words" below.
-- **Nobody else.** Nothing here is uploaded, synced, or reachable over the network. I-2: nothing
-  about a child leaves the machine, ever — no telemetry, no cloud account, no listener that a
-  request from outside could reach.
+- **The kid themselves**, on their own "What my grown-ups can see" screen (R-DATA-3) — a launcher
+  tile for bands 9-12 and 13+, run with a grown-up for younger kids (`docs/data.md`). See "In kid
+  words" below.
+- **Nobody else, unless the parent turns notifications on.** Nothing here is uploaded, synced, or
+  reachable over the network by default. I-2: nothing about a child leaves the machine except to a
+  device the parent paired or a server the parent named, and only while notifications are on (see
+  "Parental notifications" below) — no telemetry, no cloud account. With notifications off there is
+  no network listener at all.
 
 ## History, specifically
 
@@ -48,21 +51,48 @@ own "clear browsing data" is locked out of the kid's policy (`AllowDeletingBrows
 `docs/web.md`) either way, so a kid can't erase what's there before it's looked at, and a parent
 can't be shown a history that's been quietly wiped.
 
+## Parental notifications
+
+If a parent turns notifications on (`docs/notify.md`), Kids Mode may tell **the parent's own paired
+devices** about a kid's requests and decisions (I-2 as amended). That is the only thing that leaves
+the machine, and only then.
+
+- The listener, `omarchy-kids-relayd`, is local and fenced to the home network (and to the CGNAT
+  range only if the parent turns on away-from-home, `docs/notify.md`); it holds no decision power. A
+  device may answer a request only if the parent
+  paired it and root verifies its signature (`docs/devices.md`).
+- What is sent is a kid's live state (whether they are logged in and paused, minutes left), their
+  requests ("Ada asked for 15 more minutes"), and the outcomes — nothing else, and never a
+  transcript, a keystroke or a screenshot.
+- Nothing reaches the project, any vendor, or any third party. There is no telemetry and no account.
+- **Not built on this branch:** the parent app (a phone or another computer). When it ships it will
+  show a request when open (no background push on iOS in the first version). The desktop notifier on
+  the parent's own computer **is** built and works today, and so is the box-side away courier
+  (`docs/courier.md`): it talks only to the server the parent typed, and only while they turned it on.
+
+Turning notifications off revokes every paired device and removes the certificate
+(`omarchy-kids-notify disable`).
+
 ## In kid words
 
-This is the actual text of the screen a kid sees, every time they log in (K5, SPEC.md Appendix
-A) — not a paraphrase of it:
+This is the screen behind the "What grown-ups see" tile (bands 9-12 and 13+; a grown-up can run it
+with a younger kid), quoted from `bin/omarchy-kids-data`'s `mine` (K5, SPEC.md Appendix A):
 
 > **What my grown-ups can see**
 >
-> - How many minutes you were on the computer today, and other days.
-> - What apps you opened.
-> - What you asked for ("Ask a parent") and what happened.
-> - The websites you visited — *only if that's turned on for you. If it's off, this says so and
->   nobody sees it.*
+> Hi! Here's what this computer remembers about how you use it:
 >
-> Nobody outside this computer ever sees any of this. Nobody reads what you type or takes
-> pictures of your screen.
+>   - How many minutes you use it each day. Kept for 1 year.
+>   - Which apps you open from your launcher. Kept for 90 days.
+>   - What you asked for ("Ask a parent") and what happened. Kept for 90 days.
+>   - The websites you visit. Kept as long as the web browser itself keeps it. — *or, when it is
+>     off for that kid:* Your grown-ups have turned OFF website history for you — they cannot see
+>     which sites you visit.
+>
+> Nothing you type, no pictures of your screen, and nothing you write in a message is ever
+> recorded. Only your grown-ups can see any of this. It stays on this computer — unless your
+> grown-ups turn notifications on, and then only their own phone or computer, and only things like
+> your minutes and your asks.
 
 ## If you think this is wrong
 

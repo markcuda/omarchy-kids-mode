@@ -1,0 +1,221 @@
+// The app's wire layer against the shared vectors: the headers, the pairing
+// frame and the decision body must be exactly what the box verifies.
+
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:test/test.dart';
+
+import '../lib/notify_crypto.dart';
+import '../lib/relay_client.dart';
+
+void main() {
+  final doc = jsonDecode(File('test-vectors/notify-vectors.json').readAsStringSync()) as Map<String, dynamic>;
+  final seed = _hexToBytes(doc['sign_seed_hex'] as String);
+  final deviceId = (doc['decision'] as Map)['device_id'] as String;
+
+  test('the pairing frame carries the proof, never the token', () async {
+    final pairing = (doc['pairing'] as Map).cast<String, String>();
+    final frame = jsonDecode(
+      await buildPairFrame(
+        id: 'd-vector',
+        name: pairing['name']!,
+        platform: 'ios',
+        tokenHex: pairing['token']!,
+        signPub: pairing['sign_pub']!,
+        boxPub: pairing['box_pub']!,
+      ),
+    ) as Map<String, dynamic>;
+    expect(frame['proof'], equals(pairing['proof']));
+    expect(frame.keys.toSet(), equals({'id', 'name', 'platform', 'sign_pub', 'box_pub', 'proof'}));
+    expect(frame.values.contains(pairing['token']), isFalse);
+  });
+
+  test('the request headers carry the recorded signature', () async {
+    final request = (doc['request'] as Map).cast<String, dynamic>();
+    final keyPair = await signKeyFromSeed(seed);
+    final headers = await signedHeaders(
+      keyPair: keyPair,
+      deviceId: deviceId,
+      ts: request['ts'] as int,
+      nonce: request['nonce'] as String,
+      method: request['method'] as String,
+      path: request['path'] as String,
+      body: base64.decode(request['body_b64'] as String),
+    );
+    expect(headers['X-Kids-Device'], equals(deviceId));
+    expect(
+      headers['X-Kids-Sig'],
+      equals('${request['ts']}.${request['nonce']}.${doc['request_signature_b64']}'),
+    );
+  });
+
+  test('the decision body carries the recorded record and signature', () async {
+    final record = (doc['decision'] as Map).cast<String, Object?>();
+    final keyPair = await signKeyFromSeed(seed);
+    final body = jsonDecode(await buildDecisionBody(keyPair: keyPair, record: record)) as Map<String, dynamic>;
+    expect(body['signature'], equals(doc['decision_signature_b64']));
+    expect(body['record'], equals(record));
+  });
+
+  test('a review record takes only the review shape and a real seen value', () {
+    final rid = 'kid-ada.' + 'a' * 16;
+    final record = reviewDecisionRecord(
+      deviceId: 'd1',
+      reviewId: rid,
+      decision: 'deny',
+      seen: 'missing',
+      ts: 1,
+      nonce: 'n',
+    );
+    expect(record.keys.toSet(), {'device_id', 'review_id', 'decision', 'seen', 'ts', 'nonce'});
+    expect(
+      reviewDecisionRecord(
+        deviceId: 'd1',
+        reviewId: rid,
+        decision: 'approve',
+        seen: 'ab' * 32,
+        ts: 1,
+        nonce: 'n',
+      )['decision'],
+      'approve',
+    );
+    expect(
+      () => reviewDecisionRecord(deviceId: 'd1', reviewId: rid, decision: 'decline', seen: 'ab' * 32, ts: 1, nonce: 'n'),
+      throwsArgumentError,
+      reason: 'the box takes approve/deny here, not decline',
+    );
+    expect(
+      () => reviewDecisionRecord(deviceId: 'd1', reviewId: rid, decision: 'approve', seen: 'nonsense', ts: 1, nonce: 'n'),
+      throwsArgumentError,
+    );
+    expect(
+      () => reviewDecisionRecord(deviceId: 'd1', reviewId: rid, decision: 'approve', seen: 'ab' * 31, ts: 1, nonce: 'n'),
+      throwsArgumentError,
+    );
+  });
+
+  test('an ACT record takes only the grant/end shape', () {
+    final grant = actRecord(deviceId: 'd1', account: 'kid-ada', action: 'grant', minutes: 30, ts: 1, nonce: 'n');
+    expect(grant.keys.toSet(), {'device_id', 'account', 'action', 'minutes', 'ts', 'nonce'});
+    final end = actRecord(deviceId: 'd1', account: 'kid-ada', action: 'end', ts: 1, nonce: 'n');
+    expect(end.keys.toSet(), {'device_id', 'account', 'action', 'ts', 'nonce'});
+    expect(end.containsKey('minutes'), isFalse);
+    expect(
+      () => actRecord(deviceId: 'd1', account: 'kid-ada', action: 'pause', ts: 1, nonce: 'n'),
+      throwsArgumentError,
+      reason: 'pause is not an action the box takes',
+    );
+    expect(
+      () => actRecord(deviceId: 'd1', account: 'kid-ada', action: 'grant', ts: 1, nonce: 'n'),
+      throwsArgumentError,
+      reason: 'a grant needs minutes',
+    );
+    expect(
+      () => actRecord(deviceId: 'd1', account: 'kid-ada', action: 'grant', ts: 1, nonce: 'n', minutes: 0),
+      throwsArgumentError,
+    );
+    expect(
+      () => actRecord(deviceId: 'd1', account: 'kid-ada', action: 'grant', ts: 1, nonce: 'n', minutes: 1441),
+      throwsArgumentError,
+    );
+    expect(
+      () => actRecord(deviceId: 'd1', account: 'kid-ada', action: 'end', ts: 1, nonce: 'n', minutes: 15),
+      throwsArgumentError,
+      reason: 'an end takes no minutes',
+    );
+    expect(
+      () => actRecord(deviceId: 'd1', account: 'Kid!', action: 'grant', minutes: 15, ts: 1, nonce: 'n'),
+      throwsArgumentError,
+    );
+    expect(
+      () => actRecord(deviceId: 'd1', account: '../../etc/passwd', action: 'grant', minutes: 15, ts: 1, nonce: 'n'),
+      throwsArgumentError,
+    );
+  });
+
+  test('a decision record rejects a bad decision or a long/unprintable reply', () {
+    expect(
+      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'maybe', ts: 1, nonce: 'n'),
+      throwsArgumentError,
+    );
+    expect(
+      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'x' * 81),
+      throwsArgumentError,
+    );
+    // An accented reply is accepted (the box's isprintable), a control one is not.
+    expect(
+      decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'café')['reply'],
+      equals('café'),
+    );
+    expect(
+      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u0007b'),
+      throwsArgumentError,
+    );
+    // A variation selector (Mn, which the box accepts) must NOT be refused:
+    // the emoji keyboard appends U+FE0F to ❤️ and the like.
+    expect(
+      decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'ok \u2764\ufe0f')['reply'],
+      equals('ok \u2764\ufe0f'),
+    );
+    // A no-break space or a zero-width joiner is refused too (the box would).
+    expect(
+      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u00a0b'),
+      throwsArgumentError,
+    );
+    expect(
+      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u200db'),
+      throwsArgumentError,
+    );
+    final record = decisionRecord(
+      deviceId: 'd1',
+      requestId: 'r1',
+      decision: 'decline',
+      ts: 1,
+      nonce: 'n',
+      reply: 'After dinner',
+    );
+    expect(record['reply'], equals('After dinner'));
+  });
+
+  test('every quick reply is acceptable to the box', () {
+    for (final chip in defaultReplyChips) {
+      expect(chip.length, lessThanOrEqualTo(80), reason: chip);
+      expect(chip.runes.every((r) => r >= 0x20 && r <= 0x7e), isTrue, reason: chip);
+    }
+  });
+
+  test('a pairing URI yields the id, token and addresses', () {
+    final token = 'a' * 40;
+    final uri = PairingUri.parse(
+      'omarchy-kids://pair?v=1&id=d-1&token=$token&addr=192.168.1.5,100.64.0.7',
+    );
+    expect(uri.id, equals('d-1'));
+    expect(uri.token, equals(token));
+    expect(uri.addresses, equals(['192.168.1.5', '100.64.0.7']));
+    expect(() => PairingUri.parse('https://example.com'), throwsFormatException);
+    expect(() => PairingUri.parse('omarchy-kids://pair?v=1&id=d-1'), throwsFormatException);
+    expect(() => PairingUri.parse('omarchy-kids://pair?v=2&id=d-1&token=${'a' * 40}'), throwsFormatException);
+    expect(() => PairingUri.parse('omarchy-kids://pair?v=1&id=d-1&token=short'), throwsFormatException);
+    expect(() => PairingUri.parse('omarchy-kids://pair?v=1&id=../etc&token=${'a' * 40}'), throwsFormatException);
+  });
+
+  test('the courier envelope opens through the wire helper', () async {
+    final env = (doc['envelope'] as Map).cast<String, dynamic>();
+    final plaintext = await openStateEnvelope(
+      deviceId: 'd-vector',
+      boxSeed: _hexToBytes(env['box_priv_hex'] as String),
+      body: jsonEncode(env['envelope']),
+    );
+    expect(plaintext, equals(base64.decode(env['plaintext_b64'] as String)));
+  });
+}
+
+Uint8List _hexToBytes(String hex) {
+  final out = Uint8List(hex.length ~/ 2);
+  for (var i = 0; i < out.length; i++) {
+    out[i] = int.parse(hex.substring(i * 2, i * 2 + 2), radix: 16);
+  }
+  return out;
+}

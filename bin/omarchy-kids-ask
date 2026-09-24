@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Ask a grown-up for more time, an app, a plugin, or a site
-# omarchy:args=<time|app|plugin|site|submit|collect|list|approve|decline> ...
+# omarchy:args=<time|app|plugin|site|submit|outcome|collect|list|approve|decline> ...
 # The kid asks (time/app/plugin/site); root collects, verifies, and applies (SPEC.md R-ASK-1..3, Appendix D).
 # See docs/ask.md for the outbox/queue design and every judgment call.
 set -euo pipefail
@@ -23,6 +23,10 @@ RUN="/run/user/$(id -u)/omarchy-kids"
 RUN_USER_ROOT=/run/user
 KIDS_DIR="$ETC/kids"
 QUEUE_DIR="$SYSROOT/var/lib/omarchy-kids/queue"
+# The data root the kid's own copy of a decision lives under (R-NOTIFY-6): beside
+# the queue, root-written, readable by the kid's own group. A constant, never an
+# argument or an environment value.
+VARLIB="$SYSROOT/var/lib/omarchy-kids"
 OUTBOX_DIR="$RUN/ask-outbox"
 MODAL_QML="$SHARE/ask/shell.qml"
 MODAL_PIDFILE="$RUN/ask-modal.pid"
@@ -52,12 +56,13 @@ Usage: omarchy-kids-ask time <minutes>
        omarchy-kids-ask plugin <plugin-id>
        omarchy-kids-ask site <host>
        omarchy-kids-ask submit <kind> <what> [--minutes N]
+       omarchy-kids-ask outcome                 # the newest decision in your own directory
        omarchy-kids-ask grant <kind> <what> [--minutes N]   (password on stdin)
        omarchy-kids-ask apply-grant --kid K --kind KIND --what W [--minutes N] --apply
-       omarchy-kids-ask collect [--apply]
-       omarchy-kids-ask list [<kid>]
-       omarchy-kids-ask approve <id> [--apply]
-       omarchy-kids-ask decline <id> [--apply]
+       omarchy-kids-ask collect [--apply]       # also heals a missing kid copy (R-NOTIFY-6)
+       omarchy-kids-ask list [<kid>]            # root or a member of omarchy-parents
+       omarchy-kids-ask approve <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
+       omarchy-kids-ask decline <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
        omarchy-kids-ask --help
 
 time/app/plugin/site   Kid-side: opens share/ask/shell.qml, the "Ask a
@@ -81,7 +86,8 @@ collect       Root: moves every kid's outbox into the real queue
 
 list          Root: every undecided (open) request, all kids or one.
 
-approve       Root: performs the action, marks the record approved.
+approve       Root: decides the record approved, then performs the action.
+              A failed action still leaves the record approved (a warning).
 decline       Root: marks the record declined; never performs the action.
 
 DRY_RUN=1 is the default for collect/approve/decline (AGENTS.md rule 8):
@@ -345,7 +351,18 @@ cmd_collect() {
     esac
   done
 
-  install -d -m 0755 "$QUEUE_DIR"
+  # R-NOTIFY-7: the queue is 0750 root:omarchy-parents so the parent group (the relay's
+  # unit, the desktop notifier) can read it and no other local account can. The parent
+  # group has to exist before anything is moved into it; where `getent` is absent (macOS)
+  # the check is skipped, the repo's own idiom for a group this box does not have.
+  if command -v getent >/dev/null 2>&1 && ! getent group omarchy-parents >/dev/null 2>&1; then
+    die "collect: the omarchy-parents group is missing; the parent's own tools could not read the queue" 1
+  fi
+
+  # On every run, not only on creation: an earlier 0755 directory is corrected here.
+  install -d -m 0750 "$QUEUE_DIR"
+  chown root:omarchy-parents "$QUEUE_DIR" 2>/dev/null || true
+  chmod 0750 "$QUEUE_DIR"
 
   local collected=0 skipped=0
   local -a outbox_dirs=("$RUN_USER_ROOT"/*/omarchy-kids/ask-outbox)
@@ -395,6 +412,9 @@ cmd_collect() {
   done
 
   if [[ "$DRY_RUN" == "0" ]]; then
+    # R-NOTIFY-6: a decision whose kid copy failed (a full disk, an account that
+    # did not resolve then) gets one here. A present copy is never rewritten.
+    "$KIDS_PY" "$ASKPY" sync-decisions "$QUEUE_DIR" || true
     echo "omarchy-kids-ask: collect: $collected request(s) collected, $skipped dropped"
   else
     echo "omarchy-kids-ask: collect: $collected request(s) would be collected (dry-run; pass --apply for real)"
@@ -450,7 +470,11 @@ cmd_apply_grant() {
     ${minutes:+--minutes "$minutes"} || die "apply-grant: refused"
   is_known_kid "$KIDS_DIR" "$kid" || die "apply-grant: '$kid' is not a provisioned kid account"
 
-  install -d -m 0755 "$QUEUE_DIR"
+  # R-NOTIFY-7: same modes collect sets, corrected on every run (an on-the-spot grant must
+  # not re-widen the queue an earlier version left 0755).
+  install -d -m 0750 "$QUEUE_DIR"
+  chown root:omarchy-parents "$QUEUE_DIR" 2>/dev/null || true
+  chmod 0750 "$QUEUE_DIR"
   local name
   name="$("$KIDS_PY" "$ASKPY" write "$QUEUE_DIR" --kid "$kid" --kind "$kind" --what "$what" \
     ${minutes:+--minutes "$minutes"})" || die "apply-grant: could not record the request"
@@ -465,10 +489,29 @@ cmd_apply_grant() {
 
 # --- root: list / approve / decline ---------------------------------------
 
+# cmd_outcome -- kid-side, display only (R-NOTIFY-6): the newest decided request
+# in this account's own directory, or nothing. It decides nothing and it cannot
+# read another kid's (0750, their own group).
+cmd_outcome() {
+  (($# == 0)) || die "outcome: takes no arguments"
+  local account
+  account="$(id -un)"
+  "$KIDS_PY" "$ASKPY" outcome "$VARLIB/$account/decisions"
+}
+
 cmd_list() {
-  is_root || die "list: root only" 1
+  is_root || in_parent_group || die "list: root or a member of omarchy-parents only" 1
   local kid="${1:-}"
-  install -d -m 0755 "$QUEUE_DIR"
+  # A reader creates nothing (R-NOTIFY-7). An absent queue is empty; a queue this caller
+  # cannot open is an error, never "no open requests" -- a group added since login is not
+  # in the session's credentials until the next login, and an empty answer there would lie.
+  if [[ ! -d "$QUEUE_DIR" ]]; then
+    echo "omarchy-kids-ask: no open requests"
+    return 0
+  fi
+  if [[ ! -r "$QUEUE_DIR" || ! -x "$QUEUE_DIR" ]] && ! is_root; then
+    die "list: cannot read the queue (are you in omarchy-parents in this session?)" 1
+  fi
   local -a args=("list-open" "$QUEUE_DIR")
   [[ -n "$kid" ]] && args+=(--kid "$kid")
 
@@ -495,11 +538,29 @@ record_path_for_id() {
 cmd_approve() {
   is_root || die "approve: root only" 1
   local id="" apply_flag=0
+  local -a byargs=(--by panel) replyargs=()
   while (($#)); do
     case "$1" in
       --apply)
         apply_flag=1
         shift
+        ;;
+      --reply)
+        replyargs=(--reply "${2:?approve: --reply needs a value}")
+        shift 2
+        ;;
+      --by)
+        local byval="${2:?approve: --by needs a value}"
+        case "$byval" in
+          device:*)
+            local did="${byval#device:}"
+            [[ "$did" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$ ]] || die "approve: bad device id '$did'"
+            byargs=(--by device --device "$did")
+            ;;
+          keyboard | panel | widget) byargs=(--by "$byval") ;;
+          *) die "approve: --by must be panel, keyboard, widget, or device:<id>" ;;
+        esac
+        shift 2
         ;;
       -h | --help)
         usage
@@ -520,26 +581,44 @@ cmd_approve() {
   state="$("$KIDS_PY" "$ASKPY" show "$path" --field state)"
   [[ "$state" == "open" ]] || die "request '$id' is already decided ($state)"
 
-  # A failed apply (root required, the target not installed yet) is
-  # never a reason to leave the request stuck "open" -- same
-  # graceful-degradation apply_time's own comment documents.
-  apply_record "$path" || echo "omarchy-kids-ask: could not apply $id (see above) -- approving it anyway" >&2
+  # Decide first (atomic, write-once): a racing second decision is refused
+  # before it can perform the action again. A failed apply still leaves the
+  # request decided, the same graceful degradation as before.
   if [[ "$DRY_RUN" == "0" ]]; then
-    "$KIDS_PY" "$ASKPY" decide "$path" --state approved --by panel
+    "$KIDS_PY" "$ASKPY" decide "$path" --state approved "${byargs[@]}" ${replyargs[@]+"${replyargs[@]}"}
+    apply_record "$path" || echo "omarchy-kids-ask: could not apply $id (see above) -- approving it anyway" >&2
     echo "omarchy-kids-ask: approved $id"
   else
-    echo "  [dry-run] would mark $id approved (by=panel)"
+    echo "  [dry-run] would mark $id approved (by ${byargs[*]}${replyargs:+ reply \"${replyargs[1]}\"})"
   fi
 }
 
 cmd_decline() {
   is_root || die "decline: root only" 1
   local id="" apply_flag=0
+  local -a byargs=(--by panel) replyargs=()
   while (($#)); do
     case "$1" in
       --apply)
         apply_flag=1
         shift
+        ;;
+      --reply)
+        replyargs=(--reply "${2:?decline: --reply needs a value}")
+        shift 2
+        ;;
+      --by)
+        local byval="${2:?decline: --by needs a value}"
+        case "$byval" in
+          device:*)
+            local did="${byval#device:}"
+            [[ "$did" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$ ]] || die "decline: bad device id '$did'"
+            byargs=(--by device --device "$did")
+            ;;
+          keyboard | panel | widget) byargs=(--by "$byval") ;;
+          *) die "decline: --by must be panel, keyboard, widget, or device:<id>" ;;
+        esac
+        shift 2
         ;;
       -h | --help)
         usage
@@ -561,10 +640,10 @@ cmd_decline() {
   [[ "$state" == "open" ]] || die "request '$id' is already decided ($state)"
 
   if [[ "$DRY_RUN" == "0" ]]; then
-    "$KIDS_PY" "$ASKPY" decide "$path" --state declined --by panel
+    "$KIDS_PY" "$ASKPY" decide "$path" --state declined "${byargs[@]}" ${replyargs[@]+"${replyargs[@]}"}
     echo "omarchy-kids-ask: declined $id"
   else
-    echo "  [dry-run] would mark $id declined (by=panel), no action performed"
+    echo "  [dry-run] would mark $id declined (by ${byargs[*]}${replyargs:+ reply \"${replyargs[1]}\"}), no action performed"
   fi
 }
 
@@ -588,6 +667,7 @@ main() {
     plugin) cmd_plugin "$@" ;;
     site) cmd_site "$@" ;;
     submit) cmd_submit "$@" ;;
+    outcome) cmd_outcome "$@" ;;
     grant) cmd_grant "$@" ;;
     apply-grant) cmd_apply_grant "$@" ;;
     collect) cmd_collect "$@" ;;

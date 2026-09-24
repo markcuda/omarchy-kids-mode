@@ -134,6 +134,10 @@ These are AGENTS.md's rules, restated for this specific harness:
 | `40-time-lights-out.sh` | 5 | Sets `lights_out` in the past, logs the kid in, confirms the Time's Up overlay auto-Finishes with no answer. |
 | `50-ask-grant.sh` | 6 | `omarchy-kids-ask time 15` from the kid's session, approved on the spot with the parent password, confirms the ledger reflects the grant. |
 | `60-wizard-easy.sh` | 1 | Drives the Easy wizard's fifteen screens over `ssh -tt` with an answers file, Applies for real, cold boots as the kid it provisions. |
+| `70-notify-pair-and-approve.sh` | R-NOTIFY-1/4/5 (N-6) | Enables notifications, starts the relay, pairs the scripted `test/live/clients/notify-client.py` through `/v1/pair`, queues a request root-side, approves it from the client's signed decision, and confirms the grant in the ledger. |
+| `71-notify-idle-exit.sh` | R-NOTIFY-1 (N-7) | With no kid live and no request open, starts the relay and confirms `ss` shows port 8447 closing within the not-in-use bound. |
+| `72-notify-review-decide.sh` | R-NOTIFY-12 | Writes a desktop file root-side and adds its id to the kid's `apps.extra`, scans (approval stamped), changes the Exec, scans again (a review opens), pairs the scripted client, and approves the review from its signed `REVIEW` frame; confirms the review clears and the list is empty of it. |
+| `73-notify-act.sh` | R-NOTIFY-13 | Pairs the client, has it grant 15 minutes through the `ACT` frame and confirms the day's grant ledger shows +15, then has it end the session and confirms the frame is accepted (with no session live, the command's own outcome is exit 0; scenario 30 covers a live end). |
 | `90-remove.sh` | 8 | `omarchy-kids-remove --dry-run` (always); under `LIVE_DESTRUCTIVE=1`, a real `omarchy-kids-provision remove` of just the wizard kid. |
 
 `05-unit-tests-on-vm.sh` is the answer to a green `test/all` on the Mac that hid four skipped
@@ -150,7 +154,11 @@ installed, so it boots the VM itself only if it finds it down.
 
 Not covered yet: §8 items 4 (browser walled garden / DoH), 7 (`omarchy update` + a kernel update),
 and 9 (changing the parent's login password) — each needs its own scenario and its own care about
-what state it leaves the VM in; left for a follow-on issue rather than guessed at here.
+what state it leaves the VM in; left for a follow-on issue rather than guessed at here. Scenarios 70
+through 73 are **new drafts no gate has run yet** (AGENTS.md rule 11): review them on
+the first VM run before trusting their PASS. 70, 72 and 73 share `lib.sh`'s `notify_pair_client`
+(enable, start the relay, open a pairing window, pair the client, check the registry) so their setup
+cannot drift.
 
 Scenario 05 also runs `shfmt -i 2 -ci -l` over every bash file when the VM has `shfmt` (the Mac
 does not), and fails on any file the formatter would change.

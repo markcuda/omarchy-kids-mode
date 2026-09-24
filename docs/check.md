@@ -67,6 +67,47 @@ function only; a FAIL points at `docs/assert.md`'s own table for what the lock p
 fix does, rather than repeating that here. The three boot-owned lock checks appear only in trusted
 `boot=disk` mode. Portal and invalid mode never inspect the UKI or Limine.
 
+Three rows go beyond the "one line per assert lock" rule (R-NOTIFY-11.2). `lock:devices` and
+`lock:relay-away` are the assert locks above (registry modes; the away drop-in), standard shape.
+`lock:relay-fence` has **no assert lock behind it**: the relay's `IPAddressAllow`/`IPAddressDeny`
+fence lives in the package's own unit file, and assert never rewrites a packaged file (I-7). It is
+verify-only — the unit file is present, root-owned, with exactly the packaged allow line and
+`IPAddressDeny=any` in its `[Service]` section, and, live and without `--root`,
+`systemctl show … -p FragmentPath` names that same file (a full override in `/etc/systemd/system`
+shadows it and fails), the effective deny is `any` (systemd reports it as the two catch-all prefixes `0.0.0.0/0 ::/0`, which is accepted), and the effective allow set — over systemd's own
+expansion of `localhost`/`link-local`/`multicast`, compared as a set — is exactly the packaged list
+plus the CGNAT range if and only if the parent's `away.conf` is there. Absent unit (the package is
+not installed) is a WARN. A FAIL means "reinstall `omarchy-kids` and remove any drop-in you did not
+write", **not** "run `omarchy-kids-assert`", so this one row says so itself rather than reusing
+`lock_check`'s standard text. What it proves: the packaged fence is intact and systemd applies it
+(plus the away range only with the parent's consent). What it cannot: that the relay is running,
+that the fence is a firewall (it binds one unit's sockets, not the machine), or that someone with
+root has not replaced the packaged copy too.
+
+Two more rows, `lock:relay-tls` and `lock:courier-conf`, are the assert locks of the same names
+(R-NOTIFY-11.4), standard shape and standard fail text. They prove only that the relay's private key
+(`/etc/omarchy-kids/relay/key.pem`, root `omarchy-parents` `0640`, its certificate `0644`, the
+directory `0750` with nothing else in it) and the courier's mailbox file
+(`/etc/omarchy-kids/courier.conf`, root `0600`, which carries the Gotify token or the ntfy reply
+topic) are absent or closed to everyone but root and, for the key, the parent group. Neither row
+opens either file: not that the key matches the certificate or the one a device pinned, not that the
+token is valid or the server reachable, not that the relay or the courier is running, and not that
+nobody read the secret while its mode was wrong. A warn on `lock:relay-tls` is the directory being
+unreadable to this run, which is what a run outside `omarchy-parents` sees.
+
+`lock:queue` is the assert lock of the same name (R-NOTIFY-7), standard shape and standard fail
+text. It proves only that the request queue (`/var/lib/omarchy-kids/queue`, root `omarchy-parents`
+`0750`, each `*.json` record `0640`, none a symlink) is absent or closed to everyone but root and the
+parent group; not that any record is valid or open, that `collect` runs, or that nobody read a
+record while its mode was wrong. A warn is the directory being unreadable to this run, which is what
+a run outside `omarchy-parents` sees.
+
+`lock:decisions:<account>` is the assert lock of the same name (R-NOTIFY-6), standard shape and
+standard fail text. It proves only that each provisioned kid's `decisions` directory is absent or
+closed to everyone but root and that kid, one row per kid; not that a copy matches its record, that
+every decided record has one, or that the kid saw it. A warn is a directory being unreadable to this
+run.
+
 **One exception, not a FAIL:** `face:<account>` (the SDDM avatar icon, issue #39) is a WARN even
 in this technical catalog. It is the one lock in the table that isn't a security fence at all —
 missing or wrong, a kid still logs in exactly as fenced, just without their picture on the portal

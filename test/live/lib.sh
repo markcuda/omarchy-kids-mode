@@ -551,6 +551,69 @@ kid_budget_restore() {
   [[ -n "${KID_BUDGET_BEFORE:-}" ]] && vmroot "omarchy-kids-conf set '$1' budget_min $KID_BUDGET_BEFORE >/dev/null"
 }
 
+# notify_pair_client KEY_PATH — the shared setup for the notification scenarios (70, 72, 73):
+# enable notifications on the VM, start the relay (the tick would, but these want it up before a
+# kid is live), open a pairing window, pair the scripted client
+# (test/live/clients/notify-client.py) through /v1/pair with its key at KEY_PATH, and confirm the
+# device is in the registry. Sets NOTIFY_DEVICE_ID on success; on any step it calls fail() and
+# returns non-zero, and the caller skips whatever needed the pairing.
+notify_pair_client() {
+  local key_path="$1" pair_out uri token id reply
+  vmroot "omarchy-kids-notify enable --apply" >/dev/null 2>&1 &&
+    ok "notifications enabled (the relay certificate is minted)" ||
+    {
+      fail "omarchy-kids-notify enable failed"
+      return 1
+    }
+  vmroot "systemctl start omarchy-kids-relayd.service" >/dev/null 2>&1 &&
+    ok "relay started" || {
+    fail "could not start the relay"
+    return 1
+  }
+  pair_out="$(vmroot "omarchy-kids-notify pair --apply" 2>&1)"
+  uri="$(printf '%s\n' "$pair_out" | grep -o 'omarchy-kids://pair[^ ]*' | head -1)"
+  token="$(printf '%s' "$uri" | sed -n 's/.*[?&]token=\([^&]*\).*/\1/p')"
+  # The pairing record's own id (d-xxxxxxxx) is the one authd looks up; the scenario pairs under
+  # that, not one of its own.
+  id="$(printf '%s' "$uri" | sed -n 's/.*[?&]id=\([^&]*\).*/\1/p')"
+  if [[ -n "$token" && -n "$id" ]]; then
+    ok "pairing window opened for $id"
+  else
+    fail "pair-start printed no id/token: $pair_out"
+    return 1
+  fi
+  # The client is copied in, never run from the runner: it must reach the relay on the VM's own
+  # localhost, which the unit's fence allows. vm_write_file runs as the owner, so /tmp, not /root.
+  if vm_write_file /tmp/notify-client.py <"$LIVE_LIB_DIR/clients/notify-client.py"; then
+    ok "client copied to the vm"
+  else
+    fail "could not copy the client to the vm"
+    return 1
+  fi
+  reply="$(vmroot "python3 /tmp/notify-client.py pair --key $key_path --id $id --token $token" 2>&1)"
+  if [[ "$reply" == *"pair 200"* ]]; then
+    ok "the client paired through /v1/pair ($reply)"
+  else
+    fail "pairing failed: $reply"
+    return 1
+  fi
+  vmroot "omarchy-kids-devices list" 2>/dev/null | grep -q "$id" &&
+    ok "the device is in the registry" || {
+    fail "the paired device is not in the registry"
+    return 1
+  }
+  # shellcheck disable=SC2034 # read by the sourcing scenario after this returns
+  NOTIFY_DEVICE_ID="$id"
+  return 0
+}
+
+# notify_stop — the shared teardown: disable notifications (which revokes every device and removes
+# the certificate) so no listener is left and no paired key survives the scenario.
+notify_stop() {
+  vmroot "omarchy-kids-notify disable --apply" >/dev/null 2>&1 &&
+    ok "notifications disabled and the device revoked" || fail "disable failed"
+}
+
 # assert_no_session KID [DEADLINE=30] — KID has no live loginctl session within DEADLINE seconds.
 assert_no_session() {
   local kid="$1" deadline="${2:-30}" waited=0

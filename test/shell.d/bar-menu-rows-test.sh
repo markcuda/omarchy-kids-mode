@@ -28,6 +28,12 @@ function extractFunction(source, name) {
   throw new Error(`unterminated ${name}`);
 }
 
+// R-BAR-3 as amended: the badge count comes from status.json, not a subprocess.
+assert.ok(qml.includes('data.open_requests'), 'the widget must read open_requests from status.json');
+assert.ok(qml.includes('Math.max(0, Math.round(Number(data && data.open_requests)'), 'the count is coerced so a missing or odd value reads as a number');
+assert.ok(!qml.includes('askBin'), 'the widget must not keep the now-unused ask command path');
+assert.ok(!/omarchy-kids-ask[\"\']?\s*,\s*[\"\']list/.test(qml), 'the widget must not run ask list for the count');
+
 const makeMenuRows = extractFunction(qml, 'makeMenuRows');
 const model = vm.runInNewContext(`(${makeMenuRows})`);
 const rows = model([
@@ -119,6 +125,18 @@ for (const kind of ['missing', 'empty', 'malformed', 'valid-empty']) {
   escape();
   assert.strictEqual(root.opened, false, 'Escape closes the same menu');
   assert.strictEqual(launches.length, 0, 'no child action was launched');
+}
+// The badge count is read from status.json's open_requests and coerced, so a
+// string, a negative, a fraction or a missing value cannot break the badge.
+for (const [value, want] of [['2', 2], [-3, 0], [1.6, 2], ['x', 0], [null, 0], [undefined, 0]]) {
+  readFails = false;
+  const doc = { kids: [{ kid: 'kid-cy', live: true, paused: false, minutes_left: 17 }] };
+  if (value !== undefined) doc.open_requests = value;
+  statusText = JSON.stringify(doc);
+  root.reloadStatus();
+  assert.strictEqual(root.openRequestCount, want, `open_requests ${JSON.stringify(value)} reads as ${want}`);
+  const row = root.menuRows.find(r => r.kind === 'requests');
+  assert.strictEqual(row.label, want > 0 ? `Open requests (${want})` : 'Open requests', `the row shows ${want}`);
 }
 console.log('bar-menu-rows-test: PASS');
 NODE

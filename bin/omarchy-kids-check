@@ -120,6 +120,21 @@ lock_check() {
   fi
 }
 
+# lock_check_relay_fence — the one row whose fail is not assert's to fix: the
+# fence is the package's own unit file, and assert never rewrites one (I-7).
+lock_check_relay_fence() {
+  local id="$1" fn="$2" rc
+  shift 2
+  "$fn" "$@" && rc=0 || rc=$?
+  if [[ "$rc" -eq 0 ]]; then
+    add_result Locks "lock:$id" pass "matches what the package installed, and the same fence is what systemd applies"
+  elif [[ "$rc" -eq 2 ]]; then
+    add_result Locks "lock:$id" warn "the relay unit is not installed or not loaded here, so its fence could not be verified"
+  else
+    add_result Locks "lock:$id" fail "the relay's fence differs from what the package installed; reinstall 'omarchy-kids' (a packaged file, which 'omarchy-kids-assert' never rewrites) and remove any drop-in you did not write — see 'docs/check.md'"
+  fi
+}
+
 # lock_check_warn — same shape as lock_check, for the SDDM face icon
 # (issue #39), cosmetic only, no security consequence (docs/check.md).
 lock_check_warn() {

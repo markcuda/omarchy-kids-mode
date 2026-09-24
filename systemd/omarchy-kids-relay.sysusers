@@ -1,0 +1,4 @@
+# The LAN notification relay's own system account (R-NOTIFY-1, R-NOTIFY-3):
+# omarchy-kids-authd accepts a DECIDE only from this uid, so it owns nothing and
+# has no home of its own.
+u omarchy-kids-relay - "Kids Mode notification relay" -

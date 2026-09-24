@@ -91,8 +91,8 @@ here sets `QML2_IMPORT_PATH` to extend it to a bare `quickshell -p` invocation. 
 `share/qml/KidsTheme.qml` does for those files exactly what `shell/Commons/Color.qml` does for the
 real shell. It also resolves the same font the real shell would: `fontFamily` is always the
 fontconfig alias `"monospace"`, resolved via `fc-match -f '%{family[0]}' monospace` through the
-same `Process`/`StdioCollector`/`onStreamFinished` shape `share/bar/KidsModule.qml`'s `askProcess`
-already confirmed live in this repo. Unconfirmed: whether a bare `running: true` property
+same `Process`/`StdioCollector`/`onStreamFinished` shape `share/qml/KidsTheme.qml` and
+`share/plugins/shell.qml` already use. Unconfirmed: whether a bare `running: true` property
 initializer on `Process` actually starts it on component completion the way it does for a `Timer`
 elsewhere here (`share/launcher/shell.qml`'s clock) — if it doesn't in the VM, trigger it from
 `Component.onCompleted` instead. Reads
@@ -101,7 +101,7 @@ the same key/fallback chases (`background`→`color0`, `accent`→`color4`, `for
 `muted`→`color8`, plus this repo's own `error`→`red`→`color1` and `warning`→`orange`→`yellow`→
 `color3`), and resolve the font with the identical `fc-match` command via a
 `Process`/`StdioCollector`/`onStreamFinished` — the one `Quickshell.Io.Process` shape already
-confirmed live in this repo (`share/bar/KidsModule.qml`'s own `askProcess`).
+confirmed live in this repo (`share/qml/KidsTheme.qml` and `share/plugins/shell.qml`).
 
 It's a plain `QtObject`, not a `pragma Singleton`: every file that wants it just instantiates its
 own copy —

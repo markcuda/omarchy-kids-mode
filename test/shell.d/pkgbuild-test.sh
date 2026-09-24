@@ -88,6 +88,13 @@ if [[ -f "$PKGBUILD" ]]; then
   fi
 fi
 
+# --- the relay's sysusers account is installed (R-NOTIFY-1) ---------------
+if [[ -n "${pkg_body:-}" ]] && grep -q 'systemd/omarchy-kids-relay.sysusers' <<<"$pkg_body"; then
+  pass "package() installs the relay sysusers account (R-NOTIFY-1)"
+else
+  fail "package() does not install the relay sysusers account"
+fi
+
 # --- omarchy-kids.install parses -----------------------------------------
 if [[ -f "$INSTALL_FILE" ]]; then
   pass "omarchy-kids.install exists"

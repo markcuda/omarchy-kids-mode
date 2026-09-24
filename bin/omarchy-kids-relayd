@@ -1,0 +1,429 @@
+#!/usr/bin/env python3
+# omarchy:summary=The LAN notification relay: serve the parent's devices while Kids Mode is on
+# omarchy:hidden=true
+# omarchy:args=[]
+"""omarchy-kids-relayd -- the LAN relay (R-NOTIFY-1/2).
+
+The one network listener this project ships. It runs as its own account, on the
+home network only, or the CGNAT range when the parent turns on away-from-home (the unit fences it
+with IPAddressDeny and the allow list), only while Kids Mode
+is in use, and it decides nothing: it serves the root-written status and the
+open requests to a paired device after verifying that device's signature, and
+forwards a signed decision to authd, which root verifies and applies. A missing
+certificate, device key or ledger fails closed. See
+docs/phase1/SPEC-AMENDMENT-notifications.md.
+
+HTTPS/1.1 only, stdlib (asyncio + ssl). SSE, the pair route, the request and
+review decisions, and the ACT actions (grant/end) are all served.
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import importlib.util
+import json
+import os
+import re
+import ssl
+import sys
+import time
+
+MAX_REQUEST = 64 * 1024
+MAX_HEADERS = 64
+MAX_CONNECTIONS = 32
+CLIENT_TIMEOUT = 30
+EVENTS_POLL = 5
+HEARTBEAT = 25
+
+RE_AVATAR = re.compile(r"\A[A-Za-z0-9_-]{1,32}\Z")
+
+
+def load_module(path: str, name: str):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise OSError(f"no {name} at {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class Relay:
+    def __init__(self, args, relay_mod, devices_mod):
+        self.args = args
+        self.relay = relay_mod
+        self.devices = devices_mod
+        self.ledger = devices_mod.NonceLedger(args.nonce_ledger)
+        self.last_activity = time.monotonic()
+        self.connected = 0
+        self.tasks = set()
+        self.server = None
+
+    # --- HTTP -----------------------------------------------------------
+    async def read_request(self, reader):
+        data = await reader.readuntil(b"\r\n\r\n")
+        if len(data) > MAX_REQUEST:
+            raise ValueError("too large")
+        head, _, rest = data.partition(b"\r\n\r\n")
+        lines = head.decode("latin-1").split("\r\n")
+        method, path, _ = (lines[0].split(" ") + ["", ""])[:3]
+        headers = {}
+        for line in lines[1:MAX_HEADERS]:
+            key, sep, value = line.partition(":")
+            if sep:
+                headers[key.strip().lower()] = value.strip()
+        try:
+            length = int(headers.get("content-length", "0"))
+        except ValueError:
+            length = -1
+        if length < 0 or length > MAX_REQUEST - len(rest):
+            raise ValueError("bad length")
+        body = rest
+        while len(body) < length:
+            chunk = await reader.read(length - len(body))
+            if not chunk:
+                break
+            body += chunk
+        return method, path, headers, body[:length]
+
+    def authorized(self, method, path, headers, body):
+        # Appendix H's shape: X-Kids-Device plus X-Kids-Sig: <ts>.<nonce>.<sig>.
+        device = headers.get("x-kids-device", "")
+        parts = headers.get("x-kids-sig", "").split(".")
+        if len(parts) != 3:
+            return False, "malformed"
+        ts_raw, nonce, signature = parts
+        try:
+            ts = int(ts_raw)
+        except ValueError:
+            return False, "stale-timestamp"
+        return self.devices.verify_request(
+            self.args.devices_json,
+            self.ledger,
+            device,
+            ts,
+            nonce,
+            method,
+            path,
+            body,
+            signature,
+            int(time.time()),
+        )
+
+    async def handle(self, reader, writer):
+        if self.connected >= MAX_CONNECTIONS:
+            try:
+                writer.close()
+            except OSError:
+                pass
+            return
+        self.connected += 1
+        self.tasks.add(asyncio.current_task())
+        try:
+            method, path, headers, body = await asyncio.wait_for(
+                self.read_request(reader), timeout=CLIENT_TIMEOUT
+            )
+            await self.dispatch(method, path, headers, body, writer)
+        except (TimeoutError, asyncio.IncompleteReadError, ConnectionError, ValueError):
+            pass
+        except Exception:  # noqa: BLE001 -- never let a client kill the relay
+            pass
+        finally:
+            self.connected -= 1
+            self.tasks.discard(asyncio.current_task())
+            self.last_activity = time.monotonic()
+            try:
+                writer.close()
+            except OSError:
+                pass
+
+    async def dispatch(self, method, path, headers, body, writer):
+        self.last_activity = time.monotonic()
+
+        if path == "/v1/state" and method == "GET":
+            ok, reason = self.authorized(method, path, headers, body)
+            if not ok:
+                return await self.reply(writer, 403, {"error": reason})
+            state = self.relay.build_state(self.args.status, self.args.queue, self.args.reviews)
+            return await self.reply(writer, 200, state)
+
+        if path == "/v1/events" and method == "GET":
+            ok, reason = self.authorized(method, path, headers, body)
+            if not ok:
+                return await self.reply(writer, 403, {"error": reason})
+            return await self.serve_events(writer)
+
+        if path.startswith("/v1/avatars/") and method == "GET":
+            ok, reason = self.authorized(method, path, headers, body)
+            if not ok:
+                return await self.reply(writer, 403, {"error": reason})
+            name = path[len("/v1/avatars/") :]
+            if name.endswith(".svg"):
+                name = name[:-4]
+            if not RE_AVATAR.match(name):
+                return await self.reply(writer, 404, {"error": "no such avatar"})
+            return await self.serve_avatar(writer, name)
+
+        if path == "/v1/pair" and method == "POST":
+            # Pairing is pre-auth (R-NOTIFY-5): the frame carries a proof the
+            # device holds the single-use token, and authd (root) verifies it.
+            # The relay never reads the root-only pairing record (R-NOTIFY-2).
+            # Re-serialize compactly: authd reads one line, and a pretty-printed
+            # body would be cut at its first newline.
+            try:
+                frame = json.loads(body)
+            except ValueError:
+                return await self.reply(writer, 400, {"error": "malformed"})
+            keys = ("id", "name", "platform", "sign_pub", "box_pub", "proof")
+            if not isinstance(frame, dict) or not all(isinstance(frame.get(k), str) for k in keys):
+                return await self.reply(writer, 400, {"error": "malformed"})
+            compact = json.dumps(frame, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+            loop = asyncio.get_running_loop()
+            reply = await loop.run_in_executor(None, self.relay.forward_pair, self.args.auth_sock, compact)
+            if reply is None:
+                return await self.reply(writer, 502, {"error": "authd unreachable"})
+            if reply == "ok":
+                return await self.reply(writer, 200, {"reply": "ok"})
+            # A generic refusal: this caller is unauthenticated, and authd's own
+            # reason would be a bad-proof/unknown-pairing oracle.
+            return await self.reply(writer, 403, {"error": "pairing refused"})
+
+        if path.startswith("/v1/requests/") and path.endswith("/decision") and method == "POST":
+            # The relay authenticates the caller too (an unsigned POST is
+            # refused here, not only at authd); the body is the DECIDE frame,
+            # which authd re-verifies and applies.
+            ok, reason = self.authorized(method, path, headers, body)
+            if not ok:
+                return await self.reply(writer, 403, {"error": reason})
+            try:
+                frame = json.loads(body)
+            except ValueError:
+                return await self.reply(writer, 400, {"error": "malformed"})
+            request_id = path[len("/v1/requests/") : -len("/decision")]
+            record = frame.get("record") if isinstance(frame, dict) else None
+            if (
+                not isinstance(record, dict)
+                or str(record.get("request_id", "")) != request_id
+                or "signature" not in frame
+            ):
+                return await self.reply(writer, 400, {"error": "malformed"})
+            loop = asyncio.get_running_loop()
+            reply = await loop.run_in_executor(None, self.relay.forward_decide, self.args.auth_sock, body)
+            if reply is None:
+                return await self.reply(writer, 502, {"error": "authd unreachable"})
+            return await self.reply(writer, 200 if reply == "ok" else 403, {"reply": reply})
+
+        if path.startswith("/v1/reviews/") and path.endswith("/decision") and method == "POST":
+            # R-NOTIFY-12: the same authentication as a request decision, then a
+            # REVIEW frame carried to authd, which verifies and applies it. The
+            # relay does not open the review file, compare fingerprints or read
+            # the device's scopes -- authd does all of that (R-NOTIFY-2).
+            ok, reason = self.authorized(method, path, headers, body)
+            if not ok:
+                return await self.reply(writer, 403, {"error": reason})
+            review_id = path[len("/v1/reviews/") : -len("/decision")]
+            if not self.relay.RE_REVIEW_ID.match(review_id):
+                return await self.reply(writer, 400, {"error": "malformed"})
+            try:
+                frame = json.loads(body)
+            except ValueError:
+                return await self.reply(writer, 400, {"error": "malformed"})
+            record = frame.get("record") if isinstance(frame, dict) else None
+            if (
+                not isinstance(record, dict)
+                or str(record.get("review_id", "")) != review_id
+                or "signature" not in frame
+            ):
+                return await self.reply(writer, 400, {"error": "malformed"})
+            loop = asyncio.get_running_loop()
+            reply = await loop.run_in_executor(None, self.relay.forward_review, self.args.auth_sock, body)
+            if reply is None:
+                return await self.reply(writer, 502, {"error": "authd unreachable"})
+            return await self.reply(writer, 200 if reply == "ok" else 403, {"reply": reply})
+
+        if path.startswith("/v1/kids/") and method == "POST" and (
+            path.endswith("/grant") or path.endswith("/end")
+        ):
+            # R-NOTIFY-13: a paired device's grant or end. Authenticated like a
+            # decision; the relay checks only the route's own shape (the account
+            # is a kid account, the signed record names that account and the
+            # route's action, and a grant's minutes are in range) and carries the
+            # body verbatim to authd, which verifies the signature and applies it.
+            ok, reason = self.authorized(method, path, headers, body)
+            if not ok:
+                return await self.reply(writer, 403, {"error": reason})
+            action = "grant" if path.endswith("/grant") else "end"
+            account = path[len("/v1/kids/") : -(len(action) + 1)]
+            if not self.devices.RE_KID_ACCOUNT.match(account):
+                return await self.reply(writer, 400, {"error": "malformed"})
+            try:
+                frame = json.loads(body)
+            except ValueError:
+                return await self.reply(writer, 400, {"error": "malformed"})
+            record = frame.get("record") if isinstance(frame, dict) else None
+            if (
+                not isinstance(record, dict)
+                or "signature" not in frame
+                or str(record.get("account", "")) != account
+                or record.get("action") != action
+            ):
+                return await self.reply(writer, 400, {"error": "malformed"})
+            minutes = record.get("minutes")
+            if action == "grant":
+                if (
+                    not isinstance(minutes, int)
+                    or isinstance(minutes, bool)
+                    or minutes < 1
+                    or minutes > self.devices.MAX_GRANT_MINUTES
+                ):
+                    return await self.reply(writer, 400, {"error": "malformed"})
+            elif "minutes" in record:
+                return await self.reply(writer, 400, {"error": "malformed"})
+            loop = asyncio.get_running_loop()
+            reply = await loop.run_in_executor(None, self.relay.forward_act, self.args.auth_sock, body)
+            if reply is None:
+                return await self.reply(writer, 502, {"error": "authd unreachable"})
+            return await self.reply(writer, 200 if reply == "ok" else 403, {"reply": reply})
+
+        return await self.reply(writer, 404, {"error": "not found"})
+
+    async def serve_events(self, writer):
+        """Server-Sent Events: the state whenever it changes, plus a heartbeat.
+
+        Signed once at connect; a long-lived stream authenticates the connection,
+        not each event (Appendix H). It ends when the client goes away.
+        """
+        writer.write(
+            b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n"
+            b"Cache-Control: no-cache\r\nConnection: keep-alive\r\n\r\n"
+        )
+        await writer.drain()
+        last = None
+        last_beat = time.monotonic()
+        while True:
+            state = self.relay.build_state(self.args.status, self.args.queue, self.args.reviews)
+            body = json.dumps(state, sort_keys=True)
+            if body != last:
+                writer.write(f"event: state\ndata: {body}\n\n".encode("utf-8"))
+                last = body
+                last_beat = time.monotonic()
+            elif time.monotonic() - last_beat >= HEARTBEAT:
+                writer.write(b": heartbeat\n\n")
+                last_beat = time.monotonic()
+            await writer.drain()
+            await asyncio.sleep(EVENTS_POLL)
+
+    async def reply(self, writer, status, obj):
+        body = json.dumps(obj).encode("utf-8")
+        writer.write(
+            b"HTTP/1.1 %d %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\n"
+            b"Connection: close\r\n\r\n" % (status, b"OK" if status == 200 else b"Error", len(body))
+            + body
+        )
+        await writer.drain()
+
+    async def serve_avatar(self, writer, name):
+        path = os.path.join(self.args.share, "avatars", name + ".svg")
+        try:
+            with open(path, "rb") as f:
+                body = f.read(MAX_REQUEST)
+        except OSError:
+            return await self.reply(writer, 404, {"error": "no such avatar"})
+        writer.write(
+            b"HTTP/1.1 200 OK\r\nContent-Type: image/svg+xml\r\nContent-Length: %d\r\n"
+            b"Connection: close\r\n\r\n" % len(body) + body
+        )
+        await writer.drain()
+
+    # --- lifecycle ------------------------------------------------------
+    async def expire_when_idle(self):
+        needless_since = None
+        while True:
+            await asyncio.sleep(5)
+            # The idler must never die: a dead idler is the always-on listener
+            # R-NOTIFY-1 forbids. Any read failure counts as "in use" for this
+            # pass, which only delays the stop.
+            try:
+                needed = self.relay.is_needed(self.args.status, self.args.queue)
+            except Exception:  # noqa: BLE001
+                needed = True
+            now = time.monotonic()
+            if needed:
+                needless_since = None
+            elif needless_since is None:
+                needless_since = now
+            # Not needed (no live kid, no open request, no pairing window) for
+            # the grace: stop, even if a device holds a stream open. A subscriber
+            # must not keep the always-on listener R-NOTIFY-1 forbids.
+            if self.relay.needs_stopping(needed, needless_since, now, self.args.needless_seconds):
+                print("omarchy-kids-relayd: Kids Mode is not in use; stopping", file=sys.stderr)
+                for task in list(self.tasks):
+                    task.cancel()
+                self.server.close()
+                return
+
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser(prog="omarchy-kids-relayd", description="Kids Mode LAN relay (R-NOTIFY-1).")
+    parser.add_argument("--bind", default="0.0.0.0")
+    parser.add_argument("--port", type=int, default=8447)
+    parser.add_argument("--cert", required=True, help="TLS certificate (PEM)")
+    parser.add_argument("--key", required=True, help="TLS private key (PEM)")
+    parser.add_argument("--devices-json", default="/run/omarchy-kids/devices.json")
+    parser.add_argument("--status", default="/run/omarchy-kids/status.json")
+    parser.add_argument("--queue", default="/var/lib/omarchy-kids/queue")
+    parser.add_argument(
+        "--reviews",
+        default="/var/lib/omarchy-kids/reviews/open",
+        help="Open add-on reviews (R-NOTIFY-12); the relay reads them, never decides",
+    )
+    parser.add_argument("--auth-sock", default="/run/omarchy-kids/auth.sock")
+    parser.add_argument("--nonce-ledger", default="/run/omarchy-kids/relay/nonces.json")
+    parser.add_argument("--share", default="/usr/share/omarchy-kids")
+    parser.add_argument("--lib", default="/usr/lib/omarchy-kids")
+    parser.add_argument("--needless-seconds", type=int, default=60)
+    return parser.parse_args(argv)
+
+
+async def main_async(argv) -> int:
+    args = parse_args(argv)
+    try:
+        relay_mod = load_module(os.path.join(args.lib, "relay.py"), "omarchy_kids_relay")
+        devices_mod = load_module(os.path.join(args.lib, "devices.py"), "omarchy_kids_devices")
+    except OSError as exc:
+        print(f"omarchy-kids-relayd: {exc}", file=sys.stderr)
+        return 1
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    try:
+        context.load_cert_chain(args.cert, args.key)
+    except (OSError, ssl.SSLError) as exc:
+        print(f"omarchy-kids-relayd: no usable certificate: {exc}", file=sys.stderr)
+        return 1
+    relay = Relay(args, relay_mod, devices_mod)
+    relay.server = await asyncio.start_server(
+        relay.handle, args.bind, args.port, ssl=context, ssl_handshake_timeout=10
+    )
+    print(f"omarchy-kids-relayd: listening on {args.bind}:{args.port}", file=sys.stderr)
+    idler = asyncio.ensure_future(relay.expire_when_idle())
+    try:
+        await relay.server.serve_forever()
+    except (asyncio.CancelledError, KeyboardInterrupt):
+        pass
+    finally:
+        idler.cancel()
+        for task in list(relay.tasks):
+            task.cancel()
+        relay.server.close()
+        # Never wait indefinitely for a client that holds a stream open.
+        try:
+            await asyncio.wait_for(relay.server.wait_closed(), timeout=2)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            pass
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(asyncio.run(main_async(sys.argv[1:])))
+    except KeyboardInterrupt:
+        sys.exit(0)

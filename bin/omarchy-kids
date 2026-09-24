@@ -35,9 +35,10 @@ Opens Kids Mode. With no kid provisioned yet, this is the parent wizard
 'omarchy-kids wizard' always opens the wizard, to add another kid.
 
   wizard            Always open the parent wizard, even if kids already exist.
-  --requests        Print open "ask a parent" requests (R-ASK-2) via
-                     omarchy-kids-ask list, instead of opening the panel --
-                     a quick look without the full interactive screen.
+  --requests        Print open "ask a parent" requests (R-ASK-2) with
+                    omarchy-kids-ask list (root or a member of
+                    omarchy-parents, R-NOTIFY-7), instead of opening the
+                    panel -- a quick look without the full screen.
   remove-kids-mode  Remove Kids Mode (R-TRUST-4); see
                     omarchy-kids-remove --help for its own flags.
   --dry-run         Passed through to the wizard's or panel's own --dry-run.

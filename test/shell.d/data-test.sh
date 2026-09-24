@@ -340,6 +340,7 @@ echo
 
 out="$(KIDS_TEST_ACCOUNT=kid-ada OMARCHY_KIDS_NOW="2026-09-02 10:00:00" "$DATA" mine)"
 check_contains "$out" "What my grown-ups can see" "mine: title"
+check_contains "$out" "What you asked for" "mine: names the Ask a parent record (R-DATA-1/3)"
 check_contains "$out" "1 year" "mine: states the minutes retention"
 check_contains "$out" "90 days" "mine: states the launches retention"
 check_contains "$out" "websites you visit" "mine: mentions browsing history when it's visible"
@@ -375,6 +376,14 @@ NEW_TS=1893000000 # near this suite's fixture "now" (2026-09-02-ish)
 echo '{"kid":"kid-ada"}' >"$QUEUE_DIR/${OLD_TS}-kid-ada-time.json"
 echo '{"kid":"kid-ada"}' >"$QUEUE_DIR/${NEW_TS}-kid-ada-time.json"
 
+# The kid's own copies of decisions (R-NOTIFY-6) share the queue's timestamp and
+# its 90 days: the stale one goes with the stale record, the recent one stays.
+DEC_DIR="$ROOT/var/lib/omarchy-kids/kid-ada/decisions"
+mkdir -p "$DEC_DIR"
+echo '{"kid":"kid-ada"}' >"$DEC_DIR/${OLD_TS}-kid-ada-time.json"
+echo '{"kid":"kid-ada"}' >"$DEC_DIR/${NEW_TS}-kid-ada-time.json"
+echo '{"kid":"kid-ada"}' >"$DEC_DIR/not-a-timestamp.json"
+
 "$DATA" retention >/dev/null 2>&1
 check_status "$?" 1 "retention: refuses without root"
 
@@ -399,6 +408,9 @@ check_not_contains "$(cat "$ROOT_LOG")" "oldapp" "retention --apply: the 2024 la
 check_contains "$(cat "$ROOT_LOG")" "kanagram" "retention --apply: recent launch lines are kept"
 check_no_file "$QUEUE_DIR/${OLD_TS}-kid-ada-time.json" "retention --apply: the stale request is pruned"
 check_file "$QUEUE_DIR/${NEW_TS}-kid-ada-time.json" "retention --apply: the recent request is kept"
+check_no_file "$DEC_DIR/${OLD_TS}-kid-ada-time.json" "retention --apply: the stale kid copy is pruned"
+check_file "$DEC_DIR/${NEW_TS}-kid-ada-time.json" "retention --apply: the recent kid copy is kept"
+check_file "$DEC_DIR/not-a-timestamp.json" "retention --apply: a copy with no timestamp in its name is kept"
 
 # Chromium's own History db is never touched by retention (R-DATA-1:
 # "the browser's own retention") -- it should be untouched, byte for

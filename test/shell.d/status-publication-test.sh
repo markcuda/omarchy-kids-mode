@@ -90,11 +90,20 @@ time_is_paused() { return 1; }
 active_kid_sessions() { printf 'kid-ada\n'; }
 kids_list() { printf 'kid-ada\n'; }
 
-PATH="$STUBS:/usr/bin:/bin"
+# python3 is needed by open_requests_count (it delegates to lib/ask.py); keep the
+# stub dir first, then whatever dir holds python3, then the base tools.
+PATH="$STUBS:$(dirname "$(command -v python3)"):/usr/bin:/bin"
 # shellcheck disable=SC2034 # consumed by the extracted production function
 KIDS_DIR="$ROOT/etc/omarchy-kids/kids"
 RUN_DIR="$ROOT/run/omarchy-kids"
 STATUS_JSON="$RUN_DIR/status.json"
+PAIRING_DIR="$RUN_DIR/pairing"
+REVIEW_DIR="$RUN_DIR/reviews/open"
+QUEUE_DIR="$ROOT/var/lib/omarchy-kids/queue"
+# open_requests_count delegates to lib/ask.py’s list-open, so the extracted
+# write_status_json needs both the interpreter and the module path.
+KIDS_PY=python3
+ASK_PY="$DIR/lib/ask.py"
 printf '%s\n' '{"generated_at":"old","kids":[]}' >"$STATUS_JSON"
 OLD_HASH="$(file_hash "$STATUS_JSON")"
 
@@ -109,6 +118,36 @@ mkdir -p "$STATUS_META_DIR"
 write_status_json
 check "$(jq -r '.kids[0].kid' "$STATUS_JSON")" kid-ada "publishes complete JSON"
 check "$(cat "$STATUS_MV_BOUNDARY")" 'root:omarchy-parents:640' "metadata is complete at publication boundary"
+
+# A pending pairing window is published as its expiry, never the token, so the
+# relay can keep itself up while a phone pairs (R-NOTIFY-2/5).
+mkdir -p "$PAIRING_DIR"
+printf '{"expires_at": 4102444800}\n' >"$PAIRING_DIR/d-1"
+write_status_json
+check "$(jq -r '.pairing_open_until' "$STATUS_JSON")" "4102444800" "publishes the pairing window's expiry"
+rm -rf "$PAIRING_DIR"
+write_status_json
+check "$(jq -r '.pairing_open_until' "$STATUS_JSON")" "0" "no pairing window publishes 0"
+
+# An open add-on review (R-NOTIFY-12) is published as a count, so the bar and the
+# notifier see the same number.
+mkdir -p "$REVIEW_DIR"
+printf '{"kid": "kid-ada", "id": "minecraft", "state": "open"}\n' >"$REVIEW_DIR/kid-ada.abc123.json"
+write_status_json
+check "$(jq -r '.reviews' "$STATUS_JSON")" "1" "publishes the open-review count"
+rm -rf "$REVIEW_DIR"
+write_status_json
+check "$(jq -r '.reviews' "$STATUS_JSON")" "0" "no open review publishes 0"
+
+# The open-request count (R-BAR-3 as amended) rides the same document.
+mkdir -p "$QUEUE_DIR"
+printf '{"kid": "kid-ada", "kind": "time", "what": "10", "minutes": 10, "asked_at": 1000000000, "state": "open"}\n' \
+  >"$QUEUE_DIR/1-kid-ada-time.json"
+write_status_json
+check "$(jq -r '.open_requests' "$STATUS_JSON")" "1" "publishes the open-request count"
+rm -rf "$QUEUE_DIR"
+write_status_json
+check "$(jq -r '.open_requests' "$STATUS_JSON")" "0" "no open request publishes 0"
 
 for failure in jq-row jq-final chown chgrp chmod mv getent; do
   rm -f "$RUN_DIR"/status.json.* "$STATUS_MV_BOUNDARY"

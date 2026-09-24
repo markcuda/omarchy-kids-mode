@@ -102,6 +102,7 @@ cat >"$DEFAULTS2" <<'EOF'
 EOF
 
 env2() { OMARCHY_KIDS_HOME="$HOME2" OMARCHY_PATH="$TMP/defaults2" "$@"; }
+env2p() { OMARCHY_KIDS_HOME="$HOME2" OMARCHY_PATH="$TMP/defaults2" PATH="$STUBSN:$PATH" "$@"; }
 
 out="$(env2 "$BAR" status)"
 check "$out" "disabled" "status: disabled before enable"
@@ -138,8 +139,56 @@ check "$before" "$after" "a second enable --apply leaves shell.json byte-for-byt
 check "$(jq -r "[.bar.layout.right[] | select(.id == \"$plugin_id\")] | length" "$SHELL_JSON2")" "1" \
   "still exactly one widget entry after a second enable"
 
+# --- the desktop notifier consent (N-9): same consent as the widget --------
+STUBSN="$TMP/stubs-notify"
+mkdir -p "$STUBSN"
+NOTIFY_CTL_LOG="$TMP/notify-ctl.log"
+cat >"$STUBSN/systemctl" <<EOF
+#!/bin/bash
+printf 'systemctl %s\n' "\$*" >>"$NOTIFY_CTL_LOG"
+case "\$*" in
+  *is-enabled*) [[ -f "$TMP/notify-on" ]] && exit 0 || exit 1 ;;
+  *enable*) : >"$TMP/notify-on" ;;
+  *disable*) rm -f "$TMP/notify-on" ;;
+esac
+exit 0
+EOF
+chmod +x "$STUBSN/systemctl"
+rm -f "$TMP/notify-on"
+: >"$NOTIFY_CTL_LOG"
+
+# The widget is off in HOME1: the consent is refused, and nothing is touched.
+out="$(OMARCHY_KIDS_HOME="$HOME1" OMARCHY_PATH="$TMP/no-such-omarchy" PATH="$STUBSN:$PATH" \
+  "$BAR" notify-enable --apply 2>&1)"
+check_status "$?" 2 "notify-enable refuses before the bar widget is on"
+check "$(grep -c . "$NOTIFY_CTL_LOG")" "0" "no unit is touched when the widget is off"
+
+# The widget is on in HOME2 (from the enable above).
+check "$(env2p "$BAR" notify-status)" "disabled" \
+  "notify-status: disabled before notify-enable"
+out="$(env2p "$BAR" notify-enable --apply 2>&1)"
+check_status "$?" 0 "notify-enable --apply exits 0 with the widget on"
+check_contains "$(cat "$NOTIFY_CTL_LOG")" "systemctl --user enable --now omarchy-kids-notify-watch.service" \
+  "notify-enable enables the user unit"
+check "$(env2p "$BAR" notify-status)" "enabled" \
+  "notify-status: enabled after notify-enable"
+
+: >"$NOTIFY_CTL_LOG"
+env2p "$BAR" notify-disable --apply >/dev/null 2>&1
+check_contains "$(cat "$NOTIFY_CTL_LOG")" "systemctl --user disable --now omarchy-kids-notify-watch.service" \
+  "notify-disable disables the user unit"
+check "$(env2p "$BAR" notify-status)" "disabled" \
+  "notify-status: disabled after notify-disable"
+
+# Same consent both ways: leave the notifier on, then the widget disable below
+# must turn it off too.
+env2p "$BAR" notify-enable --apply >/dev/null 2>&1
+: >"$NOTIFY_CTL_LOG"
+
 # --- disable: since enable created shell.json, disable removes it ---------
-env2 "$BAR" disable --apply >/dev/null
+env2p "$BAR" disable --apply >/dev/null
+check_contains "$(cat "$NOTIFY_CTL_LOG")" "systemctl --user disable --now omarchy-kids-notify-watch.service" \
+  "disabling the widget turns its notifier off too (same consent both ways)"
 check "$([[ -f "$SHELL_JSON2" ]] && echo yes || echo no)" "no" \
   "disable removes the shell.json it created (back to 'no file' = defaults)"
 check "$([[ -f "$HOME2/.config/omarchy/.omarchy-kids-bar-created-shell-json" ]] && echo yes || echo no)" "no" \
@@ -278,6 +327,89 @@ check "$(grep -c loginctl "$LOGFILE3")" "0" "end never calls loginctl directly"
 
 out="$("$BAR" end 2>&1)"
 check_status "$?" 2 "end with no kid is refused"
+
+# --- approve / decline: N-9's desktop-notification actions, the same
+#     terminal/sudo shape, through omarchy-kids-ask (R-NOTIFY) ------------
+kids_stub "$TMP/tree" omarchy-kids-ask <<'EOF'
+#!/bin/bash
+echo "ASK $*" >>"$LOGFILE"
+exit 0
+EOF
+
+LOGFILE4="$TMP/approve.log"
+: >"$LOGFILE4"
+out="$(PATH="$STUBS4:$BASE_PATH" LOGFILE="$LOGFILE4" \
+  "$BAR" approve 1000000001-kid-ada-time </dev/null 2>&1)"
+check_status "$?" 0 "approve exits 0 when the terminal/sudo/ask chain succeeds"
+check_contains "$(cat "$LOGFILE4")" "SUDO " "approve ran the command through sudo"
+check_contains "$(cat "$LOGFILE4")" "ASK approve 1000000001-kid-ada-time --apply" \
+  "sudo ran omarchy-kids-ask approve <id> --apply"
+
+LOGFILE5="$TMP/decline.log"
+: >"$LOGFILE5"
+out="$(PATH="$STUBS4:$BASE_PATH" LOGFILE="$LOGFILE5" \
+  "$BAR" decline 1000000002-kid-ada-app </dev/null 2>&1)"
+check_status "$?" 0 "decline exits 0 when the terminal/sudo/ask chain succeeds"
+check_contains "$(cat "$LOGFILE5")" "ASK decline 1000000002-kid-ada-app --apply" \
+  "sudo ran omarchy-kids-ask decline <id> --apply"
+
+out="$("$BAR" approve 2>&1)"
+check_status "$?" 2 "approve with no id is refused"
+out="$("$BAR" decline 2>&1)"
+check_status "$?" 2 "decline with no id is refused"
+
+# --- review-approve / review-deny: N-12's add-on actions, same shape ------
+kids_stub "$TMP/tree" omarchy-kids-review <<'EOF'
+#!/bin/bash
+echo "REVIEW $*" >>"$LOGFILE"
+exit 0
+EOF
+LOGFILE6="$TMP/review.log"
+: >"$LOGFILE6"
+out="$(PATH="$STUBS4:$BASE_PATH" LOGFILE="$LOGFILE6" \
+  "$BAR" review-approve kid-ada minecraft </dev/null 2>&1)"
+check_status "$?" 0 "review-approve exits 0 when the terminal/sudo chain succeeds"
+check_contains "$(cat "$LOGFILE6")" "SUDO " "review-approve ran the command through sudo"
+check_contains "$(cat "$LOGFILE6")" "REVIEW approve kid-ada minecraft --apply" \
+  "sudo ran omarchy-kids-review approve <kid> <id> --apply"
+
+LOGFILE7="$TMP/review-deny.log"
+: >"$LOGFILE7"
+out="$(PATH="$STUBS4:$BASE_PATH" LOGFILE="$LOGFILE7" \
+  "$BAR" review-deny kid-ada minecraft </dev/null 2>&1)"
+check_status "$?" 0 "review-deny exits 0 when the terminal/sudo chain succeeds"
+check_contains "$(cat "$LOGFILE7")" "REVIEW deny kid-ada minecraft --apply" \
+  "sudo ran omarchy-kids-review deny <kid> <id> --apply"
+
+LOGFILE8="$TMP/review-check.log"
+: >"$LOGFILE8"
+out="$(PATH="$STUBS4:$BASE_PATH" LOGFILE="$LOGFILE8" \
+  "$BAR" review-check kid-ada minecraft </dev/null 2>&1)"
+check_status "$?" 0 "review-check exits 0"
+check_contains "$(cat "$LOGFILE8")" "REVIEW show kid-ada minecraft" \
+  "sudo ran omarchy-kids-review show <kid> <id>"
+
+out="$("$BAR" review-approve kid-ada 2>&1)"
+check_status "$?" 2 "review-approve with no id is refused"
+out="$("$BAR" review-deny 'bad id' minecraft 2>&1)"
+check_status "$?" 2 "review-deny with a bad kid is refused"
+
+# --dry-run forces the preview for an action and opens no terminal (rule 8).
+LOGFILE6="$TMP/approve-preview.log"
+: >"$LOGFILE6"
+out="$(PATH="$STUBS4:$BASE_PATH" LOGFILE="$LOGFILE6" \
+  "$BAR" approve 1000000001-kid-ada-time --dry-run </dev/null 2>&1)"
+check_status "$?" 0 "approve --dry-run exits 0"
+check_contains "$out" "[dry-run]" "approve --dry-run prints the plan"
+check "$(grep -c 'ASK ' "$LOGFILE6")" "0" "approve --dry-run calls no ask command"
+check "$(grep -c 'TERM ' "$LOGFILE6")" "0" "approve --dry-run opens no terminal"
+
+# The id is validated here: this is the entry point a notification callback
+# feeds, and ask's approve/decline only checks that the file exists.
+out="$("$BAR" approve ../../etc/sudoers.d 2>&1)"
+check_status "$?" 2 "an id with a path traversal is refused"
+out="$("$BAR" decline 'bad id' 2>&1)"
+check_status "$?" 2 "an id with a space is refused"
 
 # ===========================================================================
 # 5. /run/omarchy-kids/status.json (R-BAR-3): mode 0640, group

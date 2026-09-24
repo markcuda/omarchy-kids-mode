@@ -253,6 +253,8 @@ check_contains "$(cat "$rec")" '"kid": "kid-ada"' "submit (open): kid field"
 check_contains "$(cat "$rec")" '"state": "open"' "submit (open): state=open"
 check_contains "$(cat "$rec")" '"minutes": 20' "submit (open): minutes=20"
 check_not_contains "$(cat "$rec")" '"by"' "submit (open): no 'by' yet -- undecided"
+# R-NOTIFY-7: the outbox draft is the kid's own, 0600 (its 0700 directory closes it too).
+check_eq "$(kids_file_mode "$rec")" "600" "submit (open): the outbox draft is 0600"
 rm -f "$rec"
 
 # --- review S1: `submit` has no way to write a decision at all -----------
@@ -456,8 +458,11 @@ check_not_contains "$out" "hunter2" "grant: the typed password is never echoed"
 ASK_QML="$ROOT_DIR/share/ask/shell.qml"
 check_not_contains "$(cat "$ASK_QML")" '"--state"' \
   "share/ask/shell.qml never passes --state (review S1)"
-check_not_contains "$(cat "$ASK_QML")" '"approved"' \
-  "share/ask/shell.qml never writes the word approved"
+check_not_contains "$(cat "$ASK_QML")" '"approve"' \
+  "share/ask/shell.qml never calls approve"
+check_not_contains "$(cat "$ASK_QML")" '"decline"' \
+  "share/ask/shell.qml never calls decline"
+# It does compare the ask command's own outcome words (R-NOTIFY-6), a read."
 check_contains "$(cat "$ASK_QML")" '"grant"' \
   "share/ask/shell.qml goes through the root grant path instead"
 
@@ -490,6 +495,53 @@ check_contains "$out_ada" "kid-ada" "list kid-ada: shows kid-ada"
 
 out_bo="$("$BIN" list kid-bo)"
 check_contains "$out_bo" "no open requests" "list kid-bo: nothing open for kid-bo"
+
+# =====================================================================
+# R-NOTIFY-7: the queue is root and omarchy-parents only
+# =====================================================================
+
+# collect refuses to move anything when the parent group does not exist: where
+# `getent` says so, a record moved into the queue would be unreadable by the relay
+# and the desktop notifier, so it stays in the outbox for the next minute.
+stub getent 'exit 1'
+rec10="$RUN_USER_ROOT/1000/omarchy-kids/ask-outbox/1000000010-kid-ada-time.json"
+printf '%s
+' '{"kid": "kid-ada", "kind": "time", "what": "10", "minutes": 10, "asked_at": 1000000010, "state": "open"}' >"$rec10"
+"$BIN" collect --apply >/dev/null 2>&1
+check_eq "$?" 1 "collect: refuses when omarchy-parents is missing"
+[[ -f "$rec10" ]] && pass "collect: left the outbox record in place" ||
+  fail "collect: moved a record with no parent group"
+rm -f "$STUBS/getent" "$rec10"
+
+# list: a non-root caller outside omarchy-parents is refused; inside it, reads.
+export KIDS_TEST_UID=1000
+kids_id_stub "$STUBS" kid-ada 1000 "kid-ada"
+out="$("$BIN" list 2>&1)"
+check_eq "$?" 1 "list: a caller outside omarchy-parents is refused"
+check_contains "$out" "root or a member of omarchy-parents" "list: says who may read the queue"
+
+kids_id_stub "$STUBS" kid-ada 1000 "kid-ada omarchy-parents"
+out="$("$BIN" list 2>&1)"
+check_contains "$out" "kid-ada" "list: a member of omarchy-parents reads the queue"
+
+# list: an unreadable queue is an error, never "no open requests".
+chmod 0000 "$QUEUE_DIR"
+out="$("$BIN" list 2>&1)"
+st=$?
+chmod 0750 "$QUEUE_DIR"
+check_eq "$st" 1 "list: an unreadable queue is an error"
+check_contains "$out" "cannot read the queue" "list: says why a queue it cannot read is not empty"
+
+# list: a reader creates nothing (the fixture queue is moved aside, not deleted).
+kids_id_stub "$STUBS" kid-ada 1000 "kid-ada omarchy-parents"
+mv "$QUEUE_DIR" "$QUEUE_DIR.keep"
+"$BIN" list >/dev/null 2>&1
+[[ -e "$QUEUE_DIR" ]] && fail "list: a reader created the queue" ||
+  pass "list: a reader creates nothing"
+mv "$QUEUE_DIR.keep" "$QUEUE_DIR"
+
+kids_id_stub "$STUBS" kid-ada 1000
+export KIDS_TEST_UID=0
 
 # =====================================================================
 # approve / decline: one keystroke, act on an id from `list`
@@ -528,6 +580,20 @@ check_contains "$(cat "$QUEUE_DIR/1000000005-kid-ada-site.json")" '"state": "dec
   "decline --apply: marks the record declined"
 check_contains "$(cat "$QUEUE_DIR/1000000005-kid-ada-site.json")" '"by": "panel"' \
   "decline --apply: by=panel"
+
+# The optional reply line (Appendix D): recorded when given, validated.
+cat >"$QUEUE_DIR/1000000008-kid-ada-site.json" <<'EOF'
+{"kid": "kid-ada", "kind": "site", "what": "example.org", "asked_at": 1000000008, "state": "open"}
+EOF
+"$BIN" decline "1000000008-kid-ada-site" --by panel --reply "After dinner" --apply >/dev/null
+check_contains "$(cat "$QUEUE_DIR/1000000008-kid-ada-site.json")" '"reply": "After dinner"' \
+  "decide --reply: the reply is written to the record"
+
+cat >"$QUEUE_DIR/1000000010-kid-ada-site.json" <<'EOF'
+{"kid": "kid-ada", "kind": "site", "what": "example.net", "asked_at": 1000000010, "state": "open"}
+EOF
+"$BIN" decline "1000000010-kid-ada-site" --by panel --reply "$(printf 'x%.0s' $(seq 1 81))" --apply >/dev/null 2>&1
+check_eq "$?" 2 "decide --reply: a reply longer than 80 characters is refused"
 
 # =====================================================================
 # static: systemd/omarchy-kids-ask-collect.{service,timer}
@@ -587,7 +653,6 @@ fi
 
 [[ -f "$ROOT_DIR/share/ask/shell.qml" ]] && pass "share/ask/shell.qml exists" || fail "share/ask/shell.qml missing"
 
-
 # --- grant time <n>: the minutes travel in <what> (seen live: rejected before it was sent) ---
 out="$(printf 'pw\n' | "$BIN" grant time 7 2>&1)"
 st=$?
@@ -598,6 +663,121 @@ check_not_contains "$out" "rejected before it was sent" "grant time 7 carries mi
 # (live review, 2026-09-21 -- same fix as the exit modal).
 check_contains "$(cat "$ROOT_DIR/share/ask/shell.qml")" '"Your password"' \
   "the ask modal's empty field says whose password is wanted"
+
+# --- --by device:<id> attributes a decision to a paired device (R-NOTIFY-9) --
+python3 "$ROOT_DIR/lib/ask.py" write "$QUEUE_DIR" --kid kid-ada --kind time --what 5 --minutes 5 >/dev/null
+dev_rec="$(ls -t "$QUEUE_DIR"/*.json | head -1)"
+dev_id="$(basename "$dev_rec" .json)"
+"$BIN" approve "$dev_id" --by device:d1 --apply >/dev/null 2>&1
+check_eq "$?" "0" "approve --by device:<id> succeeds for root"
+check_contains "$(cat "$dev_rec")" '"by": "device"' "the decision records by=device"
+check_contains "$(cat "$dev_rec")" '"device": "d1"' "the decision records the device id"
+
+python3 "$ROOT_DIR/lib/ask.py" write "$QUEUE_DIR" --kid kid-ada --kind time --what 5 --minutes 5 >/dev/null
+dev_rec2="$(ls -t "$QUEUE_DIR"/*.json | head -1)"
+dev_id2="$(basename "$dev_rec2" .json)"
+"$BIN" approve "$dev_id2" --by device:../x --apply >/dev/null 2>&1
+check_eq "$?" "2" "approve --by device:../x is refused"
+check_contains "$(cat "$dev_rec2")" '"state": "open"' "a refused decision leaves the record open"
+python3 "$ROOT_DIR/lib/ask.py" decide "$dev_rec2" --state approved --by device >/dev/null 2>&1
+check_eq "$?" "2" "decide --by device without --device is refused"
+
+# =====================================================================
+# R-NOTIFY-6: the kid's own copy of a decision
+# =====================================================================
+#
+# Every decision lands a copy beside the queue, under the kid's own directory,
+# so the ask overlay can show the newest one. The record is the decision; the
+# copy is derived, written after it and never by/device.
+
+COPY_ID="1000000021-kid-ada-app"
+COPY_REC="$QUEUE_DIR/$COPY_ID.json"
+DEC_DIR="$VARLIB_ROOT/var/lib/omarchy-kids/kid-ada/decisions"
+rm -rf "$DEC_DIR"
+cat >"$COPY_REC" <<'EOF'
+{"kid": "kid-ada", "kind": "app", "what": "firefox", "asked_at": 1000000021, "state": "open"}
+EOF
+"$BIN" approve "$COPY_ID" --apply >/dev/null 2>&1
+copy="$DEC_DIR/$COPY_ID.json"
+[[ -f "$copy" ]] && pass "the kid's copy is written on a decision" ||
+  fail "no kid copy was written"
+check_eq "$(kids_file_mode "$copy")" "640" "the kid's copy is 0640"
+check_contains "$(cat "$copy")" '"state": "approved"' "the copy carries the decision"
+check_contains "$(cat "$copy")" '"id": "1000000021-kid-ada-app"' "the copy carries its id"
+check_not_contains "$(cat "$copy")" '"by"' "the copy carries no by"
+check_not_contains "$(cat "$copy")" '"device"' "the copy carries no device"
+
+# A decline with a reply: the reply rides the copy, and nothing else does.
+COPY2="1000000022-kid-ada-time"
+printf '%s\n' "{\"kid\": \"kid-ada\", \"kind\": \"time\", \"what\": \"15\", \"minutes\": 15, \"asked_at\": 1000000022, \"state\": \"open\"}" >"$QUEUE_DIR/$COPY2.json"
+"$BIN" decline "$COPY2" --reply "After dinner" --apply >/dev/null 2>&1
+copy2="$DEC_DIR/$COPY2.json"
+check_contains "$(cat "$copy2")" '"reply": "After dinner"' "the copy carries the parent's reply"
+check_contains "$(cat "$copy2")" '"minutes": 15' "the copy carries the request's minutes"
+
+# sync-decisions heals a missing copy and never rewrites a present one.
+before="$(cksum <"$copy")"
+rm -f "$copy"
+python3 "$ROOT_DIR/lib/ask.py" sync-decisions "$QUEUE_DIR" >/dev/null 2>&1
+[[ -f "$copy" ]] && pass "sync-decisions writes a missing copy" ||
+  fail "sync-decisions did not heal a missing copy"
+# A present copy, even with the wrong bytes, is never rewritten: a rewrite would
+# produce identical bytes, so the fixture must differ to own this.
+printf 'sentinel\n' >"$copy"
+python3 "$ROOT_DIR/lib/ask.py" sync-decisions "$QUEUE_DIR" >/dev/null 2>&1
+check_eq "$(cat "$copy")" "sentinel" "sync-decisions never rewrites a present copy"
+
+# An open record gets no copy of its own.
+printf '%s\n' '{"kid": "kid-ada", "kind": "app", "what": "x", "asked_at": 1000000023, "state": "open"}' >"$QUEUE_DIR/1000000023-kid-ada-app.json"
+python3 "$ROOT_DIR/lib/ask.py" sync-decisions "$QUEUE_DIR" >/dev/null 2>&1
+[[ -e "$DEC_DIR/1000000023-kid-ada-app.json" ]] &&
+  fail "sync-decisions wrote a copy for an open record" ||
+  pass "sync-decisions writes nothing for an open record"
+rm -f "$QUEUE_DIR/1000000023-kid-ada-app.json"
+
+# The kid-side read: the newest decided request, one tab-separated line. Only
+# the copy under test is left: earlier sections decided requests with real
+# timestamps, and the newest by name is what the modal shows.
+find "$DEC_DIR" -type f -name '*.json' ! -name "$COPY2.json" -delete
+out="$("$BIN" outcome)"
+check_eq "$(printf '%s' "$out" | cut -f1)" "time" "outcome: the newest decision's kind"
+check_eq "$(printf '%s' "$out" | cut -f2)" "15" "outcome: its what"
+check_eq "$(printf '%s' "$out" | cut -f3)" "15" "outcome: its minutes (time)"
+check_eq "$(printf '%s' "$out" | cut -f4)" "declined" "outcome: its state"
+check_eq "$(printf '%s' "$out" | cut -f5)" "After dinner" "outcome: its reply"
+
+# A malformed newest file is skipped for the next valid one.
+printf 'not json\n' >"$DEC_DIR/9999999999-kid-ada-app.json"
+out="$("$BIN" outcome)"
+check_eq "$(printf '%s' "$out" | cut -f4)" "declined" "outcome: a malformed newest file is skipped"
+rm -f "$DEC_DIR/9999999999-kid-ada-app.json"
+
+# A copy that is valid but for another account is skipped: the newest one is
+# not the kid's, so the next valid (their own) is read instead.
+printf '%s\n' '{"id": "9999999998-kid-cy-app", "kid": "kid-cy", "kind": "app", "what": "x", "asked_at": 9999999998, "decided_at": 9999999998, "state": "approved"}' >"$DEC_DIR/9999999998-kid-cy-app.json"
+out="$("$BIN" outcome)"
+check_eq "$(printf '%s' "$out" | cut -f4)" "declined" "outcome: another account's newest copy is skipped"
+rm -f "$DEC_DIR/9999999998-kid-cy-app.json"
+
+# An absent directory is nothing at all, exit 0.
+out="$("$BIN" outcome 2>&1)"
+st=$?
+rm -rf "$DEC_DIR"
+out2="$("$BIN" outcome 2>&1)"
+check_eq "$?" "0" "outcome: an absent directory exits 0"
+check_eq "$out2" "" "outcome: an absent directory prints nothing"
+
+# A copy that cannot be written does not undo the decision: the record is still
+# decided, the failure is said out loud, and the exit is 0 (R-NOTIFY-6).
+: >"$DEC_DIR"
+COPY3="1000000024-kid-ada-app"
+printf '%s\n' "{\"kid\": \"kid-ada\", \"kind\": \"app\", \"what\": \"firefox\", \"asked_at\": 1000000024, \"state\": \"open\"}" >"$QUEUE_DIR/$COPY3.json"
+err="$("$BIN" approve "$COPY3" --apply 2>&1 >/dev/null)"
+st=$?
+check_eq "$st" "0" "a failed copy does not fail the decision"
+check_contains "$(cat "$QUEUE_DIR/$COPY3.json")" '"state": "approved"' "the record is decided anyway"
+check_contains "$err" "could not write the kid's copy" "the failed copy is said out loud"
+rm -f "$DEC_DIR" "$QUEUE_DIR/$COPY3.json"
 
 echo "ask-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc

@@ -31,9 +31,10 @@ show_remove_kids_mode() {
 
 screen_home() {
   while true; do
-    local rows_out total_open
+    local rows_out total_open total_reviews
     rows_out="$("$PROVISION_BIN" list 2>/dev/null)"
     total_open="$(count_open_requests)"
+    total_reviews="$(count_open_reviews)"
 
     local -a choices=()
     if [[ "$rows_out" == *$'\t'* ]]; then
@@ -49,6 +50,8 @@ screen_home() {
     choices+=(
       "add|Add a kid|"
       "requests|Requests ($total_open)|"
+      "notifications|Notifications|Turn notifications on or off, and pair a device (R-NOTIFY)"
+      "reviews|Reviews ($total_reviews)|An approved app whose surface changed (R-NOTIFY-12)"
       "machine|Machine safety|The read-only safety report (R-TRUST-2)"
       "remove_kids_mode|Remove Kids Mode|"
       "quit|Quit|"
@@ -75,6 +78,16 @@ screen_home() {
         ;;
       machine)
         screen_machine
+        rc=$?
+        ((rc == 130)) && return 130
+        ;;
+      notifications)
+        screen_notify
+        rc=$?
+        ((rc == 130)) && return 130
+        ;;
+      reviews)
+        screen_reviews
         rc=$?
         ((rc == 130)) && return 130
         ;;

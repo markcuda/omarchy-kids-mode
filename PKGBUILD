@@ -21,14 +21,17 @@ url="https://github.com/markcuda/omarchy-kids-mode"
 license=('MIT')
 # qt6-svg: SDDM renders share/avatars/*.svg (#39). networkmanager: wifid drives nmcli (#26).
 # quickshell: the modals and the Level 1 launcher exec it (#32). hyprland, sddm: the kid session
-# and the portal. Omarchy itself comes from its own installer, so it cannot be listed;
-# omarchy-kids-check reports when its files are missing. docs/packaging.md has the reasoning.
-depends=('bash' 'gum' 'jq' 'python' 'cryptsetup' 'polkit' 'sudo' 'systemd' 'qt6-svg' 'qt6-5compat' 'networkmanager' 'quickshell' 'hyprland' 'sddm')
+# and the portal. python-cryptography: omarchy-kids-authd verifies a paired device's signed
+# decision (R-NOTIFY-4) and fails closed without it. Omarchy itself comes from its own installer,
+# so it cannot be listed; omarchy-kids-check reports when its files are missing. docs/packaging.md
+# has the reasoning.
+depends=('bash' 'gum' 'jq' 'python' 'cryptsetup' 'polkit' 'sudo' 'systemd' 'qt6-svg' 'qt6-5compat' 'networkmanager' 'quickshell' 'hyprland' 'sddm' 'python-cryptography')
 # snapper and limine-snapper-sync are guarded with command -v: skipped, never failed (#38).
 optdepends=(
 	'socat: faster transport between omarchy-kids-parent-auth and omarchy-kids-authd'
 	'snapper: pre-apply "before Kids Mode" snapshot and Remove Kids Mode snapshot (R-TRUST-1)'
 	'limine-snapper-sync: refresh the boot menu right after hiding/showing snapshot entries (issue #38)'
+	'qrencode: render the pairing URI as a QR in omarchy-kids-notify pair (R-NOTIFY-5)'
 )
 install=omarchy-kids.install
 source=()
@@ -71,8 +74,24 @@ package() {
 	# issue #26), boot-login + its cleanup unit, the screen-time ledger's
 	# timer/service, R-TIME-1, and the ask-collect timer, R-ASK-1..3,
 	# issue #25).
-	install -dm755 "$pkgdir/usr/lib/systemd/system"
-	install -m644 systemd/*.service systemd/*.socket systemd/*.timer "$pkgdir/usr/lib/systemd/system/"
+	install -dm755 "$pkgdir/usr/lib/systemd/system" "$pkgdir/usr/lib/systemd/user"
+	for unit in systemd/*.service systemd/*.socket systemd/*.timer; do
+		[ -e "$unit" ] || continue
+		case "$unit" in
+		*.user.service)
+			# A user unit (N-9): the parent's desktop notifier belongs in the
+			# user manager, with the .user suffix dropped from its name.
+			install -m644 "$unit" \
+				"$pkgdir/usr/lib/systemd/user/$(basename "${unit%.user.service}").service"
+			;;
+		*)
+			install -m644 "$unit" "$pkgdir/usr/lib/systemd/system/"
+			;;
+		esac
+	done
+	# The relay's system account (R-NOTIFY-1): authd accepts a DECIDE only from it.
+	install -dm755 "$pkgdir/usr/lib/sysusers.d"
+	install -m644 systemd/omarchy-kids-relay.sysusers "$pkgdir/usr/lib/sysusers.d/omarchy-kids-relay.conf"
 
 	# Data: bands, packs, hyprland, tui, policy, avatars, menu, sddm-theme,
 	# wifi (share/wifi/shell.qml, the kid-facing picker, R-WIFI-1..2).

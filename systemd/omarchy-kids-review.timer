@@ -1,0 +1,12 @@
+[Unit]
+Description=Re-check approved add-ons for a changed surface or exec (SPEC.md R-NOTIFY-12)
+Documentation=https://github.com/markcuda/omarchy-kids-mode/blob/main/docs/review.md
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+Unit=omarchy-kids-review.service
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

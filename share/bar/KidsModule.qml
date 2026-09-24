@@ -13,10 +13,9 @@ Panel {
     moduleName: "omarchy-kids.bar"
     ipcTarget: "omarchy-kids.bar"
 
-    // --- external commands, every path overridable for tests/dev ----------
+    // --- external commands; the paths are absolute and not overridable -----
     readonly property string statusPath: Quickshell.env("OMARCHY_KIDS_STATUS_JSON") || "/run/omarchy-kids/status.json"
     // Absolute, and not from the environment (AGENTS.md rule 9, review S12).
-    readonly property string askBin: "/usr/bin/omarchy-kids-ask"
     readonly property string barCtlBin: "/usr/bin/omarchy-kids-bar"
     readonly property string kidsBin: "/usr/bin/omarchy-kids"
     // How many more minutes one click grants (bin/omarchy-kids-time grant
@@ -53,6 +52,7 @@ Panel {
         if (!text || text.length === 0) {
             root.hasFile = false
             root.liveKids = []
+            root.openRequestCount = 0
             if (root.cursorIndex >= root.menuRows.length) root.cursorIndex = 0
             return
         }
@@ -62,6 +62,7 @@ Panel {
         } catch (e) {
             root.hasFile = false
             root.liveKids = []
+            root.openRequestCount = 0
             if (root.cursorIndex >= root.menuRows.length) root.cursorIndex = 0
             return
         }
@@ -80,6 +81,9 @@ Panel {
             })
         }
         root.liveKids = out
+        // R-BAR-3 as amended: the open-request count is in the document, so the
+        // badge needs no `omarchy-kids-ask list` subprocess.
+        root.openRequestCount = Math.max(0, Math.round(Number(data && data.open_requests) || 0))
         if (root.cursorIndex >= root.menuRows.length) root.cursorIndex = 0
     }
 
@@ -91,40 +95,6 @@ Panel {
     function kidInitial(kid) {
         var s = kidSlug(kid)
         return s.length > 0 ? s.charAt(0).toUpperCase() : "?"
-    }
-
-    // --- open request badge (a Process every 30s, per the issue) ----------
-    // `omarchy-kids-ask list` prints a plain aligned table (ID/KID/KIND/
-    // WHAT/ASKED_AT header + one row per open request) or the literal line
-    // "omarchy-kids-ask: no open requests" -- there is no --json/--count
-    // (bin/omarchy-kids-ask), so this counts lines instead of adding a new
-    // output mode to a command another issue owns.
-    Timer {
-        interval: 30000
-        running: true
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: askProcess.running = true
-    }
-
-    Process {
-        id: askProcess
-        command: [root.askBin, "list"]
-        stdout: StdioCollector {
-            waitForEnd: true
-            onStreamFinished: root.parseAskCount(text)
-        }
-    }
-
-    function parseAskCount(text) {
-        var lines = String(text || "").split("\n").filter(function (l) { return l.length > 0 })
-        if (lines.length === 0 || lines[0].indexOf("no open requests") !== -1) {
-            root.openRequestCount = 0
-            return
-        }
-        // First line is the header row (ID KID KIND WHAT ASKED_AT); every
-        // line after it is one open request.
-        root.openRequestCount = Math.max(0, lines.length - 1)
     }
 
     // --- menu rows: R-BAR-2's three actions ("give more time, end

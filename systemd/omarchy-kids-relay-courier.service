@@ -1,0 +1,28 @@
+[Unit]
+Description=Send the state to the one server the parent named (SPEC.md R-NOTIFY-8)
+Documentation=https://github.com/markcuda/omarchy-kids-mode/blob/main/docs/courier.md
+
+[Service]
+Type=oneshot
+ExecStart=-/usr/bin/omarchy-kids-relay-courier --apply
+ExecStart=/usr/bin/omarchy-kids-relay-courier poll --apply
+# The one Kids Mode process allowed to open a connection beyond the LAN
+# (R-NOTIFY-8). Like the relay it needs AF_INET/AF_INET6, but unlike the relay it
+# carries no IPAddressAllow/IPAddressDeny fence: it may reach the one server the
+# parent named, and only that. It reads root-owned files and writes only the
+# last-sent digest under /run/omarchy-kids. It runs as root only because it reads
+# the root-owned state and the 0600 config; --apply is the only way it posts, and
+# with no config it exits at once. docs/courier.md.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=/etc/omarchy-kids /var/lib/omarchy-kids
+ReadWritePaths=/run/omarchy-kids

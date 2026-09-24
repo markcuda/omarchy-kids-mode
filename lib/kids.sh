@@ -572,4 +572,33 @@ KIDS_SOCKETS=(omarchy-kids-authd.socket omarchy-kids-wifid.socket)
 # ask-collect.timer: the every-minute backstop that applies an "ask a
 # parent" request submitted while no one was running the panel.
 # shellcheck disable=SC2034 # read by sourcing callers, not here
-KIDS_TIMERS=(omarchy-kids-time.timer omarchy-kids-ask-collect.timer)
+KIDS_TIMERS=(omarchy-kids-time.timer omarchy-kids-ask-collect.timer omarchy-kids-review.timer omarchy-kids-relay-courier.timer)
+
+# in_parent_group — the caller's own session groups include omarchy-parents (R-NOTIFY-7:
+# the request queue is readable by root and the parent group, nothing else).
+in_parent_group() { id -Gn 2>/dev/null | tr ' ' '\n' | grep -Fxq omarchy-parents; }
+
+# The relay's network fence, in one place: the notify writer and the assert lock
+# both use these (R-NOTIFY-11.1). A drift between two copies would make every
+# boot and every update rewrite the drop-in and restart the relay, dropping every
+# held device stream, so there is exactly one copy (the tests cross-check too).
+# shellcheck disable=SC2034 # read by sourcing callers
+RELAY_UNIT_NAME="omarchy-kids-relayd.service"
+# shellcheck disable=SC2034 # read by sourcing callers
+RELAY_LAN_ALLOW="localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 fc00::/7 fe80::/10"
+# shellcheck disable=SC2034 # read by sourcing callers
+RELAY_CGNAT="100.64.0.0/10"
+
+# The exact bytes "omarchy-kids-notify away tailnet" writes; also what the
+# relay-away lock expects, byte for byte.
+relay_away_conf_text() {
+  cat <<EOF
+# Kids Mode: "Away from home: my own VPN" (N-10), written by
+# omarchy-kids-notify away tailnet. Extends the relay's fence to the CGNAT range
+# Tailscale uses, so a device on the parent's own tailnet can reach it. "away off"
+# removes this file. The LAN list is repeated so this file is correct whether
+# systemd merges IPAddressAllow or replaces the unit's.
+[Service]
+IPAddressAllow=$RELAY_LAN_ALLOW $RELAY_CGNAT
+EOF
+}

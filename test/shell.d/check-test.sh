@@ -352,6 +352,11 @@ ln -sf /usr/lib/systemd/system/omarchy-kids-wifid.socket "$SCRATCH_ROOT/etc/syst
 mkdir -p "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants"
 ln -sf /usr/lib/systemd/system/omarchy-kids-ask-collect.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-ask-collect.timer"
 ln -sf /usr/lib/systemd/system/omarchy-kids-time.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-time.timer"
+ln -sf /usr/lib/systemd/system/omarchy-kids-review.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-review.timer"
+ln -sf /usr/lib/systemd/system/omarchy-kids-relay-courier.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-relay-courier.timer"
+# The relay's own unit, so its fence row has something to verify (R-NOTIFY-11.2).
+mkdir -p "$SCRATCH_ROOT/usr/lib/systemd/system"
+cp "$ROOT_DIR/systemd/omarchy-kids-relayd.service" "$SCRATCH_ROOT/usr/lib/systemd/system/omarchy-kids-relayd.service"
 
 mkdir -p "$ETC/hyprland"
 cp "$SHARE"/hyprland/*.lua "$ETC/hyprland/"
@@ -444,6 +449,114 @@ if command -v python3 >/dev/null 2>&1; then
 else
   pass "--json: skipped the python3 structural parse (no python3 on this box)"
 fi
+
+# --- the relay fence and the notification stores (R-NOTIFY-11.2) --------
+
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "PASS  lock:relay-fence" "relay-fence: the packaged fence passes"
+check_contains "$plain" "PASS  lock:relay-away" "relay-away: no drop-in passes (the base fence applies)"
+check_contains "$plain" "PASS  lock:devices" "devices: the registry passes"
+UNIT_FILE="$SCRATCH_ROOT/usr/lib/systemd/system/omarchy-kids-relayd.service"
+cp "$UNIT_FILE" "$UNIT_FILE.good"
+sed -i.bak '/^IPAddressDeny=any$/d' "$UNIT_FILE"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "FAIL  lock:relay-fence" "relay-fence: a fence line gone from the unit fails"
+check_contains "$plain" "reinstall" "relay-fence: the fail says reinstall, not assert (I-7)"
+cp "$UNIT_FILE.good" "$UNIT_FILE"
+rm -f "$UNIT_FILE.good" "$UNIT_FILE.bak"
+rm -f "$UNIT_FILE"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "WARN  lock:relay-fence" "relay-fence: an uninstalled package warns, not fails"
+cp "$ROOT_DIR/systemd/omarchy-kids-relayd.service" "$UNIT_FILE"
+
+# systemd_addr_expand/addr_set are pure: pin the expansion table and the
+# order/duplicate-insensitivity the live fence compare relies on (R-NOTIFY-11.2).
+# The live branch cannot run under a scratch root, so this is where they are owned.
+expand_out="$(
+  cd "$ROOT_DIR/lib" || exit 1
+  source conf.sh
+  source posture.sh
+  source kids.sh
+  source check-locks.sh
+  printf '%s\n' "$(addr_set "$(systemd_addr_expand 'localhost link-local multicast')")"
+)"
+check_eq "$expand_out" "127.0.0.0/8 169.254.0.0/16 224.0.0.0/4 ::1/128 fe80::/64 ff00::/8" \
+  "systemd_addr_expand expands the three zone tokens as the spec table says"
+reorder_out="$(
+  cd "$ROOT_DIR/lib" || exit 1
+  source conf.sh
+  source posture.sh
+  source kids.sh
+  source check-locks.sh
+  printf '%s\n' "$(addr_set '10.0.0.0/8 10.0.0.0/8 ::1/128')"
+)"
+check_eq "$reorder_out" "10.0.0.0/8 ::1/128" "addr_set ignores order and duplicates"
+reduce_out="$(
+  cd "$ROOT_DIR/lib" || exit 1
+  source conf.sh
+  source posture.sh
+  source kids.sh
+  source check-locks.sh
+  printf '%s\n' "$(addr_reduce 'fe80::/10 fe80::/64 ::1/128')"
+)"
+check_eq "$reduce_out" "::1/128 fe80::/10" "addr_reduce drops the covered fe80::/64"
+deny_any="$(
+  cd "$ROOT_DIR/lib" || exit 1
+  source conf.sh
+  source posture.sh
+  source kids.sh
+  source check-locks.sh
+  deny_is_any any && deny_is_any '0.0.0.0/0 ::/0' && ! deny_is_any '10.0.0.0/8' && echo yes
+)"
+check_eq "$deny_any" "yes" "deny_is_any accepts the keyword and systemd's expansion, and nothing else"
+
+# --- the secret-holding files (R-NOTIFY-11.4) --------------------------
+RELAY_DIR="$SCRATCH_ROOT/etc/omarchy-kids/relay"
+COURIER_CONF="$SCRATCH_ROOT/etc/omarchy-kids/courier.conf"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "PASS  lock:relay-tls" "relay-tls: absent passes"
+check_contains "$plain" "PASS  lock:courier-conf" "courier-conf: absent passes"
+mkdir -p "$RELAY_DIR"
+printf 'key' >"$RELAY_DIR/key.pem"
+chmod 0750 "$RELAY_DIR" # the directory is right, so the key's mode is what fails
+chmod 0644 "$RELAY_DIR/key.pem"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "FAIL  lock:relay-tls" "relay-tls: a world-readable key fails"
+check_contains "$plain" "does not match what omarchy-kids-assert expects" \
+  "relay-tls: the fail carries assert's own wording (repairable)"
+rm -rf "$RELAY_DIR"
+
+# --- the request queue (R-NOTIFY-7) ------------------------------------
+QUEUE_DIR="$SCRATCH_ROOT/var/lib/omarchy-kids/queue"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "PASS  lock:queue" "queue: absent passes"
+mkdir -p "$QUEUE_DIR"
+printf '{}' >"$QUEUE_DIR/1-kid-ada-time.json"
+chmod 0755 "$QUEUE_DIR"
+chmod 0644 "$QUEUE_DIR/1-kid-ada-time.json"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "FAIL  lock:queue" "queue: a world-readable record fails"
+chmod 0000 "$QUEUE_DIR"
+plain="$(strip_ansi "$("$BIN")")"
+chmod 0750 "$QUEUE_DIR"
+check_contains "$plain" "WARN  lock:queue" "queue: an unreadable directory warns, not fails"
+rm -rf "$QUEUE_DIR"
+
+# --- the kid's own copies of decisions (R-NOTIFY-6) --------------------
+DEC_DIR="$SCRATCH_ROOT/var/lib/omarchy-kids/kid-ada/decisions"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "PASS  lock:decisions:kid-ada" "decisions: absent passes"
+mkdir -p "$DEC_DIR"
+printf '{}' >"$DEC_DIR/1-kid-ada-app.json"
+chmod 0755 "$DEC_DIR"
+chmod 0644 "$DEC_DIR/1-kid-ada-app.json"
+plain="$(strip_ansi "$("$BIN")")"
+check_contains "$plain" "FAIL  lock:decisions:kid-ada" "decisions: a world-readable copy fails"
+chmod 0000 "$DEC_DIR"
+plain="$(strip_ansi "$("$BIN")")"
+chmod 0755 "$DEC_DIR"
+check_contains "$plain" "WARN  lock:decisions:kid-ada" "decisions: an unreadable directory warns"
+rm -rf "$DEC_DIR"
 
 # --- Boot JSON is selected only by the trusted machine mode -----------
 

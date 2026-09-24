@@ -103,6 +103,40 @@ PanelWindow {
         }
     }
 
+    // --- The kid's own last decision (R-NOTIFY-6), read once when the modal
+    //     opens: display only, no control. The absolute ask binary, and no new
+    //     environment value (AGENTS.md rule 9).
+    property string lastOutcome: ""
+
+    Process {
+        id: outcomeProcess
+        command: [root.askBin, "outcome"]
+        running: true
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: root.lastOutcome = root.outcomeSentence(String(text || ""))
+        }
+    }
+
+    // outcomeSentence LINE -> the kid's sentence, or "" for nothing at all.
+    // The line is the ask command's tab-separated fields; anything short or odd
+    // is ignored, and the reply is plain text (never rich text).
+    function outcomeSentence(line) {
+        // Strip the trailing newline only: the reply may be empty, and the
+        // line then ends with a tab that trim() would eat with it.
+        const parts = line.replace(/[\r\n]+$/, "").split("\t")
+        if (parts.length < 5) return ""
+        const thing = parts[0] === "time" && parts[2].length > 0
+            ? parts[2] + " more minutes" : parts[1]
+        if (thing.length === 0) return ""
+        var sentence = ""
+        if (parts[3] === "approved") sentence = "Last time your grown-up said yes to " + thing + "."
+        else if (parts[3] === "declined") sentence = "Last time your grown-up said not this time to " + thing + "."
+        else return ""
+        if (parts[4].length > 0) sentence += ' They said: "' + parts[4] + '"'
+        return sentence
+    }
+
     // onGranted -- root already did it, by the time grantProcess exits.
     // There is deliberately nothing to write here: this session cannot
     // approve anything, so it does not try (review S1).
@@ -216,6 +250,23 @@ PanelWindow {
                         text: root.desc
                         color: theme.caption
                         font.pixelSize: 15
+                        wrapMode: Text.WordWrap
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    // The kid's own last decision (R-NOTIFY-6): one line, no
+                    // control, shown until the modal is submitted. It is what
+                    // their own decisions directory said, nothing more.
+                    Text {
+                        font.family: theme.fontFamily
+                        width: parent.width
+                        visible: root.lastOutcome.length > 0 && !root.done
+                        text: root.lastOutcome
+                        // A parent's reply rides this line, so it is plain text:
+                        // an angle bracket is an angle bracket (R-NOTIFY-6).
+                        textFormat: Text.PlainText
+                        color: theme.caption
+                        font.pixelSize: 13
                         wrapMode: Text.WordWrap
                         horizontalAlignment: Text.AlignHCenter
                     }

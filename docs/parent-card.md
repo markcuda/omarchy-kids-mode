@@ -13,20 +13,27 @@ you to remember, not something the app will nag about.
 **1. Getting the parent controls up.** Tap **Super three times, fast** (within about a second
 and a half), or press **Super+Shift+K**. Either one opens the same box: your password, then
 **Finish**, which closes the kid's apps and takes you back to the login screen. (**Pause** —
-leaving their apps open — is on the screen but greyed out; it isn't built yet. See "Not yet"
-below.)
+leaving their apps open — is not built yet: the box offers Finish only, so no Pause button is
+shown at all, rather than one that does nothing. See "Not yet" below.)
 
 **2. The login screen (the portal).** One tile per person in the house, yours last. Arrow keys
-move the highlight, Enter picks a tile, then type that person's password. Whoever's password
-unlocked the *disk* at power-on lands straight on their own desktop with no login screen at all —
-that only happens once, right after the machine turns on. Every other time you see a login
-screen — after **Finish** ends someone's turn, or if the disk password you typed didn't match
-anyone's — it's this one.
+move the highlight, Enter picks a tile, then type that person's password (a kid with no password
+gets in on Enter). If the machine is set to go straight in from the disk password (`boot=disk`
+in the machine's config), whoever's password unlocked the *disk* at power-on lands on their own
+desktop with no login screen at all, once, right after the machine turns on; if it is set to show
+the portal every time (`boot=portal`), this screen is what you see at every power-on. There is no
+default: it is set by hand (`omarchy-kids-conf machine set boot disk|portal`) — an upgrade keeps
+what the machine had — and the wizard stops rather than guess if it is missing. That command only
+records the choice: the disk-mode boot hook is put in place by an upgrade that carried it over, and
+a fresh install's transition is not built yet, so until it is, a fresh install should be set to
+`portal` (the login screen every time). Every other time — after **Finish** ends someone's turn,
+or if the disk password you typed didn't match anyone's — it's this one.
 
 **3. Time's Up.** When a kid's screen time runs out, their screen shows an owl (or their own
-avatar), the time, and two choices: **Ask a grown-up for more time** or **Finish**. Left alone for
-60 seconds, it finishes on its own. "Ask a grown-up" is the same request queue as everything else
-a kid asks for — see "Four things you'll do most" below.
+avatar), their name and why they are out of time, a countdown, and one button: **Ask a grown-up for
+more time**. Left alone for
+60 seconds, it finishes on its own (no button needed for that). "Ask a grown-up" is the same
+request queue as everything else a kid asks for — see "Four things you'll do most" below.
 
 ## The one password rule
 
@@ -52,17 +59,27 @@ computer, if you've set that up — `systemctl restart sddm` there is the gentle
 1. **Give a kid more time today.** Their row → Screen time → "Give more minutes today". Doesn't
    touch tomorrow's budget, just today's.
 2. **Answer a request.** Home screen → Requests (shows the count). Enter on one shows what they
-   asked for; approve or decline in one keystroke.
+   asked for; Enter approves (Approve is preselected), arrow to Decline and Enter declines.
 3. **Change what they can see or use.** Their row → Web (the allow list, if they're on one) or
    Apps (turn something on or off from their starter pack).
 4. **Add another kid.** Home screen → "Add a kid" — the same wizard as the first one, one kid at
    a time.
 
+**Desktop notifications.** With the Kids Mode bar widget on, `omarchy-kids-bar notify-enable` shows
+each request on your own desktop with **Approve** and **Decline** (`docs/notify.md`). The panel's
+**Notifications** screen turns the device side on or off, pairs a device, and lists or revokes the
+paired ones. The phone app is in this repository (`clients/parent`) and does the same from the other
+side: pair, approve or decline a request, approve or deny a changed add-on, give more time or end a
+session, and read what was decided in the last day. **There is no installable build yet** — the
+platform scaffolding and the store builds are not committed — so a pairing window is what you pair
+*to* rather than *from* until that lands.
+
 ## What's not built yet
 
 See `docs/install.md`'s "What isn't ready yet" for the full, current list — the short version:
-**Pause** (switching back without closing a kid's apps), and the firmware/BIOS password (see
-below), which Kids Mode can't set for you.
+**Pause** (switching back without closing a kid's apps), an **installable build of the phone app**
+(the source is here; nothing to put on a phone yet), and the firmware/BIOS password (see below),
+which Kids Mode can't set for you.
 
 ## The firmware password (this part is on you)
 
@@ -72,10 +89,12 @@ boot something else entirely and skip everything on this card. Set a firmware pa
 way you would on any computer (reboot, enter setup — usually a key held right at power-on, check
 your machine's manual for which one — and look for "Set Supervisor/Admin/Firmware Password"). This
 is the actual wall; everything else on this card is a fence for a curious kid, not a lock against
-someone who's decided to get around it. Kids Mode is meant to track whether you've done this and
-stay red until you have; that screen isn't built yet, so for now there's nothing to check off in
-the app — do it, and remember that you did, the same as any other thing on this card outside Kids
-Mode's reach.
+someone who's decided to get around it. Kids Mode tracks whether you've done this: once a kid
+exists, the box's own check reports it as a FAILing row and the panel's Machine screen shows
+**Safety: NOT READY — n check(s) failing** with the firmware step named, until it is marked done
+(before the first kid, the check skips rather than fails). What is not built is the check-off
+itself — nothing writes that mark yet — so for now, do it, and remember that you did, the same as
+any other thing on this card outside Kids Mode's reach.
 
 ---
 

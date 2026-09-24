@@ -35,7 +35,7 @@ kids_tree() {
 kids_stub() {
   local path="$1/bin/$2"
   cat >"$path"
-  chmod +x "$path"
+  chmod 0755 "$path" # not +x: a 002 umask would make it 775, which the launcher-map fence refuses
 }
 
 # kids_id_stub DIR ACCOUNT [UID] — `id` for DIR (put DIR on PATH).
@@ -43,6 +43,7 @@ kids_stub() {
 # test drives that the same way it already drives `loginctl`.
 kids_id_stub() {
   local dir="$1" account="$2" uid="${3:-1000}"
+  local groups="${4:-$account}"
   cat >"$dir/id" <<EOF
 #!/bin/bash
 case "\${1:-}" in
@@ -56,10 +57,16 @@ case "\${1:-}" in
       echo "\${KIDS_TEST_UID:-$uid}"
     fi
     ;;
+  -Gn)
+    echo "\${KIDS_TEST_GROUPS:-$groups}"
+    ;;
+  -gn)
+    echo "$account"
+    ;;
   *) exit 1 ;;
 esac
 EOF
-  chmod +x "$dir/id"
+  chmod 0755 "$dir/id"
 }
 
 # kids_set_const FILE NAME VALUE — rewrite a `NAME=<constant>` line in a

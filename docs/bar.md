@@ -71,6 +71,15 @@ omarchy-kids-bar enable [--apply]
 omarchy-kids-bar disable [--apply]
 omarchy-kids-bar status
 omarchy-kids-bar grant <kid> <minutes>
+omarchy-kids-bar end <kid>
+omarchy-kids-bar approve <id>
+omarchy-kids-bar decline <id>
+omarchy-kids-bar review-approve <kid> <id>
+omarchy-kids-bar review-deny <kid> <id>
+omarchy-kids-bar review-check <kid> <id>
+omarchy-kids-bar notify-enable [--apply]
+omarchy-kids-bar notify-disable [--apply]
+omarchy-kids-bar notify-status
 ```
 
 `enable`:
@@ -96,11 +105,24 @@ as `omarchy plugin disable` on a first-party widget (`shell/README.md`: "leaving
 available to add again"). Idempotent: disabling an already-disabled bar is a no-op.
 
 `grant <kid> <minutes>` is what the widget's own "give N more minutes" menu row runs (see
-"Actions" below) -- it is not something a parent normally types by hand.
+"Actions" below) -- it is not something a parent normally types by hand. `end <kid>`, `approve
+<id>` and `decline <id>` are the same shape for the widget's "end session" row and for the
+desktop notification's Approve/Decline actions (N-9, R-NOTIFY): a floating terminal running
+`sudo omarchy-kids-<time|exit|ask>` with the parent's own password. `review-approve`/`review-deny`
+are the same shape for a changed add-on (`docs/review.md`, N-12): they run `sudo omarchy-kids-review
+approve|deny <kid> <id>`. `review-check` shows the change (and decides nothing) with `sudo
+omarchy-kids-review show <kid> <id>`.
 
-DRY_RUN=1 is the default for `enable`/`disable` (AGENTS.md rule 8); `--apply` (or `DRY_RUN=0`)
-makes them real. `grant` always runs for real -- it's a parent clicking a button in their own
-session, opening a terminal, nothing to preview.
+`notify-enable` turns on the desktop notifier (`docs/notify.md`) on the same consent as the widget:
+it refuses until the widget is on, then `systemctl --user enable --now
+omarchy-kids-notify-watch.service` (the unit ships in `/usr/lib/systemd/user/`, so nothing is
+copied). `notify-disable` stops and disables it; `notify-status` prints `enabled`/`disabled`.
+
+DRY_RUN=1 is the default for `enable`/`disable`/`notify-enable`/`notify-disable` (AGENTS.md rule 8);
+`--apply` (or `DRY_RUN=0`) makes them real. `grant`/`end`/`approve`/`decline`/`review-approve`/`review-deny`/`review-check` run for real by default
+-- a parent clicked a button or a notification action, opening a terminal -- and `--dry-run` prints
+the plan instead and opens no terminal. Disabling the widget also disables its notifier (the same
+consent, both ways).
 
 ## `share/bar/KidsModule.qml`
 
@@ -111,10 +133,9 @@ session, opening a terminal, nothing to preview.
   data that isn't there).
 - One dot per kid whose row has `"live": true`: the initial letter of the kid's slug (`kid-ada` →
   `A`), colored differently while `"paused": true`.
-- A badge with the count of open requests, refreshed every 30s by running `omarchy-kids-ask list`
-  in a `Process` and counting its output lines (that command prints a plain aligned table or the
-  literal line `omarchy-kids-ask: no open requests` -- there is no `--json`/`--count` mode, so this
-  counts lines rather than adding a new output mode to a command another issue owns).
+- A badge with the count of open requests, read from `status.json`'s `open_requests` (R-BAR-3 as
+  amended): the ledger publishes it, so the widget runs no subprocess and needs no 30-second
+  polling (it follows the file). The requests row opens the panel, which lists them.
 - Click or Enter opens a menu: two-line "Give 15 more" and "End session" rows for each live kid,
   with the affected kid's status and minutes on the detail line (R-BAR-1's
   "Ada · paused · 32 min"), then "Open requests" and "Open Kids Mode".
@@ -210,10 +231,10 @@ this issue's two spec-vs-ticket comments.
 | `OMARCHY_PATH` | `/usr/share/omarchy` | Omarchy's own install root (a real Omarchy session var, confirmed against `etc/profile.d/omarchy.sh` / `default/bash/env-bootstrap` upstream -- not one of ours) |
 | `DRY_RUN` | `1` | gates `enable`/`disable` |
 
-`share/bar/KidsModule.qml` reads its own env at runtime (`Quickshell.env(...)`, not a shell var):
-`OMARCHY_KIDS_STATUS_JSON` (default `/run/omarchy-kids/status.json`), `OMARCHY_KIDS_ASK_BIN`
-(default `omarchy-kids-ask`), `OMARCHY_KIDS_BAR_BIN` (default `omarchy-kids-bar`),
-`OMARCHY_KIDS_BIN` (default `omarchy-kids`).
+`share/bar/KidsModule.qml` reads one env value at runtime (`Quickshell.env(...)`):
+`OMARCHY_KIDS_STATUS_JSON` (default `/run/omarchy-kids/status.json`). The commands it runs are
+absolute and hardcoded, not from the environment (AGENTS.md rule 9): `/usr/bin/omarchy-kids-bar`
+and `/usr/bin/omarchy-kids`.
 
 ## What's unverified -- check in the VM
 

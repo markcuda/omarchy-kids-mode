@@ -17,13 +17,18 @@ case "${1:-}" in
   style)
     shift
     seen=0
-    : >>"${DISPLAY_BUFFER:?DISPLAY_BUFFER must be set}"
+    text=()
     for arg in "$@"; do
-      if ((seen)); then
-        printf '%s\n' "$arg" >>"$DISPLAY_BUFFER"
-        printf '%s\n' "$arg"
-      fi
+      ((seen)) && text+=("$arg")
       [[ "$arg" == -- ]] && seen=1
+    done
+    if ((${#text[@]} == 0)); then
+      while IFS= read -r line; do text+=("$line"); done
+    fi
+    : >>"${DISPLAY_BUFFER:?DISPLAY_BUFFER must be set}"
+    for arg in "${text[@]+"${text[@]}"}"; do
+      printf '%s\n' "$arg" >>"$DISPLAY_BUFFER"
+      printf '%s\n' "$arg"
     done
     ;;
   choose) printf '%s\n' "${GUM_OUTPUT:-apply}" ;;
@@ -107,6 +112,10 @@ grep -q 'Screen time.*30 minutes a day weekdays; 45 minutes a day weekends' <<<"
 }
 grep -q 'Bedtime.*20:00 weekdays; 20:30 weekends' <<<"$current_card" || {
   echo 'FAIL current Ready card lost weekday/weekend bedtime summary'
+  exit 1
+}
+grep -q 'pair a parent app for .*requests.*Notifications screen' <<<"$current_card" || {
+  echo 'FAIL current Ready card lost the one-line notifications summary (N-6)'
   exit 1
 }
 if grep -q '|' <<<"$current_card"; then

@@ -1,0 +1,373 @@
+#!/bin/bash
+# omarchy:summary=Manage the parent's paired notification devices (root)
+# omarchy:args=<list|add|rename|scopes|revoke|publish|pair-start> ...
+# omarchy:hidden=true
+# The root-owned device registry behind R-NOTIFY-3..4: one <id>.conf per paired
+# device under /etc/omarchy-kids/devices/, and the public /run copy the relay
+# reads. Root only; DRY_RUN=1 prints the plan. See docs/phase1/SPEC-AMENDMENT-notifications.md.
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+LIB="$DIR/lib"
+[[ -f "$LIB/kids.sh" ]] || LIB=/usr/lib/omarchy-kids
+# shellcheck source=lib/kids.sh
+source "$LIB/kids.sh"
+
+ETC=/etc/omarchy-kids
+DEVICES_DIR="$ETC/devices"
+SYSROOT=""
+DRY_RUN="${DRY_RUN:-1}" # repo convention: 1 prints the plan, 0/--apply performs
+VALID_SCOPES=(decide act)
+
+die() {
+  echo "omarchy-kids-devices: $1" >&2
+  exit "${2:-2}"
+}
+
+usage() {
+  cat <<'EOF'
+Usage: omarchy-kids-devices list [--json]
+       omarchy-kids-devices add --id ID --name NAME --platform P \
+             --sign-pub B64 --box-pub B64 [--scopes decide,act] [--by WHO] [--apply]
+       omarchy-kids-devices rename <id> <name> [--apply]
+       omarchy-kids-devices scopes <id> decide[,act] [--apply]
+       omarchy-kids-devices revoke <id> [--apply]
+       omarchy-kids-devices publish [--apply]
+       omarchy-kids-devices pair-start [--id ID] [--scopes decide,act] [--address ADDR]... [--apply]
+
+The parent's paired notification devices (R-NOTIFY-3): each is a root-owned
+<id>.conf under /etc/omarchy-kids/devices/; `publish` writes the public copy the
+relay reads to /run/omarchy-kids/devices.json. Root only; DRY_RUN=1 prints the
+plan, --apply performs it.
+
+pair-start writes one single-use pairing record (R-NOTIFY-5) and prints the
+omarchy-kids://pair URI (which carries the token) for the parent to show the
+device; the device's PAIR frame is verified and consumed by omarchy-kids-authd.
+--address (repeatable) adds the box's own routable addresses to the record and
+the URI, so the app can try another when one fails (N-10). Root only; the parent
+password gate is the caller's (it VERIFYs first).
+EOF
+}
+
+device_path() { printf '%s/%s.conf' "$DEVICES_DIR" "$1"; }
+valid_id() { [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$ ]]; }
+valid_text() { [[ -n "$1" && ${#1} -le 64 && "$1" != *[[:cntrl:]]* ]]; }
+valid_key() { [[ "$1" =~ ^[A-Za-z0-9+/]{40,64}={0,2}$ ]]; }
+# An IPv4/IPv6 literal or a hostname: what may ride the pairing URI's addr list
+# (N-10). No spaces, no scheme, no path, no brackets.
+valid_address() { [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9.:-]{0,63}$ ]]; }
+valid_scopes() {
+  # One anchored match of the whole string: `read -ra` stops at a newline and
+  # would accept `decide\nsign_pub=EVIL`, injecting a field into the record.
+  local alt
+  alt="$(
+    IFS='|'
+    printf '%s' "${VALID_SCOPES[*]}"
+  )"
+  [[ "$1" =~ ^($alt)(,($alt))*$ ]]
+}
+dget() { sed -n "s/^$2=//p" "$1" | head -1; }
+
+# device_objects -- one compact public JSON object per paired device on stdout.
+device_objects() {
+  local f id
+  for f in "$DEVICES_DIR"/*.conf; do
+    [[ -e "$f" ]] || continue
+    id="$(basename "$f" .conf)"
+    jq -c -n --arg id "$id" --arg name "$(dget "$f" name)" \
+      --arg platform "$(dget "$f" platform)" --arg sign_pub "$(dget "$f" sign_pub)" \
+      --arg box_pub "$(dget "$f" box_pub)" --arg scopes "$(dget "$f" scopes)" \
+      --arg paired_at "$(dget "$f" paired_at)" --arg paired_by "$(dget "$f" paired_by)" \
+      '{id: $id, name: $name, platform: $platform, sign_pub: $sign_pub, box_pub: $box_pub,
+        scopes: ($scopes | split(",")), paired_at: ($paired_at | tonumber? // 0), paired_by: $paired_by}'
+  done
+}
+
+# write_device ID FIELD=VALUE... -- write the conf whole, atomically, 0600 root.
+write_device() {
+  local id="$1"
+  shift
+  local path kv
+  path="$(device_path "$id")"
+  local content="id=$id"
+  for kv in "$@"; do content+=$'\n'"$kv"; done
+  content+=$'\n'
+  if ((DRY_RUN)); then
+    echo "  [dry-run] would write $path (0600 root)"
+    return 0
+  fi
+  install -d -m 0750 "$DEVICES_DIR"
+  local tmp
+  tmp="$(mktemp "$DEVICES_DIR/.$id.XXXXXX")"
+  printf '%s' "$content" >"$tmp"
+  chmod 0600 "$tmp"
+  mv -f "$tmp" "$path"
+}
+
+# rewrite_field ID KEY VALUE -- atomic field rewrite for a device conf. Rebuilt
+# line by line, never through sed: a parent's chosen name may contain `|`, `&` or
+# `\`, which a sed replacement would mangle (and `&` would inject the match).
+rewrite_field() {
+  local id="$1" key="$2" value="$3" path tmp line
+  path="$(device_path "$id")"
+  if ((DRY_RUN)); then
+    echo "  [dry-run] would set $key on $path"
+    return 0
+  fi
+  tmp="$(mktemp "$DEVICES_DIR/.$id.XXXXXX")"
+  while IFS= read -r line; do
+    [[ "$line" == "$key="* ]] && continue
+    printf '%s\n' "$line" >>"$tmp"
+  done <"$path"
+  printf '%s=%s\n' "$key" "$value" >>"$tmp"
+  chmod 0600 "$tmp"
+  mv -f "$tmp" "$path"
+}
+
+# publish -- the public record the relay reads: ids, names, platforms, public
+# keys, scopes and pairing provenance only. Best-effort on a box with no relay,
+# like write_status_json.
+publish() {
+  local dir="$SYSROOT/run/omarchy-kids" rows tmp
+  command -v jq >/dev/null 2>&1 || return 0
+  if ((DRY_RUN)); then
+    echo "  [dry-run] would publish $dir/devices.json"
+    return 0
+  fi
+  install -d -m 0755 "$dir"
+  rows="$(mktemp)"
+  device_objects >"$rows"
+  tmp="$(mktemp "$dir/.devices.XXXXXX")"
+  jq -s '.' "$rows" >"$tmp"
+  rm -f "$rows"
+  chmod 0644 "$tmp"
+  mv -f "$tmp" "$dir/devices.json"
+}
+
+cmd_list() {
+  local json=0
+  while (($#)); do
+    case "$1" in
+      --json) json=1 ;;
+      *) die "list: unknown argument '$1'" ;;
+    esac
+    shift
+  done
+  [[ -d "$DEVICES_DIR" ]] || {
+    ((json)) && printf '[]\n' || echo "omarchy-kids-devices: no devices paired"
+    return 0
+  }
+  if ((json)); then
+    device_objects | jq -s '.'
+    return 0
+  fi
+  local f found=0
+  for f in "$DEVICES_DIR"/*.conf; do
+    [[ -e "$f" ]] || continue
+    found=1
+    printf '%-16s %-20s %-12s %s\n' "$(basename "$f" .conf)" "$(dget "$f" name)" \
+      "$(dget "$f" platform)" "$(dget "$f" scopes)"
+  done
+  ((found)) || echo "omarchy-kids-devices: no devices paired"
+}
+
+cmd_add() {
+  local id="" name="" platform="" sign_pub="" box_pub="" scopes="decide,act" by="panel"
+  while (($#)); do
+    case "$1" in
+      --id)
+        id="${2:?}"
+        shift 2
+        ;;
+      --name)
+        name="${2:?}"
+        shift 2
+        ;;
+      --platform)
+        platform="${2:?}"
+        shift 2
+        ;;
+      --sign-pub)
+        sign_pub="${2:?}"
+        shift 2
+        ;;
+      --box-pub)
+        box_pub="${2:?}"
+        shift 2
+        ;;
+      --scopes)
+        scopes="${2:?}"
+        shift 2
+        ;;
+      --by)
+        by="${2:?}"
+        shift 2
+        ;;
+      --apply)
+        DRY_RUN=0
+        shift
+        ;;
+      *) die "add: unknown argument '$1'" ;;
+    esac
+  done
+  valid_id "$id" || die "add: --id is required and must be a plain id"
+  valid_text "$name" || die "add: --name must be printable, at most 64 characters"
+  valid_text "$platform" || die "add: --platform must be printable, at most 64 characters"
+  valid_key "$sign_pub" || die "add: --sign-pub must be a base64 public key"
+  valid_key "$box_pub" || die "add: --box-pub must be a base64 public key"
+  valid_scopes "$scopes" || die "add: --scopes must be a comma list of ${VALID_SCOPES[*]}"
+  valid_text "$by" || die "add: --by must be printable, at most 64 characters"
+  local path
+  path="$(device_path "$id")"
+  [[ ! -e "$path" ]] || die "add: '$id' is already paired (revoke it first)"
+  write_device "$id" \
+    "name=$name" "platform=$platform" "sign_pub=$sign_pub" "box_pub=$box_pub" \
+    "scopes=$scopes" "label_for_kids=a grown-up" "paired_at=$(date +%s)" "paired_by=$by"
+  publish
+  echo "omarchy-kids-devices: paired $id ($name)"
+}
+
+cmd_rename() {
+  local id="${1:?rename: needs <id>}" name="${2:?rename: needs <name>}"
+  shift 2
+  [[ "${1:-}" == "--apply" ]] && DRY_RUN=0
+  valid_id "$id" || die "rename: bad id"
+  valid_text "$name" || die "rename: name must be printable, at most 64 characters"
+  [[ -f "$(device_path "$id")" ]] || die "rename: no such device '$id'"
+  rewrite_field "$id" name "$name"
+  publish
+  echo "omarchy-kids-devices: renamed $id to '$name'"
+}
+
+cmd_scopes() {
+  local id="${1:?scopes: needs <id>}" scopes="${2:?scopes: needs scopes}"
+  shift 2
+  [[ "${1:-}" == "--apply" ]] && DRY_RUN=0
+  valid_id "$id" || die "scopes: bad id"
+  valid_scopes "$scopes" || die "scopes: must be a comma list of ${VALID_SCOPES[*]}"
+  [[ -f "$(device_path "$id")" ]] || die "scopes: no such device '$id'"
+  rewrite_field "$id" scopes "$scopes"
+  publish
+  echo "omarchy-kids-devices: $id scopes=$scopes"
+}
+
+cmd_revoke() {
+  local id="${1:?revoke: needs <id>}"
+  shift
+  [[ "${1:-}" == "--apply" ]] && DRY_RUN=0
+  valid_id "$id" || die "revoke: bad id"
+  local path
+  path="$(device_path "$id")"
+  [[ -f "$path" ]] || die "revoke: no such device '$id'"
+  if ((DRY_RUN)); then
+    echo "  [dry-run] would revoke $id (rename to $(basename "$path").revoked)"
+    return 0
+  fi
+  mv -f "$path" "$path.revoked"
+  publish
+  echo "omarchy-kids-devices: revoked $id"
+}
+
+cmd_publish() {
+  [[ "${1:-}" == "--apply" ]] && DRY_RUN=0
+  publish
+}
+
+# pair-start -- write one single-use pairing record and print what the parent
+# shows the device (R-NOTIFY-5). The token goes in the QR; the code is the
+# fallback. The record expires and is consumed by the PAIR frame.
+cmd_pair_start() {
+  local id="" scopes="decide,act"
+  local -a addrs=()
+  while (($#)); do
+    case "$1" in
+      --id)
+        id="${2:?}"
+        shift 2
+        ;;
+      --scopes)
+        scopes="${2:?}"
+        shift 2
+        ;;
+      --address)
+        valid_address "${2:?}" || die "pair-start: bad --address '${2}'"
+        addrs+=("$2")
+        shift 2
+        ;;
+      --apply)
+        DRY_RUN=0
+        shift
+        ;;
+      *) die "pair-start: unknown argument '$1'" ;;
+    esac
+  done
+  valid_scopes "$scopes" || die "pair-start: --scopes must be a comma list of ${VALID_SCOPES[*]}"
+  [[ -n "$id" ]] || id="$("$KIDS_PY" -c 'import secrets; print("d-" + secrets.token_hex(4))')"
+  valid_id "$id" || die "pair-start: bad id '$id'"
+  local dir="$SYSROOT/run/omarchy-kids/pairing"
+  # Refuse an id that is already paired: burning the record and only then
+  # failing at `add` would eat the parent's whole pairing window (review).
+  [[ ! -e "$(device_path "$id")" && ! -e "$(device_path "$id").revoked" ]] ||
+    die "pair-start: '$id' is already paired"
+  # An expired record is treated as absent: a parent who let one lapse must be
+  # able to start again with the same id (it is overwritten below).
+  if [[ -e "$dir/$id" ]]; then
+    local pending_exp now_s
+    now_s="$(date +%s)"
+    pending_exp="$(jq -r '.expires_at // 0' "$dir/$id" 2>/dev/null || echo 0)"
+    if [[ "$pending_exp" =~ ^[0-9]+$ ]] && ((pending_exp > now_s)); then
+      die "pair-start: a pairing for '$id' is already pending"
+    fi
+  fi
+  if ((DRY_RUN)); then
+    echo "  [dry-run] would write a pairing record for $id under $dir"
+    return 0
+  fi
+  command -v jq >/dev/null 2>&1 || die "pair-start: jq is required"
+  local now rec token
+  now="$(date +%s)"
+  local -a addr_args=()
+  local a
+  for a in "${addrs[@]+"${addrs[@]}"}"; do addr_args+=(--address "$a"); done
+  rec="$("$KIDS_PY" "$LIB/devices.py" pair-start "$dir" "$id" --scopes "$scopes" --now "$now" \
+    "${addr_args[@]+"${addr_args[@]}"}")" ||
+    die "pair-start: could not write the pairing record"
+  token="$(printf '%s' "$rec" | jq -r .token)"
+  local uri="omarchy-kids://pair?v=1&id=$id&token=$token"
+  if ((${#addrs[@]})); then
+    local csv
+    csv="$(
+      IFS=,
+      printf '%s' "${addrs[*]}"
+    )"
+    uri+="&addr=$csv"
+  fi
+  echo "omarchy-kids-devices: pairing started for $id"
+  echo "  pair:  $uri"
+}
+
+[[ $# -ge 1 ]] || {
+  usage >&2
+  exit 2
+}
+# --help works for anyone, before the root check (AGENTS.md: every command
+# supports --help).
+case "$1" in
+  -h | --help)
+    usage
+    exit 0
+    ;;
+esac
+is_root || die "root only (it owns the device registry)"
+cmd="$1"
+shift
+case "$cmd" in
+  list) cmd_list "$@" ;;
+  add) cmd_add "$@" ;;
+  rename) cmd_rename "$@" ;;
+  scopes) cmd_scopes "$@" ;;
+  revoke) cmd_revoke "$@" ;;
+  publish) cmd_publish "$@" ;;
+  pair-start) cmd_pair_start "$@" ;;
+  *) die "unknown command: '$cmd' (see --help)" ;;
+esac

@@ -35,7 +35,7 @@ change it.
 | --- | --- |
 | `lib/time.sh` | Shared bash helpers: the clock, day-boundary/weekend, budget/lights-out resolution, ledger/grant reads and (root-only) writes |
 | `lib/time.py` | The one place this needs real calendar math — day rollover and weekday, portable across the dev machine's BSD `date` and the target's GNU `date` (same reasoning as `lib/conf.py`) |
-| `bin/omarchy-kids-time-ledger` | Root: `tick` accounts monotonic active seconds, writes each kid's runtime state, and refreshes `/run/omarchy-kids/status.json` (R-BAR-3) |
+| `bin/omarchy-kids-time-ledger` | Root: `tick` accounts monotonic active seconds, writes each kid's runtime state, and refreshes `/run/omarchy-kids/status.json` (R-BAR-3; it also publishes the pending pairing window's expiry, `pairing_open_until`, and the open-review count, `reviews`) |
 | `systemd/omarchy-kids-time.timer` + `omarchy-kids-time-ledger.service` | Runs `tick` every 30 seconds |
 | `bin/omarchy-kids-time` | The kid-side daemon, plus `status`/`grant` |
 | `share/time/toast.qml` | The small "N minutes left" warning (R-TIME-3) |
@@ -84,8 +84,13 @@ build-time seam for deterministic tests. No inherited value selects the root clo
 6. At the monotonic grace deadline, calls the resolved sibling `omarchy-kids-exit --finish --kid
    <account>`. A failed call remains `finishing` and is retried on the next tick. A successful call
    is recorded and is not repeated for the same enforcing state.
-7. Refreshes `/run/omarchy-kids/status.json` and folds launch logs. Those auxiliary writes remain
-   best-effort; a runtime-state or ledger write failure does not become `allowed`.
+ 7. Refreshes `/run/omarchy-kids/status.json` and folds launch logs. Those auxiliary writes remain
+    best-effort; a runtime-state or ledger write failure does not become `allowed`.
+ 8. Asks the notification relay to start when Kids Mode is in use — a kid live, a request open, or a
+    pairing window open (`nudge_relay`, R-NOTIFY-1). The relay is not a daemon this tick keeps
+    alive: it stops itself after a 60-second grace once none of those holds, and the next tick
+    starts it again if it is needed. Best effort, and it does nothing while notifications are off
+    (no certificate). The line it prints goes to the journal.
 
 Tickets 1 and 2 moved accounting, decisions, locking, and finishing into the root tick. Ticket 3
 leaves the kid-side path as a compatibility display adapter; killing it no longer prevents root
@@ -123,6 +128,12 @@ facts. Its output remains `lights-out at HH:MM` or `budget runs out at HH:MM` on
 
 `grant` adds to a *separate* `usage/<day>.grant` file and remains root-only. The root tick is the
 only code that recomputes budget, lights-out, and enforcement state.
+
+A paired device holding the `act` scope reaches the same `grant` through the relay and authd
+(R-NOTIFY-13, `docs/notify.md`): `authd` verifies the device's signature, checks the target is a
+provisioned kid account, and runs `omarchy-kids-time grant <account> <minutes>` as root -- the same
+writer, with no terminal and no parent password. A grant over the wire is still today only, 1..1440
+minutes.
 
 `daemon` polls every 30 s (`OMARCHY_KIDS_TIME_POLL_INTERVAL`) while *this session*
 The daemon remains for compatibility with existing logged-in sessions. It reads only the current
@@ -179,8 +190,12 @@ alone.
 - **The pre-reader full-screen countdown** (R-TIME-3's second half: "plus a full-screen countdown
   for pre-readers with icon and sound"). `share/time/toast.qml` is the same for every band today.
 - **Pushing lights-out for tonight only** (R-TIME-4). `grant` only ever extends the *budget*.
-- **`/run/omarchy-kids/status.json` has no reader yet** — it's written (R-BAR-3's shape) for the
-  future parent-bar widget, R-BAR, which is a separate ticket.
+- **`/run/omarchy-kids/status.json` readers** (R-BAR-3): the bar widget reads it for the live kids
+  and their minutes-left and paused state (`share/bar/KidsModule.qml`), and the notification relay
+  (`lib/relay.py`) reads the live and pairing state from it — the open-request half it takes from
+  the queue directory. It is written best-effort; a missing document reads as nothing, and nothing
+  inspects `generated_at`, so a stale one is shown as current. The bar widget reads the live kids and
+  their minutes from it, and its badge reads the open-request count (`open_requests`) — no subprocess.
 
 Each of these is a real gap, not an oversight — I-6 says don't claim a control that isn't there,
 so this list is exactly the set of R-TIME/R-ASK behaviors this issue's "Done when" doesn't cover.
@@ -349,7 +364,8 @@ anything a kid process could write into.
           rolls at 04:00). A kid with more than one such session only
           gets one minute added, not one per session. Also refreshes
           /run/omarchy-kids/status.json (R-BAR-3) for every known kid,
-          whether or not they're live right now -- best-effort; a
+          whether or not they're live right now, plus the pending pairing
+          window's expiry (`pairing_open_until`, never the token) -- best-effort; a
           failure to write it never fails the tick itself, since the
           ledger write is the part that actually matters. Finally,
           for every known kid, folds any new lines from their own

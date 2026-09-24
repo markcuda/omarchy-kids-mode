@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Add or remove the parent's Kids Mode bar widget
-# omarchy:args=<enable|disable|status|grant <kid> <minutes>|end <kid>> [--apply]
+# omarchy:args=<enable|disable|status|grant <kid> <minutes>|end <kid>|approve <id>|decline <id>|review-approve <kid> <id>|review-deny <kid> <id>|review-check <kid> <id>|notify-enable|notify-disable|notify-status> [--apply]
 # The parent's bar widget: per-kid minutes and requests from /run/omarchy-kids/status.json (SPEC.md R-BAR).
 # See docs/bar.md for the full design, every env var, and the terminal-fallback rationale.
 set -euo pipefail
@@ -17,6 +17,8 @@ OMARCHY_PATH="${OMARCHY_PATH:-/usr/share/omarchy}"
 DEFAULTS_SHELL_JSON="$OMARCHY_PATH/config/omarchy/shell.json"
 TIME_BIN="$(kids_bin time "$DIR")"
 EXIT_BIN="$(kids_bin exit "$DIR")"
+ASK_BIN="$(kids_bin ask "$DIR")"
+REVIEW_BIN="$(kids_bin review "$DIR")"
 
 PLUGIN_ID="omarchy-kids.bar"
 CONFIG_DIR="$HOME_DIR/.config/omarchy"
@@ -39,6 +41,16 @@ Usage: omarchy-kids-bar enable [--apply]
        omarchy-kids-bar status
        omarchy-kids-bar grant <kid> <minutes>
        omarchy-kids-bar end <kid>
+       omarchy-kids-bar approve <id>
+       omarchy-kids-bar decline <id>
+       omarchy-kids-bar review-approve <kid> <id>
+       omarchy-kids-bar review-deny <kid> <id>
+       omarchy-kids-bar review-check <kid> <id>
+       omarchy-kids-bar notify-enable [--apply]
+       omarchy-kids-bar notify-disable [--apply]
+       omarchy-kids-bar notify-status
+
+Every subcommand also accepts --dry-run (print the plan, change nothing).
 
   enable          Add the Kids Mode widget to your bar (SPEC.md R-BAR-1).
   disable         Remove it; restores your bar to how it was.
@@ -50,8 +62,31 @@ Usage: omarchy-kids-bar enable [--apply]
   end <kid>       Open a terminal to end <kid>'s session right now (root,
                   your own login password) -- what the widget's "end
                   session" menu row runs (R-BAR-2).
-  --apply         Make enable/disable real (default is DRY_RUN=1, prints
-                  the plan -- AGENTS.md rule 8).
+  approve <id>    Open a terminal to approve request <id> (root, your own
+                  login password) -- what a desktop notification's Approve
+                  action runs (N-9, R-NOTIFY).
+  decline <id>    The same for a notification's Decline action.
+  review-approve <kid> <id>
+                  Accept a changed add-on (N-12, R-NOTIFY-12) -- what a review
+                  notification's Approve action runs (omarchy-kids-review
+                  approve).
+  review-deny <kid> <id>
+                  The same for Deny: hide the app again.
+  review-check <kid> <id>
+                  Show a changed add-on in full -- what changed and its Exec now
+                  -- so you (or your own agent) can check it. Decides nothing.
+  notify-enable   Turn on desktop notifications for a kid's requests (N-9).
+                  Needs the widget on (omarchy-kids-bar enable) first; then it
+                  enables omarchy-kids-notify-watch.service for this session.
+  notify-disable  Stop and disable it.
+  notify-status   Print "enabled" or "disabled".
+  --apply         Make enable/disable/notify-enable/notify-disable real
+                  (default is DRY_RUN=1, prints the plan -- AGENTS.md rule 8).
+  --dry-run       Print the plan instead of running it, for every
+                  subcommand. grant/end/approve/decline/review-approve/
+                  review-deny/review-check run for real by
+                  default (a parent clicked a button or a notification
+                  action); --dry-run previews them and opens no terminal.
   -h, --help      Show this help and exit.
 EOF
 }
@@ -152,6 +187,12 @@ cmd_disable() {
     rm -f "$tmp"
   fi
 
+  # Same consent both ways: removing the widget turns its notifier off too.
+  if command -v systemctl >/dev/null 2>&1 &&
+    systemctl --user is-enabled "$NOTIFY_UNIT" >/dev/null 2>&1; then
+    run systemctl --user disable --now "$NOTIFY_UNIT"
+  fi
+
   if [[ "$DRY_RUN" == "0" ]]; then
     echo "omarchy-kids-bar: disabled"
     command -v omarchy-shell >/dev/null 2>&1 && omarchy-shell shell reloadConfig >/dev/null 2>&1 || true
@@ -166,6 +207,33 @@ cmd_status() {
   else
     echo "disabled"
   fi
+}
+
+# --- the desktop notifier (N-9): the same consent as the bar widget ---------
+#
+# The unit ships in /usr/lib/systemd/user/ (PKGBUILD); enabling it is per-session
+# state, so it goes through `systemctl --user` and needs no file copy. A parent
+# asked for notifications only where they already asked for the widget, so this
+# refuses until the widget is on.
+NOTIFY_UNIT="omarchy-kids-notify-watch.service"
+
+cmd_notify_status() {
+  if command -v systemctl >/dev/null 2>&1 &&
+    systemctl --user is-enabled "$NOTIFY_UNIT" >/dev/null 2>&1; then
+    echo "enabled"
+  else
+    echo "disabled"
+  fi
+}
+
+cmd_notify_enable() {
+  widget_present "$SHELL_JSON" ||
+    die "notify-enable: enable the bar widget first (omarchy-kids-bar enable)"
+  run systemctl --user enable --now "$NOTIFY_UNIT"
+}
+
+cmd_notify_disable() {
+  run systemctl --user disable --now "$NOTIFY_UNIT"
 }
 
 # open_terminal_running CMD_ARGV... — runs a whole real terminal in the
@@ -195,6 +263,10 @@ cmd_grant() {
   local kid="${1:-}" minutes="${2:-}"
   [[ -n "$kid" && -n "$minutes" ]] || die "grant: needs <kid> <minutes> (see --help)"
   [[ "$minutes" =~ ^[0-9]+$ && "$minutes" -gt 0 ]] || die "grant: <minutes> must be a positive integer, got '$minutes'"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $TIME_BIN grant $kid $minutes"
+    return 0
+  fi
   open_terminal_running "Granted." "omarchy-kids-time grant failed" \
     sudo "$TIME_BIN" grant "$kid" "$minutes"
 }
@@ -207,8 +279,93 @@ cmd_grant() {
 cmd_end() {
   local kid="${1:-}"
   [[ -n "$kid" ]] || die "end: needs <kid> (see --help)"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $EXIT_BIN --finish --kid $kid"
+    return 0
+  fi
   open_terminal_running "Session ended." "ending the session failed" \
     sudo "$EXIT_BIN" --finish --kid "$kid"
+}
+
+# cmd_approve / cmd_decline — the desktop notification's Approve/Decline
+# actions (N-9, R-NOTIFY). Same path as grant/end: a floating terminal
+# and the parent's own sudo prompt, because this is the parent's session
+# and needs no paired device.
+#
+# The id is validated here, not left to the ask command: this is the one
+# entry point that receives an id from another process (a notification
+# daemon's action callback) and hands it to root, and ask's approve/decline
+# only checks that the record file exists (lib/ask.py's RE_ID is applied to
+# list output, not to this input).
+valid_request_id() { [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._+@-]{0,127}$ ]]; }
+
+cmd_approve() {
+  local id="${1:-}"
+  [[ -n "$id" ]] || die "approve: needs <request-id> (see --help)"
+  valid_request_id "$id" || die "approve: bad request id '$id'"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $ASK_BIN approve $id --apply"
+    return 0
+  fi
+  open_terminal_running "Approved." "approving the request failed" \
+    sudo "$ASK_BIN" approve "$id" --apply
+}
+
+cmd_decline() {
+  local id="${1:-}"
+  [[ -n "$id" ]] || die "decline: needs <request-id> (see --help)"
+  valid_request_id "$id" || die "decline: bad request id '$id'"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $ASK_BIN decline $id --apply"
+    return 0
+  fi
+  open_terminal_running "Declined." "declining the request failed" \
+    sudo "$ASK_BIN" decline "$id" --apply
+}
+
+# cmd_review_approve / cmd_review_deny — the desktop notification's actions for
+# a changed add-on (N-12, R-NOTIFY-12): a parent accepts or rejects the new
+# surface through omarchy-kids-review, again a floating terminal and their own
+# sudo prompt. The id is a launcher id (docs/apps.md), checked here too.
+cmd_review_approve() {
+  local kid="${1:-}" id="${2:-}"
+  [[ -n "$kid" && -n "$id" ]] || die "review-approve: needs <kid> <id> (see --help)"
+  [[ "$kid" =~ ^[a-z_][a-z0-9_-]*$ ]] || die "review-approve: bad kid '$kid'"
+  [[ "$id" =~ ^[a-z0-9_-]+$ ]] || die "review-approve: bad app id '$id'"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $REVIEW_BIN approve $kid $id --apply"
+    return 0
+  fi
+  open_terminal_running "Approved the change." "approving the change failed" \
+    sudo "$REVIEW_BIN" approve "$kid" "$id" --apply
+}
+
+cmd_review_deny() {
+  local kid="${1:-}" id="${2:-}"
+  [[ -n "$kid" && -n "$id" ]] || die "review-deny: needs <kid> <id> (see --help)"
+  [[ "$kid" =~ ^[a-z_][a-z0-9_-]*$ ]] || die "review-deny: bad kid '$kid'"
+  [[ "$id" =~ ^[a-z0-9_-]+$ ]] || die "review-deny: bad app id '$id'"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $REVIEW_BIN deny $kid $id --apply"
+    return 0
+  fi
+  open_terminal_running "Denied; the app is hidden." "denying the change failed" \
+    sudo "$REVIEW_BIN" deny "$kid" "$id" --apply
+}
+
+# cmd_review_check -- the notification's Check action (N-12, R-NOTIFY-12): show
+# what changed, deciding nothing, so the parent or their own agent can look.
+cmd_review_check() {
+  local kid="${1:-}" id="${2:-}"
+  [[ -n "$kid" && -n "$id" ]] || die "review-check: needs <kid> <id> (see --help)"
+  [[ "$kid" =~ ^[a-z_][a-z0-9_-]*$ ]] || die "review-check: bad kid '$kid'"
+  [[ "$id" =~ ^[a-z0-9_-]+$ ]] || die "review-check: bad app id '$id'"
+  if ((dry_run_flag)); then
+    echo "  [dry-run] sudo $REVIEW_BIN show $kid $id"
+    return 0
+  fi
+  open_terminal_running "Done." "could not show the review" \
+    sudo "$REVIEW_BIN" show "$kid" "$id"
 }
 
 [[ $# -ge 1 ]] || {
@@ -225,12 +382,14 @@ case "$cmd" in
 esac
 
 apply_flag=0
+dry_run_flag=0
 args=()
 for arg in "$@"; do
   case "$arg" in
     --apply) apply_flag=1 ;;
     --dry-run)
       apply_flag=0
+      dry_run_flag=1
       DRY_RUN=1
       ;;
     -h | --help)
@@ -248,5 +407,13 @@ case "$cmd" in
   status) cmd_status ;;
   grant) cmd_grant "${args[@]+"${args[@]}"}" ;;
   end) cmd_end "${args[@]+"${args[@]}"}" ;;
+  approve) cmd_approve "${args[@]+"${args[@]}"}" ;;
+  decline) cmd_decline "${args[@]+"${args[@]}"}" ;;
+  review-approve) cmd_review_approve "${args[@]+"${args[@]}"}" ;;
+  review-deny) cmd_review_deny "${args[@]+"${args[@]}"}" ;;
+  review-check) cmd_review_check "${args[@]+"${args[@]}"}" ;;
+  notify-enable) cmd_notify_enable ;;
+  notify-disable) cmd_notify_disable ;;
+  notify-status) cmd_notify_status ;;
   *) die "unknown command: '$cmd' (see --help)" ;;
 esac

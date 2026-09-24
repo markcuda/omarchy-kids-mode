@@ -145,7 +145,7 @@ bash test/shell.d/authd-test.sh
 or as part of the full suite with `test/all`.
 ## The GRANT request type (2026-09-03)
 
-The daemon answers three request shapes, one per connection. Ordinary verification uses the
+The daemon answers seven request shapes, one per connection. Ordinary verification uses the
 explicit `VERIFY` frame. The wizard's `BOOTSTRAP` frame adds the caller-identity check. The third
 is `GRANT <json-request-line>\n<password>\n`, and it exists because an "Ask a grown-up" approval
 cannot be an exit code from a process the kid owns (review S1). Root does all of it here: it
@@ -154,7 +154,33 @@ parses the request, runs it through `lib/ask.py`'s `validate_grant` (loaded by p
 the request's `kid`, confirms that kid has a profile under `--etc`, and only then spends a
 `crypt(3)` on the password. Everything that can be refused without the password is refused
 first. On success it runs `<--ask-bin> apply-grant --kid ... --apply` with a fixed argv list, so
-the "do the thing" code has exactly one home. Two other changes came from the same review: the
+the "do the thing" code has exactly one home. The fourth is `REVIEW <json-frame>\n` (R-NOTIFY-12),
+the same shape as `DECIDE` over a review record: the relay account or root may present it, the
+device's signature is verified against the registry with the `decide` scope, and root then re-reads
+the open review file, refuses `no changed-again` unless the file's `now` is the fingerprint the app
+signed it had seen, and runs `omarchy-kids-review approve <kid> <id> --seen <fp> --apply` or
+`omarchy-kids-review deny <kid> <id> --apply`. `approve` re-checks that fingerprint against the live
+surface under the lock `scan` takes and exits 3 when it differs, which authd maps to
+`no changed-again` -- so the pin is a lock, not a second read (rule 4). The next is
+`ACT <json-frame>\n` (R-NOTIFY-13): a paired device's grant or end. The relay account or root may
+present it; the device's signature is verified with the `act` scope, then root re-validates the
+target as a provisioned kid account (never the parent, root or a system account) and runs
+`omarchy-kids-time grant <account> <minutes>` or `omarchy-kids-exit --finish --kid <account>` -- no
+terminal, no password. The same action the bar reaches through `sudo` (R-BAR-2), the other way in.
+The next is `DECIDE <json-frame>\n`, a paired
+device's signed decision (R-NOTIFY-4): only the relay account (`--relay-user`) or root may send it (the away courier runs as root and
+carries the app's signed decision; both only carry it, root verifies here),
+`lib/devices.py` verifies the Ed25519 signature, skew, nonce and the fixed `decide` scope as root,
+and on success root runs `<--ask-bin> approve|decline <id> --by device:<id> --apply`, which refuses
+an already-decided record. The next is `PAIR <json-frame>\n` (R-NOTIFY-5): again only the relay may
+send it, `lib/devices.py` reads the single-use pairing record (`--pairing-dir`), checks the
+HMAC-SHA256 proof over the device's keys and name against the expiry, then registers the device
+through `<--devices-bin> add` and consumes the record -- and only then, so a failure to register
+does not burn the parent's pairing window. Its `no` reasons are `malformed`, `unknown-pairing`,
+`expired`, `bad-proof`, `apply failed`, `devices unavailable` and `not the relay`. The parent
+password gate is the caller's: the panel verifies first, then runs `omarchy-kids-devices
+pair-start`. A missing module, ledger or relay account makes every DECIDE fail
+closed. Two other changes came from the same review: the
 rate limiter is keyed per peer uid and decays after a quiet window, so a kid looping wrong
 guesses at the world-connectable socket can no longer lock the parent out of their own exit
 modal (S7); and each connection is handled on its own thread, so a peer holding a connection

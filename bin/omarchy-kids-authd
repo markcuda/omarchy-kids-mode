@@ -3,11 +3,15 @@
 # omarchy:hidden=true
 """omarchy-kids-authd -- the parent-password verifier (R-SEC-1, R-SEC-2).
 
-A root, socket-activated oracle. Three request shapes, one per connection:
+A root, socket-activated oracle. Seven request shapes, one per connection:
 
     VERIFY\n<password>\n               -> "ok" / "no"   (verify, R-SEC-2)
     BOOTSTRAP\n<password>\n           -> "ok" / "no"   (wizard bootstrap)
     GRANT <json-request>\n<password>\n -> "ok" / "no <reason>"
+    DECIDE <json-frame>\n              -> "ok" / "no <reason>"  (a paired device, R-NOTIFY-4)
+    REVIEW <json-frame>\n              -> "ok" / "no <reason>"  (an add-on review, R-NOTIFY-12)
+    ACT <json-frame>\n                -> "ok" / "no <reason>"  (grant/end time, R-NOTIFY-13)
+    PAIR <json-frame>\n                -> "ok" / "no <reason>"  (pair a device, R-NOTIFY-5)
 
 The second is the *only* way an "Ask a grown-up" request is ever granted
 on the spot (review S1): root verifies the parent's password here, checks
@@ -56,6 +60,35 @@ DEFAULT_ASK_BIN = "/usr/bin/omarchy-kids-ask"
 GRANT_PREFIX = "GRANT "
 BOOTSTRAP_PREFIX = "BOOTSTRAP"
 VERIFY_PREFIX = "VERIFY"
+# A device's signed decision (R-NOTIFY-4). One line: DECIDE <json>\n, where the
+# json is {"record": {...}, "signature": "b64"}. Only the relay account may send
+# it, and only root verifies and applies it. The decision always needs the
+# "decide" scope; the scope is never taken from the (unsigned) frame.
+DECIDE_PREFIX = "DECIDE "
+# A paired device's signed add-on review decision (R-NOTIFY-12). One line:
+# REVIEW <json>\n, the same {record, signature} shape as DECIDE over a review
+# record. Only the relay account or root may send it; root verifies it, re-reads
+# the open review file, and only then runs the approve or deny as root.
+REVIEW_PREFIX = "REVIEW "
+# A paired device's signed grant or end (R-NOTIFY-13). One line: ACT <json>\n,
+# the same {record, signature} shape as DECIDE over a grant/end record. Only the
+# relay account or root may send it; root verifies it, checks the target is a
+# provisioned kid, and runs the time or exit command as root -- no terminal, no
+# parent password.
+ACT_PREFIX = "ACT "
+# A parent pairs a device (R-NOTIFY-5). One line: PAIR <json>\n, where the json
+# is {id, name, platform, sign_pub, box_pub, proof}. Only the relay may send it;
+# root verifies the single-use pairing proof and registers the device.
+PAIR_PREFIX = "PAIR "
+MAX_DECIDE_LINE = 2048  # a max-shape decision with an escaped reply still fits
+RELAY_USER = "omarchy-kids-relay"
+DEFAULT_NONCE_LEDGER = "/var/lib/omarchy-kids/devices/nonces.json"
+DEFAULT_DEVICES_BIN = "/usr/bin/omarchy-kids-devices"
+DEFAULT_PAIRING_DIR = "/run/omarchy-kids/pairing"
+DEFAULT_REVIEWS_DIR = "/var/lib/omarchy-kids/reviews/open"
+DEFAULT_REVIEW_BIN = "/usr/bin/omarchy-kids-review"
+DEFAULT_TIME_BIN = "/usr/bin/omarchy-kids-time"
+DEFAULT_EXIT_BIN = "/usr/bin/omarchy-kids-exit"
 
 _LIBCRYPT = None
 
@@ -251,6 +284,29 @@ def load_ask_module(lib_dir: str):
     return module
 
 
+def load_devices_module(lib_dir: str):
+    """lib/devices.py, by path -- the one home for device verification."""
+    spec = importlib.util.spec_from_file_location(
+        "omarchy_kids_devices_lib", os.path.join(lib_dir, "devices.py")
+    )
+    if spec is None or spec.loader is None:
+        raise OSError(f"no devices.py under {lib_dir}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def relay_uid(name: str = RELAY_USER) -> "int | None":
+    """The uid of the relay account, or None where it is not set up.
+
+    Fail closed: an unresolved relay account means no DECIDE is ever accepted.
+    """
+    try:
+        return pwd.getpwnam(name).pw_uid
+    except KeyError:
+        return None
+
+
 def check_grant(request: dict, uid: int, etc_dir: str, lib_dir: str):
     """None if root may apply this request, else a one-line reason.
 
@@ -343,7 +399,229 @@ def handle_verify(password: bytes, conn: socket.socket, cfg, limiter: RateLimite
     return b"no\n"
 
 
-def read_candidate_line(conn: socket.socket, buf: bytearray) -> "tuple[bytes | None, bool]":
+def handle_pair(header: str, conn: socket.socket, cfg) -> bytes:
+    """A parent pairs a device (R-NOTIFY-5): the relay presents the frame, root
+    verifies the single-use proof against the pairing record, and registers the
+    device through omarchy-kids-devices. A missing record, an expired one, a
+    wrong proof or a non-relay caller is refused."""
+    if cfg.devices is None:
+        return b"no devices unavailable\n"
+    if cfg.relay_uid is None or peer_uid(conn) != cfg.relay_uid:
+        return b"no not the relay\n"
+    try:
+        frame = json.loads(header[len(PAIR_PREFIX):])
+        pair_id = frame["id"]
+        name = frame["name"]
+        platform = frame["platform"]
+        sign_pub = frame["sign_pub"]
+        box_pub = frame["box_pub"]
+        proof = frame["proof"]
+    except (ValueError, KeyError, TypeError):
+        return b"no malformed\n"
+    values = (pair_id, name, platform, sign_pub, box_pub, proof)
+    if not all(isinstance(value, str) for value in values):
+        return b"no malformed\n"
+    now = int(time.time())
+    # Read, register and consume under one lock: the record is burned only once
+    # the device is really registered (review -- a failure at add must not eat
+    # the parent's pairing window), and a second connection cannot slip in.
+    with cfg.devices.pairing_lock(cfg.pairing_dir):
+        record, reason = cfg.devices.read_pairing(cfg.pairing_dir, pair_id, now)
+        if record is None:
+            return b"no " + reason.encode("utf-8", "replace") + b"\n"
+        if not cfg.devices.check_pairing_proof(record, proof, name, sign_pub, box_pub):
+            return b"no bad-proof\n"
+        scopes = record.get("scopes")
+        if not isinstance(scopes, str) or not scopes:
+            scopes = "decide,act"
+        argv = [
+            cfg.devices_bin,
+            "add",
+            "--id",
+            pair_id,
+            "--name",
+            name,
+            "--platform",
+            platform,
+            "--sign-pub",
+            sign_pub,
+            "--box-pub",
+            box_pub,
+            "--scopes",
+            scopes,
+            "--by",
+            "pair",
+            "--apply",
+        ]
+        try:
+            proc = subprocess.run(argv, capture_output=True, timeout=30)
+        except (OSError, subprocess.TimeoutExpired):
+            return b"no apply failed\n"
+        if proc.returncode != 0:
+            return b"no apply failed\n"
+        cfg.devices.consume_pairing(cfg.pairing_dir, pair_id)
+    return b"ok\n"
+
+
+def may_present_decide(uid: "int | None", relay_uid: "int | None") -> bool:
+    """Who may present a DECIDE frame (R-NOTIFY-4): the relay account, or root --
+    the away courier runs as root and carries the app's signed decision. Both
+    paths only carry it; authd verifies the signature and applies it here."""
+    return uid == 0 or (relay_uid is not None and uid == relay_uid)
+
+
+def handle_decide(header: str, conn: socket.socket, cfg) -> bytes:
+    """A paired device's signed decision, verified and applied as root.
+
+    R-NOTIFY-4: the relay account or root may present it (the away courier runs as
+    root), the signature is verified against the root-owned device key, and the decision is then
+    applied through omarchy-kids-ask (which itself refuses an already-decided
+    record). The relay never decides (R-NOTIFY-2).
+    """
+    if cfg.devices is None or cfg.ledger is None:
+        return b"no devices unavailable\n"
+    if not may_present_decide(peer_uid(conn), cfg.relay_uid):
+        return b"no not the relay\n"
+    try:
+        frame = json.loads(header[len(DECIDE_PREFIX):])
+        record = frame["record"]
+        signature = frame["signature"]
+    except (ValueError, KeyError, TypeError):
+        return b"no malformed\n"
+    # A DECIDE always needs the "decide" scope. It is not read from the frame:
+    # an unsigned scope would let a decide-less device pick its own check.
+    ok, reason = cfg.devices.verify_decision(
+        cfg.etc, cfg.ledger, record, signature, int(time.time()), "decide"
+    )
+    if not ok:
+        return b"no " + reason.encode("utf-8", "replace") + b"\n"
+    action = "approve" if record.get("decision") == "approve" else "decline"
+    argv = [
+        cfg.ask_bin,
+        action,
+        str(record.get("request_id", "")),
+        "--by",
+        f"device:{record.get('device_id', '')}",
+        "--apply",
+    ]
+    # The optional reply line the app signed (a decline reason) rides through to
+    # the queue record; devices.verify_decision has already validated it.
+    if isinstance(record.get("reply"), str) and record["reply"]:
+        argv += ["--reply", record["reply"]]
+    try:
+        proc = subprocess.run(argv, capture_output=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return b"no apply failed\n"
+    if proc.returncode != 0:
+        return b"no apply failed\n"
+    return b"ok\n"
+
+
+def handle_review(header: str, conn: socket.socket, cfg) -> bytes:
+    """A paired device's signed add-on review decision (R-NOTIFY-12).
+
+    Same presenter and verification as DECIDE, then root re-reads the open review
+    file itself and refuses unless the file's `now` is the fingerprint the app
+    signed it had seen. The command does the rest: approve stamps the baseline
+    and clears the review, deny hides the app and clears it only if the hide
+    worked.
+    """
+    if cfg.devices is None or cfg.ledger is None:
+        return b"no devices unavailable\n"
+    if not may_present_decide(peer_uid(conn), cfg.relay_uid):
+        return b"no not the relay\n"
+    try:
+        frame = json.loads(header[len(REVIEW_PREFIX) :])
+        record = frame["record"]
+        signature = frame["signature"]
+    except (ValueError, KeyError, TypeError):
+        return b"no malformed\n"
+    ok, reason = cfg.devices.verify_review_decision(
+        cfg.etc, cfg.ledger, record, signature, int(time.time()), "decide"
+    )
+    if not ok:
+        return b"no " + reason.encode("utf-8", "replace") + b"\n"
+    review_id = record["review_id"]
+    open_review, reason = cfg.devices.read_open_review(cfg.reviews_dir, review_id)
+    if open_review is None:
+        return b"no " + reason.encode("utf-8", "replace") + b"\n"
+    # The parent decides the surface they looked at: the app signs the `now` it
+    # showed, and a review a later scan replaced is refused rather than applied
+    # to a fingerprint the parent never saw.
+    if open_review.get("now") != record.get("seen"):
+        return b"no changed-again\n"
+    action = "approve" if record.get("decision") == "approve" else "deny"
+    argv = [cfg.review_bin, action, str(open_review.get("kid", "")), str(open_review.get("id", ""))]
+    # The signed fingerprint rides through to the command, which re-checks it
+    # against the live surface under the same flock scan takes: comparing it here
+    # alone would be re-reading, not locking (rule 4).
+    if action == "approve":
+        argv += ["--seen", str(record.get("seen", ""))]
+    argv.append("--apply")
+    try:
+        proc = subprocess.run(argv, capture_output=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return b"no apply failed\n"
+    if proc.returncode == 3:
+        # The command checks the live surface under its lock and exits 3 when the
+        # decider's fingerprint no longer matches it.
+        return b"no changed-again\n"
+    if proc.returncode != 0:
+        return b"no apply failed\n"
+    return b"ok\n"
+
+
+def handle_act(header: str, conn: socket.socket, cfg) -> bytes:
+    """A paired device's signed grant or end (R-NOTIFY-13).
+
+    Same presenter and verification as DECIDE, then root checks the target is a
+    real provisioned kid (never the parent, root or a system account) and runs
+    the bar's own command as root: no terminal, no password. The device's
+    signature, with the `act` scope the parent gave it, is the whole of the
+    authorisation.
+    """
+    if cfg.devices is None or cfg.ledger is None:
+        return b"no devices unavailable\n"
+    if not may_present_decide(peer_uid(conn), cfg.relay_uid):
+        return b"no not the relay\n"
+    try:
+        frame = json.loads(header[len(ACT_PREFIX) :])
+        record = frame["record"]
+        signature = frame["signature"]
+    except (ValueError, KeyError, TypeError):
+        return b"no malformed\n"
+    ok, reason = cfg.devices.verify_act(cfg.etc, cfg.ledger, record, signature, int(time.time()), "act")
+    if not ok:
+        return b"no " + reason.encode("utf-8", "replace") + b"\n"
+    account = record.get("account", "")
+    # The target is re-validated here, before any command runs: a signed value is
+    # still a value from outside the box (rule 9). One reason for all failures.
+    if not cfg.devices.kid_account_ok(cfg.etc, account):
+        return b"no not-a-kid\n"
+    if record.get("action") == "grant":
+        argv = [cfg.time_bin, "grant", account, str(record.get("minutes"))]
+    else:
+        argv = [cfg.exit_bin, "--finish", "--kid", account]
+    try:
+        proc = subprocess.run(argv, capture_output=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return b"no apply failed\n"
+    if proc.returncode != 0:
+        return b"no apply failed\n"
+    # One journal line (stderr lands in the journal under systemd). The device
+    # id, the account, the action and the minutes; never the signature or nonce.
+    verb = "granted" if record.get("action") == "grant" else "ended"
+    minutes = f" {record.get('minutes')} minute(s)" if record.get("action") == "grant" else ""
+    print(
+        f"omarchy-kids-authd: device {record.get('device_id', '')} {verb} {account}{minutes}",
+        file=sys.stderr,
+    )
+    return b"ok\n"
+
+
+def read_candidate_line(
+    conn: socket.socket, buf: bytearray, max_line: int = MAX_LINE
+) -> "tuple[bytes | None, bool]":
     """Read one line and flag malformed frames separately from missing lines."""
     while b"\n" not in buf:
         try:
@@ -351,13 +629,13 @@ def read_candidate_line(conn: socket.socket, buf: bytearray) -> "tuple[bytes | N
         except (socket.timeout, OSError):
             return None, False
         if not chunk:
-            return None, len(buf) > MAX_LINE  # closed before sending a full line
+            return None, len(buf) > max_line  # closed before sending a full line
         buf += chunk
-        if len(buf) > MAX_LINE * 2:
+        if len(buf) > max_line * 2:
             return None, True
     line, _, rest = bytes(buf).partition(b"\n")
     buf[:] = rest
-    if len(line) > MAX_LINE:
+    if len(line) > max_line:
         return None, True
     return line, False
 
@@ -366,7 +644,7 @@ def handle_client(conn: socket.socket, cfg, limiter: RateLimiter, slot=None):
     conn.settimeout(CLIENT_TIMEOUT)
     buf = bytearray()
     try:
-        first, _first_malformed = read_candidate_line(conn, buf)
+        first, _first_malformed = read_candidate_line(conn, buf, MAX_DECIDE_LINE)
         if first is None:
             reply = b"no\n"
         else:
@@ -388,6 +666,18 @@ def handle_client(conn: socket.socket, cfg, limiter: RateLimiter, slot=None):
                     reply = handle_bootstrap(password, conn, cfg, limiter)
                 else:
                     reply = handle_verify(password, conn, cfg, limiter)
+            elif header.startswith(DECIDE_PREFIX):
+                # One line: the signed decision carries its own signature.
+                reply = handle_decide(header, conn, cfg)
+            elif header.startswith(ACT_PREFIX):
+                # One line, like DECIDE: the signature is in the frame.
+                reply = handle_act(header, conn, cfg)
+            elif header.startswith(REVIEW_PREFIX):
+                # One line, like DECIDE: the signature is in the frame.
+                reply = handle_review(header, conn, cfg)
+            elif header.startswith(PAIR_PREFIX):
+                # One line: the pairing proof carries its own secret.
+                reply = handle_pair(header, conn, cfg)
             else:
                 reply = b"no\n"
         try:
@@ -451,6 +741,46 @@ def parse_args(argv):
     parser.add_argument("--etc", default=DEFAULT_ETC, help="Path to /etc/omarchy-kids (GRANT: the kid registry)")
     parser.add_argument("--lib", default=DEFAULT_LIB, help="Directory holding ask.py (GRANT: the request allowlist)")
     parser.add_argument("--ask-bin", default=DEFAULT_ASK_BIN, help="Path to omarchy-kids-ask (GRANT: applies the request)")
+    parser.add_argument(
+        "--devices-bin",
+        default=DEFAULT_DEVICES_BIN,
+        help="Path to omarchy-kids-devices (PAIR: registers the device)",
+    )
+    parser.add_argument(
+        "--pairing-dir",
+        default=DEFAULT_PAIRING_DIR,
+        help="Path to the single-use pairing records (PAIR)",
+    )
+    parser.add_argument(
+        "--nonce-ledger",
+        default=DEFAULT_NONCE_LEDGER,
+        help="Path to the device-decision nonce ledger (DECIDE: replay refusal)",
+    )
+    parser.add_argument(
+        "--reviews-dir",
+        default=DEFAULT_REVIEWS_DIR,
+        help="Path to the open add-on reviews (REVIEW: re-read before applying)",
+    )
+    parser.add_argument(
+        "--review-bin",
+        default=DEFAULT_REVIEW_BIN,
+        help="Path to omarchy-kids-review (REVIEW: approves or denies the review)",
+    )
+    parser.add_argument(
+        "--time-bin",
+        default=DEFAULT_TIME_BIN,
+        help="Path to omarchy-kids-time (ACT: grants more time today)",
+    )
+    parser.add_argument(
+        "--exit-bin",
+        default=DEFAULT_EXIT_BIN,
+        help="Path to omarchy-kids-exit (ACT: ends the kid's session)",
+    )
+    parser.add_argument(
+        "--relay-user",
+        default=RELAY_USER,
+        help="Account whose uid may present a DECIDE frame (the LAN relay; root may too)",
+    )
     return parser.parse_args(argv)
 
 
@@ -464,6 +794,17 @@ class Config:
         self.etc = args.etc
         self.lib = args.lib
         self.ask_bin = args.ask_bin
+        self.devices_bin = args.devices_bin
+        self.pairing_dir = args.pairing_dir
+        self.nonce_ledger = args.nonce_ledger
+        self.reviews_dir = args.reviews_dir
+        self.review_bin = args.review_bin
+        self.time_bin = args.time_bin
+        self.exit_bin = args.exit_bin
+        # Filled in by main() for the DECIDE path; None means fail closed.
+        self.devices = None
+        self.ledger = None
+        self.relay_uid = None
 
     @property
     def parent(self):
@@ -475,6 +816,16 @@ def main(argv=None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     cfg = Config(args)
     limiter = RateLimiter()
+
+    # The DECIDE and REVIEW paths need lib/devices.py and a shared nonce ledger. A
+    # missing module or ledger leaves cfg.devices None, so both fail closed.
+    try:
+        cfg.devices = load_devices_module(cfg.lib)
+        cfg.ledger = cfg.devices.NonceLedger(cfg.nonce_ledger)
+    except OSError:
+        cfg.devices = None
+        cfg.ledger = None
+    cfg.relay_uid = relay_uid(args.relay_user)
 
     sock = get_systemd_socket()
     owns_socket_file = False

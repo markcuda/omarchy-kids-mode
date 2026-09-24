@@ -1,0 +1,191 @@
+#!/bin/bash
+# Tests bin/omarchy-kids-devices — the root-owned paired-device registry
+# (SPEC.md R-NOTIFY-3). A stub `id` (uid 0) stands in for root; the registry
+# tree and the published file both live under a scratch root.
+set -uo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=test/shell.d/lib.sh
+source "$DIR/test/shell.d/lib.sh"
+# shellcheck source=test/shell.d/tree.sh
+source "$DIR/test/shell.d/tree.sh"
+
+pass() { echo "PASS  $*"; }
+fail() {
+  echo "FAIL  $*"
+  rc=1
+}
+rc=0
+check_eq() { # got want label
+  if [[ "$1" == "$2" ]]; then pass "$3"; else fail "$3 (want '$2', got '$1')"; fi
+}
+check_contains() { # haystack needle label
+  if [[ "$1" == *"$2"* ]]; then pass "$3"; else fail "$3 (want '$2' in '$1')"; fi
+}
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+STUBS="$TMP/stubs"
+ETC="$TMP/etc"
+SYSROOT="$TMP/sysroot"
+mkdir -p "$STUBS" "$ETC" "$SYSROOT"
+
+kids_tree "$TMP/tree" "$DIR"
+BIN="$TMP/tree/bin/omarchy-kids-devices"
+kids_id_stub "$STUBS" root 0
+export PATH="$STUBS:$PATH"
+kids_set_const "$BIN" ETC "$ETC"
+kids_set_const "$BIN" SYSROOT "$SYSROOT"
+
+KEY="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+DEV="$ETC/devices/d1.conf"
+PUB="$SYSROOT/run/omarchy-kids/devices.json"
+
+# --- root only -------------------------------------------------------------
+KIDS_TEST_UID=1000 "$BIN" list >/dev/null 2>&1
+check_eq "$?" "2" "a non-root caller is refused (registry is root-owned)"
+KIDS_TEST_UID=1000 "$BIN" --help >/dev/null 2>&1
+check_eq "$?" "0" "--help works for a non-root caller (AGENTS.md)"
+export KIDS_TEST_UID=0
+
+# --- DRY_RUN is the default ------------------------------------------------
+out="$("$BIN" add --id d1 --name Phone --platform android --sign-pub "$KEY" --box-pub "$KEY" 2>&1)"
+check_eq "$?" "0" "add: previews without --apply"
+check_contains "$out" "[dry-run]" "add: prints the plan"
+[[ -e "$DEV" ]] && fail "add (dry-run): must not write the device file" || pass "add (dry-run): writes nothing"
+
+# --- add --apply -----------------------------------------------------------
+"$BIN" add --id d1 --name Phone --platform android --sign-pub "$KEY" --box-pub "$KEY" --apply >/dev/null
+check_eq "$?" "0" "add --apply succeeds"
+[[ -f "$DEV" ]] && pass "add: writes <id>.conf" || fail "add: no device file"
+check_eq "$(kids_file_mode "$DEV")" "600" "device conf is 0600 root (R-NOTIFY-3)"
+check_contains "$(cat "$DEV")" "name=Phone" "device conf carries the name"
+check_contains "$(cat "$DEV")" "scopes=decide,act" "device conf carries the default scopes"
+[[ -f "$PUB" ]] && pass "add: publishes the relay copy" || fail "add: no published devices.json"
+check_contains "$(cat "$PUB")" '"id": "d1"' "published record names the device"
+check_contains "$(cat "$PUB")" '"sign_pub": ' "published record carries the public key"
+
+# --- a second add of the same id is refused --------------------------------
+"$BIN" add --id d1 --name Phone2 --platform ios --sign-pub "$KEY" --box-pub "$KEY" --apply >/dev/null 2>&1
+check_eq "$?" "2" "add: an already-paired id is refused"
+
+# --- validation ------------------------------------------------------------
+for bad in \
+  "--id ../../etc --name X --platform ios --sign-pub $KEY --box-pub $KEY" \
+  "--id d2 --name X --platform ios --sign-pub short --box-pub $KEY" \
+  "--id d2 --name X --platform ios --sign-pub $KEY --box-pub $KEY --scopes root"; do
+  # shellcheck disable=SC2086
+  "$BIN" add $bad --apply >/dev/null 2>&1
+  check_eq "$?" "2" "add refuses: $bad"
+done
+# A newline in --scopes must not inject a second field; a trailing comma must
+# not publish an empty scope; a control character in the name must not land.
+"$BIN" add --id d3 --name X --platform ios --sign-pub "$KEY" --box-pub "$KEY" \
+  --scopes "$(printf 'decide\nsign_pub=EVIL')" --apply >/dev/null 2>&1
+check_eq "$?" "2" "add refuses scopes with an embedded newline"
+"$BIN" add --id d3 --name X --platform ios --sign-pub "$KEY" --box-pub "$KEY" --scopes "decide," --apply >/dev/null 2>&1
+check_eq "$?" "2" "add refuses a trailing-comma scope list"
+"$BIN" add --id d3 --name "$(printf 'Phone\033[2J')" --platform ios --sign-pub "$KEY" --box-pub "$KEY" --apply >/dev/null 2>&1
+check_eq "$?" "2" "add refuses a control character in the name"
+
+# --- list ------------------------------------------------------------------
+check_contains "$("$BIN" list)" "d1" "list shows the device"
+check_contains "$("$BIN" list --json)" '"platform": "android"' "list --json is machine-readable"
+
+# --- scopes / rename / revoke ----------------------------------------------
+"$BIN" scopes d1 decide --apply >/dev/null
+check_contains "$(cat "$DEV")" "scopes=decide" "scopes --apply rewrites the scopes"
+"$BIN" rename d1 "Ada's phone" --apply >/dev/null
+check_contains "$(cat "$DEV")" "name=Ada's phone" "rename --apply rewrites the name"
+"$BIN" rename d1 'A|B&C\D' --apply >/dev/null
+check_contains "$(cat "$DEV")" 'name=A|B&C\D' "rename stores a name with |, & and \ verbatim (no sed injection)"
+"$BIN" revoke d1 --apply >/dev/null
+[[ -f "$DEV.revoked" ]] && pass "revoke renames the conf to .revoked" || fail "revoke did not rename"
+[[ -f "$DEV" ]] && fail "revoke must remove the live conf" || pass "revoke removes the live conf"
+check_contains "$("$BIN" list)" "no devices paired" "revoked device is not listed"
+
+# --- publish is idempotent and public-only ---------------------------------
+"$BIN" publish --apply >/dev/null
+check_eq "$?" "0" "publish succeeds with no live devices"
+check_eq "$(cat "$PUB")" "[]" "publish writes an empty array when nothing is paired"
+
+# --- pair-start: the single-use pairing record (R-NOTIFY-5) ----------------
+PAIR_DIR="$SYSROOT/run/omarchy-kids/pairing"
+out="$("$BIN" pair-start --id d9 2>&1)"
+check_eq "$?" "0" "pair-start previews without --apply"
+check_contains "$out" "[dry-run]" "pair-start prints the plan"
+[[ -e "$PAIR_DIR/d9" ]] && fail "pair-start (dry-run): must not write the record" ||
+  pass "pair-start (dry-run): writes nothing"
+out="$("$BIN" pair-start --id d9 --address 192.168.1.5 --address 100.64.0.7 --apply 2>&1)"
+check_eq "$?" "0" "pair-start --apply succeeds"
+[[ -f "$PAIR_DIR/d9" ]] && pass "pair-start writes the pairing record" || fail "pair-start: no record"
+check_eq "$(kids_file_mode "$PAIR_DIR/d9")" "600" "pairing record is 0600 root (the token never reaches the relay, R-NOTIFY-2/5)"
+check_contains "$out" "pair:  omarchy-kids://pair" "pair-start prints the pair URI"
+check_contains "$out" "addr=192.168.1.5,100.64.0.7" "the URI carries the box's addresses (N-10)"
+check_eq "$(jq -r '.addresses | join(",")' "$PAIR_DIR/d9")" "192.168.1.5,100.64.0.7" \
+  "the record carries the addresses (N-10)"
+[[ "$out" != *"code:"* ]] && pass "pair-start prints no code nothing accepts (I-6)" ||
+  fail "pair-start still prints a code with no code path"
+"$BIN" pair-start --id 'bad:id' --apply >/dev/null 2>&1
+check_eq "$?" "2" "pair-start refuses a bad id"
+"$BIN" pair-start --id d11 --address 'bad addr' --apply >/dev/null 2>&1
+check_eq "$?" "2" "pair-start refuses a bad address"
+"$BIN" add --id d10 --name D --platform ios --sign-pub "$KEY" --box-pub "$KEY" --apply >/dev/null 2>&1
+"$BIN" pair-start --id d10 --apply >/dev/null 2>&1
+check_eq "$?" "2" "pair-start refuses an already-paired id"
+
+# --- the ACT record shape and the kid-account test (R-NOTIFY-13) ----------
+# The module functions the authd ACT frame relies on, without a daemon.
+python3 - "$DIR/lib/devices.py" "$ETC" <<'PY'
+import importlib.util, os, pwd, sys
+devices_py, etc = sys.argv[1], sys.argv[2]
+spec = importlib.util.spec_from_file_location("kids_devices", devices_py)
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+fails = []
+
+def check(cond, label):
+    print(("PASS  " if cond else "FAIL  ") + label)
+    if not cond:
+        fails.append(label)
+
+base = {"device_id": "d1", "account": "kid-ada", "ts": 1, "nonce": "n"}
+check(d.valid_act_record(dict(base, action="grant", minutes=15)), "a grant record is valid")
+check(d.valid_act_record(dict(base, action="end")), "an end record is valid")
+check(not d.valid_act_record(dict(base, action="end", minutes=15)), "an end carrying minutes is refused")
+check(not d.valid_act_record(dict(base, action="grant")), "a grant without minutes is refused")
+check(not d.valid_act_record(dict(base, action="grant", minutes=0)), "minutes 0 is refused")
+check(not d.valid_act_record(dict(base, action="grant", minutes=1441)), "minutes 1441 is refused")
+check(not d.valid_act_record(dict(base, action="grant", minutes="15")), "a string minutes is refused")
+check(not d.valid_act_record(dict(base, action="grant", minutes=True)), "a bool minutes is refused")
+check(not d.valid_act_record(dict(base, action="pause")), "a pause action is refused")
+check(not d.valid_act_record(dict(base, action="grant", minutes=15, request_id="r")),
+      "an extra key is refused")
+check(not d.valid_record(dict(base, action="grant", minutes=15)),
+      "an ACT record cannot be a request decision")
+
+me = pwd.getpwuid(os.getuid()).pw_name
+check(not d.kid_account_ok(etc, me), "an account with no profile is not a kid")
+os.makedirs(os.path.join(etc, "kids"), exist_ok=True)
+with open(os.path.join(etc, "kids", me + ".conf"), "w") as f:
+    f.write("band=6-8\n")
+# A profile for root and for a real system account: the profile is there, so only
+# the uid guard can refuse them (delete the guard and these fail).
+for system in ("root", "daemon"):
+    if pwd.getpwnam(system).pw_uid < 1000:
+        with open(os.path.join(etc, "kids", system + ".conf"), "w") as f:
+            f.write("band=6-8\n")
+        check(not d.kid_account_ok(etc, system), f"a profile does not make '{system}' a kid")
+if os.getuid() >= 1000:
+    check(d.kid_account_ok(etc, me), "a provisioned non-root account is a kid")
+check(not d.kid_account_ok(etc, "root"), "root is never a kid")
+check(not d.kid_account_ok(etc, "no-such-account-xyz"), "an unknown account is not a kid")
+check(not d.kid_account_ok(etc, "Kid!"), "a bad-shaped account is not a kid")
+check(not d.kid_account_ok(etc, "../etc/passwd"), "a path-like account is not a kid")
+print("; ".join(fails))
+sys.exit(1 if fails else 0)
+PY
+check_eq "$?" "0" "the ACT record shape and the kid-account test hold (R-NOTIFY-13)"
+
+echo "devices-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
+exit $rc

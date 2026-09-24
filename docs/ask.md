@@ -31,8 +31,8 @@ omarchy-kids-ask submit <kind> <what> [--minutes N]
 omarchy-kids-ask grant <kind> <what> [--minutes N]
 omarchy-kids-ask collect [--apply]
 omarchy-kids-ask list [<kid>]
-omarchy-kids-ask approve <id> [--apply]
-omarchy-kids-ask decline <id> [--apply]
+omarchy-kids-ask approve <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
+omarchy-kids-ask decline <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
 ```text
 
 ### Kid-side: `time` / `app` / `plugin` / `site`
@@ -59,15 +59,22 @@ omarchy-kids-ask submit <kind> <what> --state open|approved --by keyboard [--min
 ```text
 
 Writes one Appendix D record into `/run/user/<uid>/omarchy-kids/ask-outbox/<unix-ts>-<account>-<kind>.json`
-(`lib/ask.py write` does the actual JSON, atomically). Never gated by `DRY_RUN` — it only ever
+(`lib/ask.py write` does the actual JSON, atomically), `0600` inside the kid's own `0700` directory
+(R-NOTIFY-7: the draft is the kid's; the queue it later lands in is not). Never gated by `DRY_RUN` — it only ever
 touches the kid's own runtime directory, same reasoning `bin/omarchy-kids-super-tap` already gives
 for never gating its own runtime-dir writes.
 
 ### `collect [--apply]` — root
 
+Before it moves anything, `collect` checks that the `omarchy-parents` group exists (`getent`; where
+`getent` is absent the check is skipped), and exits `1` touching no outbox when it does not: a record
+moved into a queue the parent's own readers cannot open would be a request nobody sees. On every run
+it also sets the queue to `0750 root:omarchy-parents` (R-NOTIFY-7), correcting an earlier `0755`.
+
 For every `<uid>/omarchy-kids/ask-outbox/*.json` under `/run/user` (the root-side runtime tree),
 `/run/user`, i.e. every logged-in kid's real `$XDG_RUNTIME_DIR`), moves the file into
-`/var/lib/omarchy-kids/queue/` (Appendix D's real home), keeping the same filename. Any record
+`/var/lib/omarchy-kids/queue/` (Appendix D's real home, `0750 root:omarchy-parents`, each record
+`0640`, R-NOTIFY-7), keeping the same filename. Any record
 that already arrived decided (`state: "approved"`, from the modal's "A grown-up is here" path) is
 applied right here, via the same dispatch `approve` uses. An `"open"` record is left exactly as it
 is, for a human to `approve`/`decline` later. `DRY_RUN=1` by default (AGENTS.md rule 8): it only
@@ -75,16 +82,44 @@ previews what it would collect; `--apply` (or `DRY_RUN=0`) does it for real. Run
 whenever a parent is looking, and by `systemd/omarchy-kids-ask-collect.timer` every minute
 otherwise (see below).
 
-### `list [<kid>]` — root
+### `outcome` — kid-side, display only
+
+The newest decided request in **this account's own** directory, one tab-separated line
+(`kind`, `what`, `minutes`, `state`, `reply`), or nothing when there is none (R-NOTIFY-6). It
+resolves the account as `id -un` and the directory as a constant (`/var/lib/omarchy-kids/<account>/decisions`),
+never an argument or an environment value; the modal reads it once when it opens and shows a
+sentence ("Last time your grown-up said yes to 15 more minutes."). It decides nothing and it cannot
+read another kid's directory (`0750`, the kid's own group). See "The kid's copy" below.
+
+### `list [<kid>]` — root or omarchy-parents
 
 Every **open** (undecided) request, all kids or one, one line each: id, kid, kind, what (minutes
 for `time`), and when it was asked. Nothing decided ever shows here — that's the whole point of a
-one-keystroke panel. The command requires `is_root` before reading the queue.
+one-keystroke panel. The command runs for root or a member of `omarchy-parents` (the parent), and
+creates nothing: an absent queue reads as no open requests, and a queue the caller cannot open is an
+error rather than an empty answer (R-NOTIFY-7).
+
+### The kid's copy
+
+Every decision — from the panel, the bar, the desktop notifier, a paired device or the courier —
+also lands a copy under the kid's own directory: `/var/lib/omarchy-kids/<kid>/decisions/<id>.json`,
+`0640 root:<kid>` in a `0750 root:<kid>` directory, the queue record's own values and nothing else
+(no `by`, no `device`; R-NOTIFY-6). `ask.py decide` writes it after the queue record that *is* the
+decision, so no reader ever finds a copy whose record is still open; a copy that fails to write
+(the account gone, the disk full) leaves the decision standing and prints one line on stderr, and
+root's `collect` heals it on its next run (`ask.py sync-decisions`). It is a copy the kid can read,
+not a channel: nothing reads it to decide or act, the queue record stays the decision of record,
+and `omarchy-kids-data retention` prunes it with the queue (90 days).
 
 ### `approve <id>` / `decline <id>` — root
 
-`approve` performs the action (dispatch below), then marks the record `approved`, `by: "panel"`.
-`decline` marks it `declined`, `by: "panel"`, and never performs the action. Both refuse (exit 2)
+`approve` decides the record first — atomically, write-once — and only then performs the action
+(dispatch below); a failed action still leaves the record `approved` with a warning, the same
+graceful degradation as before. `decline` marks it `declined` and never performs the action. `--by`
+records who decided: `panel` (a human at the panel, the default), `keyboard`, `widget`, or
+`device:<id>` (a paired device's signed decision, which authd forwards). Both take an optional
+`--reply TEXT` (at most 80 printable characters), the parent's own line — signed when it arrives
+through a paired device, typed otherwise — which the record then carries. Both refuse (exit 2)
 on an id that's already decided or doesn't exist — Appendix D's "approvers append, never rewrite
 history" is read here as *a record is decided exactly once*; nothing ever flips a decision back or
 edits `kid`/`kind`/`what`/`minutes`/`asked_at` after they're first written (`lib/ask.py decide`
@@ -101,7 +136,8 @@ opening or changing a queue record. `DRY_RUN=1` by default; `--apply` makes eith
 
 ## Judgment calls made in this implementation
 
-- **The queue lives at the exact path Appendix D names**, but this issue does *not* make the
+- **The queue lives at the exact path Appendix D names**, is `0750 root:omarchy-parents` with
+  `0640` records (R-NOTIFY-7, the `queue` lock), and this issue does *not* make the
   kid-writable half of the pipeline live there. A kid write to a root-owned, shared directory
   would need either a special group + sticky bit or a root-setuid helper — both more moving parts,
   and both weaker than the answer actually available for free: `$XDG_RUNTIME_DIR` is already a
@@ -150,8 +186,9 @@ considered and rejected before landing on the one shipped here:
   rule 8 (never assume, always verify) is warning against.
 
 What shipped instead: the modal writes the decided record into the kid's outbox and says so
-honestly — "Got it! ... will be ready very soon", never "Done" — and `omarchy-kids-ask collect`
-is what actually performs it, the next time it runs. That is:
+honestly — **"Got it! <thing> is ready now."** once `grant` returned 0 (root applied it before it
+did), and **"Asked. Your grown-up will see it."** for "Ask later" — never "Done", and `omarchy-kids-ask collect`
+is what actually performs a later one, the next time it runs. That is:
 
 - **Immediately**, if a parent happens to be at the panel (the panel is expected to call `collect
   --apply` itself whenever it's open, or a parent can run it by hand).

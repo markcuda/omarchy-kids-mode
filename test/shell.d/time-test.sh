@@ -305,6 +305,76 @@ check "$(used_today 2026-09-02)" "3" "tick: kid-ada's session still counts"
 # assertion is just that this doesn't error out.)
 pass "tick: a non-kid account's session is silently ignored (no crash, no ledger file for it)"
 
+# --- the relay starts on demand (N-7, R-NOTIFY-1) -------------------------
+#
+# The ledger asks the relay to start while a kid is live or a request is open;
+# there is no certificate when notifications are off. A systemctl stub owns the
+# proof (AGENTS.md shape 1), so a missing stub -- the real systemctl -- can
+# never make these pass.
+SYSTEMCTL_LOG="$TMP/systemctl.log"
+cat >"$STUBS/systemctl" <<EOF
+#!/bin/bash
+printf 'systemctl %s\n' "\$*" >>"$SYSTEMCTL_LOG"
+exit 0
+EOF
+chmod +x "$STUBS/systemctl"
+mkdir -p "$ETC/relay" "$ROOT/var/lib/omarchy-kids/queue"
+
+# Notifications off (no certificate): a live kid starts nothing.
+: >"$SYSTEMCTL_LOG"
+rm -f "$ETC/relay/cert.pem" "$ETC/relay/key.pem"
+set_now "2026-09-02 10:00:00"
+set_clock 1400
+set_sessions "1 1000 kid-ada yes no"
+"$LEDGER" tick >/dev/null
+check_not_contains "$(cat "$SYSTEMCTL_LOG")" "omarchy-kids-relayd" \
+  "tick: no certificate (notifications off) starts no relay"
+
+# Notifications on, a kid live: it starts.
+: >"$SYSTEMCTL_LOG"
+: >"$ETC/relay/cert.pem"
+: >"$ETC/relay/key.pem"
+set_clock 1430
+"$LEDGER" tick >/dev/null
+check_contains "$(cat "$SYSTEMCTL_LOG")" "start --no-block omarchy-kids-relayd.service" \
+  "tick: a live kid starts the relay on demand"
+
+# Notifications on, no kid live, no open request: it starts nothing.
+: >"$SYSTEMCTL_LOG"
+set_sessions "1 1000 kid-ada no no"
+set_clock 1460
+"$LEDGER" tick >/dev/null
+check_not_contains "$(cat "$SYSTEMCTL_LOG")" "omarchy-kids-relayd" \
+  "tick: no live kid and no open request starts no relay"
+
+# Notifications on, no kid live, but a request is open: it starts.
+: >"$SYSTEMCTL_LOG"
+printf '{"kid": "kid-ada", "kind": "time", "what": "10", "minutes": 10, "asked_at": 1000000002, "state": "open"}\n' \
+  >"$ROOT/var/lib/omarchy-kids/queue/1000000002-kid-ada-time.json"
+set_clock 1490
+"$LEDGER" tick >/dev/null
+check_contains "$(cat "$SYSTEMCTL_LOG")" "start --no-block omarchy-kids-relayd.service" \
+  "tick: an open request starts the relay on demand"
+rm -f "$ROOT/var/lib/omarchy-kids/queue/1000000002-kid-ada-time.json"
+
+# Notifications on, no kid live, but a pairing window is open: it starts.
+: >"$SYSTEMCTL_LOG"
+mkdir -p "$ROOT/run/omarchy-kids/pairing"
+printf '{"expires_at": %s}\n' "$(($(date +%s) + 300))" >"$ROOT/run/omarchy-kids/pairing/d-1"
+set_clock 1520
+"$LEDGER" tick >/dev/null
+check_contains "$(cat "$SYSTEMCTL_LOG")" "start --no-block omarchy-kids-relayd.service" \
+  "tick: an open pairing window starts the relay on demand"
+
+# Notifications on, no kid live, an expired pairing record: it starts nothing.
+: >"$SYSTEMCTL_LOG"
+printf '{"expires_at": 0}\n' >"$ROOT/run/omarchy-kids/pairing/d-1"
+set_clock 1550
+"$LEDGER" tick >/dev/null
+check_not_contains "$(cat "$SYSTEMCTL_LOG")" "omarchy-kids-relayd" \
+  "tick: an expired pairing record starts no relay"
+rm -rf "$ROOT/run/omarchy-kids/pairing"
+
 # --- two sessions for the same kid: only one minute, not two -------------
 
 set_sessions "1 1000 kid-ada yes no" "2 1000 kid-ada yes no"

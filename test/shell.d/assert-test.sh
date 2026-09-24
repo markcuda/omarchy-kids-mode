@@ -456,6 +456,8 @@ ln -sf /usr/lib/systemd/system/omarchy-kids-wifid.socket "$SCRATCH_ROOT/etc/syst
 mkdir -p "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants"
 ln -sf /usr/lib/systemd/system/omarchy-kids-ask-collect.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-ask-collect.timer"
 ln -sf /usr/lib/systemd/system/omarchy-kids-time.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-time.timer"
+ln -sf /usr/lib/systemd/system/omarchy-kids-review.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-review.timer"
+ln -sf /usr/lib/systemd/system/omarchy-kids-relay-courier.timer "$SCRATCH_ROOT/etc/systemd/system/timers.target.wants/omarchy-kids-relay-courier.timer"
 
 # hyprland configs already installed (copied from the real share/hyprland
 # fixture above, so a byte-for-byte cmp against $SHARE/hyprland passes)
@@ -489,6 +491,17 @@ CHROMIUM_FILE="$SCRATCH_ROOT/etc/chromium/policies/managed/omarchy-kids-6-8.json
 echo '{}' >"$CHROMIUM_FILE"
 chmod 0640 "$CHROMIUM_FILE"
 launcher_map_fix kid-ada
+
+# The ownership fence (AGENTS.md rule 9): an executable that is group/other-
+# writable is refused, so a PATH a kid can set can make a tile absent, never point
+# it at the kid's own binary.
+tuxpaint_bin="$(command -v tuxpaint)"
+chmod 0777 "$tuxpaint_bin"
+launcher_map_fix kid-ada 2>/dev/null
+check_eq "$?" "1" "launcher-map: a world-writable executable is refused"
+chmod 0755 "$tuxpaint_bin"
+launcher_map_fix kid-ada ||
+  fail "launcher-map: the map builds again once the executable is closed"
 
 # The baseline is fully provisioned, including the session input assert owns.
 session_manifest_build kid-ada
@@ -576,6 +589,197 @@ check_eq "$(cat "$TIME_STATE")" "$state_before" "time infrastructure: runtime st
 check_eq "$(kids_file_mtime "$TIME_STATE")" "$state_inode" "time infrastructure: runtime state was not replaced"
 check_eq "$(cat "$TIME_LEDGER_DIR/2026-09-04")" "$usage_before" "time infrastructure: usage ledger is unchanged"
 check_eq "$(cat "$TIME_LEDGER_DIR/2026-09-04.grant")" "$grant_before" "time infrastructure: grant ledger is unchanged"
+
+# --- paired-device registry (R-NOTIFY-3) -----------------------------------
+
+DEV_DIR="$SCRATCH_ROOT/etc/omarchy-kids/devices"
+mkdir -p "$DEV_DIR"
+printf 'id=d1\nname=Phone\n' >"$DEV_DIR/d1.conf"
+chmod 0777 "$DEV_DIR"
+chmod 0666 "$DEV_DIR/d1.conf"
+out="$($BIN)"
+check_status "$out" "devices" "fixed" "devices: broken modes report fixed (R-NOTIFY-3)"
+check_eq "$(kids_file_mode "$DEV_DIR")" "750" "devices: directory is mode 0750 (R-NOTIFY-3)"
+check_eq "$(kids_file_mode "$DEV_DIR/d1.conf")" "600" "devices: record is mode 0600 (R-NOTIFY-3)"
+
+# --- the away drop-in: the relay's fence (R-NOTIFY-11.1) -------------------
+
+AWAY_DIR="$SCRATCH_ROOT/etc/systemd/system/omarchy-kids-relayd.service.d"
+AWAY_FILE="$AWAY_DIR/away.conf"
+UNIT_DIR="$SCRATCH_ROOT/usr/lib/systemd/system"
+UNIT_FILE="$UNIT_DIR/omarchy-kids-relayd.service"
+mkdir -p "$UNIT_DIR"
+printf '[Service]\nIPAddressAllow=localhost\nIPAddressDeny=any\n' >"$UNIT_FILE"
+unit_before="$(cksum <"$UNIT_FILE")"
+
+# Absent: ok, and assert must not create it (presence is the parent's consent).
+out="$($BIN)"
+check_status "$out" "relay-away" "ok" "relay-away: no drop-in is ok (the base fence applies)"
+[[ -e "$AWAY_FILE" ]] && fail "relay-away: assert created a consent file" ||
+  pass "relay-away: assert never creates the drop-in"
+
+# Wrong bytes at the right mode: the content compare is what drives the fix.
+mkdir -p "$AWAY_DIR"
+printf 'IPAddressAllow=0.0.0.0/0\n' >"$AWAY_FILE"
+chmod 0644 "$AWAY_FILE"
+out="$($BIN)"
+check_status "$out" "relay-away" "fixed" "relay-away: wrong bytes at 0644 report fixed"
+grep -q '^IPAddressAllow=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 fc00::/7 fe80::/10 100.64.0.0/10$' "$AWAY_FILE" &&
+  pass "relay-away: the drop-in carries the LAN list plus the CGNAT range" ||
+  fail "relay-away: the drop-in content is wrong"
+check_eq "$(cksum <"$UNIT_FILE")" "$unit_before" "relay-away: the packaged unit was not touched (I-7)"
+
+# The exact bytes at 0644: ok, nothing to fix.
+out="$($BIN)"
+check_status "$out" "relay-away" "ok" "relay-away: the exact bytes at 0644 are ok"
+
+# A right file with the wrong mode is fixed, not rewritten as content drift.
+chmod 0600 "$AWAY_FILE"
+out="$($BIN)"
+check_status "$out" "relay-away" "fixed" "relay-away: a wrong mode reports fixed"
+check_eq "$(kids_file_mode "$AWAY_FILE")" "644" "relay-away: the mode is restored to 0644"
+
+# A foreign drop-in AND a widened away.conf: the lock FAILs, leaves the admin's
+# file exactly as it was, and still repairs the file it owns first (round 1: the
+# foreign check used to return before the rewrite, leaving the fence widened).
+printf 'IPAddressAllow=0.0.0.0/0\n' >"$AWAY_FILE"
+printf '[Service]\nIPAddressAllow=0.0.0.0/0\n' >"$AWAY_DIR/local-admin.conf"
+foreign_before="$(cksum <"$AWAY_DIR/local-admin.conf")"
+out="$($BIN)"
+check_status "$out" "relay-away" "FAIL" "relay-away: a foreign drop-in fails the lock"
+check_eq "$(cksum <"$AWAY_DIR/local-admin.conf")" "$foreign_before" \
+  "relay-away: assert never rewrites (or deletes) an admin's file"
+grep -q '^IPAddressAllow=localhost link-local multicast .* 100.64.0.0/10$' "$AWAY_FILE" &&
+  pass "relay-away: the owned drop-in is repaired even beside a foreign one" ||
+  fail "relay-away: a foreign drop-in left the owned file widened"
+rm -f "$AWAY_DIR/local-admin.conf"
+
+# away off (the consent file removed) is ok again.
+rm -f "$AWAY_FILE"
+out="$($BIN)"
+check_status "$out" "relay-away" "ok" "relay-away: removing the consent file is ok"
+[[ "$(cksum <"$UNIT_FILE")" == "$unit_before" ]] && pass "relay-away: the unit is still untouched" ||
+  fail "relay-away: a packaged file changed"
+
+# --- the secret-holding files: relay-tls and courier-conf (R-NOTIFY-11.4) ---
+
+RELAY_DIR="$SCRATCH_ROOT/etc/omarchy-kids/relay"
+COURIER_CONF="$SCRATCH_ROOT/etc/omarchy-kids/courier.conf"
+
+out="$($BIN)"
+check_status "$out" "relay-tls" "ok" "relay-tls: no relay directory is ok"
+check_status "$out" "courier-conf" "ok" "courier-conf: no mailbox file is ok"
+[[ -e "$RELAY_DIR" ]] && fail "relay-tls: assert created a relay directory" ||
+  pass "relay-tls: assert never creates the directory"
+[[ -e "$COURIER_CONF" ]] && fail "courier-conf: assert created the mailbox file" ||
+  pass "courier-conf: assert never creates the file"
+
+mkdir -p "$RELAY_DIR"
+printf 'cert' >"$RELAY_DIR/cert.pem"
+printf 'key' >"$RELAY_DIR/key.pem"
+printf 'transport=ntfy\nurl=https://x\ntopic=y\n' >"$COURIER_CONF"
+chmod 0777 "$RELAY_DIR"
+chmod 0666 "$RELAY_DIR/cert.pem" "$RELAY_DIR/key.pem" "$COURIER_CONF"
+out="$($BIN)"
+check_status "$out" "relay-tls" "fixed" "relay-tls: wrong modes report fixed"
+check_eq "$(kids_file_mode "$RELAY_DIR")" "750" "relay-tls: the directory is 0750"
+check_eq "$(kids_file_mode "$RELAY_DIR/cert.pem")" "644" "relay-tls: cert.pem is 0644"
+check_eq "$(kids_file_mode "$RELAY_DIR/key.pem")" "640" "relay-tls: key.pem is 0640"
+check_status "$out" "courier-conf" "fixed" "courier-conf: a wrong mode reports fixed"
+check_eq "$(kids_file_mode "$COURIER_CONF")" "600" "courier-conf: the mailbox file is 0600"
+
+# A loose copy of the key beside the real one -- hidden, the shape a glob would
+# miss: FAIL, left exactly as it was, and the file the lock owns is still repaired.
+printf 'key' >"$RELAY_DIR/.key.pem.bak"
+chmod 0600 "$RELAY_DIR/.key.pem.bak"
+foreign_before="$(cksum <"$RELAY_DIR/.key.pem.bak")"
+chmod 0666 "$RELAY_DIR/key.pem"
+out="$($BIN)"
+check_status "$out" "relay-tls" "FAIL" "relay-tls: a foreign copy fails the lock"
+check_eq "$(kids_file_mode "$RELAY_DIR/key.pem")" "640" "relay-tls: the owned key is still repaired"
+check_eq "$(cksum <"$RELAY_DIR/.key.pem.bak")" "$foreign_before" \
+  "relay-tls: the hidden foreign copy is left untouched"
+rm -f "$RELAY_DIR/.key.pem.bak"
+out="$($BIN)"
+check_status "$out" "relay-tls" "ok" "relay-tls: ok again once the foreign copy is gone"
+
+# --- the request queue (R-NOTIFY-7) ----------------------------------------
+
+QUEUE_DIR="$SCRATCH_ROOT/var/lib/omarchy-kids/queue"
+out="$($BIN)"
+check_status "$out" "queue" "ok" "queue: absent is ok (no request has been collected)"
+[[ -e "$QUEUE_DIR" ]] && fail "queue: assert created the queue" ||
+  pass "queue: assert never creates it"
+
+mkdir -p "$QUEUE_DIR"
+printf '{}' >"$QUEUE_DIR/1-kid-ada-time.json"
+chmod 0755 "$QUEUE_DIR"
+chmod 0644 "$QUEUE_DIR/1-kid-ada-time.json"
+out="$($BIN)"
+check_status "$out" "queue" "fixed" "queue: wrong modes report fixed"
+check_eq "$(kids_file_mode "$QUEUE_DIR")" "750" "queue: the directory is 0750"
+check_eq "$(kids_file_mode "$QUEUE_DIR/1-kid-ada-time.json")" "640" "queue: the record is 0640"
+
+# A symlinked record is refused and never followed.
+ln -sf /etc/passwd "$QUEUE_DIR/evil.json"
+out="$($BIN)"
+check_status "$out" "queue" "FAIL" "queue: a symlinked record fails the lock"
+[[ -L "$QUEUE_DIR/evil.json" ]] && pass "queue: the symlink is left alone" ||
+  fail "queue: the symlink was removed or replaced"
+rm -f "$QUEUE_DIR/evil.json" "$QUEUE_DIR/1-kid-ada-time.json"
+
+# A symlinked queue directory is refused, never followed.
+rm -rf "$QUEUE_DIR"
+ln -s /etc "$QUEUE_DIR"
+out="$($BIN)"
+check_status "$out" "queue" "FAIL" "queue: a symlinked directory fails the lock"
+[[ -L "$QUEUE_DIR" ]] && pass "queue: the directory symlink is left alone" ||
+  fail "queue: the directory symlink was removed or replaced"
+rm -f "$QUEUE_DIR"
+
+# A queue this caller cannot read is a warn ("I could not look"), not a FAIL.
+mkdir -p "$QUEUE_DIR"
+chmod 0000 "$QUEUE_DIR"
+out="$($BIN)"
+chmod 0750 "$QUEUE_DIR"
+check_status "$out" "queue" "warn" "queue: an unreadable directory is a warn"
+rmdir "$QUEUE_DIR"
+
+# --- the kid's own copies of decisions (R-NOTIFY-6) -----------------------
+DEC_DIR="$SCRATCH_ROOT/var/lib/omarchy-kids/kid-ada/decisions"
+out="$($BIN)"
+check_status "$out" "decisions:kid-ada" "ok" "decisions: absent is ok (nothing decided yet)"
+[[ -e "$DEC_DIR" ]] && fail "decisions: assert created the directory" ||
+  pass "decisions: assert never creates it"
+
+mkdir -p "$DEC_DIR"
+printf '{}' >"$DEC_DIR/1-kid-ada-app.json"
+chmod 0755 "$DEC_DIR"
+chmod 0644 "$DEC_DIR/1-kid-ada-app.json"
+out="$($BIN)"
+check_status "$out" "decisions:kid-ada" "fixed" "decisions: wrong modes report fixed"
+check_eq "$(kids_file_mode "$DEC_DIR")" "750" "decisions: the directory is 0750"
+check_eq "$(kids_file_mode "$DEC_DIR/1-kid-ada-app.json")" "640" "decisions: the copy is 0640"
+
+ln -sf /etc/passwd "$DEC_DIR/evil.json"
+out="$($BIN)"
+check_status "$out" "decisions:kid-ada" "FAIL" "decisions: a symlinked copy fails the lock"
+[[ -L "$DEC_DIR/evil.json" ]] && pass "decisions: the symlink is left alone" ||
+  fail "decisions: the symlink was removed or replaced"
+rm -f "$DEC_DIR/evil.json" "$DEC_DIR/1-kid-ada-app.json"
+
+# A symlinked directory is refused, never followed; an unreadable one is a warn.
+rm -rf "$DEC_DIR"
+ln -s /etc "$DEC_DIR"
+out="$($BIN)"
+check_status "$out" "decisions:kid-ada" "FAIL" "decisions: a symlinked directory fails the lock"
+rm -f "$DEC_DIR"
+mkdir -p "$DEC_DIR"
+chmod 0000 "$DEC_DIR"
+out="$($BIN)"
+chmod 0750 "$DEC_DIR"
+check_status "$out" "decisions:kid-ada" "warn" "decisions: an unreadable directory is a warn"
+rmdir "$DEC_DIR"
 
 # --- --quiet on an all-ok tree prints nothing ---------------------------
 
@@ -900,6 +1104,25 @@ check_contains "$out2" "nothing else to assert" "no profiles, not quiet: names w
 #     disables them again, still needs the package's own units back) ----
 
 check_status "$out2" "units" "ok" "no profiles: units is still checked (not skipped) with zero kids"
+check_status "$out2" "relay-tls" "ok" "no profiles: relay-tls is still checked with zero kids"
+check_status "$out2" "queue" "ok" "no profiles: queue is still checked with zero kids"
+check_status "$out2" "courier-conf" "ok" "no profiles: courier-conf is still checked with zero kids"
+
+# The secret-holding locks are fixed on the zero-kids path too (a leaked key
+# still impersonates the relay to a device paired before the first kid).
+mkdir -p "$SCRATCH_ROOT/etc/omarchy-kids/relay"
+printf 'key' >"$SCRATCH_ROOT/etc/omarchy-kids/relay/key.pem"
+printf 'transport=ntfy\nurl=https://x\ntopic=y\n' >"$SCRATCH_ROOT/etc/omarchy-kids/courier.conf"
+chmod 0777 "$SCRATCH_ROOT/etc/omarchy-kids/relay"
+chmod 0666 "$SCRATCH_ROOT/etc/omarchy-kids/relay/key.pem" "$SCRATCH_ROOT/etc/omarchy-kids/courier.conf"
+out4="$(OMARCHY_KIDS_ETC="$EMPTY_ETC" "$BIN")"
+check_status "$out4" "relay-tls" "fixed" "no profiles: relay-tls is fixed with zero kids"
+check_status "$out4" "courier-conf" "fixed" "no profiles: courier-conf is fixed with zero kids"
+check_eq "$(kids_file_mode "$SCRATCH_ROOT/etc/omarchy-kids/relay/key.pem")" "640" \
+  "no profiles: the key is 0640 after the fix"
+check_eq "$(kids_file_mode "$SCRATCH_ROOT/etc/omarchy-kids/courier.conf")" "600" \
+  "no profiles: the mailbox file is 0600 after the fix"
+rm -rf "$SCRATCH_ROOT/etc/omarchy-kids/relay" "$SCRATCH_ROOT/etc/omarchy-kids/courier.conf"
 
 BOOT_LOGIN_LINK="$SCRATCH_ROOT/etc/systemd/system/multi-user.target.wants/omarchy-kids-boot-login.service"
 rm -f "$BOOT_LOGIN_LINK"

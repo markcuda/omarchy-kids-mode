@@ -79,14 +79,15 @@ verified live, what is open, and which decisions are still waiting.
 
 ## What is here now
 
-Twenty-six `bin/omarchy-kids-*` commands, each with a `--help`; most have their own
+Thirty-three `bin/omarchy-kids*` commands, each with a `--help`; most have their own
 `docs/<command>.md`, the rest documented alongside a related command's page instead. The shared
 shell under `lib/`; the data, policies, Hyprland levels, and Quickshell surfaces under `share/`;
 and `test/all`. [`AGENTS.md`](AGENTS.md)'s Layout table is the map.
 
 ## Rules
 
-MIT, same as Omarchy. Never collects anything about a child; nothing leaves the machine. A way for
-a kid to get around this is a bug: report privately per
+MIT, same as Omarchy. Never collects anything about a child; nothing leaves the machine except to a
+device the parent paired or a server the parent named, and only while notifications are on (I-2).
+A way for a kid to get around this is a bug: report privately per
 [SECURITY.md](SECURITY.md). Everything
 here must work from the keyboard alone. Not affiliated with DHH, 37signals, or the Omarchy project.

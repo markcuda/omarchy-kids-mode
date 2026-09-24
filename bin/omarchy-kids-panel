@@ -30,10 +30,13 @@ WIZARD_BIN="$(kids_bin wizard "$DIR")"
 DATA_BIN="$(kids_bin data "$DIR")"
 REMOVE_BIN="$(kids_bin remove "$DIR")"
 CHECK_BIN="$(kids_bin check "$DIR")"
+NOTIFY_BIN="$(kids_bin notify "$DIR")"
+REVIEW_BIN="$(kids_bin review "$DIR")"
 
 ETC="${OMARCHY_KIDS_ETC:-/etc/omarchy-kids}"
 SYSROOT="${OMARCHY_KIDS_ROOT:-}"
 QUEUE_DIR="$SYSROOT/var/lib/omarchy-kids/queue"
+REVIEW_DIR="$SYSROOT/var/lib/omarchy-kids/reviews/open"
 
 # Interactive: a human's button press is the confirmation, so the default
 # is a real run (review §1.5, docs/panel.md; AGENTS.md rule 8 still holds
@@ -60,7 +63,9 @@ Usage: omarchy-kids-panel [--dry-run] [--apply] [--help]
 
 Everything after the first kid: Home lists every kid with today's minutes and open requests; per
 kid, screen time, web, apps, desktop level, password, and remove; a Requests screen to approve or
-decline what a kid has asked for; and a read-only Machine safety report.
+decline what a kid has asked for; a Notifications screen to turn device notifications on or off and
+pair a device; a Reviews screen for an approved app whose surface changed; and a read-only Machine
+safety report.
 
 Keyboard only: Esc (or "Quit"/"Back") leaves a screen, Ctrl+C leaves the
 whole panel with nothing further changed.
@@ -119,7 +124,11 @@ run_priv() {
   warm_sudo || return 1
   local rc=0 output first last nl=$'\n'
   if [[ "$DRY_RUN" == "1" ]]; then
-    output="$(printf '  [dry-run] sudo'; printf ' %q' "$@"; printf '\n')"
+    output="$(
+      printf '  [dry-run] sudo'
+      printf ' %q' "$@"
+      printf '\n'
+    )"
     printf '%s\n' "$output"
     first="${output%%"$nl"*}"
     first="${first#  }"
@@ -279,6 +288,10 @@ source "$LIB/panel-kid.sh"
 source "$LIB/panel-machine.sh"
 # shellcheck source=lib/panel-home.sh
 source "$LIB/panel-home.sh"
+# shellcheck source=lib/panel-notify.sh
+source "$LIB/panel-notify.sh"
+# shellcheck source=lib/panel-reviews.sh
+source "$LIB/panel-reviews.sh"
 
 # --- main --------------------------------------------------------------------
 

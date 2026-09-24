@@ -1,0 +1,25 @@
+# The parent's desktop notifier (N-9, R-NOTIFY).
+#
+# A user unit, shipped in /usr/lib/systemd/user/ and enabled per session by
+# `omarchy-kids-bar notify-enable` on the same consent as the bar widget: it
+# runs in the parent's own session, holds no privilege, and is not an enforcement
+# path (stopped, or notifications off, a kid is affected in no way). It reads the
+# ask queue and posts one libnotify notification per open request; an action runs
+# omarchy-kids-bar, which opens the parent's own terminal and sudo prompt.
+# docs/notify.md.
+[Unit]
+Description=Kids Mode desktop notifier (R-NOTIFY)
+Documentation=https://github.com/markcuda/omarchy-kids-mode/blob/main/docs/notify.md
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/omarchy-kids-notify-watch
+Restart=on-failure
+RestartSec=5
+# The parent's own session limits already apply; ask for nothing more.
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,54 @@
+#!/bin/bash
+# omarchy:summary=Desktop notification for each new "Ask a parent" request (N-9)
+# omarchy:hidden=true
+# The parent's side, run by systemd --user (systemd/omarchy-kids-notify-watch.user.service):
+# it reads the ask queue and posts one libnotify notification per open request,
+# with Approve/Decline actions that run omarchy-kids-bar. It never decides
+# anything and holds no privilege. The logic is lib/notify_watch.py; see
+# docs/notify.md.
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+LIB="$DIR/lib"
+[[ -f "$LIB/kids.sh" ]] || LIB=/usr/lib/omarchy-kids
+# shellcheck source=lib/kids.sh
+source "$LIB/kids.sh"
+
+SYSROOT=""
+QUEUE_DIR="$SYSROOT/var/lib/omarchy-kids/queue"
+REVIEW_DIR="$SYSROOT/var/lib/omarchy-kids/reviews/open"
+STATE_FILE=""
+BAR_BIN="$(kids_bin bar "$DIR")"
+
+for arg in "$@"; do
+  case "$arg" in
+    -h | --help)
+      cat <<'EOF'
+Usage: omarchy-kids-notify-watch [--once] [--no-actions] [--interval SECONDS]
+
+Show a desktop notification for each open "Ask a parent" request. Meant to run as
+the parent's user unit (systemd/omarchy-kids-notify-watch.user.service), started
+by "omarchy-kids-bar notify-enable"; it holds no privilege and decides nothing.
+
+  --once            Do one poll and exit (a test or a one-shot).
+  --no-actions      Force the plain notify-send fallback (no buttons).
+  --interval N      Seconds between polls (default 15).
+  -h, --help        Show this help and exit.
+EOF
+      exit 0
+      ;;
+  esac
+done
+
+if [[ -z "$STATE_FILE" ]]; then
+  # No /tmp fallback: a kid-writable directory would let a pre-created name make
+  # the watcher's state write fail (or suppress a notification) for good.
+  if [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
+    echo "omarchy-kids-notify-watch: XDG_RUNTIME_DIR is unset; run it from a session, not by hand" >&2
+    exit 2
+  fi
+  STATE_FILE="$XDG_RUNTIME_DIR/omarchy-kids-notify-watch.state"
+fi
+
+exec "$KIDS_PY" "$LIB/notify_watch.py" \
+  --queue "$QUEUE_DIR" --reviews "$REVIEW_DIR" --state "$STATE_FILE" --bar "$BAR_BIN" "$@"

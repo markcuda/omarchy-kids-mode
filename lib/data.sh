@@ -20,6 +20,10 @@ data_py() {
 
 data_kid_dir() { printf '%s/%s\n' "$DATA_VARLIB" "$1"; }
 data_usage_dir() { printf '%s/usage\n' "$(data_kid_dir "$1")"; }
+
+# data_decisions_dir KID -- the kid's own copies of their decided requests,
+# written by lib/ask.py (R-NOTIFY-6); pruned by retention with the queue.
+data_decisions_dir() { printf '%s/decisions\n' "$(data_kid_dir "$1")"; }
 data_launches_file() { printf '%s/launches.log\n' "$(data_kid_dir "$1")"; }
 data_launches_offset_file() { printf '%s/launches.offset\n' "$(data_kid_dir "$1")"; }
 data_home_dir() { printf '%s/%s\n' "$DATA_HOMES_BASE" "$1"; }

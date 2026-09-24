@@ -161,8 +161,11 @@ Two calls worth spelling out:
 Provisioning and `omarchy-kids-assert` write `/etc/omarchy-kids/launchers/<account>.json` as
 root-owned, mode 0644. It is derived from the band pack and the effective allowlist after hidden
 and extra entries are applied. Each tile has display metadata plus an `argv` array. Desktop-entry
-`Exec=` lines are parsed during this root-side write, field codes are removed, and the executable
-is resolved to an absolute path. Pack fallbacks are also resolved to absolute paths at that time.
+`Exec=` lines are parsed during this root-side write, field codes are removed, and the executable is
+resolved to an absolute path on the session's `PATH`; a pack fallback is resolved the same way. The
+resolved file is then refused unless it is root-owned and not group- or other-writable
+(`lib/launcher-map.sh`), which is the fence that matters: a PATH a kid can set can make a tile
+absent, never point it at the kid's own binary.
 
 The kid's runtime launcher JSON contains display metadata only; it never contains `exec` or `argv`.
 The Level 1 launcher receives an id from that JSON, looks up the same id in the root-owned map, and

@@ -61,7 +61,7 @@ ALLOWED=(
   OMARCHY_KIDS_LAUNCHER_CONTROL  # the kid's own control file, same dir
   OMARCHY_KIDS_LAUNCHER_JSON     # the kid's own tile list, same dir
   OMARCHY_KIDS_PLUGIN_INDEX      # marketplace index path (root-only command)
-  OMARCHY_KIDS_APPLICATIONS_DIRS # .desktop search path; a tile's own label only
+  OMARCHY_KIDS_APPLICATIONS_DIRS # the .desktop search path for a kid's app surfaces (omarchy-kids-apps)
   OMARCHY_KIDS_LUKS_DEVICE       # which block device (root-only command)
   OMARCHY_KIDS_UKI               # which boot image to inspect (read-only check)
   OMARCHY_KIDS_UID_MAP           # test fixture for uid->account, root-only path
@@ -129,6 +129,44 @@ for name in "${read_names[@]}"; do
   fi
 done
 ((unlisted == 0)) && ok "trust boundary: every OMARCHY_KIDS_* read in bin/ and lib/ is allowlisted (${#read_names[@]} names)"
+
+# The OMARCHY_KIDS_* scan above also matches python (os.environ.get / getenv).
+# A non-namespaced environment read is the same hazard under a plain name, and
+# the only ones this package may make are systemd's socket-activation contract,
+# read once and then popped (bin/omarchy-kids-authd and bin/omarchy-kids-wifid).
+# A new one fails here.
+PY_ALLOWED=(
+  LISTEN_PID # sd_listen_fds: these are the systemd-activated daemons
+  LISTEN_FDS # how many sockets systemd passed
+  PATH       # lib/conf.py's desktop-argv; its only caller applies the executable fence
+)
+# Every python source the package ships, derived from its shebang (a hand-written
+# list had the courier in and wifid out), plus lib/*.py.
+PY_FILES=(lib/*.py)
+while IFS= read -r f; do PY_FILES+=("$f"); done < <(
+  grep -lE '^#!.*python' bin/omarchy-kids* 2>/dev/null
+)
+py_env_reads=()
+while IFS= read -r name; do
+  [[ -n "$name" ]] || continue
+  py_env_reads+=("$name")
+done < <(
+  grep -rhoE 'os\.environ\[?"[A-Za-z_][A-Za-z0-9_]*"|os\.environ\.get\("[A-Za-z_][A-Za-z0-9_]*"|getenv\("[A-Za-z_][A-Za-z0-9_]*"' "${PY_FILES[@]}" 2>/dev/null |
+    grep -oE '"[A-Za-z_][A-Za-z0-9_]*"' | tr -d '"' | sort -u
+)
+py_unlisted=0
+for name in "${py_env_reads[@]}"; do
+  [[ "$name" == OMARCHY_KIDS_* ]] && continue # covered and allowed above
+  listed=0
+  for a in "${PY_ALLOWED[@]}"; do [[ "$a" == "$name" ]] && listed=1; done
+  if ((listed == 0)); then
+    bad "trust boundary: the python side reads \$$name from the environment, which is not in PY_ALLOWED.
+     If it cannot select code, a path a check reads, or a root check, add it
+     above with a one-line why. Otherwise: delete it."
+    py_unlisted=1
+  fi
+done
+((py_unlisted == 0)) && ok "trust boundary: the python side's only environment reads are allowlisted (${#py_env_reads[@]} names)"
 
 # Kid-facing commands have a stricter boundary: scratch path variables are
 # root/test seams only, never safe inputs to a command a kid can run.

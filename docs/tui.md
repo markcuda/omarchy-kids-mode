@@ -59,6 +59,11 @@ two ways, decided once per call by `_tui_card_mode`:
 Nothing about the *data* a screen passes changes between the two — a caller never knows or cares
 which one is rendering. Only `lib/tui.sh` itself branches on `_tui_card_mode`.
 
+**The body goes to `gum style` on stdin, never as an argument** (`_tui_style`). A card body can
+carry a secret — P6's single-use pairing code — and any argument is readable from
+`/proc/<pid>/cmdline` by another local session for as long as `gum` runs. `gum style` accepts its
+text on stdin, so this is one line in the one place `gum style` is called.
+
 ### A screen's facts belong in the card
 
 Card mode clears the terminal at every step, so anything a caller prints *before* a screen is

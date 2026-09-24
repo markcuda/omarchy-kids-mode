@@ -1,0 +1,12 @@
+[Unit]
+Description=Send the state to the parent's server on a timer (SPEC.md R-NOTIFY-8)
+Documentation=https://github.com/markcuda/omarchy-kids-mode/blob/main/docs/courier.md
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Unit=omarchy-kids-relay-courier.service
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
