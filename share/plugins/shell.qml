@@ -1,6 +1,6 @@
 // shell.qml -- the read-only kids-plugins shelf overlay, exec'd from the
 // Level 1 launcher's "More apps" tile (SPEC.md R-APPS-7; I-5, I-6; issue #28).
-// Never run against a real Quickshell -- see docs/plugins.md for what's unconfirmed.
+// Live-verified empty on the VM 2026-09-21; docs/plugins.md has what's confirmed and what is not.
 
 import QtQuick
 import Quickshell
