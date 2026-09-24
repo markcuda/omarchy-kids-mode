@@ -32,16 +32,17 @@ Live status (2026-09-21, try-omarchy aarch64 VM, real SDDM logins; see
 `docs/dogfood-2026-09-21.md`): **Level 1 and Level 2 have both run against a real Hyprland and
 Quickshell.** Level 1 verified the fullscreen grid, keyboard navigation, launch, the exit modal,
 and the portal after logout; Level 2 verified the desktop hint layer and the windowed searchable
-picker. Still open from the checklist below: two apps open side by side, and every
-`share/wifi/shell.qml` claim (unchanged). The Level 2 `Super+K` cheat sheet was checked live on
-2026-09-22 and **does nothing there**: `omarchy-menu-keybindings` summons its menu with
-`omarchy-shell shell summon`, which needs a running Omarchy shell, and a Level 2 session runs the
-kids launcher instead (only Level 3's start hook runs `omarchy-launch-shell`); the command also
-fails first in that session on the unset `$OMARCHY_PATH` ("OMARCHY_PATH is not set", exit 1). The
-bind is Appendix E's, so it stays, but it is inert at Level 2, and its `--print` mode (which does
-print the live binds as text) has no kid surface to show it -- a kid-side cheat sheet is an open
-decision. Level 3's cheat sheet works, as the dogfood pass recorded. The stock desktop (Level 3)
-remains unverified on a real box (`share/menu/omarchy-kids-trimmed.jsonc` is an admitted guess).
+picker. Two apps open side by side was checked live on 2026-09-22 (Blinken and KTuberling, 446x496
+each at 960x540, and `Super+Shift+Left` swapped them), so it is no longer open; still open from the
+checklist below: every `share/wifi/shell.qml` claim (unchanged). The Level 2 `Super+K` cheat sheet
+was checked live on 2026-09-22 and **does nothing there**: `omarchy-menu-keybindings` summons its
+menu with `omarchy-shell shell summon`, which needs a running Omarchy shell, and a Level 2 session
+runs the kids launcher instead (only Level 3's start hook runs `omarchy-launch-shell`); the command
+also fails first in that session on the unset `$OMARCHY_PATH` ("OMARCHY_PATH is not set", exit 1).
+The bind is Appendix E's, so it stays, but it is inert at Level 2, and its `--print` mode (which
+does print the live binds as text) has no kid surface to show it -- a kid-side cheat sheet is an
+open decision. Level 3's cheat sheet works, as the dogfood pass recorded. The stock desktop (Level
+3) remains unverified on a real box (`share/menu/omarchy-kids-trimmed.jsonc` is an admitted guess).
 
 ## The files
 

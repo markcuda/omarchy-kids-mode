@@ -21,7 +21,8 @@ Omarchy's first-run provisioning. Full Mac suite green (52 files, five environme
 **Fixed on a topic branch awaiting merge:** `docs/levels-l2-cheat-sheet-inert` -- live check found
 Level 2's `Super+K` cheat sheet does nothing (the Omarchy menu needs the Omarchy shell, which Level
 2 does not run); the docs and `L2.lua`'s comment now say so and record a kid-side cheat sheet as an
-open decision.
+open decision. `docs/levels-two-apps-verified` (stacked on it) records the 2026-09-22 live check
+that two apps do tile side by side at Level 2, closing that open item in `docs/levels.md`.
 
 **The loop (restart and use):** the unattended protocol is `.opencode/loop-prompt.md` (dogfood
 first, then the backlog); the VM recipe (ssh wrapper, guest sudo, level switching, QMP keys,

@@ -1012,3 +1012,15 @@ for the owner; this is the one I-6/spec tension the loop has hit, noted rather t
 
 (The earlier "actionable backlog is exhausted" entry stands for everything else the loop can reach
 without the owner.)
+
+### 2026-09-22, loop iteration: two apps side by side, verified at last
+
+Dogfooded the next behaviour `docs/levels.md` still listed as open: launched Blinken and KTuberling
+from the Level 2 picker, and `hyprctl clients` shows them tiled 446x496 each at 960x540 (Appendix
+E's 50/50 dwindle split with the stock gaps; neither self-fullscreens), with `Super+Shift+Left`
+swapping them (KTuberling 22,22 -> 492,22, Blinken the other way). That closes the "two apps open
+side by side" item the 2026-09-21 pass had to leave uncaptured. No code changed -- the behaviour
+was already right -- so the fix is the record: `docs/levels.md` no longer lists it as open, and the
+dated dogfood report gets the follow-up. `test/all` green. Branch
+`docs/levels-two-apps-verified`, stacked on `docs/levels-l2-cheat-sheet-inert` (both edit
+`docs/levels.md`). The kid's time was granted 30 min afterwards to keep the box usable.
