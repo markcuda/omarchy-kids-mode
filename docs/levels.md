@@ -29,12 +29,15 @@ What each level binds, how the Level 1/2 big-tile launcher gets its tiles, and h
 of this on the test laptop's VM.
 
 Live status (2026-09-21, try-omarchy aarch64 VM, real SDDM logins; see
-`docs/dogfood-2026-09-21.md`): **Level 1 and Level 2 have both run against a real Hyprland and
+`docs/dogfood-2026-09-21.md`): **Levels 1, 2 and 3 have all run against a real Hyprland and
 Quickshell.** Level 1 verified the fullscreen grid, keyboard navigation, launch, the exit modal,
-and the portal after logout; Level 2 verified the desktop hint layer and the windowed searchable
-picker. Still open from the checklist below: two apps open side by side, the `Super+K` cheat
-sheet, and every `share/wifi/shell.qml` claim (unchanged). The stock desktop (Level 3) remains
-unverified on a real box (`share/menu/omarchy-kids-trimmed.jsonc` is an admitted guess).
+and the portal after logout; Level 2 the desktop hint layer and the windowed searchable picker;
+Level 3 the stock Omarchy desktop with the menu extension's `when: "false"` rows hiding
+Install/Remove/Update/Setup (only Apps/Learn/Trigger/Style/About — the `l3-menu.png` capture is
+kept on the Mac, not in the repo), no first-run provisioning, and two apps tiled side by side. Still open from the checklist below:
+every `share/wifi/shell.qml` claim (unchanged), the owner question whether Level 3 keeps the
+file-manager bind under `menu=trimmed`, and Level 2's own two-app tiling and `Super+K` cheat sheet
+(the 2026-09-21 two-app and cheat-sheet checks were at Level 3, under stock bindings).
 
 ## The files
 
@@ -47,7 +50,7 @@ unverified on a real box (`share/menu/omarchy-kids-trimmed.jsonc` is an admitted
 | `bin/omarchy-kids-session-start` | Runs once per session from each level file's `exec-once`; reads the validated manifest and starts the right surface for the level |
 | `bin/omarchy-kids-launcher-ctl` | What the Hyprland binds call to show/activate the launcher, so the Lua files don't need Quickshell IPC details |
 | `bin/omarchy-kids-exit`, `bin/omarchy-kids-super-tap`, `share/exit-modal/shell.qml` | The exit modal for Super+Shift+K and the triple-tap (R-EXIT-1); see `docs/exit.md` |
-| `share/menu/omarchy-kids-trimmed.jsonc` | Best-effort omarchy-menu extension for R-DESK-4 (Install/Update/Setup hidden at Levels 1-2) |
+| `share/menu/omarchy-kids-trimmed.jsonc` | The omarchy-menu user extension (verified merge shape) that hides Install/Remove/Update/Setup on a `menu=trimmed` kid's Level 3 stock desktop (R-DESK-4) |
 
 Deployment (R-DESK-1): the package installs these under `/usr/share/omarchy-kids/hyprland/` and
 `/usr/share/omarchy-kids/launcher/`; provisioning copies or links them to
@@ -80,10 +83,15 @@ set; nothing more, nothing less.
 `default.hypr.looknfeel`'s own `general.layout = "dwindle"` / `dwindle.preserve_split = true`,
 which Level 2 requires (see below) and which already gives that behavior for two tiled windows.
 
-**Level 3.** `require("default.hypr.omarchy")` — the same defaults a grown-up's Hyprland session
-gets — then `hl.unbind("SUPER + RETURN")` (the terminal bind, assumed from convention; see
-**Open questions** below) and `o.bind("SUPER + SHIFT + K", ...)` for the exit overlay.
-`omarchy-sudo-passwordless` is **not** removed by this file; see Open questions.
+**Level 3.** The stock Omarchy modules required individually — bindings (media, clipboard, tiling,
+utilities, voxtype, optional applications), envs, looknfeel, input, windows — but **not** the
+`default.hypr.omarchy` umbrella, which also pulls in `default.hypr.autostart` and its per-session
+`omarchy-provision-first-run` (`fix/level3-no-parent-autostart`; the session's own start hook runs
+the shell instead). Then `hl.unbind("SUPER + RETURN")` — under this config `hyprctl binds` lists
+no such bind (L3.lua's header); that does not separate "stock never binds it" from "stock binds it
+and the unbind worked" — and `o.bind("SUPER + SHIFT + K", ...)` for the exit overlay. The old worry about `omarchy-sudo-passwordless` was the autostart's provisioning,
+which this file no longer requires; whether a keybind of that name exists at all is still open
+(item 2).
 
 ## What Level 1/2 do and don't require from Omarchy's defaults (I-3)
 
@@ -217,35 +225,51 @@ run the file against.
 
 ## Open questions / what could not be verified without Hyprland or Quickshell
 
+Live status (2026-09-21, `docs/dogfood-2026-09-21.md`): **item 5 is answered for Levels 1 and 2,
+and item 8's column model holds on a real surface.** Both configs loaded on a real Hyprland with no
+parse errors; the launcher read its manifest and control file, launched apps, moved the highlight
+with the arrows and rendered real icons through `Quickshell.iconPath()`; the Level 2 picker and
+desktop layer rendered as sibling Quickshell windows (the `PanelWindow`/desktop-mode shapes are
+real API). The live output there is 876x491 and the grid drew exactly the four columns `gridnav.js`
+computes for that width. The Level 3 pass then ran the stock desktop itself (live status above).
+Still open: item 2 (whether an `omarchy-sudo-passwordless` keybind exists at all), item 3
+(`fullscreen = true`'s exact form), item 4 (`hl.unbind`'s signature, Level 3 only), item 7
+(whether Omarchy ships its own volume/brightness wrappers), and item 8's exact per-row layout on
+unusual geometries. Item 1 is checked and item 6 is verified; item 5 was confirmed on 2026-09-03.
+
 This repo had two of Omarchy's real `default.hypr.bindings.*` files to check syntax against
 (`bindings-tiling.lua`, `bindings-utilities.lua`) and a handful of other `default.hypr.*` files,
-but no live Hyprland, no Quickshell, and no `default.hypr.bindings.applications` (where terminal
-launching and, per Appendix E, "omarchy-sudo-passwordless" are presumably bound). Everything
-below needs a real Omarchy 4.0.2 box or the VM to close out:
+but no live Hyprland, no Quickshell, and no `default.hypr.bindings.applications` while it was
+written. The 2026-09-21 VM pass then answered several items below; what remains needs a real box or
+another look:
 
-1. **The exact Level 3 terminal-launching bind(s).** L3.lua unbinds `SUPER + RETURN` on the
-   near-universal Hyprland/tiling-WM convention that Super+Return opens a terminal — not
-   confirmed against Omarchy's actual bindings. Run `omarchy-menu-keybindings` or `hyprctl binds`
-   on a real box and correct the list in `share/hyprland/L3.lua` (there may be more than one
-   terminal-launching bind, e.g. a second terminal or a file manager, also gated by
-   `menu=trimmed`).
-2. **`omarchy-sudo-passwordless`.** Deliberately not touched. It may not be a keybind at all —
-   `default.hypr.autostart` (the file this repo calls `hypr-autostart.lua`) calls
-   `omarchy-provision-first-run` on every `hyprland.start`, which sounds like a more likely place
-   for a first-run passwordless-sudo convenience to live than a key someone presses. If that's
-   right, Level 3 requiring `default.hypr.omarchy` re-runs that provisioning for the kid too,
-   which the Appendix G bypass matrix ("Kid runs sudo → No grant") says must never happen. This
-   needs confirming on a real box, and probably belongs to whatever issue owns
-   `omarchy-provision-first-run` or Level 3 session hardening, not this one.
+1. **The exact Level 3 terminal-launching bind(s) -- checked 2026-09-21.** `omarchy-menu-keybindings`
+   on the VM lists the stock L3 binds, including `SUPER + SHIFT + RETURN` (Browser) and
+   `SUPER + SHIFT + F` (File manager); only terminal-launching binds are trimmed under
+   `menu=trimmed` (Appendix E). L3.lua still unbinds `SUPER + RETURN`: its header records that
+   under L3.lua `hyprctl binds` lists no such bind, which does not separate "stock never binds it"
+   from "stock binds it and the unbind worked". Try `Super+Return` and confirm nothing launches.
+   Whether the file-manager bind should also go under `menu=trimmed` is an owner question
+   (`docs/dogfood-2026-09-21.md`).
+2. **`omarchy-sudo-passwordless`.** Deliberately not touched. The worry that a Level 3 session
+   re-runs Omarchy's first-run provisioning -- a likely home for such a convenience -- is answered:
+   L3.lua no longer requires `default.hypr.omarchy` (`fix/level3-no-parent-autostart`), and the
+   2026-09-21 Level 3 pass saw no `omarchy-provision-first-run`, `udiskie` or migration line in
+   the kid's journal. Whether an `omarchy-sudo-passwordless` keybind exists at all remains
+   unconfirmed on a real box.
 3. **`fullscreen = true` as a windowrule.** Modeled on the one confirmed boolean windowrule flag
    in the reference material (`{ no_focus = true }` in `default.hypr.windows`). Could be
-   `{ fullscreen = "1" }` or something dispatcher-shaped instead; check with `hyprctl clients` on
-   a Level 1/2 session.
+   `{ fullscreen = "1" }` or something dispatcher-shaped instead: the Level 1/2 pass did not
+   exercise it, because the launcher fullscreens itself (`share/launcher/shell.qml`'s
+   `Window.FullScreen`) and GCompris asks for `fullscreen: 2` of its own accord, so no
+   non-self-fullscreening client has been seen under the rule. Check with `hyprctl clients`.
 4. **`hl.unbind`'s signature.** Assumed to take the same key-combo string `o.bind`'s first
    argument does. `bindings-utilities.lua`'s comment on its selection-layer binds describes
    unbinding by key as risky only because it can strip a *user's own* rebinding from their
    personal `~/.config/hypr` files — L3.lua has no such layer (R-DESK-6), so that risk doesn't
-   apply here, but the call signature itself is still unverified.
+   apply here, but the call signature itself is still unverified. The L3 config loaded live on
+   2026-09-21 without an error from it; whether the unbind actually removes a bind remains
+   unshown.
 5. **Historical launcher API questions (predating #200).** #200 uses the documented
    `Process.startDetached()` lifecycle, a sibling background `PanelWindow`, and Hyprland
    0.56 `hyprctl dispatch 'hl.dsp.focus({window=...})'` for the picker. The old fullscreen/focuswindow
@@ -257,8 +281,11 @@ below needs a real Omarchy 4.0.2 box or the VM to close out:
      windowrule as every other Level 1/2 app (`share/hyprland/L1.lua`'s
      `o.window(".*", { fullscreen = true })`) and reachable by `hyprctl dispatch focuswindow`
      (`bin/omarchy-kids-launcher-ctl`) — sidesteps needing Quickshell's IPC system at the cost of
-     not being a "real" always-on-top overlay. If Quickshell requires `PanelWindow` for anything
-     it loads, or an always-on-top overlay is wanted after all, this is the piece to redo.
+     not being a "real" always-on-top overlay. The "fullscreened by the same windowrule" sentence
+     above was never accurate: the launcher has set `visibility: Window.FullScreen` since it was
+     written (`7d5ddeb`), so the windowrule is not needed to fullscreen it (item 3). If Quickshell
+     requires `PanelWindow` for anything it loads, or an always-on-top overlay is wanted after
+     all, this is the piece to redo.
    - **`Quickshell.Io.FileView`** — whether `reload()`/`text()` exist with those names, and how a
      missing file is reported (assumed to throw or return empty, not crash the shell).
    - **`Quickshell.Io.Process`** — whether `command`/`running` are real properties and
@@ -269,22 +296,27 @@ below needs a real Omarchy 4.0.2 box or the VM to close out:
    Confirmed live 2026-09-03 (see "Verified live" below): the launcher renders, arrow/Enter
    navigation and launching work. Still open: whether the plain-`Window` choice above is worth
    revisiting for a true always-on-top guarantee.
-6. **`omarchy-kids-trimmed.jsonc`'s schema.** No omarchy-menu extension documentation or source
-   was available. The "hide": [...] shape in `share/menu/omarchy-kids-trimmed.jsonc` is a guess.
-   Independent of whether it's supported, R-DESK-4 still holds at the keybinding level: Level 1
-   runs no bar/shell at all, and Level 2 never binds anything to `"omarchy-menu toggle"`
-   (`Super+Space` is rebound to the kids' own launcher instead), so there's no keyboard path to
-   the untrimmed menu at either level regardless of whether the extension's hiding works.
+6. **`omarchy-kids-trimmed.jsonc`'s schema -- VERIFIED 2026-09-21.** omarchy-menu is a Quickshell
+   plugin that merges the user extension at `$HOME/.config/omarchy/extensions/omarchy-menu.jsonc`
+   into the stock entries by id, field by field (`MenuModel.mergeMenuSources`), and hides an entry
+   whose `when:` expression is false; the file now uses that shape (the same id with
+   `when: "false"`), not the old guessed "hide" list. `fix/level3-menu-trim` rewrote it and the
+   live Level 3 pass saw only Apps/Learn/Trigger/Style/About. R-DESK-4 also holds at the
+   keybinding level independently: Level 1 runs no bar/shell at all, and Level 2 never binds
+   anything to `"omarchy-menu toggle"` (`Super+Space` is rebound to the kids' own launcher), so
+   there is no keyboard path to the untrimmed menu at either level. The trim is presentation, not
+   a lock: the kid's own account still refuses every action behind a hidden row (I-3).
 7. **Volume/brightness keys** use `wpctl`/`brightnessctl` directly rather than an
    Omarchy-specific wrapper, since none was in the reference material. If Omarchy ships its own
    (e.g. for on-screen-display feedback), swap them in.
-8. **GridView's real column layout (issue #43).** `share/launcher/gridnav.js`'s `columnsFor()`
-   assumes GridView lays tiles out at exactly `Math.floor(grid.width / grid.cellWidth)` per row —
-   standard QtQuick GridView behavior in general, but not confirmed against this Quickshell 0.3.1
-   build specifically, and `grid.width`/`grid.cellWidth`'s real values at the VM's 1280x800
-   weren't rechecked after this fix. If the real layout disagrees, `columnsFor()` is the one place
-   to correct — both the GridView and the key navigation read that same value, so a fix there
-   fixes both at once instead of two places drifting apart again.
+8. **GridView's real column layout (issue #43) -- holds at the tested sizes.**
+   `share/launcher/gridnav.js`'s `columnsFor()` assumes GridView lays tiles out at exactly
+   `Math.floor(grid.width / grid.cellWidth)` per row. The 2026-09-21 pass drew exactly its four
+   columns at the VM's 876x491, and 2026-09-03 saw ten tiles at five per row at 1280x800, so the
+   model matches the real surface at those sizes; unusual geometries are still unchecked. If the
+   real layout disagrees, `columnsFor()` is the one place to correct — both the GridView and the
+   key navigation read that same value, so a fix there fixes both at once instead of two places
+   drifting apart again.
 
 ## Verify in the VM
 
@@ -306,7 +338,8 @@ scripts copied to their spec-required paths and made root-owned):
    `Super+Enter` opens whatever tile is highlighted without needing the launcher already focused.
 4. `Super+Q` closes the focused app; `Super+Shift+K` opens the exit modal (`docs/exit.md`).
 5. Repeat for `L2.lua` (focus/swap/cheat sheet) and `L3.lua` (real Omarchy desktop minus the
-   terminal bind — try `Super+Return` and confirm nothing launches).
+   terminal bind — try `Super+Return` and confirm nothing launches; `hyprctl binds` under L3.lua
+   lists no such bind, which is the expected outcome either way).
 6. Confirm the manifest-selected band overlay makes the cursor visibly larger and GTK/Qt apps
    render bigger.
 7. Issue #42: on a box where pack apps are missing, confirm the manifest marks them
