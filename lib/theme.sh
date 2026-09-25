@@ -123,10 +123,27 @@ theme_geometry() {
 
 # theme_current_name -- theme_dir's own theme.name, plain one-line file.
 # Empty, not an error, if that account has never received a theme.
+# The read is a root process opening a file inside a kid's home (rule 9), so it
+# goes through O_NOFOLLOW + a regular-file check: a FIFO or a symlink a kid
+# plants must never hang the assert or follow to another file. Empty on any
+# error. `theme_geometry` is the same shape for the portal (lib/theme-geometry.py).
 theme_current_name() {
   local f
   f="$(dirname "$(theme_dir)")/theme.name"
-  [[ -r "$f" ]] && cat "$f" || true
+  "$KIDS_PY" -c 'import os, stat, sys
+p = sys.argv[1]
+try:
+    fd = os.open(p, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0))
+except OSError:
+    sys.exit(0)
+try:
+    if not stat.S_ISREG(os.fstat(fd).st_mode):
+        sys.exit(0)
+    data = os.read(fd, 4096)
+finally:
+    os.close(fd)
+sys.stdout.write(data.decode("utf-8", "replace").strip() + "\n")
+' "$f" 2>/dev/null || true
 }
 
 # theme_list_installed -- every name under $OMARCHY_PATH/themes and the

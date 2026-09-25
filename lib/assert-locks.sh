@@ -120,7 +120,13 @@ theme_ok() {
 theme_fix() {
   local account="$1" expected
   expected="$(profile_field "$account" theme)"
-  [[ -n "$expected" ]] || return 0
+  if [[ -z "$expected" ]]; then
+    # No default to apply: report it, do not claim a fix that changed nothing
+    # (I-6). Reachable only when the profile has no theme and the name is
+    # outside the offered set.
+    echo "theme_fix: $account has no theme override to apply" >&2
+    return 1
+  fi
   theme_apply_for "$account" "$expected"
 }
 

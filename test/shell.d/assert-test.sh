@@ -912,6 +912,20 @@ out="$("$BIN" 2>&1)"
 check_status "$out" "theme:kid-ada" "ok" "theme: an in-set kid-chosen theme passes the lock (T44)"
 check_eq "$(cat "$KID_THEME_NAME_FILE")" "cozy-night" "theme: the in-set choice is not reverted (T44)"
 
+# Review finding: a profile with no theme override, and an out-of-set theme.name,
+# has no default to re-apply -- the lock must report FAIL, not a no-op "fixed".
+cp "$ETC/kids/kid-ada.conf" "$TMP/kid-ada.theme-bak"
+grep -v '^theme=' "$ETC/kids/kid-ada.conf" >"$ETC/kids/kid-ada.conf.tmp" &&
+  mv "$ETC/kids/kid-ada.conf.tmp" "$ETC/kids/kid-ada.conf"
+echo "some-other-theme" >"$KID_THEME_NAME_FILE"
+out="$("$BIN" 2>&1)"
+check_status "$out" "theme:kid-ada" "FAIL" "theme: an out-of-set name with no profile default FAILs (not a no-op fix)"
+cp "$TMP/kid-ada.theme-bak" "$ETC/kids/kid-ada.conf"
+# leave the theme in-set again, and settle the session manifest my conf edit
+# rebuilt, so later sections' only_this_lock_changed stays clean
+echo "tokyo-night" >"$KID_THEME_NAME_FILE"
+"$BIN" >/dev/null 2>&1
+
 # launcher map: a damaged root map is rebuilt from the pack and contains
 # absolute argv with desktop-entry field codes already removed.
 MAP_FILE="$ETC/launchers/kid-ada.json"
