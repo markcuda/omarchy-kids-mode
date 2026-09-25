@@ -154,6 +154,23 @@ check_contains "$(jq -c '.URLAllowlist' <<<"$out")" "example-approved.org" "rend
 count="$(jq -r '[.URLAllowlist[] | select(. == "pbskids.org")] | length' <<<"$out")"
 check "$count" "1" "render 6-8 --allow: pbskids.org is not duplicated"
 
+# --- garden bands land in the garden, not on Chromium's Google NTP ------
+# (issue #6). The start page is derived by render_policy_json from the
+# band's own starter list, so there is no second list to drift: the first
+# host of lists/<band>.txt is the front door, both for a cold start
+# (RestoreOnStartupURLs, which `launch` also passes as its argv URL) and
+# for a new tab (NewTabPageLocation).
+for band in 6-8 9-12; do
+  out="$("$BIN" render "$band")"
+  check "$(jq -r '.RestoreOnStartup' <<<"$out")" "1" "render $band: RestoreOnStartup=1 (open a list of URLs, not the NTP)"
+  check "$(jq -c '.RestoreOnStartupURLs' <<<"$out")" '["https://pbskids.org/"]' "render $band: the band's first allowed host is the start page"
+  check "$(jq -r '.NewTabPageLocation' <<<"$out")" "https://pbskids.org/" "render $band: a new tab opens in the garden too"
+done
+check "$(jq -r 'has("RestoreOnStartupURLs")' <<<"$("$BIN" render 3-5)")" "false" "render 3-5: no start page (there is no browser to start)"
+check "$(jq -r 'has("RestoreOnStartupURLs")' <<<"$("$BIN" render 13+)")" "false" "render 13+: no start page (filtered has no list to derive one from)"
+out="$("$BIN" render 6-8 --allow "$ALLOW_FILE")"
+check "$(jq -c '.RestoreOnStartupURLs' <<<"$out")" '["https://pbskids.org/"]' "render 6-8 --allow: a kid's own approved sites do not move the front door"
+
 # --- 13+ (filtered): neither key, --allow refused ----------------------
 out="$("$BIN" render 13+)"
 check "$(jq -r 'has("URLBlocklist")' <<<"$out")" "false" "render 13+: no URLBlocklist key (R-WEB-3: filtered adds neither)"
@@ -253,7 +270,7 @@ expected_joined="$(printf '%s\n' "${EXPECTED_LAUNCH_ARGV[@]}")"
 argv_out="$(OMARCHY_KIDS_WEB_NO_EXEC=1 "$BIN" launch 2>&1)"
 st=$?
 check_status "$st" 0 "launch: exits 0"
-check "$argv_out" "$expected_joined" "launch: exact exec argv, no URL"
+check "$argv_out" "$expected_joined"$'\n'"https://pbskids.org/" "launch: with no URL the band's own start page is opened last, not Chromium's NTP (issue #6)"
 check_not_contains "$argv_out" "--load-extension" "launch: never --load-extension (issue #44)"
 
 argv_out_url="$(OMARCHY_KIDS_WEB_NO_EXEC=1 "$BIN" launch https://pbskids.org 2>&1)"

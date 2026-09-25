@@ -121,8 +121,11 @@ store/feature flags from `share/policy/chromium-flags.conf` (the same four lines
 `--load-extension` line — this repo's own copy of that file), then `--no-first-run
 --no-default-browser-check --hide-crash-restore-bubble --disable-session-crashed-bubble`, then
 `URL` if one was given on the command line, else the band's rendered policy's
-`RestoreOnStartupURLs[0]` if it ever defines one (none of today's four band templates do — see
-`share/policy/README.md`). The last two flags exist because Finish (`bin/omarchy-kids-exit`,
+`RestoreOnStartupURLs[0]`, which the garden bands (6-8, 9-12) now define — `render_policy_json`
+derives it from the first host of that band's own starter list, so the tile opens in the garden
+instead of on Chromium's Google-branded new-tab page (issue #6; `none` and `filtered` bands define
+none, so their launch opens Chromium's own default — see `share/policy/README.md`). The last two
+flags exist because Finish (`bin/omarchy-kids-exit`,
 R-EXIT-1) ends the Hyprland compositor while Chromium is still running mid-session, so without
 them the *next* launch shows Chromium's own "Restore pages? Chromium didn't shut down correctly"
 crash bubble instead of a clean start.
@@ -247,8 +250,8 @@ docs/web.md for how a parent edits the lists.
       --disable-session-crashed-bubble (the last two: Finish ends the
       compositor mid-session, so the next launch otherwise shows
       Chromium's "Restore pages?" crash bubble), then URL if given, else
-      the band's `RestoreOnStartupURLs[0]` if its rendered policy
-      defines one. Refuses to start (exit 1) if the band's installed
+      the band's `RestoreOnStartupURLs[0]` — the garden bands' own first
+      starter host (issue #6). Refuses to start (exit 1) if the band's installed
       managed-policy file isn't readable (R-WEB-4: never launch
       Chromium unmanaged). The band comes from $OMARCHY_KIDS_BAND, or
       `omarchy-kids-conf get $OMARCHY_KIDS_ACCOUNT band` if unset --
