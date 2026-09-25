@@ -63,8 +63,16 @@ RE_REVIEW_ID = re.compile(r"\A[a-z_][a-z0-9_-]*\.[0-9a-f]{16}\Z")
 # own sentinel), which is exactly what that command writes.
 RE_SEEN = re.compile(r"\A([0-9a-f]{64}|missing)\Z")
 DEVICE_FIELDS = ("id", "name", "platform", "sign_pub", "box_pub", "scopes")
-ALLOWED_KEYS = {"device_id", "request_id", "decision", "reply", "ts", "nonce"}
+ALLOWED_KEYS = {"device_id", "request_id", "decision", "reply", "ts", "nonce",
+                "kid", "kind", "what", "minutes"}
 DECISIONS = ("approve", "decline")
+# The displayed request a decision binds (security review 2026-09-25, amendment
+# section 20): the app signs the kid, type, what and minutes it showed, and the
+# ask path refuses when the queue record no longer carries them, so a compromised
+# relay cannot show one request's id with another's details and have the parent
+# sign the wrong thing. The `what` bound matches lib/ask.py's own.
+KINDS = ("time", "app", "plugin", "site")
+MAX_WHAT = 254
 # A review decision (R-NOTIFY-12): the same signer and rules, a different record.
 # `seen` is the surface fingerprint the app displayed (the review file's `now`);
 # authd refuses when the open review no longer carries it.
@@ -164,6 +172,20 @@ def valid_record(record):
     reply = record.get("reply")
     if reply is not None and (
         not isinstance(reply, str) or len(reply) > MAX_REPLY or any(not c.isprintable() for c in reply)
+    ):
+        return False
+    # The display binding (amendment section 20): required, so a decision can
+    # never be applied to a record whose shown fields differ.
+    if not isinstance(record.get("kid"), str) or not RE_KID_ACCOUNT.match(record["kid"]):
+        return False
+    if record.get("kind") not in KINDS:
+        return False
+    what = record.get("what")
+    if not isinstance(what, str) or len(what) > MAX_WHAT or any(not c.isprintable() for c in what):
+        return False
+    minutes = record.get("minutes")
+    if minutes is not None and (
+        not isinstance(minutes, int) or isinstance(minutes, bool) or not 1 <= minutes <= MAX_GRANT_MINUTES
     ):
         return False
     return True

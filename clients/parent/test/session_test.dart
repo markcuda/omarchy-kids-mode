@@ -61,6 +61,9 @@ class FakeRelay implements RelayTransport {
   }
 }
 
+OpenRequest req(String id, {String kind = 'app', String what = 'x', int? minutes}) =>
+    OpenRequest(id: id, kid: 'kid-ada', kind: kind, what: what, minutes: minutes);
+
 void main() {
   late FakeRelay relay;
   late Session session;
@@ -80,13 +83,16 @@ void main() {
   });
 
   test('approve signs the record the box will verify', () async {
-    await session.approve('req-1');
+    await session.approve(req('req-1'));
     expect(relay.decided.single, {
       'device_id': 'd-1',
       'request_id': 'req-1',
       'decision': 'approve',
       'ts': 1758530400,
       'nonce': 'n-0',
+      'kid': 'kid-ada',
+      'kind': 'app',
+      'what': 'x',
     });
     // The header's nonce is a different one: separate replay domains.
     expect(relay.requestHeaders.single.$2, 'n-1');
@@ -95,18 +101,18 @@ void main() {
 
   test('a request id the box would refuse is rejected locally', () async {
     for (final bad in ['', '../etc', 'a/b', 'has space']) {
-      await expectLater(session.approve(bad), throwsArgumentError, reason: bad);
+      await expectLater(session.approve(req(bad)), throwsArgumentError, reason: bad);
     }
     expect(relay.decided, isEmpty);
   });
 
   test('decline carries the reply, and a long one is refused before sending', () async {
-    await session.decline('req-2', reply: 'After dinner');
+    await session.decline(req('req-2'), reply: 'After dinner');
     expect(relay.decided.single['decision'], 'decline');
     expect(relay.decided.single['reply'], 'After dinner');
 
     await expectLater(
-      session.decline('req-3', reply: 'x' * 81),
+      session.decline(req('req-3'), reply: 'x' * 81),
       throwsArgumentError,
     );
     expect(relay.decided.length, 1, reason: 'nothing was sent for the refused reply');

@@ -527,7 +527,9 @@ pub = base64.b64encode(key.public_key().public_bytes_raw()).decode()
 os.makedirs(os.path.join(etc, "devices"), exist_ok=True)
 with open(os.path.join(etc, "devices", "d1.conf"), "w") as f:
     f.write(f"id=d1\nname=Phone\nplatform=android\nsign_pub={pub}\nbox_pub={pub}\nscopes=decide,act\n")
-rec = {"device_id": "d1", "request_id": "req-1", "decision": "approve", "reply": "After dinner", "ts": int(time.time()), "nonce": "n1"}
+rec = {"device_id": "d1", "request_id": "req-1", "decision": "approve", "reply": "After dinner",
+       "kid": "kid-ada", "kind": "time", "what": "15", "minutes": 15,
+       "ts": int(time.time()), "nonce": "n1"}
 sig = base64.b64encode(key.sign(devices.canonical(rec))).decode()
 with open(os.path.join(tmp, "decide-frame.json"), "w") as f:
     json.dump({"record": rec, "signature": sig}, f, separators=(",", ":"))
@@ -545,6 +547,10 @@ PY
     grep -q -- '--reply After dinner' "$APPLIED" &&
       ok "DECIDE: the signed reply line reaches the queue record" ||
       bad "DECIDE: the reply was dropped"
+    # The display binding the app signed rides to ask.py (amendment section 20).
+    grep -q -- '--expect-kid kid-ada --expect-kind time --expect-what 15 --expect-minutes 15' "$APPLIED" &&
+      ok "DECIDE: the display binding reaches the queue check" ||
+      bad "DECIDE: the display binding was dropped"
     check "$(send_decide "$TMP/decide-frame.json")" "no replayed-nonce" "DECIDE: a replay is refused"
     check "$(wc -l <"$APPLIED" | tr -d ' ')" "1" "DECIDE: a replay applied nothing"
     # A resolved but wrong relay account is a uid mismatch, not a missing one.

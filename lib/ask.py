@@ -450,7 +450,9 @@ MAX_REPLY = 80
 
 
 def cmd_decide(argv):
-    opts, rest = parse_kv_args(argv, {"state", "by", "device", "reply"})
+    opts, rest = parse_kv_args(
+        argv, {"state", "by", "device", "reply", "expect_kid", "expect_kind", "expect_what", "expect_minutes"}
+    )
     if len(rest) != 1:
         die("decide: needs PATH")
     path = rest[0]
@@ -482,6 +484,20 @@ def cmd_decide(argv):
             record = load_record(path)
             if record.get("state") != "open":
                 die(f"already decided ({record.get('state')}) -- {path}", code=3)
+
+            # The display binding (amendment section 20): a device decision signs
+            # the kid/type/what/minutes it showed; refuse when the record no
+            # longer carries them, so a compromised relay cannot apply one
+            # request's fields under another's id. A panel/keyboard decision
+            # (no --expect-*) is unaffected.
+            for field in ("kid", "kind", "what", "minutes"):
+                want = opts.get("expect_" + field)
+                if want is None:
+                    continue
+                have = record.get(field)
+                got = "" if (field == "minutes" and have is None) else str(have)
+                if got != str(want):
+                    die("decide: the record changed since it was shown", code=2)
 
             record["state"] = state
             record["decided_at"] = int(time.time())

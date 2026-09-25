@@ -451,9 +451,9 @@ class _RequestScreenState extends State<RequestScreen> {
     });
     try {
       if (decision == 'approve') {
-        await widget.session.approve(widget.request.id, reply: _reply);
+        await widget.session.approve(widget.request, reply: _reply);
       } else {
-        await widget.session.decline(widget.request.id, reply: _reply);
+        await widget.session.decline(widget.request, reply: _reply);
       }
       if (mounted) Navigator.of(context).pop(true);
     } catch (error) {

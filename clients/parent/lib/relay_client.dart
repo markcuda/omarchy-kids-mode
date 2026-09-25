@@ -184,6 +184,10 @@ Map<String, Object?> decisionRecord({
   required int ts,
   required String nonce,
   String? reply,
+  required String kid,
+  required String kind,
+  required String what,
+  int? minutes,
 }) {
   if (decision != 'approve' && decision != 'decline') {
     throw ArgumentError("decision must be 'approve' or 'decline'");
@@ -191,13 +195,33 @@ Map<String, Object?> decisionRecord({
   if (reply != null && (reply.runes.length > 80 || reply.runes.any((r) => !_printable(r)))) {
     throw ArgumentError('reply must be at most 80 printable characters');
   }
+  // The binding the box re-checks against its own queue record (amendment
+  // section 20): the kid, type, what and minutes the screen showed.
+  if (!RegExp(r'^[a-z_][a-z0-9_-]*$').hasMatch(kid)) {
+    throw ArgumentError('kid must be a kid account');
+  }
+  if (!const {'time', 'app', 'plugin', 'site'}.contains(kind)) {
+    throw ArgumentError('kind must be time, app, plugin or site');
+  }
+  if (what.runes.length > 254 || what.runes.any((r) => !_printable(r))) {
+    throw ArgumentError('what must be at most 254 printable characters');
+  }
+  if (minutes != null && (minutes < 1 || minutes > 1440)) {
+    throw ArgumentError('minutes must be 1..1440');
+  }
   final record = <String, Object?>{
     'device_id': deviceId,
     'request_id': requestId,
     'decision': decision,
     'ts': ts,
     'nonce': nonce,
+    'kid': kid,
+    'kind': kind,
+    'what': what,
   };
+  if (minutes != null) {
+    record['minutes'] = minutes;
+  }
   if (reply != null) {
     record['reply'] = reply;
   }

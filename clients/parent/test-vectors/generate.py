@@ -49,6 +49,12 @@ def build():
         "device_id": "d-vector",
         "request_id": "1000000001-kid-ada-time",
         "decision": "approve",
+        # The display binding (amendment section 20): the kid, type, what and
+        # minutes the app signs as shown, matched by the request_id above.
+        "kid": "kid-ada",
+        "kind": "time",
+        "what": "15",
+        "minutes": 15,
         # Non-ASCII, a quote and a backslash on purpose: the canonical form
         # escapes them (\uXXXX, \", \\), the traps a raw encoder and a naive
         # quote handler fall into.

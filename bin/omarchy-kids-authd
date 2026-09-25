@@ -504,7 +504,18 @@ def handle_decide(header: str, conn: socket.socket, cfg) -> bytes:
         "--by",
         f"device:{record.get('device_id', '')}",
         "--apply",
+        # The display binding the app signed (devices.valid_record requires it):
+        # ask.py refuses when the queue record no longer carries these, so a
+        # relabelled decision cannot apply.
+        "--expect-kid",
+        str(record.get("kid", "")),
+        "--expect-kind",
+        str(record.get("kind", "")),
+        "--expect-what",
+        str(record.get("what", "")),
     ]
+    if record.get("minutes") is not None:
+        argv += ["--expect-minutes", str(record["minutes"])]
     # The optional reply line the app signed (a decline reason) rides through to
     # the queue record; devices.verify_decision has already validated it.
     if isinstance(record.get("reply"), str) and record["reply"]:

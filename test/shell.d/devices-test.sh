@@ -164,6 +164,19 @@ check(not d.valid_act_record(dict(base, action="grant", minutes=15, request_id="
 check(not d.valid_record(dict(base, action="grant", minutes=15)),
       "an ACT record cannot be a request decision")
 
+# The display binding (amendment section 20): a decision carries the kid, type,
+# what and minutes the app showed, and a missing or wrong one is malformed.
+drec = {"device_id": "d1", "request_id": "1000000001-kid-ada-time", "decision": "approve",
+        "kid": "kid-ada", "kind": "time", "what": "15", "minutes": 15, "ts": 1, "nonce": "n"}
+check(d.valid_record(drec), "a decision with its display binding is valid")
+check(not d.valid_record({k: v for k, v in drec.items() if k != "kid"}),
+      "a decision without kid is refused")
+check(not d.valid_record(dict(drec, kind="video")), "an unknown kind is refused")
+check(not d.valid_record(dict(drec, kid="Ada")), "a kid that is not an account name is refused")
+check(not d.valid_record(dict(drec, what="x" * 300)), "an over-long what is refused")
+check(not d.valid_record(dict(drec, minutes=0)), "minutes 0 is refused")
+check(not d.valid_record(dict(drec, minutes="15")), "a string minutes is refused")
+
 me = pwd.getpwuid(os.getuid()).pw_name
 check(not d.kid_account_ok(etc, me), "an account with no profile is not a kid")
 os.makedirs(os.path.join(etc, "kids"), exist_ok=True)

@@ -538,7 +538,7 @@ record_path_for_id() {
 cmd_approve() {
   is_root || die "approve: root only" 1
   local id="" apply_flag=0
-  local -a byargs=(--by panel) replyargs=()
+  local -a byargs=(--by panel) replyargs=() expectargs=()
   while (($#)); do
     case "$1" in
       --apply)
@@ -547,6 +547,13 @@ cmd_approve() {
         ;;
       --reply)
         replyargs=(--reply "${2:?approve: --reply needs a value}")
+        shift 2
+        ;;
+      --expect-kid | --expect-kind | --expect-what | --expect-minutes)
+        # The display binding a device decision signs (amendment section 20); a
+        # panel/keyboard decision passes none. ask.py's flags are underscore-named.
+        local ename="${1#--}"
+        expectargs+=("--${ename//-/_}" "${2:?approve: $1 needs a value}")
         shift 2
         ;;
       --by)
@@ -585,7 +592,7 @@ cmd_approve() {
   # before it can perform the action again. A failed apply still leaves the
   # request decided, the same graceful degradation as before.
   if [[ "$DRY_RUN" == "0" ]]; then
-    "$KIDS_PY" "$ASKPY" decide "$path" --state approved "${byargs[@]}" ${replyargs[@]+"${replyargs[@]}"}
+    "$KIDS_PY" "$ASKPY" decide "$path" --state approved "${byargs[@]}" ${replyargs[@]+"${replyargs[@]}"} ${expectargs[@]+"${expectargs[@]}"}
     apply_record "$path" || echo "omarchy-kids-ask: could not apply $id (see above) -- approving it anyway" >&2
     echo "omarchy-kids-ask: approved $id"
   else
@@ -596,7 +603,7 @@ cmd_approve() {
 cmd_decline() {
   is_root || die "decline: root only" 1
   local id="" apply_flag=0
-  local -a byargs=(--by panel) replyargs=()
+  local -a byargs=(--by panel) replyargs=() expectargs=()
   while (($#)); do
     case "$1" in
       --apply)
@@ -605,6 +612,13 @@ cmd_decline() {
         ;;
       --reply)
         replyargs=(--reply "${2:?decline: --reply needs a value}")
+        shift 2
+        ;;
+      --expect-kid | --expect-kind | --expect-what | --expect-minutes)
+        # The display binding a device decision signs (amendment section 20); a
+        # panel/keyboard decision passes none. ask.py's flags are underscore-named.
+        local ename="${1#--}"
+        expectargs+=("--${ename//-/_}" "${2:?decline: $1 needs a value}")
         shift 2
         ;;
       --by)
@@ -640,7 +654,7 @@ cmd_decline() {
   [[ "$state" == "open" ]] || die "request '$id' is already decided ($state)"
 
   if [[ "$DRY_RUN" == "0" ]]; then
-    "$KIDS_PY" "$ASKPY" decide "$path" --state declined "${byargs[@]}" ${replyargs[@]+"${replyargs[@]}"}
+    "$KIDS_PY" "$ASKPY" decide "$path" --state declined "${byargs[@]}" ${replyargs[@]+"${replyargs[@]}"} ${expectargs[@]+"${expectargs[@]}"}
     echo "omarchy-kids-ask: declined $id"
   else
     echo "  [dry-run] would mark $id declined (by ${byargs[*]}${replyargs:+ reply \"${replyargs[1]}\"}), no action performed"
