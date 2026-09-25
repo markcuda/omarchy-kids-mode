@@ -1,6 +1,6 @@
 # SPEC amendment: kid-chosen themes (T44/T45)
 
-Status: **partly built.** The pick-from-the-set half (T44: `theme_apply_for` is kid-owned; the `theme:<account>` lock is verify-only) is built on `fix/kid-session-polish`. The T45 chord and the "make a theme" question (T48) are still open. Requested by the owner's
+Status: **mostly built.** T44 (the kid's theme is a preference: `theme_apply_for` is kid-owned, the `theme:<account>` lock is verify-only) and T45 (the kid collection is visible to Omarchy's switcher, and `bin/omarchy-kids-theme` is bound on `Super+Ctrl+Shift+Space` at every level) are built on `fix/kid-session-polish`. Still open: a pre-reader grid tile for the picker, and the "make a theme" question (T48). Requested by the owner's
 dogfooding notes, 2026-09-24: "We need a way for kids to easily change and make inside the system,
 their own themes, and bundle some desktop themes for kids for them out of the box. It should be the
 same keybinding as the main, so they are actually learning."

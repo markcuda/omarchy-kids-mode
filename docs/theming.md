@@ -266,8 +266,7 @@ a theme *name outside the offered set* (`theme_list_installed` — Omarchy's the
 kid collection), and a planted non-regular file (a FIFO or symlink) fails rather than reading as
 "no theme"; the read itself is `O_NOFOLLOW` + `O_NONBLOCK` + a regular-file check, so a planted FIFO
 cannot hang the assert. `fix` applies the profile's default, or the parent's current theme when the
-profile has no `theme` override; a kid's choice inside the set is valid and is never reverted. The kid-facing picker on Omarchy's own chord is the separate T45 work; a kid with
-a terminal can already change it. See `docs/phase1/SPEC-AMENDMENT-kid-themes.md`.
+profile has no `theme` override; a kid's choice inside the set is valid and is never reverted. The kid-facing picker (`bin/omarchy-kids-theme`) is bound on Omarchy's own chord (T45). See `docs/phase1/SPEC-AMENDMENT-kid-themes.md`.
 
 **Where this gets called:**
 

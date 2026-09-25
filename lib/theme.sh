@@ -188,7 +188,7 @@ theme_list_installed() {
 # issue #53 and docs/phase1/SPEC-AMENDMENT-kid-themes.md.
 theme_apply_for() {
   _theme_kids_env_defaults
-  local account="$1" name="$2" home src current next tmp
+  local account="$1" name="$2" home src current next
   home="$(account_home "$account")"
   src="$OMARCHY_PATH/themes/$name"
   [[ -d "$src" ]] || src="$KIDS_THEMES_DIR/$name"
@@ -199,30 +199,35 @@ theme_apply_for() {
 
   current="$home/.local/state/omarchy/current/theme"
   next="$home/.local/state/omarchy/current/.next-theme.$$"
-  install -d -m 0755 "$(dirname "$current")" || return 1
-  rm -rf "$next"
-  install -d -m 0755 "$next" || return 1
-  cp -r "$src/." "$next/" 2>/dev/null
+
+  # Rule 9: root must never read or write through a path a kid controls. When
+  # this runs as root (conf/assert/provision), the whole build is done by the
+  # kid in their own home via runuser; root only removes a stale tree first (rm
+  # never follows a symlink). A non-root caller (a test, or the kid) runs it
+  # directly. The source is the root-owned package copy, world-readable.
+  local -a as_kid=()
+  if is_root && command -v runuser >/dev/null 2>&1; then
+    as_kid=(runuser -u "$account" --)
+    [[ -e "$current" || -L "$current" ]] && rm -rf -- "$current"
+    [[ -e "$next" || -L "$next" ]] && rm -rf -- "$next"
+  fi
+
+  ${as_kid[@]+"${as_kid[@]}"} install -d -m 0755 "$(dirname "$current")" || return 1
+  ${as_kid[@]+"${as_kid[@]}"} install -d -m 0755 "$next" || return 1
+  ${as_kid[@]+"${as_kid[@]}"} cp -r "$src/." "$next/" 2>/dev/null
 
   if [[ ! -f "$next/colors.toml" && -f "$next/alacritty.toml" ]] &&
     command -v omarchy-theme-colors-from-alacritty >/dev/null 2>&1; then
-    omarchy-theme-colors-from-alacritty "$next" >/dev/null 2>&1 || true
+    ${as_kid[@]+"${as_kid[@]}"} omarchy-theme-colors-from-alacritty "$next" >/dev/null 2>&1 || true
   fi
 
-  if ! chown -R "$account:$account" "$next" >/dev/null 2>&1; then
-    echo "theme_apply_for: could not chown $next to $account (fine outside a real root run)" >&2
-  fi
-  find "$next" -type d -exec chmod 0755 {} + 2>/dev/null
-  find "$next" -type f -exec chmod 0644 {} + 2>/dev/null
+  ${as_kid[@]+"${as_kid[@]}"} find "$next" -type d -exec chmod 0755 {} + 2>/dev/null
+  ${as_kid[@]+"${as_kid[@]}"} find "$next" -type f -exec chmod 0644 {} + 2>/dev/null
 
-  rm -rf "$current"
-  mv "$next" "$current" || return 1
-
-  tmp="$(mktemp "$(dirname "$current")/.theme.name.XXXXXX")" || return 1
-  printf '%s\n' "$name" >"$tmp"
-  chown "$account:$account" "$tmp" >/dev/null 2>&1 || true
-  chmod 0644 "$tmp"
-  mv -f "$tmp" "$(dirname "$current")/theme.name"
+  ${as_kid[@]+"${as_kid[@]}"} rm -rf "$current"
+  ${as_kid[@]+"${as_kid[@]}"} mv "$next" "$current" || return 1
+  # shellcheck disable=SC2016 # the single quotes are for the kid's sh, not us
+  ${as_kid[@]+"${as_kid[@]}"} sh -c 'printf "%s\n" "$1" >"$2"' _ "$name" "$(dirname "$current")/theme.name"
 }
 
 # theme_reload_if_live ACCOUNT -- best-effort IPC reload (same call
@@ -230,16 +235,20 @@ theme_apply_for() {
 # reaches their own socket, not root's. No-op with one log line when
 # ACCOUNT has no live Hyprland session -- the theme is on disk either way.
 theme_reload_if_live() {
-  local account="$1" current colors_b64="" shell_b64=""
+  local account="$1"
   if ! pgrep -u "$account" -x Hyprland >/dev/null 2>&1; then
     echo "theme_reload_if_live: no live session for '$account' -- the new theme applies at next login" >&2
     return 0
   fi
-  current="$(account_home "$account")/.local/state/omarchy/current/theme"
-  [[ -f "$current/colors.toml" ]] && colors_b64="$(base64 -w 0 "$current/colors.toml" 2>/dev/null || true)"
-  [[ -f "$current/shell.toml" ]] && shell_b64="$(base64 -w 0 "$current/shell.toml" 2>/dev/null || true)"
+  # Read and IPC entirely as the kid: root never opens a file in a kid's home
+  # (rule 9). A colors.toml the kid symlinked elsewhere resolves to what the kid
+  # can already read, and a planted FIFO cannot hang root.
   if command -v runuser >/dev/null 2>&1; then
-    runuser -l "$account" -c "timeout 2 omarchy-shell shell applyTheme '$colors_b64' '$shell_b64'" >/dev/null 2>&1 ||
+    # shellcheck disable=SC2016 # the single quotes are for the kid's shell, not us
+    runuser -l "$account" -c 'cd "$HOME/.local/state/omarchy/current/theme" 2>/dev/null || exit 0
+      c="$(base64 -w 0 colors.toml 2>/dev/null || true)"
+      s="$(base64 -w 0 shell.toml 2>/dev/null || true)"
+      timeout 2 omarchy-shell shell applyTheme "$c" "$s"' >/dev/null 2>&1 ||
       echo "theme_reload_if_live: live reload failed for '$account' -- the theme is applied on disk, they will see it at next login" >&2
   fi
 }

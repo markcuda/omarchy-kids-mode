@@ -90,6 +90,13 @@ L1_WANT=$(sorted \
 L1_GOT=$(sorted_combos "$HYPR/L1.lua")
 check "$L1_GOT" "$L1_WANT" "L1.lua binds exactly the Appendix E Level 1 set"
 
+# T45: the theme picker is bound on Omarchy's own chord at Level 3 too, with
+# Omarchy's stock bind for that chord removed first (no double fire).
+check_contains "$(cat "$HYPR/L3.lua")" 'o.bind("SUPER + CTRL + SHIFT + SPACE", "Kids Mode: theme", "omarchy-kids-theme")' \
+  "L3.lua binds the theme picker on Omarchy's own chord (T45)"
+check_contains "$(cat "$HYPR/L3.lua")" 'hl.unbind("SUPER + CTRL + SHIFT + SPACE")' \
+  "L3.lua removes Omarchy's own theme chord first, so one press does not run both"
+
 # Band overlays run after the level config and may set presentation gaps.
 # Level 1 must restore its zero-gap kiosk geometry after that overlay so a
 # launcher that leaves fullscreen cannot expose a band-sized black frame.

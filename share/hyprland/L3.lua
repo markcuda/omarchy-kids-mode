@@ -69,8 +69,9 @@ o.bind("SUPER + SHIFT + K", "Kids Mode: parent", "omarchy-kids-exit")
 o.bind("SUPER + SHIFT + W", "Kids Mode: Wi-Fi", "omarchy-kids-wifi picker")
 
 -- Theme picker (T45): the same chord a grown-up uses (Super+Ctrl+Shift+Space),
--- so the kid learns the real one. omarchy-kids-theme offers only installed
--- themes and applies the choice through Omarchy's own omarchy-theme-set.
+-- so the kid learns the real one. Omarchy's own stock bind for this chord is
+-- removed first (the modules above load it), so one press does not run both.
+hl.unbind("SUPER + CTRL + SHIFT + SPACE")
 o.bind("SUPER + CTRL + SHIFT + SPACE", "Kids Mode: theme", "omarchy-kids-theme")
 
 -- The triple-tap gesture (SPEC.md R-EXIT-1: "Super pressed three times

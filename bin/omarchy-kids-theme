@@ -15,6 +15,10 @@ source "$LIB/kids.sh"
 # shellcheck source=lib/theme.sh
 source "$LIB/theme.sh"
 
+# Omarchy's own theme switcher, at a fixed path (rule 9: never from $PATH). The
+# PKGBUILD does not need to rewrite it, but a test substitutes it into a copy.
+THEME_SET_BIN=/usr/bin/omarchy-theme-set
+
 die() {
   echo "omarchy-kids-theme: $1" >&2
   exit "${2:-2}"
@@ -53,11 +57,11 @@ apply_theme() { # NAME
     printf '  [dry-run] omarchy-theme-set %q\n' "$name"
     return 0
   fi
-  command -v omarchy-theme-set >/dev/null 2>&1 ||
+  [[ -x "$THEME_SET_BIN" ]] ||
     die "omarchy-theme-set is not available on this computer" 2
   # Omarchy's own switcher, run as this kid, so it writes their own theme and
   # live-reloads their own shell.
-  omarchy-theme-set "$name"
+  "$THEME_SET_BIN" "$name"
 }
 
 choose_theme() {
@@ -83,9 +87,9 @@ choose_theme() {
   apply_theme "$name"
 }
 
-# A human driving this at a real terminal gets a real switch; anything else
-# previews. --dry-run always previews (AGENTS.md rule 8).
-if [[ -t 0 && -t 1 ]]; then
+# A human driving this gets a real switch; anything else previews. --dry-run
+# always previews (AGENTS.md rule 8). launched_by_a_human is the shared check.
+if launched_by_a_human; then
   DRY_RUN="${DRY_RUN:-0}"
 else
   DRY_RUN="${DRY_RUN:-1}"
