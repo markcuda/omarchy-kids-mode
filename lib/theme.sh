@@ -226,8 +226,17 @@ theme_apply_for() {
 
   ${as_kid[@]+"${as_kid[@]}"} rm -rf "$current"
   ${as_kid[@]+"${as_kid[@]}"} mv "$next" "$current" || return 1
+  # Write theme.name beside a temp and rename it over any existing entry: a
+  # plain `> "$path"` would BLOCK forever if a kid planted a FIFO there (the
+  # open for write waits for a reader), and `mv -f` replaces a FIFO or symlink
+  # without following it. The whole thing runs as the kid (rule 9 above).
   # shellcheck disable=SC2016 # the single quotes are for the kid's sh, not us
-  ${as_kid[@]+"${as_kid[@]}"} sh -c 'printf "%s\n" "$1" >"$2"' _ "$name" "$(dirname "$current")/theme.name"
+  ${as_kid[@]+"${as_kid[@]}"} sh -c '
+    d="$1"; n="$2"
+    tmp="$(mktemp "$d/.theme.name.XXXXXX")" || exit 1
+    printf "%s\n" "$n" >"$tmp" || exit 1
+    mv -f "$tmp" "$d/theme.name"
+  ' _ "$(dirname "$current")" "$name"
 }
 
 # theme_reload_if_live ACCOUNT -- best-effort IPC reload (same call

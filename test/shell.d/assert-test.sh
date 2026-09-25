@@ -45,6 +45,20 @@ wait_for_file() { # FILE PID: wait up to 30 seconds while PID is alive
   done
   return 1
 }
+wait_bounded() { # PID LABEL: wait up to 30 s, then kill and FAIL, never hang
+  local pid="$1" label="$2" i
+  for ((i = 0; i < 3000; i++)); do
+    if ! kill -0 "$pid" 2>/dev/null; then
+      wait "$pid"
+      return $?
+    fi
+    sleep 0.01
+  done
+  kill -9 "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+  fail "$label (timed out after 30s: a deadlock, not a slow box)"
+  return 1
+}
 # line_status OUTPUT LOCK — the status word ("ok"/"fixed"/"FAIL"/"" if
 # absent) that OUTPUT's line for LOCK starts with.
 line_status() {
@@ -1346,10 +1360,8 @@ else
   fail "mode race before check: writer escaped the shared lock"
 fi
 touch "$CHECK_RELEASE"
-wait "$assert_pid"
-check_eq "$?" 0 "mode race before check: assert completes under disk authority"
-wait "$writer_pid"
-check_eq "$?" 0 "mode race before check: waiting writer completes after assert"
+wait_bounded "$assert_pid" "mode race before check: assert completes under disk authority"
+wait_bounded "$writer_pid" "mode race before check: waiting writer completes after assert"
 check_eq "$(conf_get "$ETC/machine.conf" boot)" "portal" "mode race before check: portal lands only after boot work ends"
 
 # A writer arriving after the failed check but before mkinitcpio mutation must
@@ -1387,10 +1399,8 @@ else
   fail "mode race before repair: writer escaped the shared lock"
 fi
 touch "$REPAIR_RELEASE"
-wait "$assert_pid"
-check_eq "$?" 0 "mode race before repair: assert completes its disk repair"
-wait "$writer_pid"
-check_eq "$?" 0 "mode race before repair: waiting writer completes after repair"
+wait_bounded "$assert_pid" "mode race before repair: assert completes its disk repair"
+wait_bounded "$writer_pid" "mode race before repair: waiting writer completes after repair"
 check_eq "$(conf_get "$ETC/machine.conf" boot)" "portal" "mode race before repair: portal lands only after mutation ends"
 
 # Assert never waits forever behind a transition. It keeps non-boot repair,
