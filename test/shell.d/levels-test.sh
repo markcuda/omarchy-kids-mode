@@ -131,6 +131,20 @@ for lvl in L1 L2 L3; do
     "$lvl.lua imports it into the D-Bus activation environment"
 done
 
+# The band -> mode default (SPEC R-DESK-3): 3-5 and 6-8 Grid (level 1), 9-12
+# and 13+ Desktop (level 3). Two modes only; the old Simplified desktop (2) is
+# retired and no band defaults to it.
+band_level() { # BAND -> its level
+  awk -v b="$1" '
+    /^\[band\./ { in_b = ($0 == "[band.\"" b "\"]") }
+    in_b && /^level[[:space:]]*=/ { gsub(/[^0-9]/, ""); print; exit }
+  ' "$DIR/share/bands/bands.toml"
+}
+check "$(band_level 3-5)" "1" "band 3-5 defaults to Grid (level 1)"
+check "$(band_level 6-8)" "1" "band 6-8 defaults to Grid (level 1)"
+check "$(band_level 9-12)" "3" "band 9-12 defaults to Desktop (level 3)"
+check "$(band_level 13+)" "3" "band 13+ defaults to Desktop (level 3)"
+
 # --- L2: the L1 set plus Appendix E's Level 2 additions ------------------
 
 L2_WANT=$(sorted \
@@ -319,7 +333,7 @@ EOF
   manifest_path="$ETC/sessions/kid-ada.json"
   check "$(jq -r '.account' "$manifest_path")" "kid-ada" "manifest account"
   check "$(jq -r '.band' "$manifest_path")" "6-8" "manifest band"
-  check "$(jq -r '.level' "$manifest_path")" "2" "manifest level (band 6-8's desktop default)"
+  check "$(jq -r '.level' "$manifest_path")" "1" "manifest level (band 6-8's desktop default, Grid)"
   check "$(jq -r '.tiles[0].id' "$manifest_path")" "gcompris" "manifest keeps pack order"
   check "$(jq -r '.tiles | map(select(.id == "more-apps")) | length' "$manifest_path")" "1" \
     "issue #28: band 6-8 manifest gets a 'More apps' tile"

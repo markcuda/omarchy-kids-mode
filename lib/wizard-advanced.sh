@@ -47,7 +47,7 @@ adv_label_of() { # KEY -> the row's label, in parent words
     lights_out_weekend) echo "Lights out (weekends)" ;;
     allowlist) echo "Starter apps" ;;
     wifi) echo "New Wi-Fi networks" ;;
-    level) echo "Desktop level" ;;
+    level) echo "Desktop" ;;
     theme) echo "Theme" ;;
     history_visible) echo "History you can see" ;;
   esac
@@ -368,12 +368,11 @@ adv_edit() {
         "helper|On their own, safely|They can join school or café Wi-Fi. The network can't change what's blocked."
       ;;
     level)
-      # Level 3 is offered now that its binds, menu trim and autostart were
-      # verified live (docs/dogfood-2026-09-21.md).
+      # Two kid modes only (SPEC R-DESK-3): Grid (1) and Desktop (3). The old
+      # Simplified desktop (2) is retired and never offered.
       adv_edit_enum level "How should $DISPLAY_NAME's desktop work?" "$step" "$total" \
         "1|App grid|Big app tiles. One app fills the screen." \
-        "2|Simplified desktop|Super+Space finds apps. Windows can sit side by side." \
-        "3|Full desktop|The grown-up Omarchy desktop. Install, update and setup rows are hidden; the account's permissions still refuse them."
+        "3|Desktop|The grown-up Omarchy desktop with its install, update and setup rows hidden. Windows sit side by side."
       ;;
     history_visible)
       adv_edit_enum history_visible "Can you see $DISPLAY_NAME's browsing history?" "$step" "$total" \

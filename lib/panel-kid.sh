@@ -380,11 +380,10 @@ screen_kid_level() { # ACCOUNT NAME
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local choices=(
     "1|App grid|Big app tiles. One app fills the screen."
-    "2|Simplified desktop|Super+Space finds apps. Windows can sit side by side."
-    "3|Full desktop|The grown-up Omarchy desktop. Install, update and setup rows are hidden; the account's permissions still refuse them."
+    "3|Desktop|The grown-up Omarchy desktop with its install, update and setup rows hidden. Windows sit side by side."
   )
-  # Level 3 is offered now that its binds, menu trim and autostart were verified
-  # live on the VM (docs/dogfood-2026-09-21.md).
+  # Two kid modes only (SPEC R-DESK-3): Grid (1) and Desktop (3); the old
+  # Simplified desktop (2) is retired and never offered.
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local -a facts=()
   panel_notice_lines facts
@@ -444,7 +443,7 @@ screen_kid_desktop() { # ACCOUNT NAME
     theme_cur="$(kid_conf_get "$account" theme)"
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local choices=(
-      "level|Desktop level|$(tui_desktop_label "$level_cur")"
+      "level|Desktop|$(tui_desktop_label "$level_cur")"
       "theme|Theme|${theme_cur:-(none set)}"
       "back|Back|"
     )

@@ -303,8 +303,9 @@ command in a scratch tree (`test/shell.d/tree.sh`), or substitutes a build-time 
 
 ## Desktop selection (#200)
 
-`omarchy-kids-session-start` starts the owned launcher for Levels 1 and 2. Its validated
-manifest chooses the visible Level 1 grid or Level 2 desktop with an on-demand searchable
-picker. Only manually selected Level 3 starts `omarchy-launch-shell`. Age defaults and
+`omarchy-kids-session-start` starts the owned launcher for the Grid mode (Level 1). The
+Desktop mode (Level 3) starts `omarchy-launch-shell` (the stock Omarchy shell, menu-trimmed).
+The retired Level 2 (its launcher with the on-demand searchable picker) still starts for a
+profile that names it. Age defaults and
 parent overrides are described in `docs/levels.md`; startup does not infer a level from age
 or from a child-controlled environment variable.

@@ -112,7 +112,7 @@ PY
 )"
 check_contains "$schema_metadata" $'name\tstring\tyes\tnone\tIdentity\tName\ttext\tnonempty-single-line' \
   "schema: name declares its type, required state, source, label, group, editor, and validator"
-check_contains "$schema_metadata" $'level\tenum\tno\tband\tDesktop\tDesktop level\tenum\tlevel' \
+check_contains "$schema_metadata" $'level\tenum\tno\tband\tDesktop\tDesktop\tenum\tlevel' \
   "schema: level declares band precedence and its editor metadata"
 check_contains "$schema_metadata" $'dns\tstring\tno\tband\tWeb\tSafe-search DNS\tdns\tdns' \
   "schema: dns retains band precedence"
@@ -186,7 +186,7 @@ check_contains "$out" "13+" "bands lists 13+"
 check_contains "$out" "Pre-reader" "bands shows the 3-5 blurb"
 
 out="$("$CONF" band 6-8)"
-check_contains "$out" "level=2" "band 6-8 defaults to simplified desktop"
+check_contains "$out" "level=1" "band 6-8 defaults to the app grid (SPEC R-DESK-3)"
 check_contains "$out" "web=garden" "band 6-8 has web=garden"
 check_contains "$out" "budget_min=60" "band 6-8 has budget_min=60"
 check_contains "$out" "lights_out=19:30" "band 6-8 has lights_out=19:30"
@@ -194,7 +194,7 @@ check_contains "$out" "lights_out_weekend=20:00" "band 6-8 weekend lights-out is
 check_contains "$out" "terminal=none" "band 6-8 has no terminal"
 
 out="$("$CONF" band 9-12)"
-check_contains "$out" "level=2" "band 9-12 has level=2"
+check_contains "$out" "level=3" "band 9-12 defaults to the desktop (SPEC R-DESK-3)"
 check_contains "$out" "wifi=helper" "band 9-12 has the safe wifi helper"
 check_contains "$out" "terminal=playground" "band 9-12 has a playground terminal"
 
@@ -202,9 +202,9 @@ check_contains "$out" "terminal=playground" "band 9-12 has a playground terminal
 check_status "$?" 2 "band with a bad name exits 2"
 
 # #200 changes only the desktop default; each band's other permissions stay distinct.
-for band in 3-5 6-8 9-12 13+; do
-  expected=2
-  [[ "$band" == 3-5 ]] && expected=1
+for pair in "3-5:1" "6-8:1" "9-12:3" "13+:3"; do
+  band="${pair%%:*}"
+  expected="${pair##*:}"
   check_contains "$("$CONF" band "$band")" "level=$expected" "$band has its intended desktop default"
 done
 check_contains "$("$CONF" band 13+)" "web=filtered" "older desktop keeps filtered-web permission"
@@ -273,7 +273,7 @@ out="$("$CONF" export kid-ada)"
 check "$(echo "$out" | head -1)" "# omarchy-kids-conf export for kid-ada" \
   "export: names the kid in a comment header"
 check "$(echo "$out" | awk -F= '/^name=/{print $2}')" "Ada" "export: an override is a live line"
-check_contains "$out" "# level=2 (inherited)" "export: an inherited value is commented, not pinned"
+check_contains "$out" "# level=1 (inherited)" "export: an inherited value is commented, not pinned"
 check_contains "$out" "# web=garden (inherited)" "export: inherited values are shown for reference"
 check "$(grep -c '^level=' <<<"$out")" "0" "export: inherited values are not importable lines"
 check "$(grep -c '^password=' <<<"$out")" "0" \
@@ -283,7 +283,7 @@ check "$(grep -c '^password=' <<<"$out")" "0" \
 "$CONF" set kid-ada level 1 >/dev/null
 "$CONF" export kid-ada >"$imp"
 "$CONF" unset kid-ada level >/dev/null
-check "$("$CONF" get kid-ada level)" "2" "round trip: the override was cleared"
+check "$("$CONF" get kid-ada level)" "1" "round trip: the override was cleared"
 "$CONF" import kid-ada "$imp" >/dev/null
 check "$("$CONF" get kid-ada level)" "1" "round trip: the override is restored"
 check "$("$CONF" source kid-ada web)" "band" "round trip: inherited values stay inherited"
@@ -291,7 +291,7 @@ check "$("$CONF" source kid-ada web)" "band" "round trip: inherited values stay 
 
 # --- get: override -> band -> default fallback ----------------------------
 
-check "$("$CONF" get kid-ada level)" "2" "get: level falls back to band 6-8's desktop default"
+check "$("$CONF" get kid-ada level)" "1" "get: level falls back to band 6-8's desktop default"
 check "$("$CONF" get kid-ada web)" "garden" "get: web falls back to band default (garden)"
 check "$("$CONF" get kid-ada onboarded)" "no" "get: onboarded falls back to the global default (no)"
 check "$("$CONF" get kid-ada password)" "set" "get: password falls back to the global default (set)"
@@ -311,7 +311,7 @@ check "$("$CONF" get kid-ada level)" "1" "manual app grid survives switching to 
 "$CONF" set kid-ada band 6-8 >/dev/null
 "$CONF" unset kid-ada level >/dev/null
 check "$("$CONF" source kid-ada level)" "band" "unset: removes one override"
-check "$("$CONF" get kid-ada level)" "2" "unset: exposes the band value again"
+check "$("$CONF" get kid-ada level)" "1" "unset: exposes the band value again"
 "$CONF" unset kid-ada name >/dev/null 2>&1
 check_status "$?" 2 "unset: refuses a required key with no inherited value"
 "$CONF" set kid-ada level 2 >/dev/null
@@ -450,7 +450,7 @@ check "$(grep -c '^password=' "$profile")" "1" "reset: password survives"
 check "$(grep -c '^onboarded=' "$profile")" "1" "reset: onboarded survives"
 check "$(grep -c '^level=' "$profile")" "0" "reset: level override is cleared"
 check "$(grep -c '^menu=' "$profile")" "0" "reset: menu override is cleared"
-check "$("$CONF" get kid-ada level)" "2" "reset: level reads back as the band default again"
+check "$("$CONF" get kid-ada level)" "1" "reset: level reads back as the band default again"
 check "$("$CONF" get kid-ada onboarded)" "yes" "reset: onboarded keeps its value across reset"
 
 # --- profile file permissions (spec 5.1: root 0644) -------------------------
@@ -760,7 +760,7 @@ st=$?
 check "$st" "2" "import: an out-of-range value exits 2"
 check_contains "$err" "line 2" "import: the refusal names the line"
 check_contains "$err" "budget_min" "import: the refusal names the key"
-check "$("$CONF" get kid-ada level)" "2" "import: a rejected file changes nothing"
+check "$("$CONF" get kid-ada level)" "1" "import: a rejected file changes nothing"
 
 printf 'nonsense=1\n' >"$imp"
 err="$("$CONF" import kid-ada "$imp" 2>&1)"

@@ -182,7 +182,7 @@ run_wizard() {
 # overrides those choices need are exercised too (R-BAND-2) --------------
 
 : >"$ARGV_LOG"
-answers="$(answers_file begin parentpw123 Ada owl 6-8 simple filtered default pack helper 1 secret1 secret1 apply parent)"
+answers="$(answers_file begin parentpw123 Ada owl 6-8 simple filtered default pack helper 2 secret1 secret1 apply parent)"
 run_wizard "$answers"
 
 check_status "$WIZ_STATUS" 0 "happy path exits 0"
@@ -229,7 +229,7 @@ else
 fi
 check_contains "$out" "omarchy-kids-conf set kid-ada web filtered" "a web choice that differs from the band default is written as an override"
 check_contains "$out" "omarchy-kids-conf set kid-ada wifi helper" "a Wi-Fi choice that differs from the band default is written as an override"
-check_contains "$out" "omarchy-kids-conf set kid-ada level 1" "a level choice that differs from the band default is written as an override"
+check_contains "$out" "omarchy-kids-conf set kid-ada level 3" "a level choice that differs from the band default is written as an override"
 check_contains "$out" "omarchy-kids-web install 6-8 --apply" "apply runs web install for the chosen band"
 check_contains "$out" "omarchy-kids-apps install 6-8 --now --apply" "apply installs the starter pack from cache via omarchy-kids-apps, with --apply so it isn't silently a no-op under sudo"
 check_contains "$out" "omarchy-kids-assert" "apply runs the safety check (assert)"
@@ -260,7 +260,7 @@ done
 # all (R-BAND-2: "the profile stores only overrides") --------------------
 
 : >"$ARGV_LOG"
-answers="$(answers_file begin parentpw123 Mia fox 6-8 simple garden default pack parent 2 secret1 secret1 apply parent)"
+answers="$(answers_file begin parentpw123 Mia fox 6-8 simple garden default pack parent 1 secret1 secret1 apply parent)"
 run_wizard "$answers"
 check_status "$WIZ_STATUS" 0 "all-defaults path exits 0"
 check_not_contains "$out" "omarchy-kids-conf set" "leaving every Simple choice at its band default writes no override"
@@ -385,12 +385,12 @@ check_not_contains "$out" "omarchy-kids-provision" "Apply itself never starts be
 # the result distinctly once Apply is finally chosen --------------------
 
 : >"$ARGV_LOG"
-answers="$(answers_file begin parentpw123 Ada fox 6-8 simple garden default pack parent 2 \
-  secret1 secret1 change level 1 "done" apply parent)"
+answers="$(answers_file begin parentpw123 Ada fox 6-8 simple garden default pack parent 1 \
+  secret1 secret1 change level 2 "done" apply parent)"
 run_wizard "$answers"
 check_status "$WIZ_STATUS" 0 "Change something from a Simple-built summary still completes"
-check_contains "$out" "App grid (custom)" "the summary marks a row changed via Change something"
-check_contains "$out" "omarchy-kids-conf set kid-ada level 1" "Apply writes the override made through Change something"
+check_contains "$out" "Desktop (custom)" "the summary marks a row changed via Change something"
+check_contains "$out" "omarchy-kids-conf set kid-ada level 3" "Apply writes the override made through Change something"
 
 # --- Esc from the face screen goes back to the name screen, keyboard-only
 

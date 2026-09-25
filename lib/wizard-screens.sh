@@ -255,12 +255,10 @@ screen_level() {
   default="$(band_field "$BAND" level)"
   local choices=(
     "1|App grid|Big app tiles. One app fills the screen."
-    "2|Simplified desktop|Super+Space finds apps. Windows can sit side by side."
-    "3|Full desktop|The grown-up Omarchy desktop. Install, update and setup rows are hidden; the account's permissions still refuse them."
+    "3|Desktop|The grown-up Omarchy desktop with its install, update and setup rows hidden. Windows sit side by side."
   )
-  # Level 3 is offered now that its binds, menu trim and autostart were verified
-  # live on the VM (docs/dogfood-2026-09-21.md); the owner asked for it to be
-  # available with parent-only rows hidden.
+  # Two kid modes only (SPEC R-DESK-3): Grid (1) and Desktop (3). The old
+  # Simplified desktop (2) is retired and never offered.
   tui_screen_choose "How should $DISPLAY_NAME's desktop work?" 11 "$TOTAL_STEPS" 0 "" choices "$default"
   local rc=$?
   ((rc == 0)) || return $rc

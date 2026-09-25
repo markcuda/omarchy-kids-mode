@@ -5,6 +5,10 @@
 # band defaults" just deletes the overrides and lets this table show
 # through again.
 #
+# `level` is the kid mode: 1 = Grid (the big-tile launcher), 3 = Desktop
+# (the real Omarchy desktop, menu-trimmed). Level 2 (the old bespoke
+# "Simplified desktop") is retired -- no band defaults to it (SPEC R-DESK-3).
+#
 # Keys through `menu` mirror Appendix B's profile schema exactly, so
 # `omarchy-kids-conf get <kid> <key>` can read this table directly for any
 # key a kid hasn't overridden. `terminal`, `password_min` and
@@ -34,8 +38,8 @@ password_optional = true
 
 [band."6-8"]
 label = "Ages 6-8"
-blurb = "A simple desktop, favorite apps, and walled-garden web."
-level = 2
+blurb = "A bigger app grid, favorite apps, and walled-garden web."
+level = 1
 web = "garden"
 dns = "cloudflare-family"
 budget_min = 60
@@ -51,8 +55,8 @@ password_optional = false
 
 [band."9-12"]
 label = "Ages 9-12"
-blurb = "Split-screen multitasking, a safe Wi-Fi helper, still a walled garden."
-level = 2
+blurb = "The desktop, split-screen multitasking, a safe Wi-Fi helper, still a walled garden."
+level = 3
 web = "garden"
 dns = "cloudflare-family"
 budget_min = 90
@@ -68,8 +72,8 @@ password_optional = false
 
 [band."13+"]
 label = "Ages 13+"
-blurb = "A simple desktop with filtered open web and more independence."
-level = 2
+blurb = "The desktop, filtered open web, and more independence."
+level = 3
 web = "filtered"
 dns = "cloudflare-family"
 budget_min = 120

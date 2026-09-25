@@ -1,7 +1,11 @@
 # SPEC amendment: two kid modes (`grid` and `desktop`)
 
-Status: **proposed — owner review required**. Doc only; no code changes until the owner approves.
-Requested by the owner on 2026-09-21, after the Level 1 live dogfood pass
+Status: **approved and built (owner, 2026-09-24)** — with one change to the proposed model below:
+the second mode is **Desktop = `level = 3`** (the real Omarchy desktop, menu-trimmed), not the old
+bespoke Simplified desktop (`level = 2`), which is retired. The owner's dogfooding notes asked for
+"app grid + trimmed level 3" and "just two, not app grid + weird pseudo menu + desktop". Built in
+`fix/kid-session-polish`.
+Originally requested by the owner on 2026-09-21, after the Level 1 live dogfood pass
 (`docs/dogfood-2026-09-21.md`) and the Level 2/3 questions it raised.
 
 Amends: SPEC.md R-DESK-3, R-DESK-4, R-DESK-5, Appendix A (A11), Appendix B.2, Appendix E, and the
@@ -28,16 +32,15 @@ R-BAND table. Does not touch R-BAND-1/R-BAND-2 (the table stays data; profiles s
 | Mode label | Stored as | What the kid gets | Band default |
 | --- | --- | --- | --- |
 | **Grid** | `level = 1` | fullscreen big-tile launcher, `Super+Home`, nothing else bound | 3-5, 6-8 |
-| **Desktop** | `level = 2` | normal tiled windows, searchable allowed-app picker, `Super+Space`, `Super+arrows` | 9-12, 13+ |
-| **Stock desktop** | `level = 3` | the real Omarchy desktop (menu `full` unless overridden) | none — parent-only, hidden from every picker |
+| **Desktop** | `level = 3` | the real Omarchy desktop, menu-trimmed, normal tiling and `Super+arrows` focus | 9-12, 13+ |
+| **Retired** | `level = 2` | the old bespoke Simplified desktop (themed background, searchable picker). Still starts for a profile that names it; never offered | none |
 
 - The parent's Desktop row offers **Grid** and **Desktop** only, with the band's default marked.
   This is the one mode control; it stays an override that survives a band change (R-BAND-2).
 - When the parent has not overridden the mode, a band change re-marks the new band's default.
-- `menu` gains an explicit meaning: `trimmed` for Grid and Desktop, `full` for Stock desktop,
-  still overridable. **No mode reads `menu` today** (`docs/conf.md`:74 says so and the wizard
-  hides the row), so this bullet is a code change that must ship with the rename — otherwise the
-  label is a lie (I-6). Until it ships, the row stays hidden.
+- `menu` gains an explicit meaning: `trimmed` for Grid and Desktop, `full` for an older kid who
+  wants the full menu, still overridable. The Desktop mode already seeds the trimmed menu extension
+  (`share/menu/omarchy-kids-trimmed.jsonc`, R-DESK-4).
 - No other band value moves: web, dns, budget, lights-out, wifi, apps, terminal all stay as the
   R-BAND table has them.
 

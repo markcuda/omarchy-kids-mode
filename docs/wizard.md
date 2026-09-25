@@ -50,7 +50,7 @@ at the bottom of `bin/omarchy-kids-wizard` jumps straight from step 7 to step 12
 | A8 Screen time | The default shows the band's weekday limits and current weekend limits. "I'll set my own" edits weekday minutes and bedtime (each validated); weekend values are edited in Advanced. |
 | A9 Apps | "The `<band>` starter pack" (every app), or "Let me pick" — a yes/no per app, one at a time (`apps_pick_walk`; there's no multi-select checklist widget in `lib/tui.sh` yet — Advanced's apps row, below, reuses this same walk). |
 | A10 Wi-Fi | "Ask me first" (`parent`) vs. "On their own, safely" (`helper`), band default preselected. |
-| A11 Desktop | App grid / Simplified desktop / Full desktop (advanced), band default preselected; the same choices appear in the Advanced permissions checklist. |
+| A11 Desktop | App grid / Desktop, band default preselected; the same choices appear in the Advanced permissions checklist. Grid stores `level = 1`, Desktop stores `level = 3`. |
 
 ### Step 7, Advanced: A13a
 
@@ -78,7 +78,7 @@ group:
 | Screen time | Minutes a day, weekdays and weekends (`budget_min`, `budget_min_weekend`), Lights out, weekdays and weekends (`lights_out`, `lights_out_weekend`) |
 | Apps | Starter apps (`allowlist`) |
 | Wi-Fi | New Wi-Fi networks (`wifi`) |
-| Desktop | Desktop level (`level`), Theme (`theme`) |
+| Desktop | Desktop (`level` — Grid or Desktop), Theme (`theme`) |
 | Data | History you can see (`history_visible`) |
 
 `theme`'s row (issue #53) is the one whose "default" isn't a band value at all — bands.toml has
@@ -260,7 +260,7 @@ garden             # A7 Web (6-8's default)
 default            # A8 Screen time ("the usual" — not "I'll set my own")
 pack               # A9 Apps (the whole starter pack, not "let me pick")
 parent             # A10 Wi-Fi (6-8's default)
-2                  # A11 Desktop level (6-8's default)
+1                  # A11 Desktop (App grid, 6-8's default)
 secret1            # A12 Kid password
 secret1            # A12 Kid password, again
 apply              # A13 Summary: Apply (not "Change something")
@@ -349,10 +349,10 @@ pairs, then `done`) and then another `apply`-or-`change` line for the redrawn su
 secret1
 secret1
 change             # A13 Summary: "Change something", not "Apply"
-level              # checklist: open the "Desktop level" row
-2                  # level's editor: pick "2"
+level              # checklist: open the "Desktop" row
+2                  # level's editor: pick "Desktop" (stored level = 3)
 done               # checklist: "Done customizing" — back to the summary
-apply              # A13 Summary again, now showing "Level 2 (custom)"
+apply              # A13 Summary again, now showing "Desktop (custom)"
 parent
 ```
 

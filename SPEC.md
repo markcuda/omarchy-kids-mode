@@ -95,8 +95,8 @@ malcontent; timekpr; machine-wide DNS or browser policy; localization (English f
 
 - R-DESK-1 `omarchy-kids.desktop` (Wayland session, root-owned) runs `omarchy-kids-session`, which reads the profile and execs `Hyprland --config /etc/omarchy-kids/hyprland/L<level>.lua` with the band overlay.
 - R-DESK-2 Before the compositor starts, the launcher checks: profile present, policy file readable by this account, polkit drop-ins present, home noexec, private `/tmp` mounted noexec (R-FND-2a), consoles masked, initramfs hook present. Any miss → a full-screen "Ask a grown-up" naming the check, then exit.
-- R-DESK-3 Levels per Appendix E. Level 1 (App grid): fullscreen-only, big-tile launcher, `Super+Home`, no terminal or file manager. Level 2 (Simplified desktop): a themed background teaching `Super+Space`, a searchable allowed-app picker, normal tiling and `Super+arrows` focus. Escape or opening an installed app hides the picker; it can be reopened repeatedly. Level 3 (Full desktop): an explicit advanced/manual choice with the existing Omarchy bindings and theme. Ages 3-5 default to Level 1; every older band defaults to Level 2. The parent can override this in the permissions/settings Desktop row; changes apply at next login and preserve the other age policies.
-- R-DESK-4 Omarchy's menu is trimmed of Install/Update/Setup entries under Levels 1 and 2 through a root-owned menu extension; untouched under Level 3 (Q23).
+- R-DESK-3 Two kid modes, plus a hidden parent-only stock desktop, per Appendix E. **Grid** (`level = 1`): fullscreen-only, big-tile launcher, `Super+Home`, no terminal or file manager. **Desktop** (`level = 3`): the real Omarchy desktop, menu-trimmed, with normal tiling and `Super+arrows` focus. Ages 3-5 and 6-8 default to Grid; 9-12 and 13+ default to Desktop. The parent can override the mode in the permissions/settings Desktop row (Grid or Desktop only); changes apply at next login and preserve the other age policies. `level = 2` (the retired Simplified desktop) still loads for a profile that names it, but no band or picker offers it.
+- R-DESK-4 Omarchy's menu is trimmed of Install/Update/Setup entries under Grid and under Desktop when the band's `menu` is `trimmed`, through a root-owned menu extension; untouched under `menu = full` (Q23).
 - R-DESK-5 The Level 1 launcher is a standalone root-installed QML program started by the root-owned config, not a shell plugin (I-3).
 - R-DESK-6 The kid's `~/.config/hypr` is never read.
 
@@ -123,9 +123,9 @@ malcontent; timekpr; machine-wide DNS or browser policy; localization (English f
 | Band | Level | Web | Budget / lights-out | Starter pack | Wi-Fi | Terminal |
 | --- | --- | --- | --- | --- | --- | --- |
 | 3-5 | 1 | No browser | 45 min / 19:00 | GCompris, Tux Paint, KTuberling, Blinken | Parent only | No |
-| 6-8 | 2 | Walled garden | 60 min / 19:30 | plus SuperTux, SuperTuxKart, KLettres, Kanagram | Parent only | No |
-| 9-12 | 2 | Walled garden | 90 min / 20:30 | plus TurboWarp, Luanti, KTouch, Pixelorama, Kiwix | Safe helper | Playground shell |
-| 13+ | 2 | Filtered open web | 120 min / 21:30 | plus Sonic Pi, Thonny, KStars | Safe helper | Sandboxed shell |
+| 6-8 | 1 | Walled garden | 60 min / 19:30 | plus SuperTux, SuperTuxKart, KLettres, Kanagram | Parent only | No |
+| 9-12 | 3 | Walled garden | 90 min / 20:30 | plus TurboWarp, Luanti, KTouch, Pixelorama, Kiwix | Safe helper | Playground shell |
+| 13+ | 3 | Filtered open web | 120 min / 21:30 | plus Sonic Pi, Thonny, KStars | Safe helper | Sandboxed shell |
 
 - R-BAND-1 The table is data (Appendix C).
 - R-BAND-2 The profile stores only overrides. Changing a band keeps overrides; "Reset to band defaults" clears them (Q19).
@@ -282,7 +282,7 @@ Feature commands are drop-ins for upstream's `omarchy-parent`. Settings helpers 
 ## 8. Acceptance for v1 done
 
 1. Fresh stock 4.0.x VM: install the package, set up two kids (3-5 no-password, 9-12 with password) in under ten minutes, keyboard only.
-2. Reboot: the parent's disk password lands on the parent's desktop; the 9-12 kid's lands on Level 2; the portal shows three tiles after logout.
+2. Reboot: the parent's disk password lands on the parent's desktop; the 9-12 kid's lands on Desktop; the portal shows three tiles after logout.
 3. Super+Shift+K Pause and Finish both work; the parent's desktop, browser, and DNS are unchanged throughout.
 4. Kid browser: walled garden holds; family DoH active; history cannot be cleared.
 5. Screen time: budget → warnings → lock → ask → parent grants → continues.
@@ -316,7 +316,7 @@ Voice: Omy on A1 and A14; plain elsewhere. `<K>` is the kid's name, `<Kp>` the p
 | A8 | Time (Simple) | "How much screen time?" A shows the band's weekday limits and the current weekend limits; B "I'll set my own" → edit weekday minutes and bedtime (weekend values are edited in Advanced) | A/B |
 | A9 | Apps (Simple) | "Which apps to start with?" A **The <band> starter pack** list of names B **Let me pick** → checklist | A/B |
 | A10 | Wi-Fi (Simple) | "Can <K> join new Wi-Fi?" A **Ask me first** B **On their own, safely** "They can join school or café Wi-Fi. The network can't change what's blocked." | A/B |
-| A11 | Level (Simple) | "How should <Kp> desktop work?" 1 **One thing at a time** 2 **Two things side by side** with a one-liner each; band default marked. **3 Full desktop is hidden in v1** (unverified binds and sudo path, `docs/phase1/DECISIONS-NEEDED.md` §6); existing level = 3 profiles still start | arrows |
+| A11 | Grid or Desktop | "How should <Kp> desktop work?" 1 **App grid** 2 **Desktop** with a one-liner each; band default marked. Grid stores `level = 1`, Desktop stores `level = 3` (the retired `level = 2` is never offered) | arrows |
 | A12 | Kid password | "Now a password for <K>." hint by band; 3-5 adds **No password** | password ×2 |
 | A13 | Summary | "Here's what happens next." bullets: account, desktop level, web, weekday/weekend screen-time and lights-out limits, apps, Wi-Fi; then "When the computer starts, whoever types their password lands on their own desktop. The youngest kids with no password get in after a grown-up starts it." Buttons **Apply** · **Change something** | Enter |
 | A13a | Advanced table | groups Web / Time / Apps / Wi-Fi / Desktop / Data; space toggles, slash filters, Enter picks | checklist |
@@ -364,11 +364,11 @@ B.2 `/etc/omarchy-kids/kids/<account>.conf`, key=value, only overrides present:
 
 ## Appendix E. Binding tables
 
-Level 1: `Super+Home` launcher · `Super+Enter` open selected · `Super+Q` close · `Super+Shift+K` exit modal · `Super+Shift+W` Wi-Fi picker (R-WIFI-1..2; the command itself refuses unless `wifi=helper`) · volume/brightness keys. Nothing else bound; every window rule forces fullscreen.
+Grid (`level = 1`): `Super+Home` launcher · `Super+Enter` open selected · `Super+Q` close · `Super+Shift+K` exit modal · `Super+Shift+W` Wi-Fi picker (R-WIFI-1..2; the command itself refuses unless `wifi=helper`) · volume/brightness keys. Nothing else bound; every window rule forces fullscreen.
 
-Level 2: Normal tiled app windows and a compact, centered, searchable allowed-app picker; no fullscreen rule for apps. Keeps the Level 1 controls plus `Super+arrows` focus · `Super+Shift+arrows` swap · `Super+K` cheat sheet · `Super+Space` launcher.
+Desktop (`level = 3`): Omarchy defaults, menu-trimmed, minus terminal-launching binds under `menu=trimmed` (kept under `full`), `omarchy-sudo-passwordless`, screenshot-to-clipboard of other users' windows (n/a), plus `Super+Shift+K` and `Super+Shift+W`.
 
-Level 3: Omarchy defaults minus: terminal-launching binds under `menu=trimmed` (kept under `full`), `omarchy-sudo-passwordless`, screenshot-to-clipboard of other users' windows (n/a), plus `Super+Shift+K` and `Super+Shift+W`.
+Level 2 (retired): the old bespoke Simplified desktop (themed background, searchable picker, tiling). Kept in the tree so a profile that names `level = 2` still starts; no band or picker offers it.
 
 ## Appendix F. Screen-time state machine
 

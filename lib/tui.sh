@@ -649,7 +649,7 @@ _tui_progress_bar() {
 tui_desktop_label() {
   case "$1" in
     1) echo "App grid" ;;
-    2) echo "Simplified desktop" ;;
-    3) echo "Full desktop (advanced)" ;;
+    2) echo "Simplified desktop (retired)" ;;
+    3) echo "Desktop" ;;
   esac
 }
