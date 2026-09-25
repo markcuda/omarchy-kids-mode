@@ -33,8 +33,12 @@ screen_home() {
   while true; do
     local rows_out total_open total_reviews
     rows_out="$("$PROVISION_BIN" list 2>/dev/null)"
-    total_open="$(count_open_requests)"
     total_reviews="$(count_open_reviews)"
+
+    # One ask.py call for every kid's open-request count (T25), not one per kid.
+    local req_rows
+    req_rows="$(open_requests_by_kid)"
+    total_open="$(open_request_total_from "$req_rows")"
 
     local -a choices=()
     if [[ "$rows_out" == *$'\t'* ]]; then
@@ -42,7 +46,7 @@ screen_home() {
       while IFS=$'\t' read -r account name band; do
         [[ -z "$account" ]] && continue
         status_out="$("$TIME_BIN" status "$account" 2>/dev/null)"
-        nreq="$(count_open_requests "$account")"
+        nreq="$(open_request_count_from "$req_rows" "$account")"
         home_line="$(kid_home_line "$name" "$band" "$status_out" "$nreq")"
         choices+=("kid:$account|$home_line|")
       done <<<"$rows_out"

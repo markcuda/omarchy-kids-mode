@@ -45,7 +45,9 @@ results travel the same way through `PANEL_NOTICE`: `run_priv` records preview /
 ### Home (P1)
 
 `kid_home_line` reads `omarchy-kids-time status <kid>` for the used/left numbers and the `paused:`
-line, and the ask queue (see below) for that kid's open-request count — nothing here re-derives
+line, and the ask queue (see below) for that kid's open-request count. The open-request counts come
+from **one** `ask.py list-open` call for the whole screen (`open_requests_by_kid`), not one python
+per kid (T25, "much faster") — nothing here re-derives
 either; both are read the same way P2 and P3 read them, so the numbers always agree. **Add a kid** runs the wizard (R-WIZ-7: "the same per-kid screens"), passing `--dry-run` through
 when the panel is a preview, and returns to Home when it finishes (T17), so a parent who adds one
 kid gets the panel back. **Remove a kid** (T16) is a top-level row too: it offers the kids, then the

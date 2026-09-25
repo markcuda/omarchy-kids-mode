@@ -249,6 +249,40 @@ kid_display_name() { # ACCOUNT
   printf '%s' "${name:-$account}"
 }
 
+# open_requests_by_kid — one ask.py call for the whole Home screen (T25),
+# printing "<kid>\t<count>" per kid with at least one open request. The row's
+# kid is field 2 (US-separated, lib/ask.py). Home read one python per kid
+# before this.
+open_requests_by_kid() {
+  local rows
+  rows="$("$KIDS_PY" "$ASK_PY" list-open "$QUEUE_DIR" 2>/dev/null)"
+  [[ -z "$rows" ]] && return 0
+  printf '%s\n' "$rows" | awk -v FS="$(printf '\037')" 'NF >= 2 { c[$2]++ } END { for (k in c) print k "\t" c[k] }'
+}
+
+# open_request_count_from ROWS ACCOUNT — one kid's count from a single
+# open_requests_by_kid capture (T25). Plain shell, no python and no
+# associative arrays: the panel runs under bash 3.2 on macOS.
+open_request_count_from() {
+  local rows="$1" account="$2" k c
+  while IFS=$'\t' read -r k c; do
+    [[ "$k" == "$account" ]] && {
+      printf '%s\n' "$c"
+      return 0
+    }
+  done <<<"$rows"
+  printf '0\n'
+}
+
+# open_request_total_from ROWS — the sum of every kid's count.
+open_request_total_from() {
+  local rows="$1" k c total=0
+  while IFS=$'\t' read -r k c; do
+    [[ "$c" =~ ^[0-9]+$ ]] && total=$((total + c))
+  done <<<"$rows"
+  printf '%s\n' "$total"
+}
+
 # count_open_requests [KID] — how many open requests, all kids or one.
 count_open_requests() {
   local -a args=(list-open "$QUEUE_DIR")
