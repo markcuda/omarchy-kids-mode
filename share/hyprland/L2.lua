@@ -124,7 +124,14 @@ o.bind("SUPER + K", "Kids Mode: keybindings", "omarchy-menu-keybindings")
 o.bind("SUPER + SPACE", "Kids Mode: launcher", "omarchy-kids-launcher-ctl show")
 
 -- --- Start the session ---------------------------------------------------
+-- The same systemd/dbus environment imports L3's start hook makes (and that
+-- Omarchy's own autostart makes before the shell). Without them the kid's
+-- user services and portals come up with an empty environment, which is the
+-- live finding behind a D-Bus-activated app dying at this level (R-DESK-1,
+-- I-3). The parent-only parts of Omarchy's autostart stay out.
 hl.on("hyprland.start", function()
+  hl.exec_cmd("systemctl --user import-environment $(env | cut -d'=' -f 1)")
+  hl.exec_cmd("dbus-update-activation-environment --systemd --all")
   hl.exec_cmd("omarchy-kids-session-start")
 end)
 

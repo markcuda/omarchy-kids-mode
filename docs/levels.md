@@ -23,6 +23,12 @@ Every level also turns off Hyprland's own update-news and donation popups
 link, and `xdg-open` would open it in the browser outside the kids launcher (R-DESK-1, I-6). A
 kid's session never shows either.
 
+Every level imports the environment into `systemd --user` and the D-Bus activation environment
+(`systemctl --user import-environment` and `dbus-update-activation-environment --systemd --all`)
+before `omarchy-kids-session-start`. Without it the kid's user services and portals come up with an
+empty environment, which is what killed a D-Bus-activated app at Level 1; Level 3 always did this,
+Levels 1 and 2 now do too.
+
 The desktop layer and picker are sibling windows under the existing launcher's ShellRoot;
 the background takes no keyboard focus. `launcher-ctl show` writes the existing control
 file as well as focusing the grid, so a hidden picker can become visible again. Runtime

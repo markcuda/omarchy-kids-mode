@@ -120,6 +120,17 @@ for lvl in L1 L2 L3; do
     "$lvl.lua turns off Hyprland's donation nag"
 done
 
+# Every kid level imports the environment into systemd --user and the D-Bus
+# activation environment before starting the session (L3 always did; L1/L2 got
+# it after a D-Bus-activated app died at Level 1). Without it the kid's user
+# services and portals come up with an empty environment.
+for lvl in L1 L2 L3; do
+  check_contains "$(grep -vE '^[[:space:]]*--' "$HYPR/$lvl.lua")" 'systemctl --user import-environment' \
+    "$lvl.lua imports the environment into systemd --user"
+  check_contains "$(grep -vE '^[[:space:]]*--' "$HYPR/$lvl.lua")" 'dbus-update-activation-environment --systemd --all' \
+    "$lvl.lua imports it into the D-Bus activation environment"
+done
+
 # --- L2: the L1 set plus Appendix E's Level 2 additions ------------------
 
 L2_WANT=$(sorted \

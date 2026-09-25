@@ -154,7 +154,14 @@ o.bind("XF86MonBrightnessUp", "Brightness up", "brightnessctl set +5%")
 o.bind("XF86MonBrightnessDown", "Brightness down", "brightnessctl set 5%-")
 
 -- --- Start the session (launcher, exit overlay, notifications) ---------
+-- The same systemd/dbus environment imports L3's start hook makes (and that
+-- Omarchy's own autostart makes before the shell). Without them the kid's
+-- user services and portals come up with an empty environment, which is the
+-- live finding behind a D-Bus-activated app dying at this level. The
+-- parent-only parts of Omarchy's autostart stay out (R-DESK-1, I-3).
 hl.on("hyprland.start", function()
+  hl.exec_cmd("systemctl --user import-environment $(env | cut -d'=' -f 1)")
+  hl.exec_cmd("dbus-update-activation-environment --systemd --all")
   hl.exec_cmd("omarchy-kids-session-start")
 end)
 
