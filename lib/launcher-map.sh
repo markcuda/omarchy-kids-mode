@@ -160,7 +160,12 @@ launcher_map_render() {
           "/usr/share/omarchy-kids/plugins/shell.qml"]}' >>"$entries"
   fi
 
-  if [[ "$band" == "9-12" || "$band" == "13+" ]]; then
+  # The data screen (K5, R-DATA-3) opens in Omarchy's floating terminal, which the
+  # fullscreen Grid must never spawn (R-DESK-3: "no terminal or file manager";
+  # security review, 2026-09-25). So it is offered on the level-2 desktop only;
+  # a Desktop-mode (level 3) kid reaches it through the .desktop entry
+  # provisioning installs (install_kids_data_entry), not this map.
+  if [[ "$level" != "1" && ("$band" == "9-12" || "$band" == "13+") ]]; then
     jq -n '{id: "kids-data", label: "What grown-ups see", icon: "", pkg: "", installed: true,
       argv: ["/usr/bin/omarchy-launch-floating-terminal-with-presentation",
         "/usr/bin/omarchy-kids-data", "mine"]}' >>"$entries"

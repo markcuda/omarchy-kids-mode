@@ -99,9 +99,11 @@ bytes exist each tick rather than trying to be exact against a line torn mid-wri
 
 `omarchy-kids-data mine`, run as the kid, prints what this file's "What's recorded" table says, in
 plain first-person words, plus "Since: <the earliest day on file>" and the kid's own last day's
-summary. It's wired into the Kids launcher's tile grid (the App grid) as **"What grown-ups see"**, and, for
-those two bands, into their Desktop too as a kid-owned `.desktop` entry provisioning installs (so a
-Desktop-mode kid reaches it as well). Only for
+summary. For those two bands it is a kid-owned `.desktop` entry provisioning installs, so a Desktop-mode
+(level 3) kid reaches it through Omarchy's own menu. It is also a launcher tile on the level-2
+desktop, but **not on the fullscreen Grid**: the tile opens Omarchy's floating terminal, and
+R-DESK-3 says the Grid has no terminal (security review, 2026-09-25). A 9-12/13+ kid set to the
+Grid therefore has no data screen -- a documented limit of the locked kiosk. Only for
 bands **9-12 and 13+** — the two bands the starter-pack table already gives a terminal to
 (R-BAND's own Terminal column), i.e. old enough to read the screen unsupervised. This is gated on
 **band**, not level: a 9-12/13+ kid moved to Level 1 by a `level` override still gets the tile in

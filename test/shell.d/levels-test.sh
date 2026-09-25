@@ -92,7 +92,7 @@ check "$L1_GOT" "$L1_WANT" "L1.lua binds exactly the Appendix E Level 1 set"
 
 # T45: the theme picker is bound on Omarchy's own chord at Level 3 too, with
 # Omarchy's stock bind for that chord removed first (no double fire).
-check_contains "$(cat "$HYPR/L3.lua")" 'o.bind("SUPER + CTRL + SHIFT + SPACE", "Kids Mode: theme", "omarchy-kids-theme")' \
+check_contains "$(cat "$HYPR/L3.lua")" 'o.bind("SUPER + CTRL + SHIFT + SPACE", "Kids Mode: theme", "omarchy-launch-floating-terminal-with-presentation omarchy-kids-theme")' \
   "L3.lua binds the theme picker on Omarchy's own chord (T45)"
 check_contains "$(cat "$HYPR/L3.lua")" 'hl.unbind("SUPER + CTRL + SHIFT + SPACE")' \
   "L3.lua removes Omarchy's own theme chord first, so one press does not run both"
