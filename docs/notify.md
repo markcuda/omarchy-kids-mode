@@ -119,6 +119,16 @@ or the courier, also lands as a root-written copy under the kid's own directory
 opens; the kid cannot write it and nothing reads it to act. It is off until the parent configures
 it (`omarchy-kids-notify mailbox`) and sends nothing while notifications are off. See `docs/courier.md`.
 
+**The app side, and what it checks (security review, 2026-09-25).** Only the live feed raises a
+platform notification: a `/v1/state` read (Refresh, or after answering) only *seeds* the app's seen
+sets and raises nothing (R-NOTIFY-14.1), and a read that is not the run's first document changes
+nothing. A review carries its box binding (`kid.sha256(app)[:16]`) and the app drops one that does
+not match, so a relabelled add-on review signs nothing. The relay timeout is 35 s, longer than the
+box's own 30 s apply window, so a slow apply is not reported as a failure the parent retries. The
+pinned certificate is checked both in `badCertificateCallback` and against the peer's own
+certificate after the handshake (Apple checks the chain in one call and can hand the callback a
+non-leaf certificate). The request-signing record binding is the remaining gap (`docs/relayd.md`).
+
 ## The desktop notifier (N-9)
 
 On the Omarchy box the parent is told through their own desktop, not a device: `bin/omarchy-kids-notify-watch`

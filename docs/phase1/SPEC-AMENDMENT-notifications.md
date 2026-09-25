@@ -543,3 +543,20 @@ R-NOTIFY-6's quoted text loses "(**not built on this branch** — the ask overla
    | `decisions` | The kid's copies of their decided requests (R-NOTIFY-6): `/var/lib/omarchy-kids/<kid>/decisions` is absent or is root `0750` in the kid's own primary group with every `*.json` root `0640` in that group, none a symlink, for each provisioned kid. The copy is what the ask overlay shows the kid; the queue record is the decision. Presence is `ask.py decide`'s and `collect`'s: the fix never creates, removes, rewrites, regenerates or reads a copy | `chmod`/`chown` of the directory and each copy to the modes above; never creates, never deletes, never rewrites |
 
    `docs/check.md`'s Locks section gains: "`lock:decisions` is the assert lock of the same name (R-NOTIFY-6), standard shape and standard fail text. It proves only that each provisioned kid's decisions directory is absent or closed to everyone but root and that kid; not that a copy matches its record, that every decided record has one, or that the kid saw it. A warn is a directory being unreadable to this run." `omarchy-kids-ask --help`'s usage block gains `omarchy-kids-ask outcome  # the newest decision in your own directory`, and `collect`'s line notes `# also heals a missing kid copy (R-NOTIFY-6)`. and `omarchy-kids-data --help`'s `retention` line reads "requests and their decisions 90 days".
+
+## 20. Known gap: the request decision does not sign what the parent saw (security review, 2026-09-25)
+
+A request decision the app sends signs the request id, the decision, a timestamp, a nonce and the
+optional reply (`clients/parent/lib/relay_client.dart`, `lib/session.dart`); root applies whatever
+the queue record with that id says (`bin/omarchy-kids-authd`). The app signs no kid, type, `what` or
+minutes, so a compromised `omarchy-kids-relay` -- the only network listener -- could show request B's
+id with request A's details and have the parent approve A's fields under B's id. The review id is
+already bound (`kid.sha256(app)[:16]`, checked by `lib/relay.py`, `lib/devices.py`, and now the app),
+so add-on reviews are safe; the request record is the remaining gap.
+
+Closing it is a wire change, not a client-only one: the app signs the displayed `kid`, `kind`, `what`
+and `minutes` (and `reply`) into the decision frame, and authd re-validates them against the queue
+record the id names before applying -- the shape the review fingerprint already uses. It needs both
+sides changed together and a VM check, so it is tracked here rather than shipped half-done. Until
+then, `docs/relayd.md` states the limit plainly instead of claiming the relay's whole attack surface
+is "notifications stop".

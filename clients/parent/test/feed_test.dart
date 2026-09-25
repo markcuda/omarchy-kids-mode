@@ -1,7 +1,10 @@
 // The feed's notification helpers (R-NOTIFY-14): the new-row diff and the
 // derived platform id.
 
+import 'dart:convert';
+
 import 'package:omarchy_kids_parent/feed.dart';
+import 'package:omarchy_kids_parent/notify_crypto.dart' show sha256Hex;
 import 'package:omarchy_kids_parent/state_model.dart';
 import 'package:test/test.dart';
 
@@ -10,20 +13,21 @@ void main() {
       BoxState.fromJson({'requests': requests, 'reviews': reviews});
 
   test('new requests and reviews are the ones not seen yet', () {
+    final rid = 'kid-ada.${sha256Hex(utf8.encode('firefox')).substring(0, 16)}';
     final next = state(
       requests: [
         {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'x'},
         {'id': 'req-2', 'kid': 'kid-ada', 'kind': 'time', 'what': '15', 'minutes': 15},
       ],
       reviews: [
-        {'id': 'kid-ada.' + 'a' * 16, 'kid': 'kid-ada', 'app': 'firefox', 'now': 'b' * 64},
+        {'id': rid, 'kid': 'kid-ada', 'app': 'firefox', 'now': 'b' * 64},
       ],
     );
     expect(newRequests({'req-1'}, next).map((r) => r.id), ['req-2']);
     expect(newRequests({'req-1', 'req-2'}, next), isEmpty);
-    expect(newReviews({}, next).map((r) => r.id), ['kid-ada.' + 'a' * 16]);
+    expect(newReviews({}, next).map((r) => r.id), [rid]);
     expect(liveRequestIds(next), {'req-1', 'req-2'});
-    expect(liveReviewIds(next), {'kid-ada.' + 'a' * 16});
+    expect(liveReviewIds(next), {rid});
   });
 
   test('the platform id is deterministic, non-negative and kind-separated', () async {

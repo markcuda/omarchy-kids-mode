@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'notify_crypto.dart' show sha256Hex;
+
 // The app's model of the relay's state document (Appendix H, lib/relay.py's
 // build_state): the kids, the open requests and the recently decided ones. The
 // box writes it best-effort, so every field is parsed defensively here too -- a
@@ -53,7 +57,7 @@ class OpenRequest {
         id: _clean(json['id'], 128),
         kid: _clean(json['kid'], 32),
         kind: _clean(json['kind'], 32),
-        what: _clean(json['what'], 120),
+        what: _clean(json['what'], 254),
         minutes: json['minutes'] is num ? (json['minutes'] as num).toInt() : null,
         askedAt: json['asked_at'] is int ? json['asked_at'] as int : null,
       );
@@ -131,6 +135,13 @@ class OpenReview {
 
   bool get decidable => _seenPattern.hasMatch(now);
 
+  /// The review id must be the box's own binding: `kid`, a dot, and the first 16
+  /// hex of sha256(app id) (lib/devices.py's review_id_for). The box enforces it;
+  /// the app checks it too, so a compromised relay cannot show one add-on's
+  /// review under another's id and have the parent sign the wrong surface.
+  bool get idMatchesKidApp =>
+      id == '$kid.${sha256Hex(utf8.encode(app)).substring(0, 16)}';
+
   factory OpenReview.fromJson(Map<String, dynamic> json) => OpenReview(
         id: _clean(json['id'], 128),
         kid: _clean(json['kid'], 32),
@@ -170,7 +181,8 @@ class BoxState {
             .toList(),
         reviews: _bounded(_rows(json['reviews']))
             .map(OpenReview.fromJson)
-            .where((row) => OpenReview.idPattern.hasMatch(row.id) && row.decidable)
+            .where((row) =>
+                OpenReview.idPattern.hasMatch(row.id) && row.decidable && row.idMatchesKidApp)
             .toList(),
       );
 
@@ -205,6 +217,16 @@ String describeRequest(OpenRequest request, String kidName) {
   final what = request.what.isEmpty ? request.kind : request.what;
   return '$who asked to use $what';
 }
+
+/// The request's type in a parent's words, shown on the decision screen so an
+/// app, an add-on and a website are not all just "asked to use X" there.
+String requestKindLabel(String kind) => switch (kind) {
+      'app' => 'App',
+      'plugin' => 'Browser add-on',
+      'site' => 'Website',
+      'time' => 'Screen time',
+      _ => 'Request',
+    };
 
 int _int(Object? value) => value is num ? value.toInt() : 0;
 
@@ -241,4 +263,4 @@ List<Map<String, dynamic>> _rows(Object? value) {
 
 /// No list is unbounded: a hostile document cannot make the app build a huge UI.
 List<Map<String, dynamic>> _bounded(List<Map<String, dynamic>> rows) =>
-    rows.length > 64 ? rows.sublist(0, 64) : rows;
+    rows.length > 256 ? rows.sublist(rows.length - 256) : rows;

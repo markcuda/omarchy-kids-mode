@@ -2,7 +2,11 @@
 // field must read as a safe default, never crash the app (the box writes the
 // document best-effort).
 
+import 'dart:convert';
+
 import 'package:test/test.dart';
+
+import '../lib/notify_crypto.dart' show sha256Hex;
 
 import '../lib/state_model.dart';
 
@@ -83,29 +87,34 @@ void main() {
     });
     final request = state.requests.single;
     expect(request.kid, 'kid-ada', reason: 'the bell is dropped');
-    expect(request.what.length, 120, reason: 'the value is capped');
+    expect(request.what.length, 254, reason: 'the value is capped at the box\'s own maximum');
   });
 
   test('a huge list is bounded', () {
     final rows = [for (var i = 0; i < 500; i++) {'id': 'r$i', 'kid': 'kid-ada', 'kind': 'app', 'what': 'x'}];
     final state = BoxState.fromJson({'requests': rows});
-    expect(state.requests.length, 64);
+    expect(state.requests.length, 256);
   });
 
-  test('reviews parse, and only the decidable ones are kept (R-NOTIFY-12)', () {
-    final rid = 'kid-ada.' + 'a' * 16;
+  test('reviews parse: only matching, decidable ones are kept (R-NOTIFY-12)', () {
+    String rid(String app) => 'kid-ada.${sha256Hex(utf8.encode(app)).substring(0, 16)}';
+    final firefox = rid('firefox');
+    final gone = rid('gone');
+    final ex = rid('x');
     final state = BoxState.fromJson({
       'reviews': [
-        {'id': rid, 'kid': 'kid-ada', 'app': 'firefox', 'was': 'a' * 64, 'now': 'b' * 64, 'detected_at': 5},
+        {'id': firefox, 'kid': 'kid-ada', 'app': 'firefox', 'was': 'a' * 64, 'now': 'b' * 64, 'detected_at': 5},
         // the removed add-on the box records with its own sentinel: decidable
-        {'id': 'kid-ada.' + 'c' * 16, 'kid': 'kid-ada', 'app': 'gone', 'was': 'a' * 64, 'now': 'missing'},
+        {'id': gone, 'kid': 'kid-ada', 'app': 'gone', 'was': 'a' * 64, 'now': 'missing'},
         // skipped: an id the app could not POST back, and a `now` it could not sign
         {'id': 'not-a-review', 'kid': 'kid-ada', 'app': 'x', 'now': 'b' * 64},
-        {'id': 'kid-ada.' + 'd' * 16, 'kid': 'kid-ada', 'app': 'x', 'now': 'nonsense'},
+        {'id': ex, 'kid': 'kid-ada', 'app': 'x', 'now': 'nonsense'},
+        // dropped: the id does not bind this kid and app (a relabelling relay)
+        {'id': 'kid-ada.' + 'e' * 16, 'kid': 'kid-ada', 'app': 'eve', 'now': 'b' * 64},
       ],
     });
     expect(state.reviews.length, 2);
-    expect(state.reviews.first.id, rid);
+    expect(state.reviews.first.id, firefox);
     expect(state.reviews.first.app, 'firefox');
     expect(state.reviews.first.decidable, isTrue);
     expect(state.reviews.last.now, 'missing');
