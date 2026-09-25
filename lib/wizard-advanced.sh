@@ -339,7 +339,7 @@ adv_edit_allowlist() {
 }
 
 # adv_edit_theme STEP TOTAL — tui_screen_choose over theme_list_installed
-# (system themes dir only, docs/theming.md); no themes found is a message
+# (Omarchy's themes dir plus the kid collection, docs/theming.md); no themes found is a message
 # and "row untouched", same as an Esc.
 adv_edit_theme() {
   local step="$1" total="$2"
@@ -350,7 +350,7 @@ adv_edit_theme() {
     choices+=("$name|$name|")
   done < <(theme_list_installed)
   if ((${#choices[@]} == 0)); then
-    echo "No installed themes found under \$OMARCHY_PATH/themes." >&2
+    echo "No installed themes found." >&2
     return 1
   fi
   adv_edit_enum theme "Which Omarchy theme should $DISPLAY_NAME's desktop use?" "$step" "$total" "${choices[@]}"

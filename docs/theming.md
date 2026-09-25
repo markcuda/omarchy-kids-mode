@@ -280,7 +280,8 @@ ever look there — see "Ground truth" above — so this repo does the next best
   an Omarchy theme at all gets a warning line and the kid keeps the desktop's stock theme, same as
   before this issue.
 - `bin/omarchy-kids-conf set <kid> theme <name>` — the per-kid key (Appendix B style,
-  `docs/conf.md`): validates `<name>` is a real directory under `$OMARCHY_PATH/themes`, writes the
+  `docs/conf.md`): validates `<name>` is a real directory under `$OMARCHY_PATH/themes` or `$KIDS_THEMES_DIR` (the
+  package's kid collection), writes the
   override, then calls `theme_apply_for` and `theme_reload_if_live` itself. The wizard's Advanced
   Desktop group and the panel's Desktop screen both write through this same command, never around
   it.

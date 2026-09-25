@@ -396,8 +396,9 @@ screen_kid_level() { # ACCOUNT NAME
 }
 
 # screen_kid_theme ACCOUNT NAME — a picker over theme_list_installed's own
-# names (lib/theme.sh, issue #53: the system themes dir only, never a
-# kid- or parent-installed one — theme_apply_for's own header has why).
+# names (lib/theme.sh, issue #53: Omarchy's themes dir plus the package's
+# kid collection, never a kid- or parent-installed one — theme_apply_for's
+# own header has why).
 # Writing an override here (`omarchy-kids-conf set <kid> theme <name>`)
 # is what actually applies the theme to disk as root and best-effort
 # reloads a live session — see that command's own cmd_set.
@@ -412,7 +413,7 @@ screen_kid_theme() { # ACCOUNT NAME
   done < <(theme_list_installed)
   if ((${#choices[@]} == 0)); then
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
-    local -a facts=("No installed themes found under \$OMARCHY_PATH/themes — nothing to pick from.")
+    local -a facts=("No installed themes found — nothing to pick from.")
     panel_notice_lines facts
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local back_choices=("back|Back|")

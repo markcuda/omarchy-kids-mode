@@ -21,7 +21,8 @@ switch a child either way from the panel's Desktop screen.
 **The one thing to know about Desktop:** the app allow-list, the hide/extra-app rows and the
 "What my grown-ups can see" screen are the App grid's. A Desktop child starts apps from Omarchy's
 own menu search, so those rows do not restrict them; keep a child on the App grid if you need the
-allow-list enforced. Screen time, the web policy and every lock are the same in both modes.
+allow-list enforced, the browser hidden (`web = none`), or the "What my grown-ups can see" screen.
+Screen time, safe search/safe DNS and every lock are the same in both modes.
 
 ## The defaults each band starts with
 

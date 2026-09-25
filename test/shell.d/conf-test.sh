@@ -394,7 +394,6 @@ check_contains "$err" "$OMARCHY_PATH/themes" "set: the refusal names where it lo
 "$CONF" set kid-ada theme catppuccin-latte >/dev/null
 check "$("$CONF" get kid-ada theme)" "catppuccin-latte" "set: a real installed theme is accepted and read back"
 
-
 KID_THEME_DIR="$OMARCHY_KIDS_HOME_ROOT/home/kid-ada/.local/state/omarchy/current/theme"
 check "$(cat "$KID_THEME_DIR/colors.toml" 2>/dev/null)" "$(cat "$OMARCHY_PATH/themes/catppuccin-latte/colors.toml")" \
   "set theme: theme_apply_for actually copied the new theme's colors.toml to disk"

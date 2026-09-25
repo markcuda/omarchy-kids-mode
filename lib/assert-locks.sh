@@ -543,7 +543,7 @@ courier_conf_fix() {
 
 # units (R-BOOT-3, R-SEC-2): enabled or the autologin drop-in never
 # gets written. KIDS_UNITS/SOCKETS/TIMERS come from lib/kids.sh, shared
-# with bin/omarchy-kids-wizard's Apply-time enable --now (issue #46).
+# with bin/omarchy-kids-wizard's Apply-time enable + start (issue #46).
 unit_link() { printf '%s/etc/systemd/system/%s.wants/%s' "$(posture_root)" "$1" "$2"; }
 units_ok() {
   local u

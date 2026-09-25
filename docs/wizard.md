@@ -40,7 +40,7 @@ at the bottom of `bin/omarchy-kids-wizard` jumps straight from step 7 to step 12
 | 12 | A12 | Kid's password | Twice, masked. Band 3-5 gets an extra "set a password or not" choice first (R-BAND's `password_optional`); every other band always sets one. Explains what it unlocks. |
 | 13 | A13 | Summary | A plain-words table — account, face, age band, desktop level, web mode, weekday/weekend screen-time and bedtime limits, Wi-Fi, starter apps, password, plus other customized Advanced settings — changed rows marked `(custom)` — then **Apply** or **Change something** (which opens the same grouped checklist, for a kid built either way, then redraws this summary). |
 | 14 | A13b/A13c | Apply | A step-by-step progress dashboard (`tui_progress`, R-WIZ-5): the account (plus every cell, from either path, that overrides the band default), the web policy, the starter pack, and the safety check (A13c). |
-| 15 | A14 | Done | Omy's line; **Return to my desktop** (R-WIZ-6). No live-preview button — there is no such switch (see below). |
+| 15 | A14 | Done | Omy's line; **Return to my desktop** (or **Return to the panel** when launched from the panel with `--from-panel`) (R-WIZ-6). No live-preview button — there is no such switch (see below). |
 
 ### Step 7, Simple: A7-A11
 
@@ -86,7 +86,7 @@ no theme field — it's the parent's own current Omarchy theme (`lib/theme.sh`'s
 `theme_current_name`, no `THEME_KIDS_HOME` override needed since the wizard always runs as the
 parent), the same theme `omarchy-kids-provision add` already copies for the kid at Apply time
 (`docs/theming.md`). Its editor is a `tui_screen_choose` over `theme_list_installed` — every name
-under the system themes dir — not an enum baked into this file.
+under Omarchy's themes dir or the package's kid collection — not an enum baked into this file.
 
 Every row shows its band default and its current choice (`adv_row_line`), and is marked
 `(changed)` once the current choice no longer matches the default. Enter on a row opens the right
@@ -229,7 +229,8 @@ such switch exists on this box: `bin/omarchy-kids-exit --finish` ends a *kid's o
 inside it (`docs/exit.md`), there is nothing today that starts one as a preview from the parent's
 side, and that file notes `Seat.SwitchToGreeter()` outright fails on Omarchy 4.0.2 while a session
 is live. A button that only printed an apology would be a control that does nothing (I-6), so
-Done offers only **Return to my desktop** and Omy's line says `<Name>` signs in from the login
+Done offers only one button — **Return to my desktop**, or **Return to the panel** when the wizard
+was launched from the panel (`--from-panel`) — and Omy's line says `<Name>` signs in from the login
 screen next time the computer starts. Building a real preview switch is separate, later work.
 
 ## The answers-file layout

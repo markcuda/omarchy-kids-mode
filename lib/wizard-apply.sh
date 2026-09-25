@@ -242,8 +242,10 @@ screen_done() {
     fi
   fi
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
+  local done_label="Return to my desktop"
+  ((WIZARD_FROM_PANEL)) && done_label="Return to the panel"
   local choices=(
-    "parent|Finish|"
+    "parent|$done_label|"
   )
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local body=()

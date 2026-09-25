@@ -2552,10 +2552,10 @@ work started on a branch of its own, based on the merged integration:
   (level 2) is retired. Bands 3-5/6-8 are Grid, 9-12/13+ Desktop. bands.toml, SPEC R-DESK-3/4, the
   R-BAND table, Appendix E, A11, docs/conf.md, docs/levels.md, docs/wizard.md, docs/session.md,
   schema.toml, the wizard and panel pickers, and the levels test all follow (T13/T14).
-- **Kid themes.** OldJobobo's 15-theme collection (omacom/omarchy#12488) ships as config plus one
-  compressed wallpaper each, 5.2 MB, under a package-owned root `share/themes-kids/`, listed by a
-  second theme root in lib/theme.sh so the pickers offer them; the licence/provenance state is in
-  its README (T46/T47).
+- **Kid themes.** OldJobobo's 15-theme collection (omacom/omarchy#12488) ships as config
+  only (no wallpapers: their licences are not ours to pass on), under a package-owned root
+  `share/themes-kids/`, listed by a second theme root in lib/theme.sh so the pickers offer them;
+  the licence/provenance state is in its README (T46/T47).
 - **The management menu.** A top-level "Remove a kid", and "Add a kid" returns to the panel instead
   of ending it (T16/T17).
 - **TUI.** The screen title is the heading with the step line under it; no spec ids in the

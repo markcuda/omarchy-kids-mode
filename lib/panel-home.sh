@@ -75,7 +75,7 @@ screen_home() {
         # T17: run the wizard and come back to the panel, instead of exec'ing
         # it and ending the app (a parent who adds one kid wants the panel again).
         # --dry-run passes through, the same as Remove Kids Mode below.
-        if [[ "$DRY_RUN" == "1" ]]; then "$WIZARD_BIN" --dry-run; else "$WIZARD_BIN"; fi
+        if [[ "$DRY_RUN" == "1" ]]; then "$WIZARD_BIN" --from-panel --dry-run; else "$WIZARD_BIN" --from-panel; fi
         rc=$?
         ((rc == 130)) && return 130
         ;;

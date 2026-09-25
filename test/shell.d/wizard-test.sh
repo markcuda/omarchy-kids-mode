@@ -265,7 +265,7 @@ done
 # all (R-BAND-2: "the profile stores only overrides") --------------------
 
 : >"$ARGV_LOG"
-answers="$(answers_file begin parentpw123 Bea fox 6-8 simple garden default pack parent 1 secret1 secret1 apply parent)"
+answers="$(answers_file begin parentpw123 Dot fox 6-8 simple garden default pack parent 1 secret1 secret1 apply parent)"
 run_wizard "$answers"
 check_status "$WIZ_STATUS" 0 "all-defaults path exits 0"
 check_not_contains "$out" "omarchy-kids-conf set" "leaving every Simple choice at its band default writes no override"
@@ -400,11 +400,11 @@ check_contains "$out" "omarchy-kids-conf set kid-ada level 3" "Apply writes the 
 # --- Esc from the face screen goes back to the name screen, keyboard-only
 
 : >"$ARGV_LOG"
-answers="$(answers_file begin parentpw123 Ada @esc Bea fox 6-8 simple garden default pack parent 1 secret1 secret1 apply parent)"
+answers="$(answers_file begin parentpw123 Ada @esc Dot fox 6-8 simple garden default pack parent 1 secret1 secret1 apply parent)"
 run_wizard "$answers"
 check_status "$WIZ_STATUS" 0 "Esc-back then finishing still exits 0"
-check_contains "$out" "kid-bea" "the re-entered name after Esc-back is the one used"
-check_contains "$out" "Pick Bea's face." "the face screen re-renders for the name entered after Esc-back"
+check_contains "$out" "kid-dot" "the re-entered name after Esc-back is the one used"
+check_contains "$out" "Pick Dot's face." "the face screen re-renders for the name entered after Esc-back"
 
 # --- Ctrl+C right after Welcome (before anything else) leaves with
 # nothing changed, no commands run and no prefetch started ---------------
@@ -453,7 +453,8 @@ exec "${args[@]}"
 EOF
 cat >"$RM_STUBS/systemctl" <<'EOF'
 #!/bin/bash
-# Apply's own first step (issue #46) now enables the units and starts them (except the assert oneshot, T20)
+# Apply's own first step (issue #46) now enables the units and starts only
+# the sockets and timers (T20).
 # on the package's units before provisioning; a plain success stub is
 # enough here, since these scenarios are about what happens *after* that
 # step, not about systemd itself.

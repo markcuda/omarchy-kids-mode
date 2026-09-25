@@ -20,7 +20,7 @@ run.
 
 | Screen | What's on it |
 | --- | --- |
-| **P1 Home** | One row per kid — name, band, minutes used/left today, `paused` if a kid's time isn't counting right now, and their open-request count (`kid_home_line`) — then **Add a kid**, **Requests (N)**, **Notifications**, **Reviews (N)**, **Machine safety**, **Remove a kid**, **Remove Kids Mode**, **Quit**. |
+| **P1 Home** | One row per kid — name, band, minutes used/left today, `paused` if a kid's time isn't counting right now, and their open-request count (`kid_home_line`) — then **Add a kid**, **Requests (N)**, **Notifications**, **Reviews (N)**, **Machine safety**, **Remove a kid** (right after the kid rows), **Remove Kids Mode**, **Quit**. |
 | **P2 Kid** | **Screen time** (today's status, "give more minutes" via `omarchy-kids-time grant`, weekday and weekend daily budgets and lights-out, all validated), **Web** (the band's mode; a walled-garden kid also gets an allow-list editor), **Wi-Fi** (Ask me first / On their own, safely), **Apps** (hide/show the band's pack), **Data**, **Desktop** (level, theme — issue #53), **Password**, **Reset to band defaults**, **Remove this kid**, **Back**. |
 | **P3 Requests** | Every open "Ask a parent" request, each shown as `<name> — <what> (<age>)`; Enter opens the reason line and **Approve**/**Decline**. A request card names the kid by their display name and keeps the account name beside it. |
 | **P4 Machine** | The read-only safety report (R-TRUST-2, `docs/check.md`): runs `omarchy-kids-check --json` on every draw, shows the verdict, every FAIL and WARN with the check's own detail in full, and the passed/skipped counts. **Check again** reruns it; nothing here writes or fixes. The panel runs unprivileged, so checks needing root report as warnings, and the card says so. Appendix A's firmware card is one of the report's checks, not a separate screen. |
@@ -94,10 +94,11 @@ dry-run posture is passed through as `--dry-run`.
 - **Desktop** (issue #53) is a small menu over two rows: **Desktop** is the same Grid/Desktop choice
   as the wizard's own A11, writing `level` only when it changed from the current value (same "only
   overrides" reasoning as R-BAND-2, applied one screen at a time instead of a whole Apply).
-  **Theme** is a picker over `lib/theme.sh`'s `theme_list_installed` (the system themes dir only);
+  **Theme** is a picker over `lib/theme.sh`'s `theme_list_installed` (Omarchy's themes dir plus the
+  package's kid collection);
   writing `theme` here goes through `omarchy-kids-conf set <kid> theme <name>`, whose own `cmd_set`
   applies it to the kid's `$HOME` as root and best-effort reloads a live session — see
-  `docs/theming.md`. Empty (no themes found under `$OMARCHY_PATH/themes`) shows a message instead
+  `docs/theming.md`. Empty (no themes found under either root) shows a message instead
   of an empty picker.
 - **Password**: `omarchy-kids-provision` has no `passwd` subcommand yet — only `add`/`remove`/`list`
   (docs/provision.md) — so this screen checks for one (future-proofing) and, finding none, names

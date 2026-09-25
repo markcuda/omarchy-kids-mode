@@ -40,10 +40,12 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 - **Two kid modes, and a new default for older bands.** The kid desktops are now **App grid**
   (`level = 1`) and **Desktop** (`level = 3`, the real Omarchy desktop with its Install / Update /
   Setup menu rows hidden). Ages 9-12 and 13+ now default to **Desktop**, where they defaulted to
-  the old "Simplified desktop" (retired `level = 2`) before; 3-5 and 6-8 stay on the grid. An
-  existing 9-12 or 13+ kid with no explicit `level` override therefore starts in Desktop at their
-  next login. The old level 2 still starts for a profile that names it, but no band or picker
-  offers it.
+  the old "Simplified desktop" (retired `level = 2`) before. 3-5 stays on the grid; 6-8 moves from
+  level 2 to the grid. An existing 6-8, 9-12 or 13+ kid with no explicit `level` override therefore
+  starts in its new mode at the next login. The old level 2 still starts for a profile that names
+  it, but no band or picker offers it. Every band's `menu` default is now `trimmed` too (13+ moves
+  from `full`): the trim is installed on `provision add`, so an existing 13+ kid keeps the full menu
+  until re-provisioned.
 - **A kid theme collection.** `share/themes-kids/` ships 15 kid-friendly themes' config (from
   Omarchy PR #12488), listed by `theme_list_installed` beside Omarchy's own themes. No wallpapers
   ship (their licences are not ours to pass on).
@@ -67,8 +69,8 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
   `session`, `blocked`, `launcher-ctl`, `parent-auth`, `super-tap`, `time-ledger`) are marked
   `omarchy:hidden=true`, the wizard header lists `--apply`, the time summary names `grant` and
   `daemon`, and the panel's `--help` no longer cites spec ids at a parent.
-- Level 3 is hidden from the wizard's and panel's desktop-level pickers for v1 (existing
-  level = 3 profiles still start); R-ASK-2's spec wording now matches the safe list → request
+- Level 3 was hidden from the wizard's and panel's desktop-level pickers for v1 (superseded: Level
+  3 is now the **Desktop** mode and is offered; existing level = 3 profiles still start); R-ASK-2's spec wording now matches the safe list → request
   card with **Approve** preselected. Both decisions are recorded in
   `docs/phase1/DECISIONS-NEEDED.md` §6.
 - Kid-facing wording: the Time's Up card reads root's `reason` and says "It's bedtime" when

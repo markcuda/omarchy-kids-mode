@@ -66,6 +66,7 @@ web, screen time, apps, Wi-Fi, desktop level, the kid's password, a
 plain-words summary, then Apply with a progress dashboard and a safety
 check. Run it directly, or as 'omarchy-kids wizard'. See docs/wizard.md.
 
+  --from-panel  Launched from the panel; Done returns to the panel.
   --dry-run   Print every command Apply would run instead of running it.
               Walked by a human (a terminal, or the Kids Mode app entry)
               Apply is real -- pressing Apply is the confirmation. Without
@@ -75,8 +76,11 @@ check. Run it directly, or as 'omarchy-kids wizard'. See docs/wizard.md.
 EOF
 }
 
+WIZARD_FROM_PANEL=0
+
 for arg in "$@"; do
   case "$arg" in
+    --from-panel) WIZARD_FROM_PANEL=1 ;;
     --dry-run) DRY_RUN=1 ;;
     --apply) DRY_RUN=0 ;;
     -h | --help)
