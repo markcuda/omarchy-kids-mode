@@ -34,10 +34,10 @@ enforces or could tamper with (I-3). The only people who can read it:
 - **The parent**, through the panel (`omarchy-kids-time status`, `docs/panel.md`'s Home and Kid
   screens) — the same numbers the ledger recorded, nothing added.
 - **The kid themselves**, on their own "What my grown-ups can see" screen (R-DATA-3) — a launcher
-  tile for bands 9-12 and 13+, run with a grown-up for younger kids (`docs/data.md`). **Known gap:**
-  the tile is the App grid's, so a 9-12 or 13+ kid on the Desktop mode (their default) does not see
-  it; that is an owner decision to resolve (an amendment to R-DATA-3, or a Desktop way to open it).
-  See "In kid words" below.
+  tile for bands 9-12 and 13+, run with a grown-up for younger kids (`docs/data.md`). Those two bands
+  also get it on the Desktop mode, as a kid-owned app entry provisioning installs, so a 9-12 or 13+
+  kid reaches it in either mode (`bin/omarchy-kids-provision`'s `install_kids_data_entry`). See "In
+  kid words" below.
 - **Nobody else, unless the parent turns notifications on.** Nothing here is uploaded, synced, or
   reachable over the network by default. I-2: nothing about a child leaves the machine except to a
   device the parent paired or a server the parent named, and only while notifications are on (see

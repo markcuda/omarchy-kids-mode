@@ -258,6 +258,30 @@ install_kids_menu_trim() {
     echo "  (could not chown $dest to $account -- fine outside a real root run)" >&2
 }
 
+# install_kids_data_entry ACCOUNT — a Desktop-mode way to the data screen
+# (R-DATA-3). The App grid's tile (lib/launcher-map.sh) is the Grid's only, so a
+# 9-12/13+ kid on the Desktop mode (their default) would not reach "What my
+# grown-ups can see"; this installs the same entry as a kid-owned .desktop so
+# Omarchy's own menu finds it. Band-gated exactly as the tile is. Presentation,
+# not a lock: the command behind it is read-only and kid-side.
+install_kids_data_entry() {
+  local account="$1" band home dir dest src
+  band="$("$CONF_BIN" get "$account" band 2>/dev/null || true)"
+  [[ "$band" == "9-12" || "$band" == "13+" ]] || return 0
+  src="$SHARE/applications/omarchy-kids-data.desktop"
+  if [[ ! -f "$src" ]]; then
+    echo "warning: $src is missing; skipping the data entry for $account" >&2
+    return 0
+  fi
+  home="$(home_dir_for "$account")"
+  dir="$home/.local/share/applications"
+  install -d -m 0755 "$dir"
+  dest="$dir/omarchy-kids-data.desktop"
+  install -m 0644 "$src" "$dest"
+  chown "$account:$account" "$dest" 2>/dev/null ||
+    echo "  (could not chown $dest to $account -- fine outside a real root run)" >&2
+}
+
 # gcompris_version_number — the number GCompris itself writes into
 # lastGCVersionRan (major*10000 + minor*100 + patch). Verified 2026-09-22
 # against the value the app wrote on first run: gcompris-qt 26.1 -> 260100.
