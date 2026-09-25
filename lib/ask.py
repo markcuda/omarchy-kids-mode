@@ -504,7 +504,7 @@ def cmd_decide(argv):
                 have = record.get(field)
                 got = "" if have is None else str(have)
                 if got != str(want):
-                    die("decide: the record changed since it was shown", code=2)
+                    die("decide: the decision names a different record than the queue holds", code=4)
 
             record["state"] = state
             record["decided_at"] = int(time.time())
