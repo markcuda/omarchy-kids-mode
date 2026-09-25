@@ -250,7 +250,15 @@ main() {
     cleanup
     return $?
   }
-  [[ -e "$BOOT_LOGIN_RUN_DIR/boot-slot" || -L "$BOOT_LOGIN_RUN_DIR/boot-slot" ]] || return 0
+  if [[ ! -e "$BOOT_LOGIN_RUN_DIR/boot-slot" && ! -L "$BOOT_LOGIN_RUN_DIR/boot-slot" ]]; then
+    # Disk mode, no recorded slot: the hook stepped aside (a wrong passphrase
+    # exhausted, or the disk was opened another way). Write an empty User=
+    # drop-in that supersedes the stock autologin, so the kid lands on the
+    # portal -- never the parent's autologged desktop (R-BOOT-3, I-1, I-4; the
+    # V7 fix). Portal mode already returned above and is untouched.
+    write_dropin ""
+    return $?
+  fi
 
   if ! slot="$(read_boot_slot)"; then
     fail_to_portal

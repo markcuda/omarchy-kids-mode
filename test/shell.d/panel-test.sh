@@ -148,6 +148,12 @@ run_panel "$answers"
 check_contains "$out" "sudo $TREE_BIN/omarchy-kids-conf set kid-ada level 3" \
   "dry-run: Desktop -> Desktop prints the exact conf-set command (a choice that differs from the Grid default)"
 
+answers="$(answers_file "kid:kid-ada" password back back quit)"
+run_panel "$answers"
+check_contains "$out" "sudo passwd kid-ada" "the Password screen names the passwd fallback"
+check_contains "$out" "Disk mode is different" \
+  "the Password screen is honest that disk mode needs the disk slot reset, not just passwd (R-SEC-5 gap)"
+
 answers="$(answers_file "kid:kid-ada" desktop theme catppuccin-latte back back quit)"
 run_panel "$answers"
 check_contains "$out" "sudo $TREE_BIN/omarchy-kids-conf set kid-ada theme catppuccin-latte" \

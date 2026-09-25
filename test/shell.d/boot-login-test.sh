@@ -144,16 +144,21 @@ record_boot_state >"$TMP/portal-cleanup.after"
 check_state_unchanged "$TMP/portal-cleanup.before" "$TMP/portal-cleanup.after" \
   "portal cleanup leaves every file, directory, mtime, and byte unchanged"
 
-# In disk mode, no recorded slot is also a true no-op.
+# In disk mode, no recorded slot is NOT a no-op: the hook may have stepped
+# aside and the kid may have opened the disk with their own passphrase. boot-login
+# must write an empty User= drop-in that supersedes the stock autologin, so the
+# kid lands on the portal, never the parent's autologged desktop (R-BOOT-3, I-1,
+# I-4; the V7 fix). This is the disk-mode counterpart of the portal no-op above.
 set_mode disk
-rm -f "$DROPIN" "$MARKER" "$RUN_DIR/boot-slot"
-pin_boot_state_mtimes
-record_boot_state >"$TMP/missing-slot.before"
+rm -f "$MARKER" "$RUN_DIR/boot-slot"
+printf '[Autologin]\nUser=mark\nSession=omarchy.desktop\n' >"$SDDM_DIR/10-omarchy-autologin.conf"
 run_boot_login >/dev/null 2>&1
 check_status "$?" 0 "missing boot-slot exits 0"
-record_boot_state >"$TMP/missing-slot.after"
-check_state_unchanged "$TMP/missing-slot.before" "$TMP/missing-slot.after" \
-  "missing boot-slot leaves every file, directory, mtime, and byte unchanged"
+if [[ -f "$DROPIN" ]] && grep -qx 'User=$' "$DROPIN"; then
+  pass "missing boot-slot (disk) writes an empty User=, failing to the portal, not the parent"
+else
+  fail "missing boot-slot (disk) must write an empty User= drop-in (found: $(cat "$DROPIN" 2>/dev/null | tr '\n' ' '))"
+fi
 
 cat >"$SLOTS_FILE" <<'EOF'
 0=mark
