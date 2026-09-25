@@ -224,22 +224,32 @@ check.
 
 ## What's unverified (check in the VM before this ships)
 
-- `loginctl show-session <id> -p Active -p LockedHint -p Class -p Type`'s exact output shape on
-  the real target (this repo has never run against a real `systemd-logind`) —
-  `test/shell.d/time-test.sh` stubs it, so the *parsing* is tested, not the real command's actual
-  output.
-- Whether a background `&`'d `omarchy-kids-time daemon`, started from
-  `omarchy-kids-session-start` before it `exec`s the launcher/shell, actually survives that `exec`
-  and keeps running for the life of the session (expected — backgrounded jobs aren't children of
-  the `exec`'d process — but never watched happen on a real Hyprland session).
-- `share/time/toast.qml`'s 6 s auto-dismiss (issue #40), and whether `Qt.quit()` is the right way
-  to close a `PanelWindow` — never checked against a real rendered frame. (The 2026-09-21 live
-  check saw only the window geometry — 320x32 at y=120, its message overflowing — so the window is
-  now sized to the message and the top margin is 144px, both by arithmetic from the fonts; the
-  launcher's clock block itself was not measured. See above.)
+For any item here, check `docs/loop-report.md` -- and which branch the observation was made on --
+before relying on it: the VM runs installed branch files, so live evidence can describe code this
+branch does not have yet.
+
+- `loginctl show-session <id> -p ...`'s exact output shape on the real target: `time-test.sh`
+  stubs it, so the *parsing* is tested, not the real command's output. The tick's own call form
+  (`list-sessions --no-legend` once, then one `show-session -p <prop>` per property) is read from
+  this branch's source; which ledger build the VM's ticks ran is not recorded.
+- Whether a background `&`'d `omarchy-kids-time daemon` started from `omarchy-kids-session-start`
+  survives that `exec`: the VM's own session log shows it does (started 02:19, still logging at
+  03:18 on 2026-09-22); what is open is a repo-side test -- `session-start-test.sh`'s time stub
+  exits 0 and asserts nothing about the daemon.
+- `share/time/toast.qml`'s 96px top margin actually clearing the launcher's clock, and its 6 s
+  auto-dismiss (issue #40): arithmetic from both files' anchors/font sizes, never checked against a
+  real rendered frame. (The 2026-09-21 check saw only the window geometry.)
+- Every Quickshell-specific name in `share/time/toast.qml` and `share/time/timesup.qml`, including
+  the `FileView` status reader and the fixed root-state path.
 - The kid adapter reflecting a live root warning/grace document and hiding the card after a root
-  grant; the shell test covers the fixed state fixtures, but a kid seeing those surfaces in a real
+  grant: the shell test covers fixed state fixtures, but a kid seeing those surfaces in a real
   session is still unconfirmed.
+- The Ask modal opening over a *daemon-driven* Time's Up overlay: watched over a hand-written
+  `grace` status and over the launcher (`docs/ask.md` "Verified live"), but not over the daemon's
+  own card.
+- Whether the lock step engages: the `LockedHint=yes` verification loop is on this branch
+  (`fix/time-lock-engagement`), but no record shows a Level 1/2 session going `LockedHint=yes`
+  under `lock_kid_sessions`; `finishing`/`omarchy-kids-exit --finish` has run live.
 
 ## Verified live (2026-09-21, try-omarchy VM)
 
@@ -258,47 +268,6 @@ check.
   "88 minutes left" at the next tick.
 - The timesup card itself was driven with a hand-written status file, so it does not prove the
   daemon's own grace document (below).
-Written before the 2026-09-21/22 VM runs. For any item here, check `docs/loop-report.md` -- and
-which branch the observation was made on -- before relying on it: the VM runs installed branch
-files, so live evidence can describe code this branch does not have yet.
-
-- Every Quickshell-specific name in `share/time/toast.qml` and `share/time/timesup.qml`, including
-  the `FileView` status reader and the fixed root-state path. The card's keyboard-only ask action
-  reuses the detached-command shape verified in `share/ask/shell.qml`.
-- `share/time/toast.qml`'s 96px top margin actually clearing `share/launcher/shell.qml`'s clock,
-  and the 6 s auto-dismiss (issue #40) — arithmetic from both files' own anchors/font sizes, never
-  checked against a real rendered frame of either.
-- Whether a background `&`'d `omarchy-kids-time daemon`, started from
-  `omarchy-kids-session-start` before it `exec`s the launcher/shell, actually survives that `exec`
-  and keeps running for the life of the session (expected — backgrounded jobs aren't children of
-  the `exec`'d process). The VM's own session log shows it does (started 02:19, still logging
-  toasts at 03:18 on 2026-09-22; the lines are in `docs/loop-report.md` that day); what is still
-  open is a repo-side test -- `test/shell.d/session-start-test.sh`'s time stub exits 0 and asserts
-  nothing about the daemon.
-- The kid adapter reflecting a live root warning/grace document and hiding the card after a root
-  grant; the shell test covers the fixed state fixtures, but a kid seeing those surfaces in a real
-  session is still unconfirmed.
-- The Ask modal opening over a *daemon-driven* Time's Up overlay: it has been watched over a
-  hand-written `grace` status (`docs/loop-report.md`, 2026-09-21) and over the launcher
-  (`docs/ask.md` "Verified live"), but not over the daemon's own card.
-- The launcher's own time-left line (`share/launcher/shell.qml` reading
-  `/run/omarchy-kids/time/<kid>.json` with a `FileView`, rendered through
-  `GridNav.remainingLabel`): the label logic is node-tested and the wiring is static-tested, but
-  the real file watch against root's live state has only been reasoned about, not watched.
-- Whether the lock step engages: this branch carries the `LockedHint=yes` verification loop
-  (`fix/time-lock-engagement`, `9d038cf`, is merged into it), but no record shows a Level 1/2
-  session going `LockedHint=yes` under `lock_kid_sessions` -- the "lock step reported `not-needed`
-  while a kid was live" observation is from a pre-fix run. `finishing`/`omarchy-kids-exit --finish`
-  has run live.
-
-The tick's own `loginctl` calls are this branch's code: `loginctl list-sessions --no-legend` once
-and one `loginctl show-session <id> -p <prop>` per property (`Class`, `Type`, `Active`,
-`LockedHint`) from `bin/omarchy-kids-time-ledger`, on a 30 s timer
-(`systemd/omarchy-kids-time.timer`), with `test/shell.d/time-test.sh` stubbing them. What is *not*
-recorded is which ledger build the VM's ticks ran (its package predates at least one topic branch),
-so the call form above is read from this branch's source, not observed there. (This bullet used to
-name a four-property `show-session` form and say the repo had never run against a real logind.)
-
 
 ## Verified live (2026-09-02, QEMU test VM; ticket 2)
 
