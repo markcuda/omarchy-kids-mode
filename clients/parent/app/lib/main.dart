@@ -150,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // request that was in the read but arrived after opening would be raised
       // as if it were new.
       final notice = _notice;
-      if (notice != null) unawaited(notice.update(state));
+      if (notice != null) unawaited(notice.seed(state));
       _openPending();
     } catch (error) {
       if (!mounted || _seq != before) return;
@@ -451,7 +451,7 @@ class _RequestScreenState extends State<RequestScreen> {
     });
     try {
       if (decision == 'approve') {
-        await widget.session.approve(widget.request.id);
+        await widget.session.approve(widget.request.id, reply: _reply);
       } else {
         await widget.session.decline(widget.request.id, reply: _reply);
       }
@@ -471,6 +471,8 @@ class _RequestScreenState extends State<RequestScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             Text(describeRequest(widget.request, widget.request.kid), style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text('${requestKindLabel(widget.request.kind)}: ${widget.request.what}'),
             const SizedBox(height: 24),
             const Text('A reply for the kid (optional):'),
             const SizedBox(height: 8),

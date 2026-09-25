@@ -161,7 +161,7 @@ class KidsRelayClient implements RelayTransport {
     required this.pinnedSpki,
     required this.deviceId,
     required this.keyPair,
-    this.timeout = const Duration(seconds: 10),
+    this.timeout = const Duration(seconds: 35),
   });
 
   Future<HttpClient> _client() async {
@@ -173,6 +173,20 @@ class KidsRelayClient implements RelayTransport {
     client.badCertificateCallback = (cert, _, __) => spkiMatches(cert.der, pinnedSpki);
     client.connectionTimeout = timeout;
     return client;
+  }
+
+  /// The peer's own certificate must match the pin. badCertificateCallback is
+  /// not enough on its own: on Apple platforms the whole chain is checked in one
+  /// call and the callback can be handed the last certificate the server sent,
+  /// not the leaf the connection's key belongs to. Checking the peer certificate
+  /// before reading a byte stops a device that appends the real relay
+  /// certificate to its own from passing the pin while the connection runs on
+  /// its key.
+  void _checkPeer(HttpClientResponse response) {
+    final peer = response.certificate;
+    if (peer != null && !spkiMatches(peer.der, pinnedSpki)) {
+      throw const SocketException('the peer certificate does not match the pin');
+    }
   }
 
   Future<_Reply> _send({
@@ -206,6 +220,13 @@ class KidsRelayClient implements RelayTransport {
         request.add(body);
       }
       final response = await request.close().timeout(timeout);
+      // badCertificateCallback is not enough on its own: on Apple platforms the
+      // whole chain is checked in one call and the callback can be handed the
+      // last certificate the server sent, not the leaf the connection's key
+      // belongs to. Check the peer's own certificate too, before reading a byte,
+      // so a device that appends the real relay certificate to its own cannot
+      // pass the pin while the connection runs on its key.
+      _checkPeer(response);
       final text = await utf8.decoder.bind(response).join();
       return _Reply(response.statusCode, text);
     } finally {
@@ -306,6 +327,7 @@ class KidsRelayClient implements RelayTransport {
       );
       headers.forEach(request.headers.set);
       final response = await request.close().timeout(timeout);
+      _checkPeer(response);
       if (response.statusCode != 200) {
         final text = await utf8.decoder.bind(response).join();
         throw HttpException('events: ${response.statusCode} $text');
@@ -333,6 +355,7 @@ class KidsRelayClient implements RelayTransport {
       request.headers.chunkedTransferEncoding = false;
       request.add(payload);
       final response = await request.close().timeout(timeout);
+      _checkPeer(response);
       final text = await utf8.decoder.bind(response).join();
       if (response.statusCode != 200) {
         throw HttpException('pair: ${response.statusCode} $text');

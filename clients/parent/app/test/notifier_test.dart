@@ -2,7 +2,10 @@
 // silent, a new row raises once, a row that leaves is cleared, a replay raises
 // nothing. The platform adapter is not exercised here.
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omarchy_kids_parent/notify_crypto.dart' show sha256Hex;
 import 'package:omarchy_kids_app/notifier.dart';
 import 'package:omarchy_kids_parent/state_model.dart';
 
@@ -18,7 +21,7 @@ BoxState state({List<Map<String, Object?>> requests = const [], List<Map<String,
     });
 
 void main() {
-  final rid = 'kid-ada.' + 'a' * 16;
+  final rid = 'kid-ada.${sha256Hex(utf8.encode('firefox')).substring(0, 16)}';
   final request = {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'minecraft'};
 
   test('the first document is silent and clears anything left over', () async {
@@ -43,6 +46,26 @@ void main() {
     // A reconnect replays the same document: nothing more is raised.
     await feed.update(state(requests: [request]));
     expect(notifier.shows.length, 1);
+  });
+
+  test('a state read seeds and never raises (R-NOTIFY-14.1)', () async {
+    final notifier = FakeNotifier();
+    final feed = NoticeFeed(notifier);
+    await feed.seed(state(requests: [
+      {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'x'},
+    ]));
+    expect(notifier.shows, isEmpty, reason: 'a read seeds the sets; it raises nothing');
+    await feed.seed(state(requests: [
+      {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'x'},
+      {'id': 'req-2', 'kid': 'kid-ada', 'kind': 'app', 'what': 'y'},
+    ]));
+    expect(notifier.shows, isEmpty, reason: 'a later read still raises nothing');
+    await feed.update(state(requests: [
+      {'id': 'req-1', 'kid': 'kid-ada', 'kind': 'app', 'what': 'x'},
+      {'id': 'req-2', 'kid': 'kid-ada', 'kind': 'app', 'what': 'y'},
+    ]));
+    expect(notifier.shows.length, 1, reason: 'the feed raises the new request');
+    expect(notifier.shows.single.id, 'req-2');
   });
 
   test('a review raises with its own words, and a decision elsewhere clears it', () async {

@@ -9,6 +9,7 @@ import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omarchy_kids_app/app_root.dart';
+import 'package:omarchy_kids_parent/notify_crypto.dart' show sha256Hex;
 import 'package:omarchy_kids_app/keystore.dart';
 import 'package:omarchy_kids_app/notifier.dart';
 import 'package:omarchy_kids_app/main.dart';
@@ -225,10 +226,25 @@ void main() {
     await pumpHome(tester, relay);
     await tester.tap(find.text('kid-ada asked to use minecraft'));
     await tester.pumpAndSettle();
+    expect(find.text('App: minecraft'), findsOneWidget, reason: 'the screen names the request type');
+    await tester.tap(find.text('After dinner'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Approve'));
     await tester.pumpAndSettle();
     expect(relay.decided.single['request_id'], 'req-1');
     expect(relay.decided.single['decision'], 'approve');
+    expect(relay.decided.single['reply'], 'After dinner', reason: 'the reply rides an Approve too');
+  });
+
+  testWidgets('a website request shows its type on the decision screen', (tester) async {
+    final relay = FakeRelay(stateWith([
+      {'id': 'req-site', 'kid': 'kid-ada', 'kind': 'site', 'what': 'example.com', 'asked_at': 1},
+    ]));
+    await pumpHome(tester, relay);
+    await tester.tap(find.text('kid-ada asked to use example.com'));
+    await tester.pumpAndSettle();
+    expect(find.text('Website: example.com'), findsOneWidget,
+        reason: 'an app, an add-on and a website are not the same ask');
   });
 
   testWidgets('a reply chip rides a Decline', (tester) async {
@@ -513,7 +529,7 @@ void main() {
   });
 
   testWidgets('a changed add-on is shown above the requests, and opens to what changed', (tester) async {
-    final rid = 'kid-ada.' + 'a' * 16;
+    final rid = 'kid-ada.${sha256Hex(utf8.encode('firefox')).substring(0, 16)}';
     final relay = FakeRelay(BoxState.fromJson({
       'kids': [
         {'kid': 'kid-ada', 'live': true},
@@ -536,7 +552,7 @@ void main() {
   });
 
   testWidgets('Approve sends the fingerprint the review showed', (tester) async {
-    final rid = 'kid-ada.' + 'a' * 16;
+    final rid = 'kid-ada.${sha256Hex(utf8.encode('firefox')).substring(0, 16)}';
     final relay = FakeRelay(BoxState.fromJson({
       'kids': [],
       'requests': [],
@@ -557,7 +573,7 @@ void main() {
   });
 
   testWidgets("a refusal the box gives is shown in the parent's words, not as a success", (tester) async {
-    final rid = 'kid-ada.' + 'a' * 16;
+    final rid = 'kid-ada.${sha256Hex(utf8.encode('firefox')).substring(0, 16)}';
     final relay = RefusingRelay(BoxState.fromJson({
       'kids': [],
       'requests': [],
@@ -575,7 +591,7 @@ void main() {
   });
 
   testWidgets('Deny sends a deny with the same fingerprint', (tester) async {
-    final rid = 'kid-ada.' + 'a' * 16;
+    final rid = 'kid-ada.${sha256Hex(utf8.encode('gone')).substring(0, 16)}';
     final relay = FakeRelay(BoxState.fromJson({
       'kids': [],
       'requests': [],

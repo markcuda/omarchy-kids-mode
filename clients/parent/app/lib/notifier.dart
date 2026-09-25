@@ -118,6 +118,19 @@ class NoticeFeed {
   bool get silent => !_seeded;
 
   /// Fold one document in, in arrival order, raising and clearing as the rule says.
+  /// Seed the sets from a `/v1/state` read without raising anything: only the
+  /// live feed raises a notification (R-NOTIFY-14.1). A read that is not the
+  /// first document of the run changes nothing; the feed's own diff is what
+  /// raises a request that arrived while the connection was down.
+  Future<void> seed(BoxState state) {
+    final next = _chain.then((_) async {
+      if (_seeded) return;
+      await _fold(state); // the first-document branch seeds and raises nothing
+    });
+    _chain = next.then((_) {}, onError: (_) {});
+    return next;
+  }
+
   Future<void> update(BoxState state) {
     final next = _chain.then((_) => _fold(state));
     // Keep the chain alive whatever a fold does; the caller still sees the error.
