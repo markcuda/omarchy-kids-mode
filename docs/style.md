@@ -31,8 +31,9 @@ upstream's own `AGENTS.md` (line 6) points command authors at
 — **UNVERIFIED**: the exact parser for `omarchy:summary` wasn't fetched, but the header format
 itself is directly observed in four files and is clearly load-bearing, not decorative.
 
-**Checked 2026-09-18.** All 27 commands in `bin/` (the parent command plus the 26
-`omarchy-kids-*` commands) carry a `# omarchy:summary=...` line under the shebang, and `AGENTS.md`
+**Checked 2026-09-18, re-checked 2026-09-25.** Every command in `bin/` (the parent command plus
+all 33 `omarchy-kids-*` commands, including the notification workstream's and
+`omarchy-kids-theme`) carries a `# omarchy:summary=...` line under the shebang, and `AGENTS.md`
 now requires it. The ten internal commands (`authd`, `wifid`, `boot-login`, `session-start`,
 `session`, `blocked`, `launcher-ctl`, `parent-auth`, `super-tap`, `time-ledger`) also carry
 `# omarchy:hidden=true`. `# omarchy:examples=` is still unused.
