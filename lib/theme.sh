@@ -8,6 +8,14 @@
 # shellcheck source=./kids.sh
 source "$(dirname "${BASH_SOURCE[0]}")/kids.sh" # account_home
 
+# The package's own kid theme root: a second, package-owned themes directory
+# beside Omarchy's, so the kid theme collection ships without writing into
+# /usr/share/omarchy (I-7). A plain build-time constant, never an environment
+# read (AGENTS.md rule 9): nothing a kid can set chooses it. Listed after
+# Omarchy's, so an upstream theme of the same name wins (theme_list_installed,
+# theme_apply_for). A test overrides it after sourcing.
+KIDS_THEMES_DIR=/usr/share/omarchy-kids/themes-kids
+
 # _theme_kids_env_defaults -- defaults $OMARCHY_PATH/$LANG (issue #48) --
 # unset in a session with no Omarchy env (SSH, CI). Called from every
 # function below that reads $OMARCHY_PATH or is about to run an Omarchy
@@ -17,12 +25,6 @@ source "$(dirname "${BASH_SOURCE[0]}")/kids.sh" # account_home
 _theme_kids_env_defaults() {
   : "${OMARCHY_PATH:=/usr/share/omarchy}"
   export OMARCHY_PATH
-  # The package's own kid theme root: a second, package-owned themes directory
-  # beside Omarchy's, so the kid theme collection ships without writing into
-  # /usr/share/omarchy (I-7). Listed after Omarchy's, so an upstream theme of
-  # the same name wins (theme_list_installed, theme_apply_for).
-  : "${KIDS_THEMES_DIR:=/usr/share/omarchy-kids/themes-kids}"
-  export KIDS_THEMES_DIR
   if [[ -z "${LANG:-}" || "${LANG:-}" == "C" ]]; then
     export LANG=C.UTF-8
   fi

@@ -126,9 +126,10 @@ without it `omarchy-kids-authd` answers "no" to every password and `omarchy-kids
 refuses to add a kid at all. Only then does it enable the package's own units and start them —
 `KIDS_UNITS`/`KIDS_SOCKETS`/`KIDS_TIMERS`, `lib/kids.sh`, the same list `omarchy-kids-assert`'s
 `units` lock uses (`docs/assert.md`) — *before* provisioning (issue #46). It enables every unit but
-starts all of them except the `omarchy-kids-assert.service` oneshot: Step 5 runs the assert once, and
-`enable --now` on that oneshot blocked Apply for seconds with no output (the owner's 15-second hang,
-T20). A
+starts only the sockets and timers now, the same split `units_fix` uses: the one-shot services must
+not be started here (`omarchy-kids-boot-login-cleanup.service` sleeps 20 s in `ExecStartPre`, and
+Step 5 runs the assert), so `enable --now` on them blocked Apply for seconds with no output (the
+owner's 15-second hang, T20). A
 fresh install before the first kid, or right after `omarchy-kids-remove` disables them again, needs
 the boot-time autologin and a working authd socket back before Step 2 (the account) and the *next*
 wizard run both need them. Every subsequent Apply command (`run_priv`/`run_priv_stdin`/

@@ -74,7 +74,8 @@ screen_home() {
       add)
         # T17: run the wizard and come back to the panel, instead of exec'ing
         # it and ending the app (a parent who adds one kid wants the panel again).
-        "$WIZARD_BIN"
+        # --dry-run passes through, the same as Remove Kids Mode below.
+        if [[ "$DRY_RUN" == "1" ]]; then "$WIZARD_BIN" --dry-run; else "$WIZARD_BIN"; fi
         rc=$?
         ((rc == 130)) && return 130
         ;;
@@ -95,6 +96,12 @@ screen_home() {
         done <<<"$rows_out"
         screen_kid_remove "$remove_account" "${remove_name:-$remove_account}"
         rc=$?
+        # Surface the remove screen's own notice (e.g. a mistyped name) on Home
+        # rather than leaving it for whichever kid screen opens next.
+        if [[ -n "$KID_NOTICE" ]]; then
+          PANEL_NOTICE="$KID_NOTICE"
+          KID_NOTICE=""
+        fi
         ((rc == 130)) && return 130
         ;;
       requests)

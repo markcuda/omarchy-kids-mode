@@ -14,14 +14,17 @@ permission and credit record: read that theme's `ATTRIBUTION.md`, `CREDITS.md` a
 
 ## What ships, and what does not
 
-Each theme here carries its **config** (`colors.toml`, `<theme>-base24.yaml`, `shell.toml`,
-`hyprland.lua`, `icons.theme`, `unlock.png`, and `btop.theme`/`chromium.theme` where the theme
-had them) and **one compressed wallpaper** (`backgrounds/*.webp`, the theme's first, downscaled
-to 2560px and re-encoded). The upstream collection's remaining wallpapers and its multi-megabyte
-`preview.png` are **not** shipped: the full set is ~393 MB, which has no place in the package.
-The task's own note says the same (`docs/loop-report.md`, 2026-09-24 dogfood triage). The
-wallpapers are the theme authors' / creators' art; a fuller set is an optional download, not a
-build dependency.
+Each theme here carries its **config only**: `colors.toml`, `<theme>-base24.yaml`, `shell.toml`,
+`hyprland.lua`, `icons.theme`, `unlock.png`, and `btop.theme`/`chromium.theme` where the theme had
+them. **No wallpapers ship.** The upstream collection's wallpapers are the theme authors' and other
+creators' art, several with no stated redistribution licence (for example `pocket-arcade`'s first
+wallpaper is credited fan art with no licence), and the full upstream set is ~393 MB. Shipping them
+under this package's MIT licence was wrong, so they are not shipped; a fuller set is an optional
+download the parent arranges, not a build dependency. Each theme's own `README.md`/`ATTRIBUTION.md`
+still describes its upstream wallpapers, which is where they live.
+
+The theme still restyles the whole desktop -- bar, menus, notifications, launcher and the lock
+screen all read `colors.toml`/`shell.toml` -- so a kid gets the look even without a new wallpaper.
 
 ## How the rest of the package sees it
 

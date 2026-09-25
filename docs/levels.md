@@ -15,6 +15,12 @@ launcher's searchable picker) is retired: no band defaults to it and no picker o
 starts. The Desktop mode is the stock Omarchy desktop with its menu trimmed of
 Install/Update/Setup (R-DESK-4), so a kid learns the same Super keys a parent uses.
 
+**What the Desktop mode does not do.** The app allow-list, the hide/extra-app rows and the "What my
+grown-ups can see" screen are the Kids launcher's (Grid). A Desktop kid starts apps from Omarchy's
+own menu search, so those rows neither restrict nor reach a Desktop kid: keep a child on the Grid
+if you need the allow-list enforced. The child's account, screen time, web policy and every lock
+are the same in both modes.
+
 Every level also turns off Hyprland's own update-news and donation popups
 (`ecosystem.no_update_news` and `ecosystem.no_donation_nag`): the news dialog carries an outbound
 link, and `xdg-open` would open it in the browser outside the kids launcher (R-DESK-1, I-6). A

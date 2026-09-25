@@ -209,7 +209,7 @@ for pair in "3-5:1" "6-8:1" "9-12:3" "13+:3"; do
 done
 check_contains "$("$CONF" band 13+)" "web=filtered" "older desktop keeps filtered-web permission"
 check_contains "$("$CONF" band 13+)" "terminal=sandboxed" "older desktop keeps terminal policy data"
-check_contains "$("$CONF" band 13+)" "menu=full" "older desktop keeps menu policy data"
+check_contains "$("$CONF" band 13+)" "menu=trimmed" "every band defaults to the trimmed menu now (SPEC R-DESK-3)"
 
 # --- slug (Appendix B.1) --------------------------------------------------
 
@@ -394,6 +394,7 @@ check_contains "$err" "$OMARCHY_PATH/themes" "set: the refusal names where it lo
 "$CONF" set kid-ada theme catppuccin-latte >/dev/null
 check "$("$CONF" get kid-ada theme)" "catppuccin-latte" "set: a real installed theme is accepted and read back"
 
+
 KID_THEME_DIR="$OMARCHY_KIDS_HOME_ROOT/home/kid-ada/.local/state/omarchy/current/theme"
 check "$(cat "$KID_THEME_DIR/colors.toml" 2>/dev/null)" "$(cat "$OMARCHY_PATH/themes/catppuccin-latte/colors.toml")" \
   "set theme: theme_apply_for actually copied the new theme's colors.toml to disk"
@@ -402,6 +403,24 @@ check "$(cat "$OMARCHY_KIDS_HOME_ROOT/home/kid-ada/.local/state/omarchy/current/
 
 # put kid-ada back on tokyo-night for the rest of this file's fixtures
 "$CONF" set kid-ada theme tokyo-night >/dev/null
+
+# The package's own kid theme root: conf must accept a theme that ships only in
+# the kid collection (KIDS_THEMES_DIR), not only Omarchy's. The constant is
+# rewritten in a copy of lib/theme.sh, the one substitution seam (tree.sh).
+THEME_TREE="$TMP/theme-tree"
+kids_tree "$THEME_TREE" "$DIR"
+rm -f "$THEME_TREE/lib"
+cp -a "$DIR/lib" "$THEME_TREE/lib"
+KID_THEMES="$TMP/kid-themes"
+mkdir -p "$KID_THEMES/cozy-night"
+echo 'background = "#000000"' >"$KID_THEMES/cozy-night/colors.toml"
+kids_set_const "$THEME_TREE/lib/theme.sh" KIDS_THEMES_DIR "$KID_THEMES"
+THEME_CONF="$THEME_TREE/bin/omarchy-kids-conf"
+"$THEME_CONF" set kid-ada theme cozy-night >/dev/null 2>&1
+check_status "$?" 0 "set: a theme from the kid collection is accepted (KIDS_THEMES_DIR)"
+err="$("$THEME_CONF" set kid-ada theme no-such-kid 2>&1 >/dev/null)"
+check_status "$?" 2 "set: a theme in neither root is refused"
+check_contains "$err" "no-such-kid" "set: the refusal names the bad theme"
 
 # A missing theme override still reports the parent-theme source even though
 # `get` retains the required-profile failure used by provisioning.

@@ -382,9 +382,9 @@ check_eq "$(
   (
     OMARCHY_PATH="$OMARCHY_SHARE"
     export OMARCHY_PATH
-    KIDS_THEMES_DIR="$TMP/no-kids-themes"
     # shellcheck source=/dev/null
     source "$THEME_LIB"
+    KIDS_THEMES_DIR="$TMP/no-kids-themes"
     theme_list_installed
   )
 )" "$(printf 'catppuccin-latte\ntokyo-night')" \
@@ -394,9 +394,9 @@ check_eq "$(
   (
     OMARCHY_PATH="$TMP/no-such-omarchy-path"
     export OMARCHY_PATH
-    KIDS_THEMES_DIR="$TMP/no-kids-themes"
     # shellcheck source=/dev/null
     source "$THEME_LIB"
+    KIDS_THEMES_DIR="$TMP/no-kids-themes"
     theme_list_installed
   )
 )" "" "theme_list_installed: empty, not an error, with no themes dir at all"
@@ -411,9 +411,9 @@ check_eq "$(
   (
     OMARCHY_PATH="$OMARCHY_SHARE"
     export OMARCHY_PATH
-    KIDS_THEMES_DIR="$KIDS_SHARE/themes-kids"
     # shellcheck source=/dev/null
     source "$THEME_LIB"
+    KIDS_THEMES_DIR="$KIDS_SHARE/themes-kids"
     theme_list_installed
   )
 )" "$(printf 'catppuccin-latte\ncozy-night\ntokyo-night')" \

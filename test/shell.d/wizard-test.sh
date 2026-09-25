@@ -214,8 +214,9 @@ check_not_contains "$out" "omarchy-kids-conf machine set parent forged-parent" \
   "OMARCHY_KIDS_INVOKING_USER cannot change Apply's parent identity"
 check_contains "$out" "sudo systemctl enable omarchy-kids-boot-login.service omarchy-kids-boot-login-cleanup.service omarchy-kids-assert.service omarchy-kids-authd.socket omarchy-kids-wifid.socket omarchy-kids-time.timer omarchy-kids-ask-collect.timer omarchy-kids-review.timer omarchy-kids-relay-courier.timer" \
   "Apply's first step enables the package's units, before provisioning"
-check_contains "$out" "sudo systemctl start omarchy-kids-boot-login.service omarchy-kids-boot-login-cleanup.service omarchy-kids-authd.socket omarchy-kids-wifid.socket omarchy-kids-time.timer omarchy-kids-ask-collect.timer omarchy-kids-review.timer omarchy-kids-relay-courier.timer" \
-  "Apply starts everything but the assert oneshot (step 5 runs it once; T20)"
+check_contains "$out" "sudo systemctl start omarchy-kids-authd.socket omarchy-kids-wifid.socket omarchy-kids-time.timer omarchy-kids-ask-collect.timer omarchy-kids-review.timer omarchy-kids-relay-courier.timer" \
+  "Apply starts only the sockets and timers (T20: no oneshot blocks it)"
+check_not_contains "$out" "systemctl start omarchy-kids-boot-login" "Apply never starts a oneshot service (the cleanup unit sleeps 20s; T20)"
 check_not_contains "$out" "enable --now" "Apply never blocks on the assert oneshot at step 1 (the 15-second hang)"
 check_contains "$out" "omarchy-kids-provision add Ada --band 6-8 --avatar owl --password-stdin --parent-password-stdin --apply" \
   "apply runs provision add with the exact flags, including the chosen face"
@@ -264,7 +265,7 @@ done
 # all (R-BAND-2: "the profile stores only overrides") --------------------
 
 : >"$ARGV_LOG"
-answers="$(answers_file begin parentpw123 Mia fox 6-8 simple garden default pack parent 1 secret1 secret1 apply parent)"
+answers="$(answers_file begin parentpw123 Bea fox 6-8 simple garden default pack parent 1 secret1 secret1 apply parent)"
 run_wizard "$answers"
 check_status "$WIZ_STATUS" 0 "all-defaults path exits 0"
 check_not_contains "$out" "omarchy-kids-conf set" "leaving every Simple choice at its band default writes no override"

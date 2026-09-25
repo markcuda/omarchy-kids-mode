@@ -37,6 +37,18 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Changed
 
+- **Two kid modes, and a new default for older bands.** The kid desktops are now **App grid**
+  (`level = 1`) and **Desktop** (`level = 3`, the real Omarchy desktop with its Install / Update /
+  Setup menu rows hidden). Ages 9-12 and 13+ now default to **Desktop**, where they defaulted to
+  the old "Simplified desktop" (retired `level = 2`) before; 3-5 and 6-8 stay on the grid. An
+  existing 9-12 or 13+ kid with no explicit `level` override therefore starts in Desktop at their
+  next login. The old level 2 still starts for a profile that names it, but no band or picker
+  offers it.
+- **A kid theme collection.** `share/themes-kids/` ships 15 kid-friendly themes' config (from
+  Omarchy PR #12488), listed by `theme_list_installed` beside Omarchy's own themes. No wallpapers
+  ship (their licences are not ours to pass on).
+- Apply no longer blocks for seconds on the boot-login-cleanup oneshot, and each Apply step now
+  reports its own duration.
 - UI review fixes: the Level 1 grid clips instead of hiding a selected tile, the time-left line
   sits below the clock instead of over it, long names elide in the exit and Time's Up cards, an
   open-network join failure no longer blames a password, the portal says when no accounts or no

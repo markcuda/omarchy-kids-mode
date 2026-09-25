@@ -18,6 +18,11 @@ There are exactly two:
 Ages **3-5** and **6-8** start on the grid; **9-12** and **13+** start on the desktop. You can
 switch a child either way from the panel's Desktop screen.
 
+**The one thing to know about Desktop:** the app allow-list, the hide/extra-app rows and the
+"What my grown-ups can see" screen are the App grid's. A Desktop child starts apps from Omarchy's
+own menu search, so those rows do not restrict them; keep a child on the App grid if you need the
+allow-list enforced. Screen time, the web policy and every lock are the same in both modes.
+
 ## The defaults each band starts with
 
 | | 3-5 | 6-8 | 9-12 | 13+ |
@@ -30,9 +35,10 @@ switch a child either way from the panel's Desktop screen.
 | Terminal | none | none | playground | sandboxed |
 | Password | min 4, optional | min 4 | min 6 | min 6 |
 
-Every value above is a **default**: change any of it for one child and that choice sticks, even if
-you later move them to another band ("Reset to band defaults" clears your changes and shows the new
-band's values again).
+Every value above is a **default**: change any of the per-child settings and that choice sticks,
+even if you later move them to another band ("Reset to band defaults" clears your changes and shows
+the new band's values again). Two things are **band-only** and can't be overridden per child: a
+band's **Terminal** value and its password rule.
 
 ## Every setting
 
@@ -59,7 +65,9 @@ band's values again).
   `cleanbrowsing-family`, or a `custom:<url>`). **Stored now, not applied yet:** the browser policy
   always uses the Cloudflare Family resolver regardless of this value; `docs/web.md` says so.
 - **Allowed sites** (`sites`) — extra sites the walled garden allows, beyond the band's starter
-  list. Only meaningful when Web is `garden`.
+  list. **Stored now, not applied yet:** the browser policy's allow-list comes from the band's
+  starter list plus the sites you approve, so editing this value changes nothing today;
+  `docs/conf.md` says so.
 
 ### Screen time
 
