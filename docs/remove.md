@@ -303,6 +303,18 @@ command in this repo uses:
   OMARCHY_KIDS_HOME_ROOT    scratch prefix for /home/<account> itself
 ```
 
+## Known gap: a LUKS slot on the disk that the map does not list (security review, 2026-09-25)
+
+`luks_present` and the roster cross-check read the root-owned `luks-slots` map and the intent files,
+never the device's own slot table. If a kid's slot exists on the device but is absent from the map
+(external corruption of the map, or a manual `cryptsetup`), `remove` reports "every step removed or
+skipped, nothing failed" while the kid's passphrase still unlocks the disk. `boot_check_luks_slots`
+checks map→device only, so nothing catches the reverse. The precondition is a map/disk
+inconsistency, not a routine path — `add_luks_slot` rolls its map write back on failure — and
+closing it is a `cryptsetup luksDump` device→map reconciliation before the `etc-and-varlib` purge
+(a VM item). `lib/kids.sh`'s `detect_luks_device` lsblk fallback also picks the first `crypto_LUKS`
+device, which on a multi-LUKS host may not be root; `--luks-device` is the safe path there.
+
 ## The trust boundary (issue #58)
 
 This command resolves `lib/` and every sibling `omarchy-kids-*` from its own resolved location

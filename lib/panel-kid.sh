@@ -505,8 +505,12 @@ screen_kid_password() { # ACCOUNT NAME
     "Account: $account"
     "Run this: sudo passwd $account"
     ""
-    "There's no panel button for this yet — run the line above in a terminal;"
-    "it asks for the new password twice and never shows it on screen."
+    "That changes the password used at the login screen. It asks for the new"
+    "password twice and never shows it on screen."
+    ""
+    "Disk mode is different: the kid unlocks the disk with their own passphrase,"
+    "and this does not change it. Resetting that means removing and re-adding"
+    "their disk access (docs/provision.md). No panel button for this yet."
   )
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local choices=("back|Back|")

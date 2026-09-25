@@ -111,7 +111,11 @@ dry-run posture is passed through as `--dry-run`.
 - **Password**: `omarchy-kids-provision` has no `passwd` subcommand yet — only `add`/`remove`/`list`
   (docs/provision.md) — so this screen checks for one (future-proofing) and, finding none, names
   the exact command a parent runs themselves (`sudo passwd <kid>`) rather than claiming a control
-  that doesn't exist (I-6).
+  that doesn't exist (I-6). The card says what `passwd` actually changes: the login-screen password.
+  On a disk-mode box the kid unlocks the disk with their own passphrase, which `passwd` does **not**
+  change — resetting that means removing and re-adding the kid's disk access (`docs/provision.md`).
+  R-SEC-5's "both update the slot" is therefore **not yet met**; the card says so rather than
+  implying a reset revoked disk access.
 - **Remove this kid** asks a parent to type the kid's name back, exactly, before running
   `omarchy-kids-provision remove <kid> --apply` (R-FND-6). A mismatch runs nothing at all — not
   even a dry-run print — and says so.
