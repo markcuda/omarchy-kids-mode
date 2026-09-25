@@ -27,6 +27,7 @@ privilege escalation and not a lock this project should own.
   "Reset to band defaults" restores. A kid changing their theme does not change the profile's
   `theme` value (the override stays the default the parent chose); it changes the kid's current
   theme, which lives in their own `~/.local/state/omarchy/current/theme`.
+- **The themes are visible to Omarchy's own switcher.** Provisioning links each collection theme into the kid's `~/.config/omarchy/themes/<name>` (a kid-owned symlink to the root-owned package copy), which Omarchy reads for user themes. Built on `fix/kid-session-polish`.
 - **The kid switches on Omarchy's own chord.** `Super+Ctrl+Shift+Space` runs the same kind of
   picker a parent's does, over the offered set. Every level gets it: at the Grid, a grid tile for
   pre-readers as well. This is a presentation bind, so it does not touch the Appendix E "nothing
