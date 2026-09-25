@@ -105,26 +105,36 @@ groups_fix() {
 }
 
 # theme (issue #53, T44): verify-only. The theme is a kid preference inside the
-# offered set, so a kid-chosen theme is valid; only a name outside the set (or
-# nothing) is refused, and fix re-applies the profile's default. See
+# offered set, so a kid-chosen in-set name is valid. An absent theme.name is ok
+# (nothing to enforce); a planted non-regular file (FIFO/symlink/directory) or a
+# name outside the set is refused, and fix applies the profile's default (or the
+# parent's current theme when there is no override). See
 # docs/phase1/SPEC-AMENDMENT-kid-themes.md.
 theme_ok() {
-  local account="$1" current name
-  current="$(THEME_KIDS_HOME="$(home_dir_for "$account")" theme_current_name)"
-  [[ -z "$current" ]] && return 0
+  local account="$1" state name
+  state="$(THEME_KIDS_HOME="$(home_dir_for "$account")" theme_name_state)"
+  case "$state" in
+    none) return 0 ;;   # nothing set: nothing to enforce
+    unsafe) return 1 ;; # a planted FIFO/symlink/directory, never read as "no theme"
+  esac
   while IFS= read -r name; do
-    [[ "$name" == "$current" ]] && return 0
+    [[ "$name" == "$state" ]] && return 0
   done < <(theme_list_installed)
   return 1
 }
 theme_fix() {
-  local account="$1" expected
+  local account="$1" expected parent
   expected="$(profile_field "$account" theme)"
   if [[ -z "$expected" ]]; then
-    # No default to apply: report it, do not claim a fix that changed nothing
-    # (I-6). Reachable only when the profile has no theme and the name is
-    # outside the offered set.
-    echo "theme_fix: $account has no theme override to apply" >&2
+    # No profile override (a box provisioned before issue #53, or a parent with no
+    # theme to copy): the default is the parent's own current theme, the same one
+    # `omarchy-kids-conf unset theme` applies (SPEC-AMENDMENT-kid-themes.md).
+    parent="$(conf_get "$MACHINE_CONF" parent 2>/dev/null || true)"
+    [[ -n "$parent" ]] || return 1
+    expected="$(THEME_KIDS_HOME="$(posture_parent_home "$parent")" theme_current_name)"
+  fi
+  if [[ -z "$expected" ]]; then
+    echo "theme_fix: $account has no theme to apply (no profile override and no parent theme)" >&2
     return 1
   fi
   theme_apply_for "$account" "$expected"

@@ -32,11 +32,14 @@ privilege escalation and not a lock this project should own.
   pre-readers as well. This is a presentation bind, so it does not touch the Appendix E "nothing
   else bound" claim for the Grid's *window* controls; the amendment adds exactly this one bind and
   restates Appendix E.
-- **The `theme` assert lock becomes verify-only.** It no longer re-applies the profile's theme. It
-  asserts the kid's current theme, when present, is a directory under an offered root (not a
-  symlink, not a name outside the set) and that `theme.name` matches it. A kid's free choice is
-  valid; a kid pointing their theme at something outside the set is a `fix` that re-applies the
-  parent's default. This is the one fence: the set is closed at the package's two roots.
+- **The `theme` assert lock becomes verify-only.** It no longer re-applies the profile's theme on
+  every run. It accepts an absent `theme.name` (nothing to enforce) or a name inside the offered
+  set (a kid's free choice); it refuses a name outside the set, or any planted non-regular file (a
+  FIFO/symlink/directory), reading `theme.name` with `O_NOFOLLOW` + `O_NONBLOCK` + a regular-file
+  check so a planted FIFO cannot hang the assert. `fix` applies the profile's `theme`, or the
+  parent's current theme when the profile has no `theme` override (the same default
+  `omarchy-kids-conf unset theme` uses). This is the one fence: the set is closed at the package's
+  two roots.
 
 ## The one owner question
 

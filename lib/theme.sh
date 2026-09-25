@@ -121,29 +121,45 @@ theme_geometry() {
   "$KIDS_PY" "$helper" "$parent" "${THEME_KIDS_HOME:-$HOME}" "$cache"
 }
 
-# theme_current_name -- theme_dir's own theme.name, plain one-line file.
-# Empty, not an error, if that account has never received a theme.
+# theme_name_state -- theme_dir's own theme.name, plain one-line file. Empty,
+# not an error, if that account has never received a theme.
 # The read is a root process opening a file inside a kid's home (rule 9), so it
-# goes through O_NOFOLLOW + a regular-file check: a FIFO or a symlink a kid
-# plants must never hang the assert or follow to another file. Empty on any
-# error. `theme_geometry` is the same shape for the portal (lib/theme-geometry.py).
-theme_current_name() {
+# goes through O_NOFOLLOW + O_NONBLOCK + a regular-file check: a FIFO or a
+# symlink a kid plants must never hang the assert or follow to another file.
+# Prints "none" (absent), "unsafe" (not a readable regular file), or the name.
+# `theme_geometry` is the same shape for the portal (lib/theme-geometry.py).
+theme_name_state() {
   local f
   f="$(dirname "$(theme_dir)")/theme.name"
   "$KIDS_PY" -c 'import os, stat, sys
-p = sys.argv[1]
+flags = os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_CLOEXEC", 0)
 try:
-    fd = os.open(p, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0))
+    fd = os.open(sys.argv[1], flags)
+except FileNotFoundError:
+    print("none")        # nothing set
+    sys.exit(0)
 except OSError:
+    print("unsafe")      # symlink, loop, not a file we may open
     sys.exit(0)
 try:
     if not stat.S_ISREG(os.fstat(fd).st_mode):
+        print("unsafe")
         sys.exit(0)
     data = os.read(fd, 4096)
 finally:
     os.close(fd)
-sys.stdout.write(data.decode("utf-8", "replace").strip() + "\n")
+name = data.decode("utf-8", "replace").strip()
+print(name if name else "none")
 ' "$f" 2>/dev/null || true
+}
+
+# theme_current_name -- the name, or empty for "none"/"unsafe"/error. Callers
+# that need to tell "nothing set" from "planted something" use theme_name_state.
+theme_current_name() {
+  local state
+  state="$(theme_name_state)"
+  case "$state" in none | unsafe | "") return 0 ;; esac
+  printf '%s\n' "$state"
 }
 
 # theme_list_installed -- every name under $OMARCHY_PATH/themes and the

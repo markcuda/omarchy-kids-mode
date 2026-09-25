@@ -912,6 +912,16 @@ out="$("$BIN" 2>&1)"
 check_status "$out" "theme:kid-ada" "ok" "theme: an in-set kid-chosen theme passes the lock (T44)"
 check_eq "$(cat "$KID_THEME_NAME_FILE")" "cozy-night" "theme: the in-set choice is not reverted (T44)"
 
+# Review finding: a planted FIFO theme.name must FAIL the lock (not read as "no
+# theme"), and the fix's mv -f replaces it with the regular theme.name file.
+rm -f "$KID_THEME_NAME_FILE"
+/usr/bin/mkfifo "$KID_THEME_NAME_FILE"
+out="$("$BIN" 2>&1)"
+check_status "$out" "theme:kid-ada" "fixed" "theme: a planted FIFO theme.name is fixed, not read as no-theme"
+[[ -f "$KID_THEME_NAME_FILE" && ! -p "$KID_THEME_NAME_FILE" ]] &&
+  pass "theme: the FIFO was replaced by the theme.name file" ||
+  fail "theme: the FIFO was not replaced by a regular theme.name"
+
 # Review finding: a profile with no theme override, and an out-of-set theme.name,
 # has no default to re-apply -- the lock must report FAIL, not a no-op "fixed".
 cp "$ETC/kids/kid-ada.conf" "$TMP/kid-ada.theme-bak"
