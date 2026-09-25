@@ -176,4 +176,28 @@ check "$out" "omarchy-kids-session-start: validated manifest unavailable" \
 [[ ! -e "$RUN/launcher-$(id -u).json" ]] && pass "missing manifest does not create launcher JSON" ||
   fail_ "missing manifest does not create launcher JSON"
 
+# The data-screen tile (R-DATA-3) opens a floating terminal, and R-DESK-3 says
+# the fullscreen Grid has no terminal (security review, 2026-09-25): it must not
+# appear at level 1, only on the level-2 desktop. Built last so it disturbs no
+# earlier map/manifest assertion.
+MAP="$ETC/launchers/$ACCOUNT.json"
+write_profile() { # BAND LEVEL
+  printf 'name=Display Name\navatar=fox\nband=%s\nlevel=%s\nweb=garden\ntheme=tokyo-night\n' "$1" "$2" \
+    >"$ETC/kids/$ACCOUNT.conf"
+}
+write_profile 9-12 1
+launcher_map_fix "$ACCOUNT" >/dev/null
+if jq -e '.tiles[] | select(.id == "kids-data")' "$MAP" >/dev/null 2>&1; then
+  fail_ "a level-1 Grid 9-12 kid must not get the terminal-backed data tile (R-DESK-3)"
+else
+  pass "a level-1 Grid 9-12 kid gets no terminal-backed data tile (R-DESK-3, security review)"
+fi
+write_profile 9-12 2
+launcher_map_fix "$ACCOUNT" >/dev/null
+if jq -e '.tiles[] | select(.id == "kids-data")' "$MAP" >/dev/null 2>&1; then
+  pass "a level-2 9-12 kid gets the data tile"
+else
+  fail_ "a level-2 9-12 kid must get the data tile"
+fi
+
 exit "$fail"
