@@ -41,6 +41,7 @@ import pwd
 import json
 import os
 import re
+import stat
 import sys
 import time
 
@@ -122,12 +123,21 @@ def die(msg, code=2):
 
 
 def load_record(path):
+    # Root reads a record that may have just been moved out of a kid's outbox, so
+    # the open is O_NOFOLLOW and the file must be regular: a planted symlink is
+    # never followed to another file (the shape lib/devices.py already uses).
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0))
     except FileNotFoundError:
         die(f"no such record: {path}")
-    except (OSError, json.JSONDecodeError) as e:
+    except OSError as e:
+        die(f"could not read {path}: {e}")
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            die(f"could not read {path}: not a regular file")
+        with os.fdopen(fd, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
         die(f"could not read {path}: {e}")
 
 
