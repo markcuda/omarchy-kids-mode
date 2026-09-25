@@ -2599,3 +2599,22 @@ Continuing the dogfooding workstream on `fix/kid-session-polish`.
 - **shfmt.** The union merges had left seven test files drifted; `shfmt -i 2 -ci` is clean again.
 
 Gated: `test/all -j 4`, 65 files green. Integration at `57f6476`, in sync with `origin`.
+
+### 2026-09-25, the theme write that hung the suite (a FIFO), and bounded waits
+
+- T45's other half landed: `bin/omarchy-kids-theme` (the kid picker, applied through Omarchy's own
+  `omarchy-theme-set`) bound on `Super+Ctrl+Shift+Space` at every level, with L3 removing Omarchy's
+  own stock bind for the chord first. Reviewed by opus 5.5 (max).
+- The review found a **security defect in T44**: `theme_apply_for` ran as root writing under a path
+  a kid controls, and `theme_reload_if_live` read the kid's `colors.toml` as root -- a symlinked file
+  could have leaked another file to the kid. Root now removes a stale tree and runs the whole build
+  as the kid via `runuser`; the reload reads and IPC as the kid.
+- The security refactor then introduced a real hang: it wrote `theme.name` with a shell redirect,
+  which **blocks forever opening a FIFO for write**, and the T44 test plants exactly that FIFO. Every
+  assert run hung and left orphan processes. It writes a `mktemp` file and `mv -f`s it over the
+  target now (the old shape). With that fix, `assert-test` and `remove-test` both pass, and
+  `test/all -j 4` is **67 files green with no workaround** for the first time on this Mac.
+- `assert-test` also bounds its two concurrency `wait`s so a deadlock fails the gate instead of
+  hanging it.
+
+Integration at `64e3a58`, in sync with `origin`.
