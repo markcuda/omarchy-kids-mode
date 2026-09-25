@@ -29,6 +29,39 @@ show_remove_kids_mode() {
   fi
 }
 
+# T18: hand the machine to a kid. There is no way to start a kid's live session
+# from the parent's (Omarchy 4.0.2 has no such switch), so "enter Kids Mode"
+# here means an honest sign-out: the parent's session ends and the login screen
+# shows every account for a kid to sign in from. The same mechanism
+# bin/omarchy-kids-exit --finish uses (ask the compositor to exit, then
+# loginctl as a last resort). No tile is preselected; the label says so.
+show_hand_over() {
+  # shellcheck disable=SC2034 # read by tui_screen_confirm via nameref-by-name
+  local -a facts=(
+    "This signs you out of the desktop."
+    ""
+    "The login screen then shows every account, so a kid can sign in."
+    "Nothing is changed, and no password is asked here."
+  )
+  tui_screen_confirm "Hand over to a kid?" 1 1 0 "" facts "Sign out" "Not now"
+  local rc=$?
+  ((rc == 130)) && return 130
+  ((rc == 0)) || return 0
+  if [[ "$DRY_RUN" == 1 ]]; then
+    printf '  [dry-run] hyprctl dispatch exit (sign out)\n'
+    return 0
+  fi
+  if command -v hyprctl >/dev/null 2>&1; then
+    hyprctl dispatch 'hl.dsp.exit()' >/dev/null 2>&1 || hyprctl dispatch exit >/dev/null 2>&1 || true
+  fi
+  if [[ -n "${XDG_SESSION_ID:-}" ]]; then
+    # Last resort, same as bin/omarchy-kids-exit --finish.
+    exec loginctl terminate-session "$XDG_SESSION_ID"
+  fi
+  echo "omarchy-kids-panel: no graphical session to sign out of here." >&2
+  return 1
+}
+
 screen_home() {
   while true; do
     local rows_out total_open total_reviews
@@ -51,6 +84,7 @@ screen_home() {
         choices+=("kid:$account|$home_line|")
       done <<<"$rows_out"
       choices+=("remove_kid|Remove a kid|Pick a kid to remove (their files are kept)")
+      choices+=("hand_over|Hand over to a kid|Sign out so a kid can log in at the login screen")
     fi
     choices+=(
       "add|Add a kid|"
@@ -134,6 +168,7 @@ screen_home() {
         rc=$?
         ((rc == 130)) && return 130
         ;;
+      hand_over) show_hand_over || true ;;
       quit) return 1 ;;
       kid:*)
         screen_kid "${TUI_REPLY#kid:}"
