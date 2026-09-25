@@ -192,10 +192,13 @@ that runs one, decides ✓ or ✗, and does something about it:
   claimed to be), the failing command's last ten lines print under the dashboard, and Done's
   headline names which step it was ("Setup stopped at ...") instead of claiming the desktop is
   ready.
+- **Each step's duration is measured and printed** (T19): after each step the wizard prints
+  `  <step>: <n>s` live, and a real run appends `[step] <step>: <n>s` to the technical log, so the
+  next slow step is a fact rather than a feeling.
 - **The technical log** (R-WIZ-5's tip line, `$SETUP_LOG`, default `/var/log/omarchy-kids/setup.log`)
   is now actually written on a real run, not just named: `apply_step_getok` also writes
-  machine.conf's `parent=`, enables and starts the package's own units (`sudo systemctl enable
-  --now`, issue #46, see "Root and the one sudo prompt" above) and creates the log's own directory
+  machine.conf's `parent=`, enables the package's own units and starts all of them but the assert
+  oneshot (issue #46, T20, see "Root and the one sudo prompt" above) and creates the log's own directory
   (`sudo install -d`, since a parent's own unprivileged wizard process can't create anything under
   `/var/log` itself), and every step's combined output is piped through `sudo tee -a "$SETUP_LOG"`
   on its way to the screen — a second, separate `sudo` call from the step's own (already-elevated)

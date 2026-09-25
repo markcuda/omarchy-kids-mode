@@ -126,7 +126,7 @@ apply_step_safety() {
 # run only) to $SETUP_LOG (R-WIZ-5). FUNC's own exit code, via
 # PIPESTATUS, decides ✓/✗ -- docs/wizard.md "Apply's five steps".
 run_apply_step() {
-  local func="$2" tmp rc line
+  local func="$2" tmp rc line start="$SECONDS" took
   tmp="$(mktemp)"
   if [[ "$DRY_RUN" == "1" ]]; then
     "$func" 2>&1 | tee "$tmp"
@@ -150,6 +150,13 @@ run_apply_step() {
     while IFS= read -r line; do APPLY_FAILURE_TAIL+=("$line"); done < <(tail -n 6 "$tmp")
   fi
   rm -f "$tmp"
+  took=$((SECONDS - start))
+  # Measure and say so (T19): a live per-step duration, and the same line in
+  # the root-owned log, so the next slow step is a fact, not a feeling.
+  printf '  %s: %ds\n' "$1" "$took"
+  if [[ "$DRY_RUN" != "1" ]]; then
+    printf '[step] %s: %ds\n' "$1" "$took" | sudo -n tee -a "$SETUP_LOG" >/dev/null 2>&1 || true
+  fi
   return "$rc"
 }
 

@@ -234,6 +234,7 @@ check_contains "$out" "omarchy-kids-conf set kid-ada web filtered" "a web choice
 check_contains "$out" "omarchy-kids-conf set kid-ada wifi helper" "a Wi-Fi choice that differs from the band default is written as an override"
 check_contains "$out" "omarchy-kids-conf set kid-ada level 3" "a level choice that differs from the band default is written as an override"
 check_contains "$out" "omarchy-kids-web install 6-8 --apply" "apply runs web install for the chosen band"
+check_contains "$out" "Checking setup safeguards: " "apply prints a per-step duration (T19)"
 check_contains "$out" "omarchy-kids-apps install 6-8 --now --apply" "apply installs the starter pack from cache via omarchy-kids-apps, with --apply so it isn't silently a no-op under sudo"
 check_contains "$out" "omarchy-kids-assert" "apply runs the safety check (assert)"
 check_contains "$out" "omarchy-kids-session --check-setup" "apply runs the session setup safety report"
