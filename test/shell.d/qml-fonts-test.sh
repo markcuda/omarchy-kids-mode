@@ -13,7 +13,8 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 0
 fi
 
-out="$(python3 - "$DIR" <<'PY'
+out="$(
+  python3 - "$DIR" <<'PY'
 import pathlib, re, sys
 
 # Scans every Text/TextInput/TextEdit opener and checks its *direct*

@@ -910,7 +910,7 @@ EOF
 # target readiness and before each parent release shot. No child capture does it.
 check "$(grep -c 'notifications.*dismiss' "$LOG1")" 12 \
   "three parent surfaces dismiss two startup prompts in each theme"
-if python3 - "$LOG1" <<'PY'; then pass "startup dismissal uses owner GUI and precedes each parent release"; else
+if python3 - "$LOG1" <<'PY'
 import sys
 pending = []
 captures = 0
@@ -926,6 +926,7 @@ for line in open(sys.argv[1]):
         captures += 1
 assert captures == 6 and not pending
 PY
+then pass "startup dismissal uses owner GUI and precedes each parent release"; else
   fail_ "startup dismissal ordering or owner context"
 fi
 for notice_case in none invalid failed-partial; do

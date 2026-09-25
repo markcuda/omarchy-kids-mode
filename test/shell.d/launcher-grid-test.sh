@@ -213,7 +213,7 @@ if command -v node >/dev/null 2>&1; then
 
     // A tile whose app is not installed is shown with its honest label but
     // skipped by navigation (I-6): Enter on it could neither launch nor
-    // explain. `false` in the availability array marks such a tile.
+    // explain. $(false) in the availability array marks such a tile.
     var avail = [true, false, true, true, true, true, true, true, false, true];
     results.push('skipRight=' + G.moveRight(0, 10, avail));
     results.push('skipLeft=' + G.moveLeft(2, 10, avail));

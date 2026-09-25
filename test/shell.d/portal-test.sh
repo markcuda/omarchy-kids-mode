@@ -249,7 +249,7 @@ print(s.count('{'), s.count('}'), s.count('('), s.count(')'))
     fail "Main.qml does not use the delimiter-safe PortalConfig parser"
   fi
   if command -v node >/dev/null 2>&1 && [[ -f "$PORTAL_JS" ]]; then
-    if node - "$PORTAL_JS" <<'NODE'; then
+    if node - "$PORTAL_JS" <<'NODE'
 const fs = require("fs")
 const vm = require("vm")
 const source = fs.readFileSync(process.argv[2], "utf8").replace(/^\.pragma library\s*/, "")
@@ -267,6 +267,7 @@ for (const [name, encoded] of cases) {
   if (result.kids["kid-ada"].name !== name || result.kids["kid-cy"].name !== "Cy") process.exit(1)
 }
 NODE
+    then
       pass "PortalConfig parser restores every adversarial name with two kids present"
     else
       fail "PortalConfig parser did not restore every adversarial name"

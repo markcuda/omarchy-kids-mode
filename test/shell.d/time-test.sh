@@ -240,14 +240,16 @@ check "$(tt time_minutes_since_midnight 19:30)" "1170" \
   "time_minutes_since_midnight: 19:30 is minute 1170 of the day"
 check "$(tt time_minutes_since_midnight 08:09)" "489" \
   "time_minutes_since_midnight: 08:09 is base-10 minute 489, not octal"
-bad="$(tt time_minutes_since_midnight banana 2>&1)"; st=$?
+bad="$(tt time_minutes_since_midnight banana 2>&1)"
+st=$?
 check "$st" 1 "time_minutes_since_midnight: a bad value exits non-zero"
 check_contains "$bad" "banana is not a 24-hour HH:MM time" \
   "time_minutes_since_midnight: a bad value is refused with a sentence"
 check_not_contains "$bad" "invalid integer constant" \
   "time_minutes_since_midnight: never bash's 10# error"
 
-bad="$(OMARCHY_KIDS_ETC="$ETC" bash -c 'source "$1/lib/time.sh"; time_conf kid-ada no_such_key' _ "$DIR" 2>&1)"; st=$?
+bad="$(OMARCHY_KIDS_ETC="$ETC" bash -c 'source "$1/lib/time.sh"; time_conf kid-ada no_such_key' _ "$DIR" 2>&1)"
+st=$?
 check "$st" 1 "time_conf: an unreadable key exits non-zero"
 check_contains "$bad" "could not read no_such_key for kid-ada" \
   "time_conf: an unreadable key names the key and the kid"
