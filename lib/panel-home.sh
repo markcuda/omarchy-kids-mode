@@ -50,9 +50,9 @@ screen_home() {
     choices+=(
       "add|Add a kid|"
       "requests|Requests ($total_open)|"
-      "notifications|Notifications|Turn notifications on or off, and pair a device (R-NOTIFY)"
-      "reviews|Reviews ($total_reviews)|An approved app whose surface changed (R-NOTIFY-12)"
-      "machine|Machine safety|The read-only safety report (R-TRUST-2)"
+      "notifications|Notifications|Turn notifications on or off, and pair a device"
+      "reviews|Reviews ($total_reviews)|An approved app whose surface changed"
+      "machine|Machine safety|The read-only safety report"
       "remove_kids_mode|Remove Kids Mode|"
       "quit|Quit|"
     )
