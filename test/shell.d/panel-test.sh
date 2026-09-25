@@ -202,6 +202,15 @@ check_contains "$out" "Remove a kid" "Home offers a top-level Remove a kid row (
 check_contains "$out" "Machine safety" "Home offers the Machine safety row"
 check_contains "$out" "Notifications" "Home offers the Notifications row"
 check_contains "$out" "Requests (0)" "Home shows the open-request count"
+
+# T25: one ask.py list-open call (open_requests_by_kid) feeds every per-kid and
+# the total count. Seed one open request and check the total reflects it.
+printf '%s\n' '{"kid":"kid-ada","kind":"app","what":"firefox","asked_at":1000000000,"state":"open"}' \
+  >"$QUEUE_DIR/1000000000-kid-ada-app.json"
+answers="$(answers_file quit)"
+run_panel "$answers"
+check_contains "$out" "Requests (1)" "Home totals one open request (T25: one batched read, not one per kid)"
+rm -f "$QUEUE_DIR/1000000000-kid-ada-app.json"
 check_contains "$out" "Remove Kids Mode" "Home offers the Remove Kids Mode row"
 
 # review §3.1: a screen's facts are its own card body now, so they belong
