@@ -123,9 +123,12 @@ anything else that depends on it, writes `machine.conf`'s `parent=` — `omarchy
 set parent $INVOKING_USER` (issue #46 follow-up; `$INVOKING_USER` always comes from `id -un`, since
 the wizard always runs unprivileged, as the parent) — since nothing else in this repo writes that line, and
 without it `omarchy-kids-authd` answers "no" to every password and `omarchy-kids-provision`
-refuses to add a kid at all. Only then does it run `sudo systemctl enable --now` on the package's
-own units — `KIDS_UNITS`/`KIDS_SOCKETS`/`KIDS_TIMERS`, `lib/kids.sh`, the same list
-`omarchy-kids-assert`'s `units` lock uses (`docs/assert.md`) — *before* provisioning (issue #46): a
+refuses to add a kid at all. Only then does it enable the package's own units and start them —
+`KIDS_UNITS`/`KIDS_SOCKETS`/`KIDS_TIMERS`, `lib/kids.sh`, the same list `omarchy-kids-assert`'s
+`units` lock uses (`docs/assert.md`) — *before* provisioning (issue #46). It enables every unit but
+starts all of them except the `omarchy-kids-assert.service` oneshot: Step 5 runs the assert once, and
+`enable --now` on that oneshot blocked Apply for seconds with no output (the owner's 15-second hang,
+T20). A
 fresh install before the first kid, or right after `omarchy-kids-remove` disables them again, needs
 the boot-time autologin and a working authd socket back before Step 2 (the account) and the *next*
 wizard run both need them. Every subsequent Apply command (`run_priv`/`run_priv_stdin`/

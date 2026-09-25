@@ -7,17 +7,30 @@
 # Step 1: write machine.conf's parent= first. Step 2 already holds the
 # sudo ticket used by every command in this run.
 apply_step_getok() {
+  # Start now everything the machine needs at once, except the assert oneshot:
+  # step 5 runs the assert once, and `enable --now` on the oneshot blocked Apply
+  # for seconds with no output (the owner's 15-second hang, T20). It is still
+  # enabled, so it runs on the next boot and on every update.
+  local -a start_units=()
+  local u
+  for u in "${KIDS_UNITS[@]}"; do
+    [[ "$u" == omarchy-kids-assert.service ]] || start_units+=("$u")
+  done
   if [[ "$DRY_RUN" == "1" ]]; then
     printf '  [dry-run] sudo -v\n'
     printf '  [dry-run] sudo %q machine set parent %q\n' "$CONF_BIN" "$INVOKING_USER"
-    printf '  [dry-run] sudo systemctl enable --now'
+    printf '  [dry-run] sudo systemctl enable'
     printf ' %q' "${KIDS_UNITS[@]}" "${KIDS_SOCKETS[@]}" "${KIDS_TIMERS[@]}"
+    printf '\n'
+    printf '  [dry-run] sudo systemctl start'
+    printf ' %q' "${start_units[@]}" "${KIDS_SOCKETS[@]}" "${KIDS_TIMERS[@]}"
     printf '\n'
     printf '  [dry-run] sudo install -d -m 0755 %q\n' "$(dirname "$SETUP_LOG")"
     return 0
   fi
   sudo -n "$CONF_BIN" machine set parent "$INVOKING_USER" || return 1
-  sudo -n systemctl enable --now "${KIDS_UNITS[@]}" "${KIDS_SOCKETS[@]}" "${KIDS_TIMERS[@]}" || return 1
+  sudo -n systemctl enable "${KIDS_UNITS[@]}" "${KIDS_SOCKETS[@]}" "${KIDS_TIMERS[@]}" || return 1
+  sudo -n systemctl start "${start_units[@]}" "${KIDS_SOCKETS[@]}" "${KIDS_TIMERS[@]}" || return 1
   sudo -n install -d -m 0755 "$(dirname "$SETUP_LOG")"
 }
 
@@ -231,7 +244,7 @@ screen_done() {
   )
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local body=()
-  if ((!APPLY_OK)) && ((${#APPLY_FAILURE_TAIL[@]})); then
+  if ((! APPLY_OK)) && ((${#APPLY_FAILURE_TAIL[@]})); then
     body+=("Last lines from the failed step:")
     body+=("${APPLY_FAILURE_TAIL[@]}")
   fi
