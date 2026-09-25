@@ -220,12 +220,16 @@ adv_row_line() {
   [[ "$key" == allowlist ]] && default_disp="$(adv_allowlist_count "$(adv_default "$key")")"
   if [[ "$(adv_get "$key")" == "$(adv_default "$key")" ]]; then
     reason="Band default: $default_disp"
+    printf '%s|[%s] %s|%s' "$key" "$group" "$label" "$reason"
   else
     current_disp="$(adv_friendly "$key" "$(adv_get "$key")")"
     [[ "$key" == allowlist ]] && current_disp="$(adv_allowlist_count "$(adv_get "$key")")"
-    reason="Band default: $default_disp — now: $current_disp (changed)"
+    # A changed row reads as the value now, marked, with the band default as
+    # its reason -- the value a parent scans for sits in the row, not buried at
+    # the end of the reason line (readability, the owner's dogfooding note).
+    reason="Band default: $default_disp"
+    printf '%s|[%s] %s — %s (changed)|%s' "$key" "$group" "$label" "$current_disp" "$reason"
   fi
-  printf '%s|[%s] %s|%s' "$key" "$group" "$label" "$reason"
 }
 
 # validate_dns_url CANDIDATE — A2/A8-style validator (lib/tui.sh's contract).

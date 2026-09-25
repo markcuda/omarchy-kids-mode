@@ -236,8 +236,13 @@ tui_header() {
     fi
     if [[ "$show_omy" == 1 ]]; then
       lines+=("")
-      lines+=("🦉 Omy")
-      [[ -n "$omy_line" ]] && lines+=("$omy_line")
+      # Omy talks in one line, bubble-style, rather than a bare name over a
+      # stray sentence -- the owner's "cute, friendly, chat bubble" note.
+      if [[ -n "$omy_line" ]]; then
+        lines+=("🦉 Omy says: $omy_line")
+      else
+        lines+=("🦉 Omy")
+      fi
     fi
 
     local -a _tui_hdr_body=()
@@ -253,7 +258,7 @@ tui_header() {
       "${lines[@]}"
   else
     if [[ "$show_omy" == 1 ]]; then
-      _tui_style --foreground "$TUI_C_ACCENT" --bold -- "🦉 Omy"
+      _tui_style --foreground "$TUI_C_ACCENT" --bold -- "🦉 Omy says:"
       if [[ -n "$omy_line" ]]; then
         local -a f=(--italic)
         [[ -n "$TUI_C_FG" ]] && f+=(--foreground "$TUI_C_FG")
