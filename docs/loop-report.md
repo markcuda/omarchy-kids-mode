@@ -2618,3 +2618,38 @@ Gated: `test/all -j 4`, 65 files green. Integration at `57f6476`, in sync with `
   hanging it.
 
 Integration at `64e3a58`, in sync with `origin`.
+
+### 2026-09-25, six adversarial reviews, and the decision that binds the display
+
+Continuing the dogfooding workstream on `fix/kid-session-polish`, this pass ran independent
+adversarial reviews (opus 5.5 at max effort; fable 5.1 was rate-limited) over every high-risk
+surface, and closed what they found.
+
+- **Network and socket surface** (authd, wifid, relayd, courier, the posture writers): no
+  exploitable finding. One hardening: `lib/sock.sh` pins its transport programs
+  (`/usr/bin/socat`, `KIDS_PY`).
+- **Enforcement and boot/removal**: one **critical** — in disk mode, `boot-login` treated an absent
+  `boot-slot` as a no-op, so Omarchy's stock autologin (the parent) won and a kid who opened the
+  disk after the hook stepped aside landed on the parent's desktop (a regression of the V7 fix).
+  Disk mode now writes an empty `User=` (the portal). Plus an honest Password-screen card (the
+  `passwd` fallback does not rotate the disk slot; R-SEC-5's "both update the slot" is recorded as
+  unmet) and two LOW LUKS gaps in `docs/remove.md`.
+- **Kid-facing surfaces** (launcher, modals, picker, bar): a terminal-backed tile on the fullscreen
+  Grid (now level-2 only), and a theme chord that gave `gum` no tty (now wrapped in Omarchy's
+  floating-terminal helper).
+- **Config and provisioning write paths**: no exploitable finding; two loose validators tightened
+  (`dns custom:`, `machine set parent`).
+- **Parent app**: several real defects — a reply dropped on Approve, a `/v1/state` read raising a
+  notification (R-NOTIFY-14.1), no app-side review id binding, a truncated URL approved full, a 10 s
+  timeout under a 30 s box window, a list cap that kept the oldest, and a pinned-certificate check
+  that could inspect the wrong chain certificate.
+- **The decision binds the display (amendment section 20), built.** A request decision now signs the
+  kid, kind, what and minutes the app showed; the box requires it and refuses a record whose fields
+  moved. Its own confirmation review found the live client still signed the old shape (fixed) and a
+  `docs/relayd.md` overclaim (the relay can still lie on screen; it cannot apply a relabelled
+  decision) — both corrected, with the wire-contract docs and tests updated.
+
+Also this pass: T44 (the kid's theme is a preference), T45 (the collection is visible to Omarchy's
+switcher, and the picker is bound on Omarchy's own chord), T25 (one panel read per Home screen), and
+the FIFO-write hang that broke every assert run. `test/all -j 4` is 68 files green, plus 61 Dart and
+58 Flutter tests.
