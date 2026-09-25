@@ -1,0 +1,128 @@
+#!/bin/bash
+# omarchy:summary=Pick your own desktop theme
+# omarchy:args=[--list|--set THEME] [--dry-run]
+# Kid-side theme switcher (SPEC R-DESK; docs/phase1/SPEC-AMENDMENT-kid-themes.md).
+# Lists the offered themes and applies one through Omarchy's own omarchy-theme-set,
+# on the same Super+Ctrl+Shift+Space chord a grown-up uses, so the kid learns the
+# real one. Presentation, not a lock. See docs/theming.md.
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+LIB="$DIR/lib"
+[[ -f "$LIB/theme.sh" ]] || LIB=/usr/lib/omarchy-kids
+# shellcheck source=lib/kids.sh
+source "$LIB/kids.sh"
+# shellcheck source=lib/theme.sh
+source "$LIB/theme.sh"
+
+# Omarchy's own theme switcher, at a fixed path (rule 9: never from $PATH). The
+# PKGBUILD does not need to rewrite it, but a test substitutes it into a copy.
+THEME_SET_BIN=/usr/bin/omarchy-theme-set
+
+die() {
+  echo "omarchy-kids-theme: $1" >&2
+  exit "${2:-2}"
+}
+
+usage() {
+  cat <<'EOF'
+Usage: omarchy-kids-theme [--list | --set THEME] [--dry-run]
+
+Pick your own desktop theme. With no arguments, choose one from a list.
+The theme must be one this computer offers (a grown-up's themes plus the
+Kids Mode collection); anything else is refused.
+
+  --list        Print the offered theme names, one per line, and exit.
+  --set THEME   Apply THEME (must be one of --list's names).
+  --dry-run     Print what would happen instead of changing anything.
+  -h, --help    Show this help and exit.
+EOF
+}
+
+offered() { theme_list_installed; }
+
+is_offered() { # NAME
+  local name
+  while IFS= read -r name; do
+    [[ "$name" == "$1" ]] && return 0
+  done < <(offered)
+  return 1
+}
+
+apply_theme() { # NAME
+  local name="$1"
+  [[ -n "$name" ]] || die "no theme chosen" 2
+  is_offered "$name" || die "not a theme this computer offers: $name"
+  if [[ "$DRY_RUN" == 1 ]]; then
+    printf '  [dry-run] omarchy-theme-set %q\n' "$name"
+    return 0
+  fi
+  [[ -x "$THEME_SET_BIN" ]] ||
+    die "omarchy-theme-set is not available on this computer" 2
+  # Omarchy's own switcher, run as this kid, so it writes their own theme and
+  # live-reloads their own shell.
+  "$THEME_SET_BIN" "$name"
+}
+
+choose_theme() {
+  local name
+  if command -v gum >/dev/null 2>&1; then
+    name="$(offered | gum choose --header "Pick a theme (Enter to choose)")" || return 130
+  else
+    local -a names=()
+    while IFS= read -r n; do names+=("$n"); done < <(offered)
+    ((${#names[@]})) || die "no themes are offered on this computer" 2
+    local i=0
+    for n in "${names[@]}"; do
+      i=$((i + 1))
+      printf '%2d) %s\n' "$i" "$n"
+    done
+    local reply
+    read -r -p "Pick a number: " reply
+    if [[ ! "$reply" =~ ^[0-9]+$ ]] || ((reply < 1 || reply > ${#names[@]})); then
+      die "that was not one of the numbers" 2
+    fi
+    name="${names[reply - 1]}"
+  fi
+  apply_theme "$name"
+}
+
+# A human driving this gets a real switch; anything else previews. --dry-run
+# always previews (AGENTS.md rule 8). launched_by_a_human is the shared check.
+if launched_by_a_human; then
+  DRY_RUN="${DRY_RUN:-0}"
+else
+  DRY_RUN="${DRY_RUN:-1}"
+fi
+
+mode="choose"
+theme=""
+while (($# > 0)); do
+  case "$1" in
+    --list)
+      mode="list"
+      shift
+      ;;
+    --set)
+      [[ -n "${2:-}" ]] || die "--set needs a theme name"
+      mode="set"
+      theme="$2"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *) die "unknown argument: '$1' (see --help)" ;;
+  esac
+done
+
+case "$mode" in
+  list) offered ;;
+  set) apply_theme "$theme" ;;
+  *) choose_theme ;;
+esac

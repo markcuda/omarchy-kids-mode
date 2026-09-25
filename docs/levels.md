@@ -84,7 +84,7 @@ desktop files. This keeps the level overlay and the launcher on the same root-ow
 
 ## What each level binds (Appendix E)
 
-**Grid (Level 1).** `Super+Home` show the launcher · `Super+Return` open the highlighted tile ·
+**Grid (Level 1).** `Super+Ctrl+Shift+Space` opens the theme picker (`omarchy-kids-theme`, the same chord Omarchy's own desktop uses; T45). `Super+Home` show the launcher · `Super+Return` open the highlighted tile ·
 `Super+Q` close the focused window · `Super+Shift+K` the exit overlay, and a bare `Super` tap
 three times within 1.5s does the same (`omarchy-kids-exit`, `omarchy-kids-super-tap`,
 `docs/exit.md`) · the five standard volume/brightness media keys. Nothing else — no defaults, no
@@ -99,7 +99,7 @@ set; nothing more, nothing less.
 `default.hypr.looknfeel`'s own `general.layout = "dwindle"` / `dwindle.preserve_split = true`,
 which Level 2 requires (see below) and which already gives that behavior for two tiled windows.
 
-**Desktop (Level 3).** The stock Omarchy modules required individually — bindings (media, clipboard, tiling,
+**Desktop (Level 3).** `Super+Ctrl+Shift+Space` is the theme picker (`omarchy-kids-theme`, bound over Omarchy's own). The stock Omarchy modules required individually — bindings (media, clipboard, tiling,
 utilities, voxtype, optional applications), envs, looknfeel, input, windows — but **not** the
 `default.hypr.omarchy` umbrella, which also pulls in `default.hypr.autostart` and its per-session
 `omarchy-provision-first-run` (`fix/level3-no-parent-autostart`; the session's own start hook runs

@@ -175,7 +175,7 @@ KID_COMMANDS=(
   bin/omarchy-kids-session bin/omarchy-kids-session-start bin/omarchy-kids-web
   bin/omarchy-kids-time bin/omarchy-kids-ask bin/omarchy-kids-wifi
   bin/omarchy-kids-launcher-ctl bin/omarchy-kids-blocked bin/omarchy-kids-super-tap
-  bin/omarchy-kids-exit
+  bin/omarchy-kids-exit bin/omarchy-kids-theme
 )
 KID_PATH_VARS=(
   OMARCHY_KIDS_ROOT OMARCHY_KIDS_ETC OMARCHY_KIDS_SHARE OMARCHY_KIDS_RUN_DIR

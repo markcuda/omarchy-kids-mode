@@ -1,6 +1,6 @@
 # SPEC amendment: kid-chosen themes (T44/T45)
 
-Status: **partly built.** The pick-from-the-set half (T44: `theme_apply_for` is kid-owned; the `theme:<account>` lock is verify-only) is built on `fix/kid-session-polish`. The T45 chord and the "make a theme" question (T48) are still open. Requested by the owner's
+Status: **mostly built.** T44 (the kid's theme is a preference: `theme_apply_for` is kid-owned, the `theme:<account>` lock is verify-only) and T45 (the kid collection is visible to Omarchy's switcher, and `bin/omarchy-kids-theme` is bound on `Super+Ctrl+Shift+Space` at every level) are built on `fix/kid-session-polish`. Still open: a pre-reader grid tile for the picker, and the "make a theme" question (T48). Requested by the owner's
 dogfooding notes, 2026-09-24: "We need a way for kids to easily change and make inside the system,
 their own themes, and bundle some desktop themes for kids for them out of the box. It should be the
 same keybinding as the main, so they are actually learning."
@@ -28,7 +28,7 @@ privilege escalation and not a lock this project should own.
   `theme` value (the override stays the default the parent chose); it changes the kid's current
   theme, which lives in their own `~/.local/state/omarchy/current/theme`.
 - **The themes are visible to Omarchy's own switcher.** Provisioning links each collection theme into the kid's `~/.config/omarchy/themes/<name>` (a kid-owned symlink to the root-owned package copy), which Omarchy reads for user themes. Built on `fix/kid-session-polish`.
-- **The kid switches on Omarchy's own chord.** `Super+Ctrl+Shift+Space` runs the same kind of
+- **The kid switches on Omarchy's own chord.** Built: the level configs bind `Super+Ctrl+Shift+Space` to `bin/omarchy-kids-theme` at Grid, Desktop and the retired level 2, and the command applies through Omarchy's own `omarchy-theme-set`. (What the chord does not yet do is a pre-reader grid tile.) `Super+Ctrl+Shift+Space` runs the same kind of
   picker a parent's does, over the offered set. Every level gets it: at the Grid, a grid tile for
   pre-readers as well. This is a presentation bind, so it does not touch the Appendix E "nothing
   else bound" claim for the Grid's *window* controls; the amendment adds exactly this one bind and
