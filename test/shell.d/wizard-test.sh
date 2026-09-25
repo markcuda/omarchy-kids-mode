@@ -873,6 +873,14 @@ EOF
   check_status "$rm4_status" 130 "unavailable authd: step 2 leaves without falling back to sudo"
   check_contains "$rm4_out" "parent verifier is unavailable" \
     "an unavailable verifier gives a repair instruction"
+  # Issue #4: "start the socket" is the wrong instruction when the socket is
+  # listening and the *service* is what failed (the fresh-install case was a
+  # 226/NAMESPACE on service activation). Name both units so the grown-up can
+  # tell which one is down, not just the one that used to be missing.
+  check_contains "$rm4_out" "omarchy-kids-authd.socket" \
+    "an unavailable verifier names the socket to repair"
+  check_contains "$rm4_out" "omarchy-kids-authd.service" \
+    "an unavailable verifier names the service to inspect too"
   check_not_contains "$rm4_out" "failed unexpectedly" \
     "an unavailable verifier never reports a failed unexpectedly"
   check_not_contains "$rm4_out" "FAKE-omarchy-kids-provision" \

@@ -36,7 +36,12 @@ screen_parent_password() {
     if [[ "${PARENT_AUTH_ERROR:-wrong}" != wrong ]]; then
       echo
       case "$PARENT_AUTH_ERROR" in
-        unavailable) echo "The parent verifier is unavailable. Ask a grown-up to start omarchy-kids-authd.socket." ;;
+        # Issue #4: the socket can be listening while the service is what
+        # failed (the fresh-install case was a 226/NAMESPACE on activation),
+        # so name both units -- "start the socket" alone repaired nothing.
+        unavailable) printf '%s\n' \
+          "The parent verifier is unavailable. Ask a grown-up to start omarchy-kids-authd.socket." \
+          "Still down? The service is what failed: systemctl status omarchy-kids-authd.service" ;;
         privilege) echo "Could not establish noninteractive privilege. Nothing was changed." ;;
       esac
       return 130
