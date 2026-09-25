@@ -2538,3 +2538,39 @@ with the owner's gate. This was run the way `docs/branch-conflict-map-2026-09-22
 
 Gated before push: `test/all -j 4`, 64 files green (the merge added a test file). Integration is at
 `3bb1963`, in sync with `origin`.
+
+### 2026-09-24, the dogfooding workstream (owner's notes, branch `fix/kid-session-polish`)
+
+The owner's dogfooding notes were triaged by opus 5.5 at max effort (54 tickets, T1-T54) and the
+work started on a branch of its own, based on the merged integration:
+
+- **The kid's first session survives and explains itself.** L1/L2/L3 set `ecosystem.no_update_news`
+  and `no_donation_nag`, so Hyprland's update announcement (and the link it opened in Chromium)
+  never appears in a kid session (T4); L1/L2 import the environment into `systemd --user` and the
+  D-Bus activation environment like L3, the live finding behind a D-Bus-activated app dying (T5).
+- **Two kid modes.** Grid (level 1) and Desktop (trimmed level 3); the old Simplified desktop
+  (level 2) is retired. Bands 3-5/6-8 are Grid, 9-12/13+ Desktop. bands.toml, SPEC R-DESK-3/4, the
+  R-BAND table, Appendix E, A11, docs/conf.md, docs/levels.md, docs/wizard.md, docs/session.md,
+  schema.toml, the wizard and panel pickers, and the levels test all follow (T13/T14).
+- **Kid themes.** OldJobobo's 15-theme collection (omacom/omarchy#12488) ships as config plus one
+  compressed wallpaper each, 5.2 MB, under a package-owned root `share/themes-kids/`, listed by a
+  second theme root in lib/theme.sh so the pickers offer them; the licence/provenance state is in
+  its README (T46/T47).
+- **The management menu.** A top-level "Remove a kid", and "Add a kid" returns to the panel instead
+  of ending it (T16/T17).
+- **TUI.** The screen title is the heading with the step line under it; no spec ids in the
+  parent's menu labels; Omy talks in one bubble line; the Advanced checklist's changed rows show
+  the new value in the row; the number-key claim corrected (T27/T29/T30/T33, and T28's honesty
+  half).
+- **Web.** Every band's Chromium policy disables promo tabs, the default-browser prompt, metrics
+  and search suggestions (T12, Chromium half).
+- **Docs.** docs/parent-guide.md (T36): the two desktops, each band's defaults, a plain explainer
+  per setting, pinned to the schema and bands by a test.
+- **Tests.** 65 files green on the Mac.
+
+**Deferred, with the reason:** T18 (hand over to a kid) needs the portal's sign-out and the kid
+tile preselected, which needs a VM and the R-WIZ-6 amendment; T31 (an `Ask Omy` `?` key) and T32
+(a clickable, animated Omy) need a pointer GUI, which gum cannot do; T34 (a floating wizard window)
+needs a compositor rule and a VM; T44/T45 (kid-chosen themes) and T49-T53 (the #11196 ideas:
+per-weekday minutes, Agreement mode, a PIN, earn-minutes, a kid day view) each need their own
+amendment. None is shipped as a claim that is not enforced.
