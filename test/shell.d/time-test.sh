@@ -746,6 +746,15 @@ check_contains "$(cat "$DIR/share/time/timesup.qml")" "It's bedtime." \
   "timesup: has bedtime words for a lights-out stop"
 check_contains "$(cat "$DIR/share/time/timesup.qml")" '"Closing in "' \
   "timesup: counts down in plain words"
+# Issue #9: a FileView does not re-read its file on a watch signal by itself
+# (share/launcher/shell.qml says so and binds both, and the bar module binds the
+# same pair). Without these the card read the state once, while it still said
+# `allowed`, hid itself, and never came back -- so the kid saw no Time's Up at
+# all when the budget ran out.
+check_contains "$(cat "$DIR/share/time/timesup.qml")" 'onFileChanged: reload()' \
+  "timesup: reloads the root state on a fileChanged signal"
+check_contains "$(cat "$DIR/share/time/timesup.qml")" 'onTriggered: statusFile.reload()' \
+  "timesup: also re-reads it on a short timer, since the rename-replace can drop the watch"
 # I-5: one action, and it says which key works. The card is only up for the
 # countdown, so a kid who cannot find the key loses the chance to ask.
 check_contains "$(cat "$DIR/share/time/timesup.qml")" '"Enter Ask a grown-up"' \
