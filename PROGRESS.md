@@ -1,6 +1,44 @@
 # Progress and handoff
 
-## Current — September 21, 2026: dogfooding loop state
+## Current — September 25, 2026: the dogfooding workstream
+
+**Branch:** `integration/dogfood-2026-09-19` is the union of all topic work, in sync with `origin`.
+The dogfooding workstream landed on `fix/kid-session-polish` and is merged (integration tip past
+`19ede3f`). Never push `main`; topic branches go to `origin`.
+
+**What the owner's dogfooding notes produced** (triaged into T1-T54 by opus 5.5 at max effort):
+
+- Two kid modes: **App grid** (`level = 1`) and **Desktop** (`level = 3`, the real Omarchy desktop,
+  menu-trimmed). The old Simplified desktop (`level = 2`) is retired. Ages 3-5/6-8 get the grid,
+  9-12/13+ the desktop.
+- No Hyprland update-news/donation popup and no Chromium promo tabs / default-browser prompt /
+  metrics / search suggestions in a kid session.
+- L1 and L2 import the session environment (`systemd --user`, the D-Bus activation environment)
+  like L3, the fix for the D-Bus-activated app that died.
+- The kid theme collection ships (config only) and is linked into the kid's own
+  `~/.config/omarchy/themes/`; a kid's theme is a **preference** (the `theme:<account>` lock is
+  verify-only, with a safe `O_NOFOLLOW`+`O_NONBLOCK` read).
+- The data screen (R-DATA-3) reaches a Desktop-mode kid too; the panel has a top-level **Remove a
+  kid**, and **Add a kid** returns to the panel.
+- Apply no longer blocks on the boot-login-cleanup oneshot and reports a per-step duration; A9 and
+  the summary say which apps install by hand (AUR).
+- The TUI: the question is the heading, Omy talks in a bubble, Advanced's changed rows show their
+  value, and no spec ids reach a parent's labels.
+- `docs/parent-guide.md`: every band's defaults and a plain explainer for every setting.
+- Two amendments written: `docs/phase1/SPEC-AMENDMENT-kid-themes.md` (T44/T45) and
+  `docs/phase1/SPEC-AMENDMENT-screen-time-11196.md` (T49-T53).
+
+**Reviewed** twice with opus 5.5 at max effort (fable 5.1 was rate-limited); every finding closed.
+`test/all -j 4` is 65 files green; `shfmt -i 2 -ci` and shellcheck are clean.
+
+**Blocked on the test VM (AGENTS.md rule 11) or a pointer GUI:** T45's chord binding, T18
+(hand over to a kid), T34 (a floating wizard window), T23 (background installs), T49-T53 (the
+#11196 screen-time ideas, specced), and T31/T32 (an `Ask Omy` `?` key and a clickable/animated
+Omy -- a pointer GUI `gum` cannot do).
+
+The sections below are the earlier (September 21 and before) state, kept for their live evidence.
+
+## Paused — September 21, 2026: dogfooding loop state (superseded by the section above)
 
 **Branch:** `integration/dogfood-2026-09-19` is the union of all topic work, in sync with
 `origin`. Never push `main`; topic branches go to `origin`.
