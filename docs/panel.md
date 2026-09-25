@@ -221,7 +221,7 @@ there was no argument the drawer could pass to fix it (review §1.5). The panel 
 the screen a parent confirms *is* the confirmation. So the default is now a real run when a
 human is driving -- a tty on stdin and stdout, or `OMARCHY_KIDS_LAUNCHED_BY` set, which
 `desktop/omarchy-kids.desktop` does via `Exec=env OMARCHY_KIDS_LAUNCHED_BY=desktop
-omarchy-kids` -- and `DRY_RUN=1` otherwise, so a test, a script or CI still gets a preview.
+omarchy-launch-floating-terminal-with-presentation omarchy-kids` -- and `DRY_RUN=1` otherwise, so a test, a script or CI still gets a preview.
 `--dry-run` and `--apply` both still win outright. The same rule is in `bin/omarchy-kids-wizard`
 and documented in AGENTS.md rule 8 itself; `provision`, `assert`, `web`, `apps` and `remove` are
 unchanged and still default to a preview.

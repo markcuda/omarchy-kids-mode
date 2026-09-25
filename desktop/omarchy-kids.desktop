@@ -2,7 +2,7 @@
 Type=Application
 Name=Kids Mode
 Comment=Set up and manage Kids Mode for this computer
-Exec=env OMARCHY_KIDS_LAUNCHED_BY=desktop omarchy-kids
+Exec=env OMARCHY_KIDS_LAUNCHED_BY=desktop omarchy-launch-floating-terminal-with-presentation omarchy-kids
 Icon=/usr/share/omarchy-kids/avatars/owl.svg
 Categories=System;Settings;
-Terminal=true
+Terminal=false
