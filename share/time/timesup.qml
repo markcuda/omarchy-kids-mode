@@ -50,6 +50,22 @@ PanelWindow {
         printErrors: false
         onLoaded: root.readStatus()
         onTextChanged: root.readStatus()
+        // FileView does not re-read its file on a watch signal by itself:
+        // share/launcher/shell.qml and share/bar/KidsModule.qml both bind this
+        // for the same reason. Without it the card read the state once, while
+        // it still said `allowed`, hid itself, and never came back, so the kid
+        // saw no Time's Up at all (issue #9).
+        onFileChanged: reload()
+    }
+
+    // The root side rename-replaces the state file (mktemp + mv -f), which can
+    // drop the watch for good -- the launcher needed the same belt-and-braces
+    // timer for the same reason, so this cannot miss the crossing into grace.
+    Timer {
+        interval: 2000
+        running: true
+        repeat: true
+        onTriggered: statusFile.reload()
     }
 
     Timer {
