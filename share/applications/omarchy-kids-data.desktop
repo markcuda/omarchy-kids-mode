@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=What my grown-ups can see
+Comment=See what Kids Mode records about you
+# Launched the same way the App grid's own tile is (lib/launcher-map.sh), so a
+# Desktop-mode kid reaches the data screen (R-DATA-3) too. Installed into the
+# kid's own ~/.local/share/applications by provisioning, band 9-12 or 13+.
+Exec=/usr/bin/omarchy-launch-floating-terminal-with-presentation /usr/bin/omarchy-kids-data mine
+Terminal=false
+Icon=/usr/share/omarchy-kids/avatars/owl.svg
+Categories=System;Settings;

@@ -235,6 +235,7 @@ cmd_add() {
   # docs/research/2026-09-21-gcompris-first-run-and-config-proposal.md). It is
   # configuration, not a lock: it hides the app's quit/config chrome and its
   # one-time dialogs. A config the app has already written is left alone.
+  run install_kids_data_entry "$account"
   run install_kids_gcompris_config "$account"
 
   # R-DESK, issue #53: the kid's desktop matches the house look at first

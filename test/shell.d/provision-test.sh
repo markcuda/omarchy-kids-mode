@@ -78,6 +78,8 @@ cp "$ROOT_DIR"/share/avatars/*.svg "$SHARE/avatars/"
 cp "$ROOT_DIR/share/policy/chromium-flags.conf" "$SHARE/policy/"
 # R-DESK-4: install_kids_menu_trim's source file.
 cp "$ROOT_DIR/share/menu/omarchy-kids-trimmed.jsonc" "$SHARE/menu/"
+mkdir -p "$SHARE/applications"
+cp "$ROOT_DIR/share/applications/omarchy-kids-data.desktop" "$SHARE/applications/"
 touch "$ARGV_LOG"
 
 kids_tree "$TREE" "$ROOT_DIR"
@@ -322,6 +324,14 @@ if [[ -f "$HOMEROOT/home/kid-cy/.config/omarchy/extensions/omarchy-menu.jsonc" ]
   pass "portal add seeds the trimmed omarchy-menu extension for kid-cy"
 else
   fail "portal add must seed the trimmed omarchy-menu extension for kid-cy"
+fi
+# R-DATA-3 at Desktop: the data screen is the App grid's tile, so a 9-12/13+
+# kid (Desktop by default) also gets a kid-owned .desktop that Omarchy's own
+# menu finds. Only those bands, exactly like the tile.
+if [[ -f "$HOMEROOT/home/kid-cy/.local/share/applications/omarchy-kids-data.desktop" ]]; then
+  fail "band 6-8 must not get the data desktop entry"
+else
+  pass "band 6-8 gets no data desktop entry (the data screen is 9-12/13+)"
 fi
 check_not_contains "$(cat "$ARGV_LOG")" "cryptsetup" "portal add makes no LUKS call"
 [[ -e "$ETC/kids/kid-cy.conf" ]] && pass "portal add creates the kid profile" || fail "portal add did not create kid-cy"
@@ -908,6 +918,25 @@ check_contains "$out_link3" "$LINK_HOME/.local/state/omarchy/migrations.log is a
   "the refusal names the planted file"
 check_eq "$(cat "$LINK_TARGET/victim")" "a line the add must not touch" \
   "the planted file link was neither truncated nor rewritten"
+
+# install_kids_data_entry positive, at the very end so its extra kid disturbs
+# no earlier count: a 9-12 kid gets the data desktop entry. boot=portal keeps
+# the add from needing a disk secret; a fresh home root isolates the write.
+DATA_HOME="$TMP/data-home"
+mkdir -p "$DATA_HOME/home"
+printf 'parent=mark\nboot=portal\n' >"$ETC/machine.conf"
+chmod 0644 "$ETC/machine.conf"
+data_add_out="$(printf 'kidpass1\n' |
+  env OMARCHY_KIDS_HOME_ROOT="$DATA_HOME" "$BIN" add "Test" --band 9-12 --avatar fox \
+    --password-stdin 2>&1)"
+data_add_st=$?
+data_account="$(printf '%s' "$data_add_out" | sed -n 's/.* as \(kid-[a-z0-9-]*\) (band.*/\1/p')"
+DATA_ENTRY="$DATA_HOME/home/$data_account/.local/share/applications/omarchy-kids-data.desktop"
+if [[ -f "$DATA_ENTRY" ]] && grep -q 'omarchy-kids-data mine' "$DATA_ENTRY"; then
+  pass "band 9-12 gets the data desktop entry for the Desktop mode (R-DATA-3)"
+else
+  fail "band 9-12 must get the data desktop entry (add st=$data_add_st: $data_add_out)"
+fi
 
 echo "provision-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc
