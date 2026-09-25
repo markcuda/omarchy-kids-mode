@@ -28,7 +28,7 @@ privilege escalation and not a lock this project should own.
   `theme` value (the override stays the default the parent chose); it changes the kid's current
   theme, which lives in their own `~/.local/state/omarchy/current/theme`.
 - **The themes are visible to Omarchy's own switcher.** Provisioning links each collection theme into the kid's `~/.config/omarchy/themes/<name>` (a kid-owned symlink to the root-owned package copy), which Omarchy reads for user themes. Built on `fix/kid-session-polish`.
-- **The kid switches on Omarchy's own chord.** `Super+Ctrl+Shift+Space` runs the same kind of
+- **The kid switches on Omarchy's own chord.** Built: the level configs bind `Super+Ctrl+Shift+Space` to `bin/omarchy-kids-theme` at Grid, Desktop and the retired level 2, and the command applies through Omarchy's own `omarchy-theme-set`. (What the chord does not yet do is a pre-reader grid tile.) `Super+Ctrl+Shift+Space` runs the same kind of
   picker a parent's does, over the offered set. Every level gets it: at the Grid, a grid tile for
   pre-readers as well. This is a presentation bind, so it does not touch the Appendix E "nothing
   else bound" claim for the Grid's *window* controls; the amendment adds exactly this one bind and

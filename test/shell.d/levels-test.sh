@@ -80,6 +80,7 @@ L1_WANT=$(sorted \
   'SUPER + Q' \
   'SUPER + SHIFT + K' \
   'SUPER + SHIFT + W' \
+  'SUPER + CTRL + SHIFT + SPACE' \
   'SUPER + SUPER_L' \
   'XF86AudioRaiseVolume' \
   'XF86AudioLowerVolume' \
@@ -153,6 +154,7 @@ L2_WANT=$(sorted \
   'SUPER + Q' \
   'SUPER + SHIFT + K' \
   'SUPER + SHIFT + W' \
+  'SUPER + CTRL + SHIFT + SPACE' \
   'SUPER + SUPER_L' \
   'XF86AudioRaiseVolume' \
   'XF86AudioLowerVolume' \
