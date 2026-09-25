@@ -100,14 +100,25 @@ render_policy_json() {
 
   case "$mode" in
     garden)
-      local domains allow_json
+      local domains allow_json home
       domains="$({
         list_domains "$list_file"
         [[ -n "$allow_file" ]] && list_domains "$allow_file"
       } | sort -u)"
       allow_json="$(printf '%s\n' "$domains" | jq -R -s 'split("\n") | map(select(length > 0))')"
-      jq --argjson allow "$allow_json" '.URLAllowlist = $allow' "$policy_file" ||
-        die "failed to merge the allowlist for band '$band'"
+      # The garden's front door is the band's own starter list's first host --
+      # never the kid's --allow file, so one approved site cannot move the
+      # whole band. Derived here rather than written into the template: one
+      # list, no second copy to drift (issue #6).
+      home="$(list_domains "$list_file" | head -n1)"
+      jq --argjson allow "$allow_json" --arg home "$home" '
+        .URLAllowlist = $allow
+        | if $home != "" then
+            .RestoreOnStartup = 1
+            | .RestoreOnStartupURLs = ["https://" + $home + "/"]
+            | .NewTabPageLocation = ("https://" + $home + "/")
+          else . end
+      ' "$policy_file" || die "failed to merge the allowlist for band '$band'"
       ;;
     none | filtered)
       [[ -z "$allow_file" ]] || die "band '$band' is '$mode' (R-WEB-3): it takes no allowlist, so --allow is not accepted"
@@ -230,7 +241,9 @@ resolve_band() {
 }
 
 # start_url_for_band BAND — first RestoreOnStartupURLs entry, if any.
-# Always empty today (no band template sets it) -- issue #44, docs/web.md.
+# The garden bands (6-8, 9-12) get one from render_policy_json: the first
+# host of their own starter list (issue #6). "none" (3-5) and "filtered"
+# (13+) set none, so this stays empty for them.
 start_url_for_band() {
   local band="$1" rendered
   rendered="$(render_policy_json "$band")" || return 1

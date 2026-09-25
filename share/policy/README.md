@@ -30,6 +30,9 @@ tree is built from.
 | `URLBlocklist` | list of strings | `["*"]`: blocks every URL; `URLAllowlist` carves out exceptions (walled-garden and no-browser modes). Not set at all for the filtered (13+) band -- see below. |
 | `URLAllowlist` | list of strings | The band's starter list (`lists/<band>.txt`) merged with an optional `--allow FILE` (e.g. a kid's own approved sites), via `omarchy-kids-web render`. Only present for walled-garden bands (6-8, 9-12). |
 | `PasswordManagerEnabled` | boolean | `false` for the two youngest bands (3-5, 6-8) only: a pre-reader or early reader gains nothing from Chromium's saved-password autofill and it's one less thing to explain. Left unset (enabled) for 9-12 and 13+. Not in R-WEB-2's list; added here as a small extra hardening step for young bands, consistent with I-6 since it *is* enforced. |
+| `RestoreOnStartup` | int-enum (`1` Open a list of URLs, `4` Open the New Tab page, `5` Open the last session) | `1` for the garden bands (6-8, 9-12) only: tells Chromium to honour `RestoreOnStartupURLs` at startup instead of its own default page. **Not in the JSON templates** — `render_policy_json` adds it, together with the two keys below, so the front door is derived from one source (issue #6). |
+| `RestoreOnStartupURLs` | list of strings | The garden's front door: `https://` + the first host of that band's own `lists/<band>.txt`. Derived at render time, never written into a template, so the list stays the single source of truth and a kid's `--allow` file cannot move the whole band's start page. `omarchy-kids-web launch` also passes `[0]` as its argv URL, so the tile opens there directly. |
+| `NewTabPageLocation` | string | Same URL as `RestoreOnStartupURLs[0]`: a new tab opens in the garden too, rather than Chromium's Google-branded new-tab page (with its Web Store and "Customize Chromium" affordances, none of which a garden kid can use). |
 
 ## Per-band shape (R-WEB-3)
 
@@ -37,7 +40,9 @@ tree is built from.
   the policy still sets `URLBlocklist: ["*"]` as defense in depth if it's ever opened anyway. No
   `URLAllowlist` key -- there is nothing to allow through a browser that isn't offered.
 - **6-8, 9-12** (`web=garden`, "walled garden" in the R-BAND table): `URLBlocklist: ["*"]` plus a
-  merged `URLAllowlist` from that band's `lists/<band>.txt` and the kid's own approved sites.
+  merged `URLAllowlist` from that band's `lists/<band>.txt` and the kid's own approved sites, plus
+  the three start-page keys above so the browser opens *in* the garden instead of on Chromium's
+  default new-tab page.
 - **13+** (`web=filtered`, "filtered open web"): neither key. R-WEB-3 says so explicitly --
   filtering here is the table above plus the DoH resolver's own category blocking, not a
   Chromium-side site list. `lists/13+.txt` exists as parked reference data for a future Advanced

@@ -121,8 +121,11 @@ store/feature flags from `share/policy/chromium-flags.conf` (the same four lines
 `--load-extension` line — this repo's own copy of that file), then `--no-first-run
 --no-default-browser-check --hide-crash-restore-bubble --disable-session-crashed-bubble`, then
 `URL` if one was given on the command line, else the band's rendered policy's
-`RestoreOnStartupURLs[0]` if it ever defines one (none of today's four band templates do — see
-`share/policy/README.md`). The last two flags exist because Finish (`bin/omarchy-kids-exit`,
+`RestoreOnStartupURLs[0]`, which the garden bands (6-8, 9-12) now define — `render_policy_json`
+derives it from the first host of that band's own starter list, so the tile opens in the garden
+instead of on Chromium's Google-branded new-tab page (issue #6; `none` and `filtered` bands define
+none, so their launch opens Chromium's own default — see `share/policy/README.md`). The last two
+flags exist because Finish (`bin/omarchy-kids-exit`,
 R-EXIT-1) ends the Hyprland compositor while Chromium is still running mid-session, so without
 them the *next* launch shows Chromium's own "Restore pages? Chromium didn't shut down correctly"
 crash bubble instead of a clean start.
@@ -130,9 +133,8 @@ crash bubble instead of a clean start.
 Before exec'ing anything, `launch` re-checks that this band's managed-policy file is actually
 readable (R-WEB-4) — the same fail-closed rule the tile-omission logic below already gives the
 Web tile itself, repeated here as defense in depth for whatever else might call `launch` directly.
-The band comes from `$OMARCHY_KIDS_BAND` (set by the tile's own exec line, `OMARCHY_KIDS_BAND=<band>
-omarchy-kids-web launch`, the same convention `bin/omarchy-kids-session-start`'s "more-apps" tile
-already uses) or, if unset, `omarchy-kids-conf get $OMARCHY_KIDS_ACCOUNT band`.
+The band comes from the caller's own root-owned profile — `id -un`, then `omarchy-kids-conf get
+<account> band` — never from the environment (review §3.8; see the section below).
 
 **A kid running `chromium` directly from a terminal** (bands 9-12/13+ have one, R-BAND's table)
 still goes through Arch's wrapper and still reads `~/.config/chromium-flags.conf` — a path
@@ -247,13 +249,11 @@ docs/web.md for how a parent edits the lists.
       --disable-session-crashed-bubble (the last two: Finish ends the
       compositor mid-session, so the next launch otherwise shows
       Chromium's "Restore pages?" crash bubble), then URL if given, else
-      the band's `RestoreOnStartupURLs[0]` if its rendered policy
-      defines one. Refuses to start (exit 1) if the band's installed
+      the band's `RestoreOnStartupURLs[0]` — the garden bands' own first
+      starter host (issue #6). Refuses to start (exit 1) if the band's installed
       managed-policy file isn't readable (R-WEB-4: never launch
-      Chromium unmanaged). The band comes from $OMARCHY_KIDS_BAND, or
-      `omarchy-kids-conf get $OMARCHY_KIDS_ACCOUNT band` if unset --
-      same resolution bin/omarchy-kids-session-start uses for the Web
-      tile's own exec line.
+      Chromium unmanaged). The band comes from the caller's own
+      root-owned profile (`id -un`), never the environment.
 
 Every path is overridable for tests, same convention as
 omarchy-kids-provision and omarchy-kids-session:
@@ -265,13 +265,6 @@ omarchy-kids-provision and omarchy-kids-session:
                         (default empty, the real path -- same var
                         bin/omarchy-kids-session and lib/posture.sh use
                         for the system paths this package doesn't own)
-  OMARCHY_KIDS_ACCOUNT   `launch`: the kid account to resolve a band
-                        for when $OMARCHY_KIDS_BAND isn't set (default:
-                        this process's own user)
-  OMARCHY_KIDS_BAND      `launch`: band to launch for, skipping the
-                        `omarchy-kids-conf` lookup (set by the Web
-                        tile's own exec line, same as the "more-apps"
-                        tile sets it for bin/omarchy-kids-session-start)
   OMARCHY_KIDS_WEB_NO_EXEC=1  `launch`: print the argv that would be
                         exec'd, one argument per line, and return 0
                         instead of exec'ing it (test hook, same
