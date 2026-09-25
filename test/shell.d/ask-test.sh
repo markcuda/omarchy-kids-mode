@@ -803,5 +803,15 @@ check_contains "$(cat "$QUEUE_DIR/$COPY3.json")" '"state": "approved"' "the reco
 check_contains "$err" "could not write the kid's copy" "the failed copy is said out loud"
 rm -f "$DEC_DIR" "$QUEUE_DIR/$COPY3.json"
 
+# lib/ask.py's load_record is O_NOFOLLOW + a regular-file check: a symlinked
+# record is refused, never followed to another file (defense-in-depth, the shape
+# lib/devices.py uses for the same reason).
+ln -s "$ROOT_DIR/lib/ask.py" "$QUEUE_DIR/1000000099-kid-ada-app.json"
+out="$(python3 "$ROOT_DIR/lib/ask.py" show "$QUEUE_DIR/1000000099-kid-ada-app.json" --field kid 2>&1)"
+st=$?
+rm -f "$QUEUE_DIR/1000000099-kid-ada-app.json"
+check_eq "$st" "2" "a symlinked record is refused (O_NOFOLLOW)"
+check_contains "$out" "could not read" "the refusal says why (ELOOP from O_NOFOLLOW)"
+
 echo "ask-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc
