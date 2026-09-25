@@ -278,16 +278,19 @@ fi
 # The app entry opens a terminal. omarchy-kids is a gum TUI, so Terminal=false launches it with
 # nothing to draw on: a parent clicking Kids Mode saw a launch toast and then nothing at all
 # (found on the test laptop, 2026-09-05). Omarchy's own TUI entries (btop, nvim) set Terminal=true.
-if grep -q '^Terminal=true$' "$ROOT/desktop/omarchy-kids.desktop"; then
-  pass "desktop/omarchy-kids.desktop opens a terminal for the TUI"
+# T34: the entry runs in Omarchy's own floating-terminal helper, which supplies
+# the tty the gum TUI needs -- a bare Terminal=true got whatever terminal the
+# desktop picked instead.
+if grep -q '^Terminal=false$' "$ROOT/desktop/omarchy-kids.desktop"; then
+  pass "desktop/omarchy-kids.desktop does not run in a bare default terminal (T34)"
 else
-  fail "desktop/omarchy-kids.desktop must set Terminal=true; a gum TUI has nothing to draw on without one"
+  fail "desktop/omarchy-kids.desktop must set Terminal=false and use the floating-terminal helper (T34)"
 fi
 
-if grep -q 'Exec=env OMARCHY_KIDS_LAUNCHED_BY=desktop omarchy-kids' "$ROOT/desktop/omarchy-kids.desktop"; then
-  pass "desktop entry marks itself so the panel and wizard run for real"
+if grep -q '^Exec=env OMARCHY_KIDS_LAUNCHED_BY=desktop omarchy-launch-floating-terminal-with-presentation omarchy-kids$' "$ROOT/desktop/omarchy-kids.desktop"; then
+  pass "desktop entry opens in the floating terminal and marks itself for a real run"
 else
-  fail "desktop/omarchy-kids.desktop must set OMARCHY_KIDS_LAUNCHED_BY (review §1.5)"
+  fail "desktop/omarchy-kids.desktop must use the floating-terminal helper and set OMARCHY_KIDS_LAUNCHED_BY (T34, review §1.5)"
 fi
 
 # --- lib/sock.sh ships: three commands source it now ----------------------
