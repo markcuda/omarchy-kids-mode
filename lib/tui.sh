@@ -304,7 +304,8 @@ _tui_confirm_leave() {
 # CHOICES_ARRAYNAME holds "value|label|reason" strings — one choice per
 # screen's worth of options, each with its one-line reason (R-WIZ-3). An
 # answer may be the value, the label, the whole rendered line, or a plain
-# 1-based number (the "number keys" the footer advertises).
+# 1-based number (the answers file only: the interactive gum picker selects
+# with the arrow keys and Enter, so the footer does not advertise number keys).
 # BODY_ARRAYNAME holds the screen's own facts, rendered inside the card
 # under the title exactly as tui_screen_confirm's body is: card mode
 # clears, so facts a caller echoes first are gone before anyone reads

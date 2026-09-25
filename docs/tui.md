@@ -201,8 +201,9 @@ getting in the way. It has no effect on how a prompt is *answered* (that's `OMAR
 alone); it only changes how a screen is drawn.
 
 A `tui_screen_choose` answer may be the choice's `value`, its `label`, the exact rendered line
-(what an interactive picker returns), or a bare 1-based number — the same number keys the footer
-advertises. `tui_screen_input`'s `VALIDATOR` callback (if given) is called as `VALIDATOR "$answer"`;
+(what an interactive picker returns), or, **in the answers file only**, a bare 1-based number. The
+interactive `gum choose` selects with the arrow keys and Enter and has no number keys, so the footer
+does not advertise any; the `1)` prefixes are an enumeration the answers file can address. `tui_screen_input`'s `VALIDATOR` callback (if given) is called as `VALIDATOR "$answer"`;
 it should print nothing and return `0` for a valid answer, or print a one-line reason and return
 non-zero to have the screen ask again (in file mode, that just consumes the next line). A caller
 that judges the answer itself (the parent-password screen counts its own tries) sets
