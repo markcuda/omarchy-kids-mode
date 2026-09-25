@@ -171,7 +171,9 @@ try:
     code, _ = request("GET", "/v1/avatars/../x.svg", signed_headers("/v1/avatars/../x.svg"))
     check(code == 404, "an avatar path traversal is refused")
 
-    dec_rec = {"device_id": "d1", "request_id": "req-1", "decision": "approve", "ts": int(time.time()), "nonce": "post-1"}
+    dec_rec = {"device_id": "d1", "request_id": "req-1", "decision": "approve",
+           "kid": "kid-ada", "kind": "time", "what": "15", "minutes": 15,
+           "ts": int(time.time()), "nonce": "post-1"}
     dec_sig = base64.b64encode(dev_key.sign(devices.canonical(dec_rec))).decode()
     frame = json.dumps({"record": dec_rec, "signature": dec_sig})
     code, body = request("POST", "/v1/requests/req-1/decision",

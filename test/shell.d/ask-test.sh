@@ -692,8 +692,15 @@ check_contains "$(cat "$ROOT_DIR/share/ask/shell.qml")" '"Your password"' \
 python3 "$ROOT_DIR/lib/ask.py" write "$QUEUE_DIR" --kid kid-ada --kind time --what 5 --minutes 5 >/dev/null
 dev_rec="$(ls -t "$QUEUE_DIR"/*.json | head -1)"
 dev_id="$(basename "$dev_rec" .json)"
-"$BIN" approve "$dev_id" --by device:d1 --apply >/dev/null 2>&1
-check_eq "$?" "0" "approve --by device:<id> succeeds for root"
+"$BIN" approve "$dev_id" --by device:d1 --expect-kid kid-ada --expect-kind time --expect-what 5 --expect-minutes 5 --apply >/dev/null 2>&1
+check_eq "$?" "0" "approve --by device:<id> succeeds for root (with its display binding)"
+# A device decision without the binding is refused (amendment section 20).
+python3 "$ROOT_DIR/lib/ask.py" write "$QUEUE_DIR" --kid kid-ada --kind time --what 6 --minutes 6 >/dev/null
+nobind_rec="$(ls -t "$QUEUE_DIR"/*.json | head -1)"
+nobind_id="$(basename "$nobind_rec" .json)"
+"$BIN" approve "$nobind_id" --by device:d1 --apply >/dev/null 2>&1
+check_eq "$?" 2 "a device decision without the display binding is refused"
+rm -f "$nobind_rec"
 check_contains "$(cat "$dev_rec")" '"by": "device"' "the decision records by=device"
 check_contains "$(cat "$dev_rec")" '"device": "d1"' "the decision records the device id"
 
@@ -821,6 +828,11 @@ printf '%s\n' "{\"kid\": \"kid-ada\", \"kind\": \"app\", \"what\": \"minecraft\"
 "$BIN" approve "$BIND" --expect-kid kid-ada --expect-kind app --expect-what roblox --apply >/dev/null 2>&1
 check_eq "$?" 2 "a decision whose signed what differs from the record is refused"
 check_contains "$(cat "$QUEUE_DIR/$BIND.json")" '"state": "open"' "the mismatched decision leaves the record open"
+"$BIN" approve "$BIND" --expect-kid kid-cy --expect-kind app --expect-what minecraft --apply >/dev/null 2>&1
+check_eq "$?" 2 "a decision whose signed kid differs from the record is refused"
+"$BIN" approve "$BIND" --expect-kid kid-ada --expect-kind app --expect-what minecraft --expect-minutes 99 --apply >/dev/null 2>&1
+check_eq "$?" 2 "a decision whose signed minutes differ from the record is refused"
+check_contains "$(cat "$QUEUE_DIR/$BIND.json")" '"state": "open"' "the mismatched decisions leave the record open"
 "$BIN" approve "$BIND" --by device:d-vector --expect-kid kid-ada --expect-kind app --expect-what minecraft --apply >/dev/null 2>&1
 check_eq "$?" 0 "a decision whose binding matches is applied"
 check_contains "$(cat "$QUEUE_DIR/$BIND.json")" '"state": "approved"' "the matched decision is applied"

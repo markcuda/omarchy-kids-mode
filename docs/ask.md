@@ -31,8 +31,8 @@ omarchy-kids-ask submit <kind> <what> [--minutes N]
 omarchy-kids-ask grant <kind> <what> [--minutes N]
 omarchy-kids-ask collect [--apply]
 omarchy-kids-ask list [<kid>]
-omarchy-kids-ask approve <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
-omarchy-kids-ask decline <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
+omarchy-kids-ask approve <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--expect-kid K --expect-kind KIND --expect-what W [--expect-minutes N]] [--apply]
+omarchy-kids-ask decline <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--expect-kid K --expect-kind KIND --expect-what W [--expect-minutes N]] [--apply]
 ```text
 
 ### Kid-side: `time` / `app` / `plugin` / `site`
@@ -125,7 +125,7 @@ records who decided: `panel` (a human at the panel, the default), `keyboard`, `w
 `device:<id>` (a paired device's signed decision, which authd forwards). Both take an optional
 `--reply TEXT` (at most 80 printable characters), the parent's own line — signed when it arrives
 through a paired device, typed otherwise — which the record then carries. Both refuse (exit 2)
-on an id that's already decided or doesn't exist — Appendix D's "approvers append, never rewrite
+on an id that's already decided, doesn't exist, or (with a device's `--expect-kid/--expect-kind/--expect-what/--expect-minutes` binding) whose signed display no longer matches the record (amendment section 20) — Appendix D's "approvers append, never rewrite
 history" is read here as *a record is decided exactly once*; nothing ever flips a decision back or
 edits `kid`/`kind`/`what`/`minutes`/`asked_at` after they're first written (`lib/ask.py decide`
 enforces this, not just this script). Both subcommands perform the root check at entry, before

@@ -552,8 +552,9 @@ is a time ask (`clients/parent/lib/relay_client.dart`, `lib/session.dart`). `lib
 `valid_record` requires the binding, so a decision missing it is malformed; `omarchy-kids-ask
 approve|decline` re-checks it against the queue record under the decision lock (`lib/ask.py`'s
 `--expect_*`) and refuses with "the record changed since it was shown" when it does not match. A
-compromised `omarchy-kids-relay` -- the only network listener -- can therefore only stop delivery,
-not relabel what a parent approves. A review id is bound to its kid and app the same way.
+compromised `omarchy-kids-relay` -- the only network listener -- still delivers the state a parent
+sees and can lie on that screen, but it cannot turn a relabelled display into an applied decision. A
+review id is bound to its kid and app the same way.
 
 This closed a real finding: before it, the record signed only the id, so a compromised relay could
 show request B's id with request A's details and have the parent approve A's fields under B's id.
