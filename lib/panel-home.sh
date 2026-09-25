@@ -103,6 +103,7 @@ screen_home() {
         # Surface the remove screen's own notice (e.g. a mistyped name) on Home
         # rather than leaving it for whichever kid screen opens next.
         if [[ -n "$KID_NOTICE" ]]; then
+          # shellcheck disable=SC2034 # read by panel_notice_lines (bin/omarchy-kids-panel)
           PANEL_NOTICE="$KID_NOTICE"
           KID_NOTICE=""
         fi
