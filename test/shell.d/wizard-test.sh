@@ -299,6 +299,7 @@ answers="$(answers_file begin parentpw123 Ada fox 6-8 simple garden default pick
 run_wizard "$answers"
 check_status "$WIZ_STATUS" 0 "picking apps one at a time still completes"
 check_contains "$out" "Include GCompris in Ada's starter apps?" "the checklist asks about each pack app by name"
+check_contains "$out" "install by hand after setup (AUR)" "A9 says the pack's AUR apps install by hand (I-6, R-APPS-1)"
 check_contains "$out" "GCompris, KTuberling, SuperTux, KLettres" "the summary lists only the apps answered yes"
 # %q escapes the commas (printf's own quoting choice, not a bug); the
 # value bash would actually pass through as argv[3] is still the plain

@@ -213,13 +213,19 @@ summary_lights_weekday_weekend() {
 # A9: Apps (Simple). B walks the pack one app at a time via apps_pick_walk
 # (lib/tui.sh has no multi-select widget yet).
 screen_apps() {
-  local names
+  local names aur_count
   names="$(pack_field "$BAND" label | paste -sd, - | sed 's/,/, /g')"
+  # AUR apps in the pack install by hand after setup, not during Apply
+  # (bin/omarchy-kids-apps skips them). Say so, so the list is not a promise
+  # Apply cannot keep (I-6, R-APPS-1).
+  aur_count="$(pack_field "$BAND" pkg | grep -c '^aur:' || true)"
+  local -a apps_body=()
+  ((aur_count > 0)) && apps_body=("$aur_count of these install by hand after setup (AUR); the rest install now.")
   local choices=(
     "pack|The $BAND starter pack|$names"
     "pick|Let me pick|Turn any of them off, one at a time."
   )
-  tui_screen_choose "Which apps to start with?" 9 "$TOTAL_STEPS" 0 "" choices "pack"
+  tui_screen_choose "Which apps to start with?" 9 "$TOTAL_STEPS" 0 "" choices "pack" "$TUI_FOOTER_DEFAULT" apps_body
   local rc=$?
   ((rc == 0)) || return $rc
   APPS_MODE="$TUI_REPLY"
@@ -316,6 +322,10 @@ screen_summary() {
     label="$(band_field "$BAND" label)"
     blurb="$(band_field "$BAND" blurb)"
     apps_desc="$(friendly_allowlist "$ALLOWLIST_IDS")"
+    # Mark AUR apps in the summary too (I-6), the same as A9.
+    local aur_count
+    aur_count="$(pack_field "$BAND" pkg | grep -c '^aur:' || true)"
+    ((aur_count > 0)) && apps_desc="$apps_desc ($aur_count install by hand after setup, AUR)"
     if ((NO_PASSWORD)); then
       password_line="No password — $DISPLAY_NAME gets in once you start their session."
     else
