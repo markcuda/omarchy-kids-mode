@@ -80,6 +80,9 @@ cp "$ROOT_DIR/share/policy/chromium-flags.conf" "$SHARE/policy/"
 cp "$ROOT_DIR/share/menu/omarchy-kids-trimmed.jsonc" "$SHARE/menu/"
 mkdir -p "$SHARE/applications"
 cp "$ROOT_DIR/share/applications/omarchy-kids-data.desktop" "$SHARE/applications/"
+# T45: install_kids_themes's source (a kid theme collection).
+mkdir -p "$SHARE/themes-kids/cozy-night"
+echo 'background = "#000000"' >"$SHARE/themes-kids/cozy-night/colors.toml"
 touch "$ARGV_LOG"
 
 kids_tree "$TREE" "$ROOT_DIR"
@@ -324,6 +327,13 @@ if [[ -f "$HOMEROOT/home/kid-cy/.config/omarchy/extensions/omarchy-menu.jsonc" ]
   pass "portal add seeds the trimmed omarchy-menu extension for kid-cy"
 else
   fail "portal add must seed the trimmed omarchy-menu extension for kid-cy"
+fi
+KID_OMARCHY_THEMES="$HOMEROOT/home/kid-cy/.config/omarchy/themes"
+if [[ -L "$KID_OMARCHY_THEMES/cozy-night" ]] &&
+  [[ "$(readlink "$KID_OMARCHY_THEMES/cozy-night")" == "$SHARE/themes-kids/cozy-night" ]]; then
+  pass "provision links the kid theme collection into ~/.config/omarchy/themes (T45)"
+else
+  fail "provision must link the kid theme collection for Omarchy's picker (T45)"
 fi
 # R-DATA-3 at Desktop: the data screen is the App grid's tile, so a 9-12/13+
 # kid (Desktop by default) also gets a kid-owned .desktop that Omarchy's own

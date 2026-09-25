@@ -258,6 +258,32 @@ install_kids_menu_trim() {
     echo "  (could not chown $dest to $account -- fine outside a real root run)" >&2
 }
 
+# install_kids_themes ACCOUNT — makes the package's kid theme collection visible
+# to Omarchy's own theme switcher (T45). Omarchy reads a user's themes from
+# ~/.config/omarchy/themes/ (research/05), so a kid-owned symlink per theme there
+# is what puts the collection in the kid's own picker. Never overwrites a name
+# the kid already has there. Presentation, not a lock; the target is the
+# root-owned package copy, so the kid can only choose among the offered set.
+install_kids_themes() {
+  local account="$1" home dir src theme name
+  src="$SHARE/themes-kids"
+  [[ -d "$src" ]] || return 0
+  home="$(home_dir_for "$account")"
+  dir="$home/.config/omarchy/themes"
+  install -d -m 0755 "$dir"
+  for theme in "$src"/*/; do
+    [[ -d "$theme" ]] || continue
+    name="$(basename "$theme")"
+    # -e covers a real dir/file; -L covers a symlink with a dangling target, so
+    # a second provision never doubles or retargets an existing entry.
+    [[ -e "$dir/$name" || -L "$dir/$name" ]] && continue
+    ln -s "$src/$name" "$dir/$name" 2>/dev/null || continue
+    chown -h "$account:$account" "$dir/$name" 2>/dev/null || true
+  done
+  chown "$account:$account" "$dir" 2>/dev/null ||
+    echo "  (could not chown $dir to $account -- fine outside a real root run)" >&2
+}
+
 # install_kids_data_entry ACCOUNT — a Desktop-mode way to the data screen
 # (R-DATA-3). The App grid's tile (lib/launcher-map.sh) is the Grid's only, so a
 # 9-12/13+ kid on the Desktop mode (their default) would not reach "What my

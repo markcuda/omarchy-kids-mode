@@ -231,6 +231,10 @@ cmd_add() {
   # and read-only for the kid; it is presentation, not a lock.
   run install_kids_menu_trim "$account"
 
+  # T45: make the package's kid theme collection visible to Omarchy's own theme
+  # switcher, as kid-owned symlinks in ~/.config/omarchy/themes/.
+  run install_kids_themes "$account"
+
   # GCompris's own first-run state (docs/apps.md; approved proposal,
   # docs/research/2026-09-21-gcompris-first-run-and-config-proposal.md). It is
   # configuration, not a lock: it hides the app's quit/config chrome and its
