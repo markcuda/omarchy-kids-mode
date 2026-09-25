@@ -101,6 +101,12 @@ for band in 3-5 6-8 9-12 13+; do
   check "$(jq -r '.DeveloperToolsAvailability' <<<"$out")" "2" "render $band: DeveloperToolsAvailability=2"
   check "$(jq -c '.ExtensionInstallBlocklist' <<<"$out")" '["*"]' "render $band: ExtensionInstallBlocklist=[\"*\"]"
   check "$(jq -r '.BrowserSignin' <<<"$out")" "0" "render $band: BrowserSignin=0"
+  # No first-run or promo popups, and nothing that leaves the machine on the
+  # kid's behalf (the owner's "app updates/promos showing up" note; I-2).
+  check "$(jq -r '.PromotionalTabsEnabled' <<<"$out")" "false" "render $band: no promotional tabs"
+  check "$(jq -r '.DefaultBrowserSettingEnabled' <<<"$out")" "false" "render $band: no default-browser prompt"
+  check "$(jq -r '.MetricsReportingEnabled' <<<"$out")" "false" "render $band: no metrics leave the machine"
+  check "$(jq -r '.SearchSuggestEnabled' <<<"$out")" "false" "render $band: no search-suggestion requests"
   check "$(jq -r '.DownloadRestrictions' <<<"$out")" "1" "render $band: DownloadRestrictions=1"
   check "$(jq -r '.SavingBrowserHistoryDisabled' <<<"$out")" "false" "render $band: SavingBrowserHistoryDisabled=false"
   check "$(jq -r '.AllowDeletingBrowserHistory' <<<"$out")" "false" "render $band: AllowDeletingBrowserHistory=false"
