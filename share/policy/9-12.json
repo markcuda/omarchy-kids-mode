@@ -5,11 +5,19 @@
   "ForceYouTubeRestrict": 2,
   "IncognitoModeAvailability": 1,
   "DeveloperToolsAvailability": 2,
-  "ExtensionInstallBlocklist": ["*"],
+  "ExtensionInstallBlocklist": [
+    "*"
+  ],
   "BrowserSignin": 0,
+  "PromotionalTabsEnabled": false,
+  "DefaultBrowserSettingEnabled": false,
+  "MetricsReportingEnabled": false,
+  "SearchSuggestEnabled": false,
   "DownloadRestrictions": 1,
   "SavingBrowserHistoryDisabled": false,
   "AllowDeletingBrowserHistory": false,
-  "URLBlocklist": ["*"],
+  "URLBlocklist": [
+    "*"
+  ],
   "URLAllowlist": []
 }

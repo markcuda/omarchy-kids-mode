@@ -45,7 +45,7 @@ default_source = "band"
 enum = ["1", "2", "3"]
 validator = "level"
 group = "Desktop"
-label = "Desktop level"
+label = "Desktop"
 editor = "enum"
 reset = "clear"
 

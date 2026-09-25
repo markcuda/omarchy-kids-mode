@@ -228,12 +228,21 @@ tui_header() {
       border_color="$TUI_C_ERROR"
     fi
 
-    local -a lines=("Kids Mode")
-    ((total > 1)) && lines[0]="Kids Mode · Step ${step} of ${total}"
-    [[ "$title" != "Kids Mode" ]] && lines+=("$title")
+    local -a lines=("$title")
+    if [[ "$title" == "Kids Mode" ]]; then
+      ((total > 1)) && lines[0]="Kids Mode · Step ${step} of ${total}"
+    else
+      ((total > 1)) && lines+=("Kids Mode · Step ${step} of ${total}")
+    fi
     if [[ "$show_omy" == 1 ]]; then
-      lines+=("🦉 Omy")
-      [[ -n "$omy_line" ]] && lines+=("$omy_line")
+      lines+=("")
+      # Omy talks in one line, bubble-style, rather than a bare name over a
+      # stray sentence -- the owner's "cute, friendly, chat bubble" note.
+      if [[ -n "$omy_line" ]]; then
+        lines+=("🦉 Omy says: $omy_line")
+      else
+        lines+=("🦉 Omy")
+      fi
     fi
 
     local -a _tui_hdr_body=()
@@ -249,7 +258,7 @@ tui_header() {
       "${lines[@]}"
   else
     if [[ "$show_omy" == 1 ]]; then
-      _tui_style --foreground "$TUI_C_ACCENT" --bold -- "🦉 Omy"
+      _tui_style --foreground "$TUI_C_ACCENT" --bold -- "🦉 Omy says:"
       if [[ -n "$omy_line" ]]; then
         local -a f=(--italic)
         [[ -n "$TUI_C_FG" ]] && f+=(--foreground "$TUI_C_FG")
@@ -257,9 +266,12 @@ tui_header() {
       fi
     fi
 
-    local -a plain=("Kids Mode")
-    ((total > 1)) && plain+=("step ${step} of ${total}")
-    [[ "$title" != "Kids Mode" ]] && plain+=("$title")
+    local -a plain=("$title")
+    if [[ "$title" == "Kids Mode" ]]; then
+      ((total > 1)) && plain[0]="Kids Mode · step ${step} of ${total}"
+    else
+      ((total > 1)) && plain+=("step ${step} of ${total}")
+    fi
     _tui_style --border rounded --padding "0 1" \
       --foreground "$TUI_C_ACCENT" --border-foreground "$TUI_C_ACCENT" -- "${plain[@]}"
   fi
@@ -297,7 +309,8 @@ _tui_confirm_leave() {
 # CHOICES_ARRAYNAME holds "value|label|reason" strings — one choice per
 # screen's worth of options, each with its one-line reason (R-WIZ-3). An
 # answer may be the value, the label, the whole rendered line, or a plain
-# 1-based number (the "number keys" the footer advertises).
+# 1-based number (the answers file only: the interactive gum picker selects
+# with the arrow keys and Enter, so the footer does not advertise number keys).
 # BODY_ARRAYNAME holds the screen's own facts, rendered inside the card
 # under the title exactly as tui_screen_confirm's body is: card mode
 # clears, so facts a caller echoes first are gone before anyone reads
@@ -649,7 +662,7 @@ _tui_progress_bar() {
 tui_desktop_label() {
   case "$1" in
     1) echo "App grid" ;;
-    2) echo "Simplified desktop" ;;
-    3) echo "Full desktop (advanced)" ;;
+    2) echo "Simplified desktop (retired)" ;;
+    3) echo "Desktop" ;;
   esac
 }

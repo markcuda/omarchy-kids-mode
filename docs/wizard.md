@@ -40,7 +40,7 @@ at the bottom of `bin/omarchy-kids-wizard` jumps straight from step 7 to step 12
 | 12 | A12 | Kid's password | Twice, masked. Band 3-5 gets an extra "set a password or not" choice first (R-BAND's `password_optional`); every other band always sets one. Explains what it unlocks. |
 | 13 | A13 | Summary | A plain-words table — account, face, age band, desktop level, web mode, weekday/weekend screen-time and bedtime limits, Wi-Fi, starter apps, password, plus other customized Advanced settings — changed rows marked `(custom)` — then **Apply** or **Change something** (which opens the same grouped checklist, for a kid built either way, then redraws this summary). |
 | 14 | A13b/A13c | Apply | A step-by-step progress dashboard (`tui_progress`, R-WIZ-5): the account (plus every cell, from either path, that overrides the band default), the web policy, the starter pack, and the safety check (A13c). |
-| 15 | A14 | Done | Omy's line; **Return to my desktop** (R-WIZ-6). No live-preview button — there is no such switch (see below). |
+| 15 | A14 | Done | Omy's line; **Return to my desktop** (or **Return to the panel** when launched from the panel with `--from-panel`) (R-WIZ-6). No live-preview button — there is no such switch (see below). |
 
 ### Step 7, Simple: A7-A11
 
@@ -50,7 +50,7 @@ at the bottom of `bin/omarchy-kids-wizard` jumps straight from step 7 to step 12
 | A8 Screen time | The default shows the band's weekday limits and current weekend limits. "I'll set my own" edits weekday minutes and bedtime (each validated); weekend values are edited in Advanced. |
 | A9 Apps | "The `<band>` starter pack" (every app), or "Let me pick" — a yes/no per app, one at a time (`apps_pick_walk`; there's no multi-select checklist widget in `lib/tui.sh` yet — Advanced's apps row, below, reuses this same walk). |
 | A10 Wi-Fi | "Ask me first" (`parent`) vs. "On their own, safely" (`helper`), band default preselected. |
-| A11 Desktop | App grid / Simplified desktop / Full desktop (advanced), band default preselected; the same choices appear in the Advanced permissions checklist. |
+| A11 Desktop | App grid / Desktop, band default preselected; the same choices appear in the Advanced permissions checklist. Grid stores `level = 1`, Desktop stores `level = 3`. |
 
 ### Step 7, Advanced: A13a
 
@@ -78,7 +78,7 @@ group:
 | Screen time | Minutes a day, weekdays and weekends (`budget_min`, `budget_min_weekend`), Lights out, weekdays and weekends (`lights_out`, `lights_out_weekend`) |
 | Apps | Starter apps (`allowlist`) |
 | Wi-Fi | New Wi-Fi networks (`wifi`) |
-| Desktop | Desktop level (`level`), Theme (`theme`) |
+| Desktop | Desktop (`level` — Grid or Desktop), Theme (`theme`) |
 | Data | History you can see (`history_visible`) |
 
 `theme`'s row (issue #53) is the one whose "default" isn't a band value at all — bands.toml has
@@ -86,7 +86,7 @@ no theme field — it's the parent's own current Omarchy theme (`lib/theme.sh`'s
 `theme_current_name`, no `THEME_KIDS_HOME` override needed since the wizard always runs as the
 parent), the same theme `omarchy-kids-provision add` already copies for the kid at Apply time
 (`docs/theming.md`). Its editor is a `tui_screen_choose` over `theme_list_installed` — every name
-under the system themes dir — not an enum baked into this file.
+under Omarchy's themes dir or the package's kid collection — not an enum baked into this file.
 
 Every row shows its band default and its current choice (`adv_row_line`), and is marked
 `(changed)` once the current choice no longer matches the default. Enter on a row opens the right
@@ -123,9 +123,13 @@ anything else that depends on it, writes `machine.conf`'s `parent=` — `omarchy
 set parent $INVOKING_USER` (issue #46 follow-up; `$INVOKING_USER` always comes from `id -un`, since
 the wizard always runs unprivileged, as the parent) — since nothing else in this repo writes that line, and
 without it `omarchy-kids-authd` answers "no" to every password and `omarchy-kids-provision`
-refuses to add a kid at all. Only then does it run `sudo systemctl enable --now` on the package's
-own units — `KIDS_UNITS`/`KIDS_SOCKETS`/`KIDS_TIMERS`, `lib/kids.sh`, the same list
-`omarchy-kids-assert`'s `units` lock uses (`docs/assert.md`) — *before* provisioning (issue #46): a
+refuses to add a kid at all. Only then does it enable the package's own units and start them —
+`KIDS_UNITS`/`KIDS_SOCKETS`/`KIDS_TIMERS`, `lib/kids.sh`, the same list `omarchy-kids-assert`'s
+`units` lock uses (`docs/assert.md`) — *before* provisioning (issue #46). It enables every unit but
+starts only the sockets and timers now, the same split `units_fix` uses: the one-shot services must
+not be started here (`omarchy-kids-boot-login-cleanup.service` sleeps 20 s in `ExecStartPre`, and
+Step 5 runs the assert), so `enable --now` on them blocked Apply for seconds with no output (the
+owner's 15-second hang, T20). A
 fresh install before the first kid, or right after `omarchy-kids-remove` disables them again, needs
 the boot-time autologin and a working authd socket back before Step 2 (the account) and the *next*
 wizard run both need them. Every subsequent Apply command (`run_priv`/`run_priv_stdin`/
@@ -189,10 +193,13 @@ that runs one, decides ✓ or ✗, and does something about it:
   claimed to be), the failing command's last ten lines print under the dashboard, and Done's
   headline names which step it was ("Setup stopped at ...") instead of claiming the desktop is
   ready.
+- **Each step's duration is measured and printed** (T19): after each step the wizard prints
+  `  <step>: <n>s` live, and a real run appends `[step] <step>: <n>s` to the technical log, so the
+  next slow step is a fact rather than a feeling.
 - **The technical log** (R-WIZ-5's tip line, `$SETUP_LOG`, default `/var/log/omarchy-kids/setup.log`)
   is now actually written on a real run, not just named: `apply_step_getok` also writes
-  machine.conf's `parent=`, enables and starts the package's own units (`sudo systemctl enable
-  --now`, issue #46, see "Root and the one sudo prompt" above) and creates the log's own directory
+  machine.conf's `parent=`, enables the package's own units and starts all of them but the assert
+  oneshot (issue #46, T20, see "Root and the one sudo prompt" above) and creates the log's own directory
   (`sudo install -d`, since a parent's own unprivileged wizard process can't create anything under
   `/var/log` itself), and every step's combined output is piped through `sudo tee -a "$SETUP_LOG"`
   on its way to the screen — a second, separate `sudo` call from the step's own (already-elevated)
@@ -222,7 +229,8 @@ such switch exists on this box: `bin/omarchy-kids-exit --finish` ends a *kid's o
 inside it (`docs/exit.md`), there is nothing today that starts one as a preview from the parent's
 side, and that file notes `Seat.SwitchToGreeter()` outright fails on Omarchy 4.0.2 while a session
 is live. A button that only printed an apology would be a control that does nothing (I-6), so
-Done offers only **Return to my desktop** and Omy's line says `<Name>` signs in from the login
+Done offers only one button — **Return to my desktop**, or **Return to the panel** when the wizard
+was launched from the panel (`--from-panel`) — and Omy's line says `<Name>` signs in from the login
 screen next time the computer starts. Building a real preview switch is separate, later work.
 
 ## The answers-file layout
@@ -260,7 +268,7 @@ garden             # A7 Web (6-8's default)
 default            # A8 Screen time ("the usual" — not "I'll set my own")
 pack               # A9 Apps (the whole starter pack, not "let me pick")
 parent             # A10 Wi-Fi (6-8's default)
-2                  # A11 Desktop level (6-8's default)
+1                  # A11 Desktop (App grid, 6-8's default)
 secret1            # A12 Kid password
 secret1            # A12 Kid password, again
 apply              # A13 Summary: Apply (not "Change something")
@@ -349,10 +357,10 @@ pairs, then `done`) and then another `apply`-or-`change` line for the redrawn su
 secret1
 secret1
 change             # A13 Summary: "Change something", not "Apply"
-level              # checklist: open the "Desktop level" row
-2                  # level's editor: pick "2"
+level              # checklist: open the "Desktop" row
+2                  # level's editor: pick "Desktop" (stored level = 3)
 done               # checklist: "Done customizing" — back to the summary
-apply              # A13 Summary again, now showing "Level 2 (custom)"
+apply              # A13 Summary again, now showing "Desktop (custom)"
 parent
 ```
 

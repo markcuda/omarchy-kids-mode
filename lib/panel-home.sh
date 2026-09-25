@@ -46,13 +46,14 @@ screen_home() {
         home_line="$(kid_home_line "$name" "$band" "$status_out" "$nreq")"
         choices+=("kid:$account|$home_line|")
       done <<<"$rows_out"
+      choices+=("remove_kid|Remove a kid|Pick a kid to remove (their files are kept)")
     fi
     choices+=(
       "add|Add a kid|"
       "requests|Requests ($total_open)|"
-      "notifications|Notifications|Turn notifications on or off, and pair a device (R-NOTIFY)"
-      "reviews|Reviews ($total_reviews)|An approved app whose surface changed (R-NOTIFY-12)"
-      "machine|Machine safety|The read-only safety report (R-TRUST-2)"
+      "notifications|Notifications|Turn notifications on or off, and pair a device"
+      "reviews|Reviews ($total_reviews)|An approved app whose surface changed"
+      "machine|Machine safety|The read-only safety report"
       "remove_kids_mode|Remove Kids Mode|"
       "quit|Quit|"
     )
@@ -70,7 +71,39 @@ screen_home() {
     ((rc == 0)) || return 1
 
     case "$TUI_REPLY" in
-      add) exec "$WIZARD_BIN" ;;
+      add)
+        # T17: run the wizard and come back to the panel, instead of exec'ing
+        # it and ending the app (a parent who adds one kid wants the panel again).
+        # --dry-run passes through, the same as Remove Kids Mode below.
+        if [[ "$DRY_RUN" == "1" ]]; then "$WIZARD_BIN" --from-panel --dry-run; else "$WIZARD_BIN" --from-panel; fi
+        rc=$?
+        ((rc == 130)) && return 130
+        ;;
+      remove_kid)
+        # T16: a top-level remove, alongside the per-kid Remove this kid row.
+        local -a kid_choices=()
+        while IFS=$'\t' read -r account name band; do
+          [[ -z "$account" ]] && continue
+          kid_choices+=("$account|$name|")
+        done <<<"$rows_out"
+        tui_screen_choose "Remove which kid?" 1 1 0 "" kid_choices
+        rc=$?
+        ((rc == 130)) && return 130
+        ((rc == 0)) || continue
+        local remove_account="$TUI_REPLY" remove_name=""
+        while IFS=$'\t' read -r account name band; do
+          [[ "$account" == "$remove_account" ]] && remove_name="$name"
+        done <<<"$rows_out"
+        screen_kid_remove "$remove_account" "${remove_name:-$remove_account}"
+        rc=$?
+        # Surface the remove screen's own notice (e.g. a mistyped name) on Home
+        # rather than leaving it for whichever kid screen opens next.
+        if [[ -n "$KID_NOTICE" ]]; then
+          PANEL_NOTICE="$KID_NOTICE"
+          KID_NOTICE=""
+        fi
+        ((rc == 130)) && return 130
+        ;;
       requests)
         screen_requests
         rc=$?

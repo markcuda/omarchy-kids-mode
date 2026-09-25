@@ -64,15 +64,15 @@ password survive a reset; everything else falls back to their band.
 | `name` | text | none — required | — |
 | `avatar` | id from `share/avatars/` | none — required | — |
 | `band` | `3-5` `6-8` `9-12` `13+` | none — required | — |
-| `level` | `1` `2` `3` | band | per band |
+| `level` | `1` `3` — `1` Grid, `3` Desktop; `2` (the retired Simplified desktop) still validates for an old profile but no band or picker offers it | band | per band |
 | `web` | `garden` `filtered` `none` | band | per band |
 | `dns` | `cloudflare-family` `cleanbrowsing-family` `custom:<url>` | band | per band. **Stored, not applied yet:** the rendered Chromium policy always uses the template's Cloudflare family resolver, whatever this says (`share/policy/README.md`, `docs/web.md`) |
 | `budget_min`, `budget_min_weekend` | integer minutes | band | per band |
 | `lights_out`, `lights_out_weekend` | `HH:MM` | band | per band |
 | `wifi` | `parent` `helper` | band | per band |
 | `history_visible` | `yes` `no` | band | per band |
-| `menu` | `trimmed` `full` | band | per band (trimmed for bands 3-5, 6-8 and 9-12; full for 13+). Provisioning reads it: a trimmed kid gets the omarchy-menu user extension that hides install/remove/update/setup on a Level 3 desktop (`share/menu/omarchy-kids-trimmed.jsonc`, R-DESK-4). The wizard offers no row for it (`docs/wizard.md`) |
-| `theme` | id from the system themes dir (`$OMARCHY_PATH/themes`) | parent-theme — required | — (`omarchy-kids-provision add` sets it to the parent's current theme; `docs/theming.md`) |
+| `menu` | `trimmed` `full` | band | per band — `trimmed` for every band now (13+ included; `full` is still an override). Provisioning reads it: a trimmed kid gets the omarchy-menu user extension that hides install/remove/update/setup on a Level 3 desktop (`share/menu/omarchy-kids-trimmed.jsonc`, R-DESK-4). The wizard offers no row for it (`docs/wizard.md`) |
+| `theme` | id from the system themes dir (`$OMARCHY_PATH/themes`) or the package's kid collection (`/usr/share/omarchy-kids/themes-kids`, `share/themes-kids/`) | parent-theme — required | — (`omarchy-kids-provision add` sets it to the parent's current theme; `docs/theming.md`) |
 | `allowlist` | comma-separated launcher ids | band's pack | the full starter pack |
 | `sites` | comma-separated hosts | band's pack | the band's `[garden]` list. **Stored, not applied yet:** the rendered Chromium policy's allowlist comes from `share/policy/lists/<band>.txt` plus sites a parent has approved (`allow.txt`), so editing this value changes nothing today; `test/shell.d/garden-lists-test.sh` keeps the pack's list and the policy's identical (owner decision item 7) |
 | `password` | `set` `none` | global | `set` |
@@ -166,7 +166,7 @@ boot artifacts separately.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 3-5 | 1 | none | 45 min / 19:00 | 19:30 | parent | none | min 4, optional |
 | 6-8 | 1 | garden | 60 min / 19:30 | 20:00 | parent | none | min 4 |
-| 9-12 | 2 | garden | 90 min / 20:30 | 21:00 | helper | playground | min 6 |
+| 9-12 | 3 | garden | 90 min / 20:30 | 21:00 | helper | playground | min 6 |
 | 13+ | 3 | filtered | 120 min / 21:30 | 22:00 | helper | sandboxed | min 6 |
 
 `omarchy-kids-conf bands` prints each band's `label` and `blurb`; `omarchy-kids-conf band <band>`
@@ -223,17 +223,17 @@ kid-ada: band=6-8
 
 $ omarchy-kids-conf get kid-ada level        # no override -> band 6-8's default
 1
-$ omarchy-kids-conf set kid-ada level 2      # override wins from here on
-kid-ada: level=2
+$ omarchy-kids-conf set kid-ada level 3      # override wins from here on
+kid-ada: level=3
 $ omarchy-kids-conf get kid-ada level
-2
+3
 
 $ omarchy-kids-conf show kid-ada
 KEY                  VALUE                          SOURCE
 name                 Ada                            override
 avatar               fox                            override
 band                 6-8                            override
-level                2                              override
+level                3                              override
 web                  garden                         band
 ...
 onboarded            no                             default

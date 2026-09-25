@@ -8,6 +8,14 @@
 # shellcheck source=./kids.sh
 source "$(dirname "${BASH_SOURCE[0]}")/kids.sh" # account_home
 
+# The package's own kid theme root: a second, package-owned themes directory
+# beside Omarchy's, so the kid theme collection ships without writing into
+# /usr/share/omarchy (I-7). A plain build-time constant, never an environment
+# read (AGENTS.md rule 9): nothing a kid can set chooses it. Listed after
+# Omarchy's, so an upstream theme of the same name wins (theme_list_installed,
+# theme_apply_for). A test overrides it after sourcing.
+KIDS_THEMES_DIR=/usr/share/omarchy-kids/themes-kids
+
 # _theme_kids_env_defaults -- defaults $OMARCHY_PATH/$LANG (issue #48) --
 # unset in a session with no Omarchy env (SSH, CI). Called from every
 # function below that reads $OMARCHY_PATH or is about to run an Omarchy
@@ -121,17 +129,20 @@ theme_current_name() {
   [[ -r "$f" ]] && cat "$f" || true
 }
 
-# theme_list_installed -- every name under $OMARCHY_PATH/themes, sorted.
-# The wizard/panel Desktop screens offer only these, never a user-installed
+# theme_list_installed -- every name under $OMARCHY_PATH/themes and the
+# package's own $KIDS_THEMES_DIR, sorted and de-duplicated. The wizard/panel
+# Desktop screens offer only these, never a user-installed
 # ~/.config/omarchy/themes/<name> -- docs/theming.md issue #53.
 theme_list_installed() {
   _theme_kids_env_defaults
-  local dir="$OMARCHY_PATH/themes" d
-  [[ -d "$dir" ]] || return 0
-  for d in "$dir"/*/; do
-    [[ -d "$d" ]] || continue
-    basename "$d"
-  done | sort
+  local dir d
+  for dir in "$OMARCHY_PATH/themes" "$KIDS_THEMES_DIR"; do
+    [[ -d "$dir" ]] || continue
+    for d in "$dir"/*/; do
+      [[ -d "$d" ]] || continue
+      basename "$d"
+    done
+  done | sort -u
 }
 
 # theme_apply_for ACCOUNT NAME -- writes ACCOUNT's current theme, mirroring
@@ -147,8 +158,9 @@ theme_apply_for() {
   local account="$1" name="$2" home src current next tmp
   home="$(account_home "$account")"
   src="$OMARCHY_PATH/themes/$name"
+  [[ -d "$src" ]] || src="$KIDS_THEMES_DIR/$name"
   if [[ ! -d "$src" ]]; then
-    echo "theme_apply_for: no such theme '$name' under $OMARCHY_PATH/themes" >&2
+    echo "theme_apply_for: no such theme '$name' under $OMARCHY_PATH/themes or $KIDS_THEMES_DIR" >&2
     return 1
   fi
 

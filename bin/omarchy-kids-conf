@@ -159,8 +159,9 @@ validate_value() {
     theme-id)
       [[ "$value" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "invalid value for 'theme': lowercase id, e.g. 'tokyo-night'"
       local omarchy="${OMARCHY_PATH:-/usr/share/omarchy}" # unset under sudo (theme.sh supplies its own default)
-      if [[ -d "$omarchy/themes" ]]; then
-        [[ -d "$omarchy/themes/$value" ]] || die "invalid value for 'theme': no such theme '$value' under $omarchy/themes"
+      if [[ -d "$omarchy/themes" || -d "$KIDS_THEMES_DIR" ]]; then
+        [[ -d "$omarchy/themes/$value" || -d "$KIDS_THEMES_DIR/$value" ]] ||
+          die "invalid value for 'theme': no such theme '$value' under $omarchy/themes or $KIDS_THEMES_DIR"
       fi
       ;;
     launcher-ids)

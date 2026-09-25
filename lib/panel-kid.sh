@@ -380,11 +380,10 @@ screen_kid_level() { # ACCOUNT NAME
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local choices=(
     "1|App grid|Big app tiles. One app fills the screen."
-    "2|Simplified desktop|Super+Space finds apps. Windows can sit side by side."
-    "3|Full desktop|The grown-up Omarchy desktop. Install, update and setup rows are hidden; the account's permissions still refuse them."
+    "3|Desktop|The grown-up Omarchy desktop with its install, update and setup rows hidden. Windows sit side by side."
   )
-  # Level 3 is offered now that its binds, menu trim and autostart were verified
-  # live on the VM (docs/dogfood-2026-09-21.md).
+  # Two kid modes only (SPEC R-DESK-3): Grid (1) and Desktop (3); the old
+  # Simplified desktop (2) is retired and never offered.
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local -a facts=()
   panel_notice_lines facts
@@ -397,8 +396,9 @@ screen_kid_level() { # ACCOUNT NAME
 }
 
 # screen_kid_theme ACCOUNT NAME — a picker over theme_list_installed's own
-# names (lib/theme.sh, issue #53: the system themes dir only, never a
-# kid- or parent-installed one — theme_apply_for's own header has why).
+# names (lib/theme.sh, issue #53: Omarchy's themes dir plus the package's
+# kid collection, never a kid- or parent-installed one — theme_apply_for's
+# own header has why).
 # Writing an override here (`omarchy-kids-conf set <kid> theme <name>`)
 # is what actually applies the theme to disk as root and best-effort
 # reloads a live session — see that command's own cmd_set.
@@ -413,7 +413,7 @@ screen_kid_theme() { # ACCOUNT NAME
   done < <(theme_list_installed)
   if ((${#choices[@]} == 0)); then
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
-    local -a facts=("No installed themes found under \$OMARCHY_PATH/themes — nothing to pick from.")
+    local -a facts=("No installed themes found — nothing to pick from.")
     panel_notice_lines facts
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local back_choices=("back|Back|")
@@ -444,7 +444,7 @@ screen_kid_desktop() { # ACCOUNT NAME
     theme_cur="$(kid_conf_get "$account" theme)"
     # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
     local choices=(
-      "level|Desktop level|$(tui_desktop_label "$level_cur")"
+      "level|Desktop|$(tui_desktop_label "$level_cur")"
       "theme|Theme|${theme_cur:-(none set)}"
       "back|Back|"
     )

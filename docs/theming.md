@@ -251,7 +251,7 @@ mechanics `lib/theme.sh`'s `theme_apply_for` mirrors:**
 
 - `theme_account_home ACCOUNT` — resolves any account's `$HOME` (`getent passwd`, falling back to `OMARCHY_KIDS_HOME_ROOT`-prefixed `/home/<account>` for tests); `lib/posture.sh`'s `posture_parent_home` is now a one-line call to this (AGENTS.md's "no duplicated helpers" — the two were the same lookup for the parent specifically before this issue).
 - `theme_current_name` — reads `.../current/theme.name` beside `theme_dir`, respecting `THEME_KIDS_HOME` the same way `theme_dir`/`theme_color` do. Empty, not an error, for an account that has never received a theme.
-- `theme_list_installed` — every name under `$OMARCHY_PATH/themes`, sorted. The wizard's Desktop group and the panel's Desktop screen offer only these.
+- `theme_list_installed` — every name under `$OMARCHY_PATH/themes` and the package's own `$KIDS_THEMES_DIR` (`/usr/share/omarchy-kids/themes-kids`), de-duplicated by name and sorted. The wizard's Desktop group and the panel's Desktop screen offer only these. `$KIDS_THEMES_DIR` is where the kid theme collection ships (`share/themes-kids/`, R-DESK; omacom/omarchy#12488), so those themes appear with no further wiring and an upstream theme of the same name wins.
 - `theme_apply_for ACCOUNT NAME` — the non-interactive apply. `NAME` must be one of `theme_list_installed`'s own names (never a user-installed one — `USER_THEMES_PATH` above is not read at all, since the wizard/panel never offer such a name to begin with, and `omarchy-theme-set`'s own repo-theme file-filtering logic only exists to police that overlay). Otherwise the same shape: a fresh staging dir, the alacritty-derived `colors.toml` fallback, `rm -rf` + `mv` into `.../current/theme`, `theme.name` written beside it. No background selection, no `post_theme_commands` — nothing here has a live session to restart; see the next function.
 - `theme_reload_if_live ACCOUNT` — best-effort only. If `pgrep -u ACCOUNT -x Hyprland` finds nothing, this is a no-op with one line explaining why (the theme is already correct on disk; the kid sees it at their next login, no restart needed). If a session *is* live, it runs the same `omarchy-shell shell applyTheme <base64 colors.toml> <base64 shell.toml>` IPC call `omarchy-theme-set`'s own `shell_ipc` makes, via `runuser -l ACCOUNT` so it reaches that account's own socket.
 
@@ -280,7 +280,8 @@ ever look there — see "Ground truth" above — so this repo does the next best
   an Omarchy theme at all gets a warning line and the kid keeps the desktop's stock theme, same as
   before this issue.
 - `bin/omarchy-kids-conf set <kid> theme <name>` — the per-kid key (Appendix B style,
-  `docs/conf.md`): validates `<name>` is a real directory under `$OMARCHY_PATH/themes`, writes the
+  `docs/conf.md`): validates `<name>` is a real directory under `$OMARCHY_PATH/themes` or `$KIDS_THEMES_DIR` (the
+  package's kid collection), writes the
   override, then calls `theme_apply_for` and `theme_reload_if_live` itself. The wizard's Advanced
   Desktop group and the panel's Desktop screen both write through this same command, never around
   it.

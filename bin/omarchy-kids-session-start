@@ -30,8 +30,9 @@ Usage: omarchy-kids-session-start
 
 Run from a Kids Mode Hyprland level config's exec-once (share/hyprland/
 L1.lua, L2.lua, L3.lua). Reads the caller-bound validated session manifest,
-then starts the Kids grid (Level 1), simplified desktop (Level 2),
-or Omarchy's full shell (manual Level 3).
+then starts the Kids App grid (Level 1) or Omarchy's shell, menu-trimmed
+(the Desktop mode, Level 3). A retired level = 2 profile still starts the old
+simplified desktop.
 
   -h, --help  Show this help and exit.
 EOF

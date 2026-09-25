@@ -20,6 +20,10 @@ tree is built from.
 | `DeveloperToolsAvailability` | int-enum (`0` disallowed only for force-installed extensions, `1` Allowed, `2` Disallowed) | `2`: DevTools and the JS console disallowed everywhere. |
 | `ExtensionInstallBlocklist` | list of strings | `["*"]`: every extension ID is blocked; a value of `*` is documented as meaning "block all extensions". |
 | `BrowserSignin` | int-enum (`0` Disable, `1` Enable, `2` Force) | `0`: the kid can't sign the browser into a Google account (no Sync). |
+| `PromotionalTabsEnabled` | boolean | `false`: no promotional tabs (the "What's new"/promo pages a first run or a version bump would open). |
+| `DefaultBrowserSettingEnabled` | boolean | `false`: no "make Chromium your default browser" prompt. |
+| `MetricsReportingEnabled` | boolean | `false`: no usage/crash metrics leave the machine (I-2 -- nothing about a child leaves it). |
+| `SearchSuggestEnabled` | boolean | `false`: the address bar makes no search-suggestion requests (I-2). |
 | `DownloadRestrictions` | int-enum (`0`..`4`) | `1`: `BlockDangerousDownloads` -- blocks malicious downloads and dangerous file types (R-WEB-2's literal value). |
 | `SavingBrowserHistoryDisabled` | boolean | `false`: history *is* saved (R-DATA-1 needs it; `true` would turn saving off). |
 | `AllowDeletingBrowserHistory` | boolean | `false`: the kid cannot clear their own history (matches R-WEB-2 and I-6 -- a parent's visibility into history isn't a control the kid can quietly defeat). |

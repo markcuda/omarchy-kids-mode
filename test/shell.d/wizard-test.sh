@@ -182,7 +182,7 @@ run_wizard() {
 # overrides those choices need are exercised too (R-BAND-2) --------------
 
 : >"$ARGV_LOG"
-answers="$(answers_file begin parentpw123 Ada owl 6-8 simple filtered default pack helper 1 secret1 secret1 apply parent)"
+answers="$(answers_file begin parentpw123 Ada owl 6-8 simple filtered default pack helper 2 secret1 secret1 apply parent)"
 run_wizard "$answers"
 
 check_status "$WIZ_STATUS" 0 "happy path exits 0"
@@ -212,13 +212,17 @@ check_contains "$out" "omarchy-kids-conf machine set parent $EXPECTED_INVOKING_U
   "Apply's first step writes machine.conf's parent=, to id -un"
 check_not_contains "$out" "omarchy-kids-conf machine set parent forged-parent" \
   "OMARCHY_KIDS_INVOKING_USER cannot change Apply's parent identity"
-check_contains "$out" "sudo systemctl enable --now omarchy-kids-boot-login.service omarchy-kids-boot-login-cleanup.service omarchy-kids-assert.service omarchy-kids-authd.socket omarchy-kids-wifid.socket omarchy-kids-time.timer omarchy-kids-ask-collect.timer omarchy-kids-review.timer omarchy-kids-relay-courier.timer" \
-  "Apply's first step enables and starts the package's units, before provisioning"
+check_contains "$out" "sudo systemctl enable omarchy-kids-boot-login.service omarchy-kids-boot-login-cleanup.service omarchy-kids-assert.service omarchy-kids-authd.socket omarchy-kids-wifid.socket omarchy-kids-time.timer omarchy-kids-ask-collect.timer omarchy-kids-review.timer omarchy-kids-relay-courier.timer" \
+  "Apply's first step enables the package's units, before provisioning"
+check_contains "$out" "sudo systemctl start omarchy-kids-authd.socket omarchy-kids-wifid.socket omarchy-kids-time.timer omarchy-kids-ask-collect.timer omarchy-kids-review.timer omarchy-kids-relay-courier.timer" \
+  "Apply starts only the sockets and timers (T20: no oneshot blocks it)"
+check_not_contains "$out" "systemctl start omarchy-kids-boot-login" "Apply never starts a oneshot service (the cleanup unit sleeps 20s; T20)"
+check_not_contains "$out" "enable --now" "Apply never blocks on the assert oneshot at step 1 (the 15-second hang)"
 check_contains "$out" "omarchy-kids-provision add Ada --band 6-8 --avatar owl --password-stdin --parent-password-stdin --apply" \
   "apply runs provision add with the exact flags, including the chosen face"
 machine_pos="${out%%machine set parent*}"
 machine_pos="${#machine_pos}"
-units_pos="${out%%sudo systemctl enable --now*}"
+units_pos="${out%%sudo systemctl enable *}"
 units_pos="${#units_pos}"
 provision_pos="${out%%omarchy-kids-provision add*}"
 provision_pos="${#provision_pos}"
@@ -229,8 +233,9 @@ else
 fi
 check_contains "$out" "omarchy-kids-conf set kid-ada web filtered" "a web choice that differs from the band default is written as an override"
 check_contains "$out" "omarchy-kids-conf set kid-ada wifi helper" "a Wi-Fi choice that differs from the band default is written as an override"
-check_contains "$out" "omarchy-kids-conf set kid-ada level 1" "a level choice that differs from the band default is written as an override"
+check_contains "$out" "omarchy-kids-conf set kid-ada level 3" "a level choice that differs from the band default is written as an override"
 check_contains "$out" "omarchy-kids-web install 6-8 --apply" "apply runs web install for the chosen band"
+check_contains "$out" "Checking setup safeguards: " "apply prints a per-step duration (T19)"
 check_contains "$out" "omarchy-kids-apps install 6-8 --now --apply" "apply installs the starter pack from cache via omarchy-kids-apps, with --apply so it isn't silently a no-op under sudo"
 check_contains "$out" "omarchy-kids-assert" "apply runs the safety check (assert)"
 check_contains "$out" "omarchy-kids-session --check-setup" "apply runs the session setup safety report"
@@ -260,7 +265,7 @@ done
 # all (R-BAND-2: "the profile stores only overrides") --------------------
 
 : >"$ARGV_LOG"
-answers="$(answers_file begin parentpw123 Mia fox 6-8 simple garden default pack parent 2 secret1 secret1 apply parent)"
+answers="$(answers_file begin parentpw123 Dot fox 6-8 simple garden default pack parent 1 secret1 secret1 apply parent)"
 run_wizard "$answers"
 check_status "$WIZ_STATUS" 0 "all-defaults path exits 0"
 check_not_contains "$out" "omarchy-kids-conf set" "leaving every Simple choice at its band default writes no override"
@@ -327,7 +332,7 @@ check_status "$WIZ_STATUS" 0 "the Advanced path completes"
 check_contains "$out" "[Web] Web access" "the checklist groups the web row under Web"
 check_contains "$out" "[Web] Safe-search DNS" "the checklist groups the dns row under Web too"
 check_contains "$out" "[Screen time] Minutes a day (weekdays)" "the checklist groups budget_min under Screen time"
-check_contains "$out" "now: Filtered open web (changed)" "a changed row is marked, showing the new value"
+check_contains "$out" "Web access — Filtered open web (changed)" "a changed row shows the new value in the row and is marked"
 check_contains "$out" "omarchy-kids-conf set kid-ada web filtered" "Apply writes the web override chosen in Advanced"
 check_contains "$out" "omarchy-kids-conf set kid-ada dns cleanbrowsing-family" "Apply writes the dns override chosen in Advanced"
 check_contains "$out" "omarchy-kids-conf set kid-ada budget_min 75" "Apply writes the budget_min override chosen in Advanced"
@@ -385,21 +390,21 @@ check_not_contains "$out" "omarchy-kids-provision" "Apply itself never starts be
 # the result distinctly once Apply is finally chosen --------------------
 
 : >"$ARGV_LOG"
-answers="$(answers_file begin parentpw123 Ada fox 6-8 simple garden default pack parent 2 \
-  secret1 secret1 change level 1 "done" apply parent)"
+answers="$(answers_file begin parentpw123 Ada fox 6-8 simple garden default pack parent 1 \
+  secret1 secret1 change level 2 "done" apply parent)"
 run_wizard "$answers"
 check_status "$WIZ_STATUS" 0 "Change something from a Simple-built summary still completes"
-check_contains "$out" "App grid (custom)" "the summary marks a row changed via Change something"
-check_contains "$out" "omarchy-kids-conf set kid-ada level 1" "Apply writes the override made through Change something"
+check_contains "$out" "Desktop (custom)" "the summary marks a row changed via Change something"
+check_contains "$out" "omarchy-kids-conf set kid-ada level 3" "Apply writes the override made through Change something"
 
 # --- Esc from the face screen goes back to the name screen, keyboard-only
 
 : >"$ARGV_LOG"
-answers="$(answers_file begin parentpw123 Ada @esc Bea fox 6-8 simple garden default pack parent 1 secret1 secret1 apply parent)"
+answers="$(answers_file begin parentpw123 Ada @esc Dot fox 6-8 simple garden default pack parent 1 secret1 secret1 apply parent)"
 run_wizard "$answers"
 check_status "$WIZ_STATUS" 0 "Esc-back then finishing still exits 0"
-check_contains "$out" "kid-bea" "the re-entered name after Esc-back is the one used"
-check_contains "$out" "Pick Bea's face." "the face screen re-renders for the name entered after Esc-back"
+check_contains "$out" "kid-dot" "the re-entered name after Esc-back is the one used"
+check_contains "$out" "Pick Dot's face." "the face screen re-renders for the name entered after Esc-back"
 
 # --- Ctrl+C right after Welcome (before anything else) leaves with
 # nothing changed, no commands run and no prefetch started ---------------
@@ -448,7 +453,8 @@ exec "${args[@]}"
 EOF
 cat >"$RM_STUBS/systemctl" <<'EOF'
 #!/bin/bash
-# Apply's own first step (issue #46) now runs `systemctl enable --now`
+# Apply's own first step (issue #46) now enables the units and starts only
+# the sockets and timers (T20).
 # on the package's units before provisioning; a plain success stub is
 # enough here, since these scenarios are about what happens *after* that
 # step, not about systemd itself.

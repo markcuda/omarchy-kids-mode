@@ -384,6 +384,7 @@ check_eq "$(
     export OMARCHY_PATH
     # shellcheck source=/dev/null
     source "$THEME_LIB"
+    KIDS_THEMES_DIR="$TMP/no-kids-themes"
     theme_list_installed
   )
 )" "$(printf 'catppuccin-latte\ntokyo-night')" \
@@ -395,9 +396,28 @@ check_eq "$(
     export OMARCHY_PATH
     # shellcheck source=/dev/null
     source "$THEME_LIB"
+    KIDS_THEMES_DIR="$TMP/no-kids-themes"
     theme_list_installed
   )
 )" "" "theme_list_installed: empty, not an error, with no themes dir at all"
+
+# The package's own kid theme root is listed too, and a name in both roots
+# appears once (docs/theming.md, the kid theme collection).
+KIDS_SHARE="$TMP/kids-share"
+mkdir -p "$KIDS_SHARE/themes-kids/cozy-night" "$KIDS_SHARE/themes-kids/tokyo-night"
+: >"$KIDS_SHARE/themes-kids/cozy-night/colors.toml"
+: >"$KIDS_SHARE/themes-kids/tokyo-night/colors.toml"
+check_eq "$(
+  (
+    OMARCHY_PATH="$OMARCHY_SHARE"
+    export OMARCHY_PATH
+    # shellcheck source=/dev/null
+    source "$THEME_LIB"
+    KIDS_THEMES_DIR="$KIDS_SHARE/themes-kids"
+    theme_list_installed
+  )
+)" "$(printf 'catppuccin-latte\ncozy-night\ntokyo-night')" \
+  "theme_list_installed: the kid theme root is listed too, de-duplicated by name"
 
 APPLY_HOME_ROOT="$TMP/apply-homeroot"
 mkdir -p "$APPLY_HOME_ROOT/home/kid-ada"

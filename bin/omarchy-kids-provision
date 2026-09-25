@@ -232,7 +232,7 @@ install_kids_chromium_flags() {
 
 # install_kids_menu_trim ACCOUNT — writes the omarchy-menu user extension into
 # the kid's own ~/.config/omarchy/extensions/ when their profile says
-# menu=trimmed (the band default for 3-5, 6-8 and 9-12). The extension hides
+# menu=trimmed (the band default now). The extension hides
 # the parent-only rows (install, remove, update, setup) by re-stating each id
 # with when: "false" — the real merge shape, verified against Omarchy 4.0.2's
 # menu plugin (docs/levels.md). It is the kid's own file, so it is

@@ -20,7 +20,7 @@
 //
 // Where it is applied: provisioning copies this file into the kid's own
 // ~/.config/omarchy/extensions/omarchy-menu.jsonc when the profile's
-// `menu = trimmed` (default for bands 3-5, 6-8 and 9-12). It is the kid's own
+// `menu = trimmed` (the default for every band now). It is the kid's own
 // file, so it is presentation, not a lock: a kid who edits it can see the rows
 // again, and every action behind them still fails their account's permissions
 // (polkit/sudo deny). The enforcement is the account, never this file (I-3).

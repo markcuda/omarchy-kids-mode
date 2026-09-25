@@ -68,6 +68,13 @@ hl.env("XDG_SESSION_TYPE", "wayland")
 hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
 hl.env("XDG_SESSION_DESKTOP", "Hyprland")
 
+-- Hyprland's own update-news and donation popups are upstream notices about
+-- Omarchy, not a kid's; the news dialog carries an outbound link that xdg-open
+-- would open in the browser outside the kids launcher (R-DESK-1, I-6).
+hl.config({
+  ecosystem = { no_update_news = true, no_donation_nag = true },
+})
+
 -- Kiosk look: no gaps/border/animation chrome since every window is
 -- forced fullscreen below anyway (hl.config after a require overrides
 -- the keys it sets, same as hyprctl reload semantics).
@@ -147,7 +154,14 @@ o.bind("XF86MonBrightnessUp", "Brightness up", "brightnessctl set +5%")
 o.bind("XF86MonBrightnessDown", "Brightness down", "brightnessctl set 5%-")
 
 -- --- Start the session (launcher, exit overlay, notifications) ---------
+-- The same systemd/dbus environment imports L3's start hook makes (and that
+-- Omarchy's own autostart makes before the shell). Without them the kid's
+-- user services and portals come up with an empty environment, which is the
+-- live finding behind a D-Bus-activated app dying at this level. The
+-- parent-only parts of Omarchy's autostart stay out (R-DESK-1, I-3).
 hl.on("hyprland.start", function()
+  hl.exec_cmd("systemctl --user import-environment $(env | cut -d'=' -f 1)")
+  hl.exec_cmd("dbus-update-activation-environment --systemd --all")
   hl.exec_cmd("omarchy-kids-session-start")
 end)
 

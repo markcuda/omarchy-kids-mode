@@ -143,10 +143,10 @@ check_contains "$out" "sudo $TREE_BIN/omarchy-kids-apps hide kid-ada gcompris" \
   "dry-run: hiding an app prints the exact hide command"
 
 # issue #53: the Desktop screen's two rows, level and theme.
-answers="$(answers_file "kid:kid-ada" desktop level 1 back back quit)"
+answers="$(answers_file "kid:kid-ada" desktop level 3 back back quit)"
 run_panel "$answers"
-check_contains "$out" "sudo $TREE_BIN/omarchy-kids-conf set kid-ada level 1" \
-  "dry-run: Desktop -> Desktop level prints the exact conf-set command"
+check_contains "$out" "sudo $TREE_BIN/omarchy-kids-conf set kid-ada level 3" \
+  "dry-run: Desktop -> Desktop prints the exact conf-set command (a choice that differs from the Grid default)"
 
 answers="$(answers_file "kid:kid-ada" desktop theme catppuccin-latte back back quit)"
 run_panel "$answers"
@@ -198,6 +198,7 @@ run_panel "$answers"
 check_status "$PANEL_STATUS" 0 "Home alone: 'quit' exits 0"
 check_contains "$out" "Ada · 6-8" "Home lists the one provisioned kid"
 check_contains "$out" "Add a kid" "Home offers Add a kid"
+check_contains "$out" "Remove a kid" "Home offers a top-level Remove a kid row (not only inside a kid)"
 check_contains "$out" "Machine safety" "Home offers the Machine safety row"
 check_contains "$out" "Notifications" "Home offers the Notifications row"
 check_contains "$out" "Requests (0)" "Home shows the open-request count"

@@ -7,17 +7,26 @@
 # Step 1: write machine.conf's parent= first. Step 2 already holds the
 # sudo ticket used by every command in this run.
 apply_step_getok() {
+  # Enable every unit, but start only the sockets and timers now -- the same
+  # split `units_fix` uses (lib/assert-locks.sh). The oneshot services must not
+  # be started here: omarchy-kids-boot-login-cleanup.service sleeps 20 s
+  # (ExecStartPre), and the assert runs in Step 5, so `enable --now` on either
+  # blocked Apply for seconds with no output (the owner's 15-second hang, T20).
   if [[ "$DRY_RUN" == "1" ]]; then
     printf '  [dry-run] sudo -v\n'
     printf '  [dry-run] sudo %q machine set parent %q\n' "$CONF_BIN" "$INVOKING_USER"
-    printf '  [dry-run] sudo systemctl enable --now'
+    printf '  [dry-run] sudo systemctl enable'
     printf ' %q' "${KIDS_UNITS[@]}" "${KIDS_SOCKETS[@]}" "${KIDS_TIMERS[@]}"
+    printf '\n'
+    printf '  [dry-run] sudo systemctl start'
+    printf ' %q' "${KIDS_SOCKETS[@]}" "${KIDS_TIMERS[@]}"
     printf '\n'
     printf '  [dry-run] sudo install -d -m 0755 %q\n' "$(dirname "$SETUP_LOG")"
     return 0
   fi
   sudo -n "$CONF_BIN" machine set parent "$INVOKING_USER" || return 1
-  sudo -n systemctl enable --now "${KIDS_UNITS[@]}" "${KIDS_SOCKETS[@]}" "${KIDS_TIMERS[@]}" || return 1
+  sudo -n systemctl enable "${KIDS_UNITS[@]}" "${KIDS_SOCKETS[@]}" "${KIDS_TIMERS[@]}" || return 1
+  sudo -n systemctl start "${KIDS_SOCKETS[@]}" "${KIDS_TIMERS[@]}" || return 1
   sudo -n install -d -m 0755 "$(dirname "$SETUP_LOG")"
 }
 
@@ -113,7 +122,7 @@ apply_step_safety() {
 # run only) to $SETUP_LOG (R-WIZ-5). FUNC's own exit code, via
 # PIPESTATUS, decides ✓/✗ -- docs/wizard.md "Apply's five steps".
 run_apply_step() {
-  local func="$2" tmp rc line
+  local func="$2" tmp rc line start="$SECONDS" took
   tmp="$(mktemp)"
   if [[ "$DRY_RUN" == "1" ]]; then
     "$func" 2>&1 | tee "$tmp"
@@ -137,6 +146,13 @@ run_apply_step() {
     while IFS= read -r line; do APPLY_FAILURE_TAIL+=("$line"); done < <(tail -n 6 "$tmp")
   fi
   rm -f "$tmp"
+  took=$((SECONDS - start))
+  # Measure and say so (T19): a live per-step duration, and the same line in
+  # the root-owned log, so the next slow step is a fact, not a feeling.
+  printf '  %s: %ds\n' "$1" "$took"
+  if [[ "$DRY_RUN" != "1" ]]; then
+    printf '[step] %s: %ds\n' "$1" "$took" | sudo -n tee -a "$SETUP_LOG" >/dev/null 2>&1 || true
+  fi
   return "$rc"
 }
 
@@ -226,12 +242,14 @@ screen_done() {
     fi
   fi
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
+  local done_label="Return to my desktop"
+  ((WIZARD_FROM_PANEL)) && done_label="Return to the panel"
   local choices=(
-    "parent|Return to my desktop|"
+    "parent|$done_label|"
   )
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local body=()
-  if ((!APPLY_OK)) && ((${#APPLY_FAILURE_TAIL[@]})); then
+  if ((! APPLY_OK)) && ((${#APPLY_FAILURE_TAIL[@]})); then
     body+=("Last lines from the failed step:")
     body+=("${APPLY_FAILURE_TAIL[@]}")
   fi

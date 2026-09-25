@@ -47,7 +47,7 @@ adv_label_of() { # KEY -> the row's label, in parent words
     lights_out_weekend) echo "Lights out (weekends)" ;;
     allowlist) echo "Starter apps" ;;
     wifi) echo "New Wi-Fi networks" ;;
-    level) echo "Desktop level" ;;
+    level) echo "Desktop" ;;
     theme) echo "Theme" ;;
     history_visible) echo "History you can see" ;;
   esac
@@ -220,12 +220,16 @@ adv_row_line() {
   [[ "$key" == allowlist ]] && default_disp="$(adv_allowlist_count "$(adv_default "$key")")"
   if [[ "$(adv_get "$key")" == "$(adv_default "$key")" ]]; then
     reason="Band default: $default_disp"
+    printf '%s|[%s] %s|%s' "$key" "$group" "$label" "$reason"
   else
     current_disp="$(adv_friendly "$key" "$(adv_get "$key")")"
     [[ "$key" == allowlist ]] && current_disp="$(adv_allowlist_count "$(adv_get "$key")")"
-    reason="Band default: $default_disp — now: $current_disp (changed)"
+    # A changed row reads as the value now, marked, with the band default as
+    # its reason -- the value a parent scans for sits in the row, not buried at
+    # the end of the reason line (readability, the owner's dogfooding note).
+    reason="Band default: $default_disp"
+    printf '%s|[%s] %s — %s (changed)|%s' "$key" "$group" "$label" "$current_disp" "$reason"
   fi
-  printf '%s|[%s] %s|%s' "$key" "$group" "$label" "$reason"
 }
 
 # validate_dns_url CANDIDATE — A2/A8-style validator (lib/tui.sh's contract).
@@ -335,7 +339,7 @@ adv_edit_allowlist() {
 }
 
 # adv_edit_theme STEP TOTAL — tui_screen_choose over theme_list_installed
-# (system themes dir only, docs/theming.md); no themes found is a message
+# (Omarchy's themes dir plus the kid collection, docs/theming.md); no themes found is a message
 # and "row untouched", same as an Esc.
 adv_edit_theme() {
   local step="$1" total="$2"
@@ -346,7 +350,7 @@ adv_edit_theme() {
     choices+=("$name|$name|")
   done < <(theme_list_installed)
   if ((${#choices[@]} == 0)); then
-    echo "No installed themes found under \$OMARCHY_PATH/themes." >&2
+    echo "No installed themes found." >&2
     return 1
   fi
   adv_edit_enum theme "Which Omarchy theme should $DISPLAY_NAME's desktop use?" "$step" "$total" "${choices[@]}"
@@ -368,12 +372,11 @@ adv_edit() {
         "helper|On their own, safely|They can join school or café Wi-Fi. The network can't change what's blocked."
       ;;
     level)
-      # Level 3 is offered now that its binds, menu trim and autostart were
-      # verified live (docs/dogfood-2026-09-21.md).
+      # Two kid modes only (SPEC R-DESK-3): Grid (1) and Desktop (3). The old
+      # Simplified desktop (2) is retired and never offered.
       adv_edit_enum level "How should $DISPLAY_NAME's desktop work?" "$step" "$total" \
         "1|App grid|Big app tiles. One app fills the screen." \
-        "2|Simplified desktop|Super+Space finds apps. Windows can sit side by side." \
-        "3|Full desktop|The grown-up Omarchy desktop. Install, update and setup rows are hidden; the account's permissions still refuse them."
+        "3|Desktop|The grown-up Omarchy desktop with its install, update and setup rows hidden. Windows sit side by side."
       ;;
     history_visible)
       adv_edit_enum history_visible "Can you see $DISPLAY_NAME's browsing history?" "$step" "$total" \

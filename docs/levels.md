@@ -2,21 +2,37 @@
 
 ## Desktop defaults (Mark's direction, #200)
 
-Only ages 3–5 default to **App grid** (Level 1). Every older band defaults to
-**Simplified desktop** (Level 2). This changes presentation and window controls, not the
-band's web, Wi-Fi, app, screen-time or terminal policy values. **Full desktop** (Level 3)
-remains an explicit advanced/manual option; it is not selected by any age band.
-The existing Desktop row in the parent's Advanced permissions checklist and Desktop
-settings writes the same `level` override. It survives a band change and applies at next login.
+The two kid modes are **App grid** (Level 1) and **Desktop** (Level 3 — the real Omarchy
+desktop, menu-trimmed). Ages 3–5 and 6–8 default to App grid; 9–12 and 13+ default to Desktop.
+This changes presentation and window controls, not the band's web, Wi-Fi, app, screen-time or
+terminal policy values. The Desktop row in the parent's Advanced permissions checklist and
+Desktop settings writes the same `level` override (Grid stores `level = 1`, Desktop stores
+`level = 3`). It survives a band change and applies at next login.
 
-Level 2 uses the owned Kids launcher, not the unrestricted stock shell. A background layer
-sits beneath normally tiled apps and teaches **Super + Space — Find your apps**. That key
-opens a searchable view of the same validated manifest tiles, including unavailable apps
-and the existing request routes. Search filters labels, retains stable IDs and cannot introduce
-an executable. Enter or clicking an installed result launches its manifest argv and hides
-the picker. Escape returns to the desktop; reopening clears the search. Detached launches
-allow two apps to remain open; Super+arrows focuses them and Super+Q closes the focused app.
-Level 1 keeps its existing visible grid and fullscreen apps.
+The old **Simplified desktop** (Level 2 — a themed background layer over the owned Kids
+launcher's searchable picker) is retired: no band defaults to it and no picker offers it, but
+`L2.lua` and its launcher stay in the tree so a profile that already names `level = 2` still
+starts. The Desktop mode is the stock Omarchy desktop with its menu trimmed of
+Install/Update/Setup (R-DESK-4), so a kid learns the same Super keys a parent uses.
+
+**What the Desktop mode does not do.** The app allow-list, the hide/extra-app rows, the "What my
+grown-ups can see" screen (R-DATA-3) and a `web = none` band are all the Kids launcher's (Grid). A
+Desktop kid starts apps from Omarchy's own menu search and can open Chromium, so those rows neither
+restrict nor reach a Desktop kid: keep a child on the Grid if you need the allow-list enforced or
+the browser hidden, and see `PRIVACY.md`'s known gap on the data screen for 9-12/13+. The child's
+account, screen time, the rendered web *policy* (safe search, safe DNS) and every lock are the same
+in both modes; the per-kid `web = none` **is not**.
+
+Every level also turns off Hyprland's own update-news and donation popups
+(`ecosystem.no_update_news` and `ecosystem.no_donation_nag`): the news dialog carries an outbound
+link, and `xdg-open` would open it in the browser outside the kids launcher (R-DESK-1, I-6). A
+kid's session never shows either.
+
+Every level imports the environment into `systemd --user` and the D-Bus activation environment
+(`systemctl --user import-environment` and `dbus-update-activation-environment --systemd --all`)
+before `omarchy-kids-session-start`. Without it the kid's user services and portals come up with an
+empty environment, which is what killed a D-Bus-activated app at Level 1; Level 3 always did this,
+Levels 1 and 2 now do too.
 
 The desktop layer and picker are sibling windows under the existing launcher's ShellRoot;
 the background takes no keyboard focus. `launcher-ctl show` writes the existing control
@@ -68,7 +84,7 @@ desktop files. This keeps the level overlay and the launcher on the same root-ow
 
 ## What each level binds (Appendix E)
 
-**Level 1.** `Super+Home` show the launcher · `Super+Return` open the highlighted tile ·
+**Grid (Level 1).** `Super+Home` show the launcher · `Super+Return` open the highlighted tile ·
 `Super+Q` close the focused window · `Super+Shift+K` the exit overlay, and a bare `Super` tap
 three times within 1.5s does the same (`omarchy-kids-exit`, `omarchy-kids-super-tap`,
 `docs/exit.md`) · the five standard volume/brightness media keys. Nothing else — no defaults, no
@@ -76,14 +92,14 @@ three times within 1.5s does the same (`omarchy-kids-exit`, `omarchy-kids-super-
 (`o.window(".*", { fullscreen = true })`). `test/shell.d/levels-test.sh` greps for exactly this
 set; nothing more, nothing less.
 
-**Level 2.** Everything Level 1 binds, plus `Super+arrows` to focus a window,
+**Retired (Level 2).** The Simplified desktop. Everything Level 1 binds, plus `Super+arrows` to focus a window,
 `Super+Shift+arrows` to swap it, `Super+K` for Omarchy's own keybindings cheat sheet
 (`omarchy-menu-keybindings`), and `Super+Space` aliased onto the same launcher as
 `Super+Home`. The "50/50 dwindle split" Appendix E asks for isn't extra config here — it's
 `default.hypr.looknfeel`'s own `general.layout = "dwindle"` / `dwindle.preserve_split = true`,
 which Level 2 requires (see below) and which already gives that behavior for two tiled windows.
 
-**Level 3.** The stock Omarchy modules required individually — bindings (media, clipboard, tiling,
+**Desktop (Level 3).** The stock Omarchy modules required individually — bindings (media, clipboard, tiling,
 utilities, voxtype, optional applications), envs, looknfeel, input, windows — but **not** the
 `default.hypr.omarchy` umbrella, which also pulls in `default.hypr.autostart` and its per-session
 `omarchy-provision-first-run` (`fix/level3-no-parent-autostart`; the session's own start hook runs
