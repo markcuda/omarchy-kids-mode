@@ -121,8 +121,9 @@ a lock) is what actually acts on it. `theme` is the exception: `omarchy-kids-con
 see `docs/theming.md` for the full mechanics, the ownership rationale, and what "applies" actually
 means non-interactively). A live session gets a best-effort reload the same way; no session means
 the kid simply sees it at their next login — no restart needed either way. A failed apply (not
-root, no `$OMARCHY_PATH/themes` on this box) still leaves the override written; `omarchy-kids-assert`'s
-`theme:<account>` lock re-applies it on its own the next time it runs.
+root, no `$OMARCHY_PATH/themes` on this box) still leaves the override written; the kid sees it at
+their next login. The `theme:<account>` assert lock is verify-only since T44 -- it accepts an offered
+or absent theme and does **not** re-apply a failed one.
 
 ### Machine-level keys (`machine.conf`, not profile keys)
 

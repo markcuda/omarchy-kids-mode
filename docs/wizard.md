@@ -17,11 +17,11 @@ omarchy-kids-wizard [--dry-run] [--help]
 ```text
 
 `omarchy-kids` (the app entry point) opens this automatically when no kid has been provisioned
-yet; `omarchy-kids wizard` always opens it, to add another kid (R-WIZ-7). `DRY_RUN=1` is the
-default everywhere Apply would write something (AGENTS.md rule 8): every command Apply would run
-is printed instead of run. There's no separate `--apply` confirmation flag on this command —
-the summary screen (A13) *is* the confirmation; set `DRY_RUN=0` (or pass `--apply`) for the wizard
-you launch to make a real run.
+yet; `omarchy-kids wizard` always opens it, to add another kid (R-WIZ-7). `DRY_RUN=1` is the default
+when no human is driving (a test, a script, CI): every command Apply would run is printed instead of
+run. A human at a terminal (or launched from the desktop entry) gets a real run — the summary screen
+(A13) *is* the confirmation — so `--apply`/`--dry-run` exist only to force one or the other
+(AGENTS.md rule 8).
 
 ## The screens, in Appendix A order
 
@@ -90,7 +90,7 @@ under Omarchy's themes dir or the package's kid collection — not an enum baked
 
 Every row shows its band default and its current choice (`adv_row_line`), and is marked
 `(changed)` once the current choice no longer matches the default. Enter on a row opens the right
-editor: a `tui_screen_choose` picker for an enum (web, dns, wifi, level, menu, history_visible —
+editor: a `tui_screen_choose` picker for an enum (web, dns, wifi, level, history_visible —
 dns's "Type my own" opens one more field for the address, `custom:<url>`), the same picker over
 `theme_list_installed`'s own names for `theme` (issue #53, not a fixed enum), a validated
 `tui_screen_input` for a number (the two budgets, `validate_budget_minutes`), a time
@@ -107,7 +107,7 @@ one screen); the summary's **Change something** button (below) redraws the summa
 (`adv_init`) the moment the age band is picked (A5) — before Simple's own A7-A11 screens run. Simple
 shows both weekday and weekend time values, while its custom path edits weekday minutes and bedtime
 only; weekend values edited through Advanced or "Change something" are preserved. The remaining
-Advanced-only cells (dns, sites, menu, theme, history_visible) stay at their band defaults unless
+Advanced-only cells (dns, sites, theme, history_visible) stay at their band defaults unless
 Advanced or "Change something" changes them. Apply's `maybe_override` calls (one per cell,
 `apply_step_account`) write an override for every cell whose value no longer equals that default —
 as required by R-BAND-2.
@@ -198,8 +198,8 @@ that runs one, decides ✓ or ✗, and does something about it:
   next slow step is a fact rather than a feeling.
 - **The technical log** (R-WIZ-5's tip line, `$SETUP_LOG`, default `/var/log/omarchy-kids/setup.log`)
   is now actually written on a real run, not just named: `apply_step_getok` also writes
-  machine.conf's `parent=`, enables the package's own units and starts all of them but the assert
-  oneshot (issue #46, T20, see "Root and the one sudo prompt" above) and creates the log's own directory
+  machine.conf's `parent=`, enables the package's own units and starts only the sockets and timers
+  (issue #46, T20, see "Root and the one sudo prompt" above) and creates the log's own directory
   (`sudo install -d`, since a parent's own unprivileged wizard process can't create anything under
   `/var/log` itself), and every step's combined output is piped through `sudo tee -a "$SETUP_LOG"`
   on its way to the screen — a second, separate `sudo` call from the step's own (already-elevated)
@@ -315,10 +315,10 @@ and the safety check's account-existence guard.
 `tui_screen_choose` contract as everything else here: each pass through it consumes **one line for
 the row** — a checklist row's own value is just its Appendix B key (`web`, `dns`, `sites`,
 `budget_min`, `budget_min_weekend`, `lights_out`, `lights_out_weekend`, `allowlist`, `wifi`,
-`level`, `menu`, `history_visible`), never the group name or the rendered `[Group] Label` text —
+`level`, `theme`, `history_visible`), never the group name or the rendered `[Group] Label` text —
 then, unless the row was **`done`** (the trailing "Done customizing" row, which ends the loop),
 whatever lines that row's own editor needs: one line for an enum row (`web`, `dns`, `wifi`,
-`level`, `menu`, `history_visible` — `dns`'s `custom` answer needs one more line, the address, after
+`level`, `history_visible` — `dns`'s `custom` answer needs one more line, the address, after
 it), one validated line for a number or a time row (the two budgets, the two lights-out fields,
 `sites`), or one `yes`/`no` line per app in the band's pack for `allowlist` (the same
 `apps_pick_walk` A9's "Let me pick" uses). Answering `@esc` in place of a row's editor answer

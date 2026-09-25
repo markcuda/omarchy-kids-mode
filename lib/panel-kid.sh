@@ -123,7 +123,8 @@ screen_kid_reset() { # ACCOUNT NAME
   local facts=(
     "Every other screen for this kid goes back to the band's defaults:"
     "time, web (and safe-search DNS), Wi-Fi, apps, data, desktop level"
-    "and menu. Any sites you added by hand go back too."
+    "and menu. Sites you approved are kept -- they live in the allow-list"
+    "file, which reset does not change."
     "The account, name, face, band, password and theme stay."
     ""
     "It does not undo screen time already used today."

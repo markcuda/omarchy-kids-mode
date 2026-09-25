@@ -23,7 +23,9 @@ fail-safe list, how to verify the hook is actually in the image, and how to remo
 4. **`switch_root`.** `/run` (with `boot-slot` in it, if we wrote one) carries over from the
    initramfs into the booted system.
 5. **`omarchy-kids-boot-login.service`, before `display-manager.service`.** It reads the trusted
-   `boot=` setting first. Portal mode and a missing `/run/omarchy-kids/boot-slot` are no-ops. In
+   `boot=` setting first. Portal mode is a no-op. In disk mode a missing
+   `/run/omarchy-kids/boot-slot` writes an empty `User=`, so the machine falls to the portal -- a
+   kid who opened the disk after the hook stepped aside never lands on the parent's autologin. In
    disk mode with a recorded slot, it maps the slot through
    `/etc/omarchy-kids/luks-slots`, and writes `/etc/sddm.conf.d/zz-omarchy-kids-autologin.conf`
    with `[Autologin] User=<account>` (and `Session=<session>`) for the mapped account — the
@@ -86,8 +88,9 @@ run exactly as it always has — whenever:
 - three password attempts fail (`--number-of-tries=3` under plymouth, or three tries in the
   console fallback loop).
 
-`omarchy-kids-boot-login.service` runs on every boot. Portal mode and a missing `boot-slot` change
-nothing, so Omarchy's stock autologin remains byte-for-byte. An unrecognized numeric slot writes
+`omarchy-kids-boot-login.service` runs on every boot. Portal mode changes nothing, so Omarchy's
+stock autologin remains byte-for-byte; in disk mode a missing `boot-slot` writes an empty `User=`
+and the machine falls to the portal. An unrecognized numeric slot writes
 an empty `User=`, showing the portal rather than guessing. A mapped account with no trusted parent
 or kid role, unsafe input, or malformed input also tries that safe override, returns 1 for
 diagnosis, and cannot block SDDM startup.
@@ -164,8 +167,9 @@ without letting caller-controlled state choose boot files or code.
 
 ## Shared mode-transition lock
 
-Ticket #93 owns the shared root-created mode-transition lock. Until this branch is rebased onto
-that producer, boot-login and check still read the trusted mode without holding the transition
-lock, so the review's read-then-act/report race remains open. After the rebase, boot-login's one
+Ticket #93's shared root-created mode-transition lock exists (`lib/boot-mode.sh`'s
+`boot_mode_lock_acquire`), but boot-login still reads the trusted mode without holding it
+(`bin/omarchy-kids-boot-login`), so the review's read-then-act/report race remains open. Closing it
+means boot-login's one
 mode-read/action boundary and check's one mode-read/section-dispatch boundary will hold that shared
 lock. This ticket does not add a second lock contract.

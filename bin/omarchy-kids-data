@@ -360,7 +360,12 @@ prune_launches() { # KID CUTOFF APPLY
   if ((apply)); then
     tmp="$(mktemp "${file}.XXXXXX")"
     if [[ -n "$kept" ]]; then printf '%s\n' "$kept" >"$tmp"; else : >"$tmp"; fi
-    chmod 0644 "$tmp"
+    # Keep the file's own shape -- 0640 root:omarchy-parents, like status.json --
+    # so a rewrite does not widen a record *about* a kid back to world-readable
+    # for every sibling (review §3.7). Retention is root-only.
+    chmod 0640 "$tmp"
+    chown root "$tmp" 2>/dev/null || true
+    chgrp omarchy-parents "$tmp" 2>/dev/null || true
     mv "$tmp" "$file"
   else
     echo "[dry-run] rewrite $file, keeping entries since $cutoff"

@@ -81,8 +81,8 @@ theme's own colours, before the choices.
 
 ```text
     ╭──────────────────────────────────────────╮
-    │  Kids Mode · Step 3 of 15                 │
     │  What can Ada see on the web?              │
+    │  step 3 of 15                             │
     │                                             │
     ╰──────────────────────────────────────────╯
       1) Only sites you choose — A short list you can grow.
