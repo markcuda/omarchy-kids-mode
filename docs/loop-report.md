@@ -2574,3 +2574,28 @@ tile preselected, which needs a VM and the R-WIZ-6 amendment; T31 (an `Ask Omy` 
 needs a compositor rule and a VM; T44/T45 (kid-chosen themes) and T49-T53 (the #11196 ideas:
 per-weekday minutes, Agreement mode, a PIN, earn-minutes, a kid day view) each need their own
 amendment. None is shipped as a claim that is not enforced.
+
+### 2026-09-25, kid themes as a preference, and the seam review
+
+Continuing the dogfooding workstream on `fix/kid-session-polish`.
+
+- **T44 — the theme is a preference.** `theme_apply_for` writes the kid's `.../current/theme` and
+  `theme.name` kid-owned; the `theme:<account>` assert lock is verify-only (an in-set kid choice
+  passes; an out-of-set name, or a planted FIFO/symlink, fails and the fix re-applies the profile's
+  theme, or the parent's current theme when there is no override).
+- **T45 (half) — the collection is visible to Omarchy's own switcher.** Provisioning symlinks each
+  package kid theme into the kid's `~/.config/omarchy/themes/`, where Omarchy reads user themes, so
+  the kid's own `Super+Ctrl+Shift+Space` lists them. The chord binding itself is the VM-checked half.
+- **Two reviews (opus 5.5 max).** Round one on T44 found a blocking rule-9 hole (root read the
+  kid-writable `theme.name` with a plain `cat`, so a planted FIFO could hang the assert and the
+  pacman re-assert hook) and an I-6 no-op fix; round two found the missing `O_NONBLOCK`, that the
+  FIFO tests were vacuous (no `mkfifo` on the test PATH), and that the amendment wanted the parent
+  default, not a FAIL. All closed; the read is `O_NOFOLLOW` + `O_NONBLOCK` + a regular-file check,
+  and the tests create real FIFOs.
+- **Amendments written** to unblock the rest: `SPEC-AMENDMENT-kid-themes.md` (T44/T45) and
+  `SPEC-AMENDMENT-screen-time-11196.md` (T49-T53; take logind-based counting, per-weekday schedules,
+  Agreement mode, a kid day view, opt-in root-checked earn-minutes; refuse its core edits and the
+  kid sudo grant).
+- **shfmt.** The union merges had left seven test files drifted; `shfmt -i 2 -ci` is clean again.
+
+Gated: `test/all -j 4`, 65 files green. Integration at `57f6476`, in sync with `origin`.
