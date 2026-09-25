@@ -787,6 +787,50 @@ fi
 out="$("$BIN")"
 check_contains "$out" "not run — pass --live" "without --live: the Live tests section says how to run it"
 
+# --- --live: a kid who is not logged in must not abort the whole report --
+#
+# live_session_leader_pid returns 1 when nobody is logged in, and a failed
+# command substitution in an assignment carries that status into the
+# check's own `set -euo pipefail`, so the report died before render_human
+# and `omarchy-kids-check --live` printed nothing at all (issue #7). The
+# same shape hides in the session-log fallback, where `grep` with no match
+# returns 1. Driven here directly, in a scratch environment with set -e, so
+# it runs without root -- run_live_section's EUID gate is above this
+# function, and the one outside dependency that decides the branch,
+# live_session_leader_pid, is a stub that can only answer "no session", so
+# no real session, log or machine can be read.
+probe_live_tmpfs() { # [UID_OR_EMPTY] [LOG_BODY] -> findings, baked status
+  local uid="${1-}" body="${2-}"
+  if [[ -n "$uid" && -n "$body" ]]; then
+    mkdir -p "$SCRATCH_ROOT/run/user/$uid/omarchy-kids"
+    printf '%s\n' "$body" >"$SCRATCH_ROOT/run/user/$uid/omarchy-kids/session-$uid.log"
+  fi
+  OMARCHY_KIDS_ETC="$ETC" OMARCHY_KIDS_ROOT="$SCRATCH_ROOT" \
+    OMARCHY_KIDS_PROC_ROOT="$TMP/no-such-proc" \
+    PROBE_UID="$uid" \
+    bash -c '
+      set -euo pipefail
+      source "$1/lib/conf.sh"
+      source "$1/lib/posture.sh"
+      source "$1/lib/check-live.sh"
+      add_result() { printf "%s|%s|%s\n" "$2" "$3" "$4"; }
+      live_session_leader_pid() { return 1; }
+      [[ -n "$PROBE_UID" ]] && kid_uid() { printf "%s" "$PROBE_UID"; }
+      live_test_tmpfs_noexec kid-ada
+    ' _ "$ROOT_DIR"
+}
+
+out="$(probe_live_tmpfs)"
+st=$?
+check_eq "$st" "0" "--live, kid not logged in and no session log: the report continues, it does not die on the no-session answer"
+check_contains "$out" "live:kid-ada:tmp-noexec|warn" "…and /tmp still gets the no-session WARN row"
+check_contains "$out" "live:kid-ada:shm-noexec|skip" "…and /dev/shm the SKIP that points back at it"
+
+out="$(probe_live_tmpfs 1000 'a session log line that mentions no check=tmp_noexec')"
+st=$?
+check_eq "$st" "0" "--live, kid not logged in and the session log has no tmp_noexec line: the grep miss does not end the report either"
+check_contains "$out" "live:kid-ada:tmp-noexec|warn" "…and it still lands on the same no-session WARN"
+
 # --- --live's session-aware /tmp and /dev/shm noexec check (issue #41) --
 #
 # The old probe ran `findmnt` through `runuser`, whose PAM stack never

@@ -51,7 +51,10 @@ mountinfo_noexec() {
 live_test_tmpfs_noexec() {
   local acct="$1" pid mountinfo tmp_r shm_r uid logf line detail
 
-  pid="$(live_session_leader_pid "$acct")"
+  # "No session" is an answer, not a failure: live_session_leader_pid returns 1
+  # for it, and an assignment inherits that status, so without `|| true` the
+  # caller's `set -e` ended the whole report before it rendered (issue #7).
+  pid="$(live_session_leader_pid "$acct")" || true
   if [[ -n "$pid" ]]; then
     mountinfo="$PROC_ROOT/$pid/mountinfo"
     if [[ -r "$mountinfo" ]]; then
@@ -76,7 +79,10 @@ live_test_tmpfs_noexec() {
   if [[ -n "$uid" ]]; then
     logf="$(posture_root)/run/user/$uid/omarchy-kids/session-$uid.log"
     if [[ -r "$logf" ]]; then
-      line="$(grep 'check=tmp_noexec ' "$logf" 2>/dev/null | tail -n1)"
+      # grep with no match returns 1; pipefail then makes the assignment carry
+      # that status, which the caller's `set -e` would end the report on. A log
+      # with no tmp_noexec line is the case this branch exists to report.
+      line="$(grep 'check=tmp_noexec ' "$logf" 2>/dev/null | tail -n1)" || true
       if [[ -n "$line" ]]; then
         detail="${line#*detail=}"
         case "$line" in
