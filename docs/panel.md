@@ -12,9 +12,10 @@ and its own test suite.
 omarchy-kids-panel [--dry-run] [--apply] [--help]
 ```
 
-`DRY_RUN=1` is the default everywhere a screen would write something (AGENTS.md rule 8): every
-command a write would run is printed instead of run. Pass `--apply` (or set `DRY_RUN=0`) for a real
-run.
+`DRY_RUN=1` is the default when no human is driving (a test, a script, CI): every command a write
+would run is printed instead of run. A human at a terminal gets a real run — the screen they confirm
+*is* the confirmation — so `--apply`/`--dry-run` exist only to force one or the other (AGENTS.md
+rule 8).
 
 ## Screens (Appendix A's P1-P7; P5 is not built here — see "Not built here" below)
 
@@ -153,9 +154,10 @@ argv, for exactly this reason — on argv another local session could read it fr
 
 Same shape as the wizard's own "Root and the one sudo prompt" (`docs/wizard.md`), but per-screen
 instead of per-Apply: this panel runs as the parent and is never itself elevated. Every file it
-*reads* — a kid's profile, the time ledger, the ask queue, a band's pack — is root-owned but
-world-readable (docs/conf.md, docs/time.md, docs/ask.md), so Home and every P2/P3 screen render
-with no privilege at all. The first time a screen would actually write something, `warm_sudo`
+*reads* — a kid's profile, the time ledger, a band's pack — is root-owned but world-readable
+(docs/conf.md, docs/time.md). The ask queue is `0750 root:omarchy-parents` (R-NOTIFY-7), so the
+Requests/Reviews screens read it as a member of that group, not the world; the other P2/P3 screens
+render with no privilege at all. The first time a screen would actually write something, `warm_sudo`
 prints why on screen and spends one `sudo -v`; every write after that in the same run reuses sudo's
 cached credential. `run_priv` is the one place a command is either printed (`--dry-run`, the
 default) or run for real under `sudo`; its output (stderr folded in) is captured and reprinted

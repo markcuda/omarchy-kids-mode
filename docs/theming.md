@@ -273,8 +273,9 @@ profile has no `theme` override; a kid's choice inside the set is valid and is n
 - `bin/omarchy-kids-provision add` — after the account, posture, and per-user setup are all in
   place, reads the parent's own `theme_current_name` (via `posture_parent_home`, the same lookup
   the portal writer already uses) and writes it with `"$CONF" set "$account" theme "$parent_theme"`
-  — so `omarchy-kids-conf`'s own `cmd_set` (below) is the *only* code that ever calls
-  `theme_apply_for`; provisioning never touches theme files directly. A parent who has never picked
+  — so `omarchy-kids-conf` (`cmd_set`, `unset` and `import`, below) and, as root, `assert`'s
+  `theme_fix` are the only callers of `theme_apply_for`; provisioning never touches theme files
+  directly. A parent who has never picked
   an Omarchy theme at all gets a warning line and the kid keeps the desktop's stock theme, same as
   before this issue.
 - `bin/omarchy-kids-conf set <kid> theme <name>` — the per-kid key (Appendix B style,

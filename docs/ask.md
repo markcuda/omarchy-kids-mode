@@ -124,8 +124,8 @@ graceful degradation as before. `decline` marks it `declined` and never performs
 records who decided: `panel` (a human at the panel, the default), `keyboard`, `widget`, or
 `device:<id>` (a paired device's signed decision, which authd forwards). Both take an optional
 `--reply TEXT` (at most 80 printable characters), the parent's own line — signed when it arrives
-through a paired device, typed otherwise — which the record then carries. Both refuse (exit 2)
-on an id that's already decided, doesn't exist, or (with a device's `--expect-kid/--expect-kind/--expect-what/--expect-minutes` binding) whose signed display no longer matches the record (amendment section 20) — Appendix D's "approvers append, never rewrite
+through a paired device, typed otherwise — which the record then carries. Both refuse on an id that
+doesn't exist (exit 2), one already decided (exit 3), or -- with a device's `--expect-kid/--expect-kind/--expect-what/--expect-minutes` binding -- one whose signed display no longer matches the record (exit 4; authd turns that into `no changed-since-you-looked`, amendment section 20) — Appendix D's "approvers append, never rewrite
 history" is read here as *a record is decided exactly once*; nothing ever flips a decision back or
 edits `kid`/`kind`/`what`/`minutes`/`asked_at` after they're first written (`lib/ask.py decide`
 enforces this, not just this script). Both subcommands perform the root check at entry, before

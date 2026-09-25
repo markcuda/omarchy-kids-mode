@@ -28,9 +28,10 @@ omarchy-kids-data mine
 omarchy-kids-data retention [--apply]
 ```
 
-- **`launches`** reads the root-owned `launches.log` (below), most recent first. World-readable, so
-  this needs no privilege — same convention as every other read-only figure in this package
-  (docs/time.md, docs/panel.md).
+- **`launches`** reads the root-owned `launches.log` (below), most recent first. It is root-or-self
+  (the file is `0640 root:omarchy-parents`, R-DATA-1), so it needs root or the kid's own account —
+  not the world-readable row the other read-only figures in this package are (docs/time.md,
+  docs/panel.md).
 - **`sites`** copies the kid's Chromium `History` db (and its `-wal`/`-shm` sidecars, if present —
   Chromium keeps it open and WAL-locked while running, so this never reads the live file) to a temp
   file, reads *that* read-only, and prints one line per visit. Needs root, unless run as the kid
@@ -50,9 +51,8 @@ No timer unit installs `retention` on a schedule — that's a real gap (see "Not
 
 ## Who can read what
 
-- **Minutes and launches**: unprivileged, for anyone who can read `/var/lib/omarchy-kids/` — same
-  as `omarchy-kids-time status` and everything the panel already reads without a password
-  (docs/panel.md's "Root and the one sudo prompt").
+- **Minutes**: unprivileged, for anyone who can read `/var/lib/omarchy-kids/`, the same as
+  `omarchy-kids-time status`. **Launches** is root-or-self (`0640 root:omarchy-parents`).
 - **Sites**: a kid's Chromium profile lives under *their own home*, which the parent account can't
   otherwise reach. `sites` (and the sites half of `summary`) needs root, unless the caller *is* the
   kid whose data it is — a kid reading their own history needs no elevation. The panel calls this
@@ -76,7 +76,7 @@ screen-time ledger (docs/time.md's "trust boundary"), recording a launch is two 
    `"YYYY-MM-DDTHH:MM:SS"`, one token with no embedded space — this package never converts a
    timezone anywhere (a single-user desktop has exactly one to worry about), matching every other
    timestamp this file's own format produces.
-2. **`bin/omarchy-kids-time-ledger tick`** — already runs once a minute as root (docs/time.md).
+2. **`bin/omarchy-kids-time-ledger tick`** — already runs every 30 seconds as root (docs/time.md).
    This issue adds one step to it: `lib/data.sh`'s `data_fold_launches`, which appends whatever's
    new in each known kid's own runtime log onto their root-owned `launches.log`, then remembers how
    far it got (`launches.offset`, `"<inode> <byte-offset>"`) so the same line is never folded twice.
@@ -101,13 +101,12 @@ bytes exist each tick rather than trying to be exact against a line torn mid-wri
 plain first-person words, plus "Since: <the earliest day on file>" and the kid's own last day's
 summary. For those two bands it is a kid-owned `.desktop` entry provisioning installs, so a Desktop-mode
 (level 3) kid reaches it through Omarchy's own menu. It is also a launcher tile on the level-2
-desktop, but **not on the fullscreen Grid**: the tile opens Omarchy's floating terminal, and
-R-DESK-3 says the Grid has no terminal (security review, 2026-09-25). A 9-12/13+ kid set to the
-Grid therefore has no data screen -- a documented limit of the locked kiosk. Only for
-bands **9-12 and 13+** — the two bands the starter-pack table already gives a terminal to
-(R-BAND's own Terminal column), i.e. old enough to read the screen unsupervised. This is gated on
-**band**, not level: a 9-12/13+ kid moved to Level 1 by a `level` override still gets the tile in
-that grid. 3-5/6-8 kids aren't denied the data — I-6 is about not showing a control that doesn't
+desktop, but **not on the fullscreen Grid**: the tile opens Omarchy's floating terminal, and R-DESK-3
+says the Grid has no terminal (security review, 2026-09-25), so the launcher map omits it there
+(`level != "1"`). A 9-12/13+ kid set to the Grid therefore has no data screen -- a documented limit
+of the locked kiosk. It is for bands **9-12 and 13+** only — the bands the starter-pack table already
+gives a terminal to (R-BAND's own Terminal column), i.e. old enough to read the screen
+unsupervised. 3-5/6-8 kids aren't denied the data — I-6 is about not showing a control that doesn't
 work, not about withholding the data itself — a grown-up can run `omarchy-kids-data mine` with them
 directly; this issue just doesn't add a tile a pre-reader or early reader couldn't use alone.
 
@@ -127,8 +126,8 @@ all, since `omarchy-kids-data` already refuses to touch Chromium in that case.
 
 ## Judgment calls
 
-- **The terminal is Omarchy's own helper, not a guess.** `bin/omarchy-kids-session-start`'s
-  `kids-data` tile and `bin/omarchy-kids-bar`'s grant/end both open
+- **The terminal is Omarchy's own helper, not a guess.** `lib/launcher-map.sh`'s `kids-data` tile and
+  `bin/omarchy-kids-bar`'s grant/end both open
   `omarchy-launch-floating-terminal-with-presentation`, trusted the same way this package already
   trusts `/usr/bin/omarchy-launch-shell` (review 1.4).
 - **Retention numbers are the issue's own v1.1 update comment, not the "30 days" fallback the
@@ -163,11 +162,8 @@ all, since `omarchy-kids-data` already refuses to touch Chromium in that case.
 - **No export command.** A parent who wants a copy of a kid's recorded data today reads it through
   the panel or runs `omarchy-kids-data summary`/`launches`/`sites` themselves and copies the output;
   there's no `--json`/`--csv` flag.
-- **No `PRIVACY.md`.** R-DATA-5 ("`PRIVACY.md` states all of this in plain words") isn't delivered
-  by this issue — there's no `PRIVACY.md` anywhere in this checkout, and `AGENTS.md`'s own file-
-  layout table doesn't list one either, so it isn't clear where it belongs. This doc (`docs/
-  data.md`) carries R-DATA-5's content in the meantime — what's recorded, where, who can read it,
-  retention, and export/delete, all below — until that's settled.
+- **`PRIVACY.md`.** R-DATA-5 is delivered: `PRIVACY.md` at the repo root states all of this in plain
+  words. This doc carries the same content in technical detail.
 
 ## How a parent exports or deletes
 
@@ -200,11 +196,11 @@ export story today (see "Not built here" above for why there's no dedicated flag
 | --- | --- | --- |
 | Kid overrides directory (`history_visible`, Appendix B) | `/etc/omarchy-kids/kids/` | `OMARCHY_KIDS_ETC` |
 | Usage, launches, launches.offset, the ask queue | `/var/lib/omarchy-kids/` | `OMARCHY_KIDS_ROOT` (scratch prefix) |
-| A kid's runtime launches log (`launcher-ctl log`'s target) | `$XDG_RUNTIME_DIR/omarchy-kids/launches.log` | `OMARCHY_KIDS_LAUNCHES_LOG`, or `XDG_RUNTIME_DIR` |
+| A kid's runtime launches log (`launcher-ctl log`'s target) | `$XDG_RUNTIME_DIR/omarchy-kids/launches.log` | none — a build-time constant beside `bin/omarchy-kids-launcher-ctl` (rule 9) |
 | A kid's runtime log, as seen by root folding it | `/run/user/<uid>/omarchy-kids/launches.log` | `OMARCHY_KIDS_RUN_USER_BASE` (default `/run/user`) + `OMARCHY_KIDS_ROOT` |
 | A kid's home (for `sites`) | `/home/<kid>` | `OMARCHY_KIDS_HOMES_BASE` (default `/home`) |
-| `lib/data.py` | `lib/` beside `bin/`, else `/usr/lib/omarchy-kids` | `OMARCHY_KIDS_DATA_PY` / `OMARCHY_KIDS_LIB` |
-| `omarchy-kids-data` (called by the panel and the Level 1 tile) | resolved beside the caller, else `PATH` | `OMARCHY_KIDS_DATA_BIN` |
+| `lib/data.py` | `lib/` beside the caller, else `/usr/lib/omarchy-kids` | none — resolved from the caller's own location (rule 9) |
+| `omarchy-kids-data` (called by the panel and the launcher) | resolved beside the caller, else `/usr/lib/omarchy-kids` | none (rule 9) |
 
 `test/shell.d/data-test.sh` covers `launches`/`sites`/`summary`/`mine`/`retention`, the
 `history_visible` gate, the root-vs-self check on `sites`, `launcher-ctl log`, and the ledger's

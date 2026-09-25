@@ -291,7 +291,7 @@ cmd_set() {
     if theme_apply_for "$kid" "$value"; then
       theme_reload_if_live "$kid"
     else
-      echo "omarchy-kids-conf: wrote the 'theme' override for '$kid' but could not apply it to disk yet (see stderr above) -- omarchy-kids-assert will retry" >&2
+      echo "omarchy-kids-conf: wrote the 'theme' override for '$kid' but could not apply it to disk yet (see stderr above) -- the kid sees it at their next login" >&2
     fi
   fi
   manifest_follow_profile "$kid"
@@ -417,7 +417,7 @@ cmd_import() {
   # Side effects once, after the profile is in place; a theme apply failure
   # is reported but does not undo the import (same rule as `set`).
   if [[ -n "$theme_value" ]]; then
-    theme_apply_for "$kid" "$theme_value" || echo "omarchy-kids-conf: imported the 'theme' override but could not apply it to disk yet -- omarchy-kids-assert will retry" >&2
+    theme_apply_for "$kid" "$theme_value" || echo "omarchy-kids-conf: imported the 'theme' override but could not apply it to disk yet -- the kid sees it at their next login" >&2
     theme_reload_if_live "$kid"
   fi
   manifest_follow_profile "$kid"

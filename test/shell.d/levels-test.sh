@@ -80,7 +80,6 @@ L1_WANT=$(sorted \
   'SUPER + Q' \
   'SUPER + SHIFT + K' \
   'SUPER + SHIFT + W' \
-  'SUPER + CTRL + SHIFT + SPACE' \
   'SUPER + SUPER_L' \
   'XF86AudioRaiseVolume' \
   'XF86AudioLowerVolume' \
@@ -89,6 +88,8 @@ L1_WANT=$(sorted \
   'XF86MonBrightnessDown')
 L1_GOT=$(sorted_combos "$HYPR/L1.lua")
 check "$L1_GOT" "$L1_WANT" "L1.lua binds exactly the Appendix E Level 1 set"
+check_not_contains "$(cat "$HYPR/L1.lua")" 'SUPER + CTRL + SHIFT + SPACE' \
+  "L1.lua binds no theme picker: the Grid is the no-terminal kiosk (R-DESK-3)"
 
 # T45: the theme picker is bound on Omarchy's own chord at Level 3 too, with
 # Omarchy's stock bind for that chord removed first (no double fire).

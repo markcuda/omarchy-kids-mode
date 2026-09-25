@@ -181,12 +181,13 @@ answers="$(answers_file "kid:kid-ada" reset reset back quit)"
 run_panel "$answers"
 check_contains "$out" "sudo $TREE_BIN/omarchy-kids-conf reset kid-ada" \
   "dry-run: reset to defaults prints the exact conf-reset command"
-# The screen used to say hand-added sites stay; the schema gives `sites`
-# reset=clear, so the reset does delete them (live-review I-6 finding).
-check_not_contains "$out" "sites you added by hand stay" \
-  "reset screen: never claims hand-added sites survive the reset"
-check_contains "$out" "Any sites you added by hand go back too." \
-  "reset screen: names hand-added sites among what the reset clears"
+# The screen used to say hand-added sites go back; the panel's own "Add a site"
+# writes the allow-list file, which `conf reset` does not touch, so they stay
+# (docs review, 2026-09-25).
+check_not_contains "$out" "Any sites you added by hand go back too" \
+  "reset screen: never claims hand-added sites are cleared"
+check_contains "$out" "Sites you approved are kept" \
+  "reset screen: says the allow-list file survives the reset"
 
 answers="$(answers_file "kid:kid-ada" remove NotAda back quit)"
 run_panel "$answers"

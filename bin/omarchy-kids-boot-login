@@ -30,9 +30,10 @@ In trusted boot=disk mode, writes $DROPIN for a valid recorded LUKS slot.
 A mapped provisioned kid selects omarchy-kids.desktop; the parent recorded
 in machine.conf selects omarchy.desktop. Any unknown account selects the portal.
 
-In boot=portal mode, or when boot-slot is absent, this command writes nothing.
-Invalid mode also writes nothing and exits 0 so early boot stays available.
-Malformed disk-mode input selects the portal where possible and exits 1.
+In boot=portal mode this command writes nothing. In disk mode a missing or
+malformed boot-slot selects the portal (an empty User=). Invalid mode also
+writes nothing and exits 0 so early boot stays available; malformed disk-mode
+input selects the portal where possible and exits 1.
 
 --cleanup removes only a disk-mode drop-in this command marked as created
 on the current boot.

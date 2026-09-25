@@ -15,13 +15,14 @@ launcher's searchable picker) is retired: no band defaults to it and no picker o
 starts. The Desktop mode is the stock Omarchy desktop with its menu trimmed of
 Install/Update/Setup (R-DESK-4), so a kid learns the same Super keys a parent uses.
 
-**What the Desktop mode does not do.** The app allow-list, the hide/extra-app rows, the "What my
-grown-ups can see" screen (R-DATA-3) and a `web = none` band are all the Kids launcher's (Grid). A
-Desktop kid starts apps from Omarchy's own menu search and can open Chromium, so those rows neither
-restrict nor reach a Desktop kid: keep a child on the Grid if you need the allow-list enforced or
-the browser hidden, and see `PRIVACY.md`'s known gap on the data screen for 9-12/13+. The child's
-account, screen time, the rendered web *policy* (safe search, safe DNS) and every lock are the same
-in both modes; the per-kid `web = none` **is not**.
+**What each mode does not do.** The app allow-list, the hide/extra-app rows and a `web = none` band
+are the Kids launcher's (Grid): a Desktop kid starts apps from Omarchy's own menu search and can open
+Chromium, so those rows neither restrict nor reach them -- keep a child on the Grid if you need the
+allow-list enforced or the browser hidden. The "What my grown-ups can see" screen (R-DATA-3) is the
+reverse: a Desktop kid gets it as a provisioning-installed `.desktop` entry, and the Grid has no tile
+for it (the tile opens a terminal, which R-DESK-3 forbids on the Grid). The child's account, screen
+time, the rendered web *policy* (safe search, safe DNS) and every lock are the same in both modes;
+the per-kid `web = none` **is not**.
 
 Every level also turns off Hyprland's own update-news and donation popups
 (`ecosystem.no_update_news` and `ecosystem.no_donation_nag`): the news dialog carries an outbound
@@ -84,17 +85,20 @@ desktop files. This keeps the level overlay and the launcher on the same root-ow
 
 ## What each level binds (Appendix E)
 
-**Grid (Level 1).** `Super+Ctrl+Shift+Space` opens the theme picker (`omarchy-launch-floating-terminal-with-presentation omarchy-kids-theme`, so it has a tty; the same chord Omarchy's own desktop uses; T45). `Super+Home` show the launcher · `Super+Return` open the highlighted tile ·
+**Grid (Level 1).** `Super+Home` show the launcher · `Super+Return` open the highlighted tile ·
 `Super+Q` close the focused window · `Super+Shift+K` the exit overlay, and a bare `Super` tap
 three times within 1.5s does the same (`omarchy-kids-exit`, `omarchy-kids-super-tap`,
-`docs/exit.md`) · the five standard volume/brightness media keys. Nothing else — no defaults, no
-`require("default.hypr.bindings.*")`. Every window is forced fullscreen
+`docs/exit.md`) · `Super+Shift+W` the Wi-Fi picker (R-WIFI-1..2; the command refuses unless the
+band is `helper`) · the five standard volume/brightness media keys. Nothing else — no defaults, no
+`require("default.hypr.bindings.*")`. No theme picker: it needs a terminal, and the Grid has none
+(R-DESK-3). Every window is forced fullscreen
 (`o.window(".*", { fullscreen = true })`). `test/shell.d/levels-test.sh` greps for exactly this
 set; nothing more, nothing less.
 
 **Retired (Level 2).** The Simplified desktop. Everything Level 1 binds, plus `Super+arrows` to focus a window,
 `Super+Shift+arrows` to swap it, `Super+K` for Omarchy's own keybindings cheat sheet
-(`omarchy-menu-keybindings`), and `Super+Space` aliased onto the same launcher as
+(`omarchy-menu-keybindings`; verified live 2026-09-21 that this does nothing for a kid -- the
+command fails without `$OMARCHY_PATH` -- so the bind is inert), and `Super+Space` aliased onto the same launcher as
 `Super+Home`. The "50/50 dwindle split" Appendix E asks for isn't extra config here — it's
 `default.hypr.looknfeel`'s own `general.layout = "dwindle"` / `dwindle.preserve_split = true`,
 which Level 2 requires (see below) and which already gives that behavior for two tiled windows.
@@ -287,14 +291,11 @@ Omarchy 4.0.2 box to close out:
    on a real box and correct the list in `share/hyprland/L3.lua` (there may be more than one
    terminal-launching bind, e.g. a second terminal or a file manager, also gated by
    `menu=trimmed`).
-2. **`omarchy-sudo-passwordless`.** Deliberately not touched. It may not be a keybind at all —
-   `default.hypr.autostart` (the file this repo calls `hypr-autostart.lua`) calls
-   `omarchy-provision-first-run` on every `hyprland.start`, which sounds like a more likely place
-   for a first-run passwordless-sudo convenience to live than a key someone presses. If that's
-   right, Level 3 requiring `default.hypr.omarchy` re-runs that provisioning for the kid too,
-   which the Appendix G bypass matrix ("Kid runs sudo → No grant") says must never happen. This
-   needs confirming on a real box, and probably belongs to whatever issue owns
-   `omarchy-provision-first-run` or Level 3 session hardening, not this one.
+2. **`omarchy-sudo-passwordless` -- answered 2026-09-21.** It is a menu row, not a keybind
+   (`omarchy-menu`'s `setup.security.passwordless-sudo`), hidden under the trimmed menu and refused
+   for a kid; it was never a bind to strip. L3.lua does not load `default.hypr.omarchy`, so
+   `omarchy-provision-first-run` is not re-run for a kid either
+   (`docs/phase1/SPEC-AMENDMENT-two-kid-modes.md`).
 3. **`fullscreen = true` as a windowrule.** Modeled on the one confirmed boolean windowrule flag
    in the reference material (`{ no_focus = true }` in `default.hypr.windows`). Could be
    `{ fullscreen = "1" }` or something dispatcher-shaped instead: the Level 1/2 pass did not

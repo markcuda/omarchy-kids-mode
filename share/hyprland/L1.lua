@@ -127,10 +127,10 @@ o.bind("SUPER + SHIFT + K", "Kids Mode: parent", "omarchy-kids-exit")
 -- the same claim as the bind doing anything).
 o.bind("SUPER + SHIFT + W", "Kids Mode: Wi-Fi", "omarchy-kids-wifi picker")
 
--- Theme picker (T45): the same chord a grown-up uses (Super+Ctrl+Shift+Space),
--- so the kid learns the real one. omarchy-kids-theme offers only installed
--- themes and applies the choice through Omarchy's own omarchy-theme-set.
-o.bind("SUPER + CTRL + SHIFT + SPACE", "Kids Mode: theme", "omarchy-launch-floating-terminal-with-presentation omarchy-kids-theme")
+-- No theme-picker bind here (T45): it needs a terminal for gum, and the Grid is
+-- the fullscreen "no terminal or file manager" kiosk (R-DESK-3). A Grid kid
+-- switches themes only after a grown-up moves them to the Desktop mode; the
+-- floating-terminal picker stays on levels 2 and 3 (see docs/levels.md).
 
 -- The triple-tap gesture (SPEC.md R-EXIT-1: "Super pressed three times
 -- within 1.5s" as an alternative to Super+Shift+K). The release-bind
