@@ -43,7 +43,8 @@ def write_conf(scopes="decide,act"):
         f.write(f"id=d1\nname=Phone\nplatform=android\nsign_pub={pub}\nbox_pub={pub}\nscopes={scopes}\n")
 
 def signed(**over):
-    rec = {"device_id": "d1", "request_id": "req-1", "decision": "approve", "ts": now, "nonce": "n1"}
+    rec = {"device_id": "d1", "request_id": "req-1", "decision": "approve", "ts": now, "nonce": "n1",
+           "kid": "kid-ada", "kind": "time", "what": "15", "minutes": 15}
     rec.update(over)
     return rec, base64.b64encode(key.sign(devices.canonical(rec))).decode()
 

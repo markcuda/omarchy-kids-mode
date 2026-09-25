@@ -113,11 +113,13 @@ class Session {
   /// happen, with nothing in between to swallow them.
   Stream<BoxState> watch() => relay.boxEvents(ts: now(), nonce: newNonce());
 
-  /// Approve a request, optionally with the parent's own reply line.
-  Future<void> approve(String requestId, {String? reply}) => _decide(requestId, 'approve', reply);
+  /// Approve a request, optionally with the parent's own reply line. The request
+  /// itself is signed (its kid, type, what and minutes), so the decision binds
+  /// the exact record the screen showed (amendment section 20).
+  Future<void> approve(OpenRequest request, {String? reply}) => _decide(request, 'approve', reply);
 
   /// Decline a request, optionally with a reply (a reason the box shows the kid).
-  Future<void> decline(String requestId, {String? reply}) => _decide(requestId, 'decline', reply);
+  Future<void> decline(OpenRequest request, {String? reply}) => _decide(request, 'decline', reply);
 
   /// Give a kid more time today (R-NOTIFY-13). The box applies it through
   /// omarchy-kids-time; nothing else changes.
@@ -133,22 +135,26 @@ class Session {
   /// Deny a changed add-on: the box hides the app again and clears the review.
   Future<void> denyReview(String reviewId, String seen) => _decideReview(reviewId, 'deny', seen);
 
-  Future<void> _decide(String requestId, String decision, String? reply) async {
+  Future<void> _decide(OpenRequest request, String decision, String? reply) async {
     // Fail fast on an id the box would refuse anyway: it is not a request the app
     // could decide, and it must not reach a URL path (state_model drops such rows).
-    if (!OpenRequest.idPattern.hasMatch(requestId)) {
-      throw ArgumentError('not a request id: $requestId');
+    if (!OpenRequest.idPattern.hasMatch(request.id)) {
+      throw ArgumentError('not a request id: ${request.id}');
     }
     // The record's nonce and the request header's nonce are separate replay
     // domains (authd's ledger and the relay's); both are fresh.
     final ts = now();
     final record = decisionRecord(
       deviceId: deviceId,
-      requestId: requestId,
+      requestId: request.id,
       decision: decision,
       ts: ts,
       nonce: newNonce(),
       reply: reply,
+      kid: request.kid,
+      kind: request.kind,
+      what: request.what,
+      minutes: request.minutes,
     );
     await relay.decide(record: record, ts: ts, nonce: newNonce());
   }

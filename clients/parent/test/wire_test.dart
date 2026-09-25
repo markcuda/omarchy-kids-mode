@@ -137,40 +137,43 @@ void main() {
 
   test('a decision record rejects a bad decision or a long/unprintable reply', () {
     expect(
-      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'maybe', ts: 1, nonce: 'n'),
+      () => decisionRecord(deviceId: 'd1', requestId: 'r1', kid: 'kid-ada', kind: 'app', what: 'x', decision: 'maybe', ts: 1, nonce: 'n'),
       throwsArgumentError,
     );
     expect(
-      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'x' * 81),
+      () => decisionRecord(deviceId: 'd1', requestId: 'r1', kid: 'kid-ada', kind: 'app', what: 'x', decision: 'decline', ts: 1, nonce: 'n', reply: 'x' * 81),
       throwsArgumentError,
     );
     // An accented reply is accepted (the box's isprintable), a control one is not.
     expect(
-      decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'café')['reply'],
+      decisionRecord(deviceId: 'd1', requestId: 'r1', kid: 'kid-ada', kind: 'app', what: 'x', decision: 'decline', ts: 1, nonce: 'n', reply: 'café')['reply'],
       equals('café'),
     );
     expect(
-      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u0007b'),
+      () => decisionRecord(deviceId: 'd1', requestId: 'r1', kid: 'kid-ada', kind: 'app', what: 'x', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u0007b'),
       throwsArgumentError,
     );
     // A variation selector (Mn, which the box accepts) must NOT be refused:
     // the emoji keyboard appends U+FE0F to ❤️ and the like.
     expect(
-      decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'ok \u2764\ufe0f')['reply'],
+      decisionRecord(deviceId: 'd1', requestId: 'r1', kid: 'kid-ada', kind: 'app', what: 'x', decision: 'decline', ts: 1, nonce: 'n', reply: 'ok \u2764\ufe0f')['reply'],
       equals('ok \u2764\ufe0f'),
     );
     // A no-break space or a zero-width joiner is refused too (the box would).
     expect(
-      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u00a0b'),
+      () => decisionRecord(deviceId: 'd1', requestId: 'r1', kid: 'kid-ada', kind: 'app', what: 'x', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u00a0b'),
       throwsArgumentError,
     );
     expect(
-      () => decisionRecord(deviceId: 'd1', requestId: 'r1', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u200db'),
+      () => decisionRecord(deviceId: 'd1', requestId: 'r1', kid: 'kid-ada', kind: 'app', what: 'x', decision: 'decline', ts: 1, nonce: 'n', reply: 'a\u200db'),
       throwsArgumentError,
     );
     final record = decisionRecord(
       deviceId: 'd1',
       requestId: 'r1',
+      kid: 'kid-ada',
+      kind: 'app',
+      what: 'x',
       decision: 'decline',
       ts: 1,
       nonce: 'n',
@@ -209,6 +212,22 @@ void main() {
       body: jsonEncode(env['envelope']),
     );
     expect(plaintext, equals(base64.decode(env['plaintext_b64'] as String)));
+  });
+
+  test('a decision binds the displayed request (amendment section 20)', () {
+    final rec = decisionRecord(
+      deviceId: 'd1', requestId: 'r1', kid: 'kid-ada', kind: 'time', what: '15', minutes: 15,
+      decision: 'approve', ts: 1, nonce: 'n',
+    );
+    expect(rec['kid'], 'kid-ada');
+    expect(rec['kind'], 'time');
+    expect(rec['what'], '15');
+    expect(rec['minutes'], 15);
+    Matcher throwsBad() => throwsArgumentError;
+    expect(() => decisionRecord(deviceId: 'd1', requestId: 'r1', kid: 'Ada', kind: 'app', what: 'x', decision: 'approve', ts: 1, nonce: 'n'), throwsBad());
+    expect(() => decisionRecord(deviceId: 'd1', requestId: 'r1', kid: 'kid-ada', kind: 'video', what: 'x', decision: 'approve', ts: 1, nonce: 'n'), throwsBad());
+    expect(() => decisionRecord(deviceId: 'd1', requestId: 'r1', kid: 'kid-ada', kind: 'app', what: 'x' * 300, decision: 'approve', ts: 1, nonce: 'n'), throwsBad());
+    expect(() => decisionRecord(deviceId: 'd1', requestId: 'r1', kid: 'kid-ada', kind: 'time', what: '15', minutes: 0, decision: 'approve', ts: 1, nonce: 'n'), throwsBad());
   });
 }
 

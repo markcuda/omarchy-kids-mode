@@ -127,7 +127,7 @@ not match, so a relabelled add-on review signs nothing. The relay timeout is 35 
 box's own 30 s apply window, so a slow apply is not reported as a failure the parent retries. The
 pinned certificate is checked both in `badCertificateCallback` and against the peer's own
 certificate after the handshake (Apple checks the chain in one call and can hand the callback a
-non-leaf certificate). The request-signing record binding is the remaining gap (`docs/relayd.md`).
+non-leaf certificate). A request decision signs the kid, type, what and minutes the app displayed, and the box refuses one whose binding does not match the queue record (amendment section 20).
 
 ## The desktop notifier (N-9)
 

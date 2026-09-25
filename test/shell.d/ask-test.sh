@@ -813,5 +813,18 @@ rm -f "$QUEUE_DIR/1000000099-kid-ada-app.json"
 check_eq "$st" "2" "a symlinked record is refused (O_NOFOLLOW)"
 check_contains "$out" "could not read" "the refusal says why (ELOOP from O_NOFOLLOW)"
 
+# The display binding (amendment section 20): a device decision whose signed
+# fields differ from the record is refused, and the record stays open; a match
+# applies. A panel decision (no --expect-*) is unaffected.
+BIND="1000000026-kid-ada-app"
+printf '%s\n' "{\"kid\": \"kid-ada\", \"kind\": \"app\", \"what\": \"minecraft\", \"asked_at\": 1000000026, \"state\": \"open\"}" >"$QUEUE_DIR/$BIND.json"
+"$BIN" approve "$BIND" --expect-kid kid-ada --expect-kind app --expect-what roblox --apply >/dev/null 2>&1
+check_eq "$?" 2 "a decision whose signed what differs from the record is refused"
+check_contains "$(cat "$QUEUE_DIR/$BIND.json")" '"state": "open"' "the mismatched decision leaves the record open"
+"$BIN" approve "$BIND" --by device:d-vector --expect-kid kid-ada --expect-kind app --expect-what minecraft --apply >/dev/null 2>&1
+check_eq "$?" 0 "a decision whose binding matches is applied"
+check_contains "$(cat "$QUEUE_DIR/$BIND.json")" '"state": "approved"' "the matched decision is applied"
+rm -f "$QUEUE_DIR/$BIND.json" "$QUEUE_DIR/$BIND.json.lock"
+
 echo "ask-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc

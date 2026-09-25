@@ -27,13 +27,17 @@
   "decision": {
     "decision": "approve",
     "device_id": "d-vector",
+    "kid": "kid-ada",
+    "kind": "time",
+    "minutes": 15,
     "nonce": "nonce-decision-1",
     "reply": "Apr\u00e8s \"d\u00eener\" \\ ok",
     "request_id": "1000000001-kid-ada-time",
-    "ts": 1758530400
+    "ts": 1758530400,
+    "what": "15"
   },
-  "decision_message_b64": "b21hcmNoeS1raWRzLWRlY2lzaW9uLXYxCnsiZGVjaXNpb24iOiJhcHByb3ZlIiwiZGV2aWNlX2lkIjoiZC12ZWN0b3IiLCJub25jZSI6Im5vbmNlLWRlY2lzaW9uLTEiLCJyZXBseSI6IkFwclx1MDBlOHMgXCJkXHUwMGVlbmVyXCIgXFwgb2siLCJyZXF1ZXN0X2lkIjoiMTAwMDAwMDAwMS1raWQtYWRhLXRpbWUiLCJ0cyI6MTc1ODUzMDQwMH0=",
-  "decision_signature_b64": "MUjqvHwUzD9kyDlzgBr7L1jV+qQzJP54gfIPHGq76be5Aj3iCCQUJP6KlL6EE2085v9C8YtWE5h3gAtcI56UCA==",
+  "decision_message_b64": "b21hcmNoeS1raWRzLWRlY2lzaW9uLXYxCnsiZGVjaXNpb24iOiJhcHByb3ZlIiwiZGV2aWNlX2lkIjoiZC12ZWN0b3IiLCJraWQiOiJraWQtYWRhIiwia2luZCI6InRpbWUiLCJtaW51dGVzIjoxNSwibm9uY2UiOiJub25jZS1kZWNpc2lvbi0xIiwicmVwbHkiOiJBcHJcdTAwZThzIFwiZFx1MDBlZW5lclwiIFxcIG9rIiwicmVxdWVzdF9pZCI6IjEwMDAwMDAwMDEta2lkLWFkYS10aW1lIiwidHMiOjE3NTg1MzA0MDAsIndoYXQiOiIxNSJ9",
+  "decision_signature_b64": "uRiu+NOdAXYPw7A9s9JQaZ4RM/CysH9jGXkEF6d+MGjiDD2EB0mWDK5UDaXk3IAcGBLnhNovpbG/rdigBY3qCw==",
   "envelope": {
     "box_priv_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
     "box_pub_b64": "NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ=",

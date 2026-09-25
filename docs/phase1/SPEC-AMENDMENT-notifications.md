@@ -544,19 +544,18 @@ R-NOTIFY-6's quoted text loses "(**not built on this branch** — the ask overla
 
    `docs/check.md`'s Locks section gains: "`lock:decisions` is the assert lock of the same name (R-NOTIFY-6), standard shape and standard fail text. It proves only that each provisioned kid's decisions directory is absent or closed to everyone but root and that kid; not that a copy matches its record, that every decided record has one, or that the kid saw it. A warn is a directory being unreadable to this run." `omarchy-kids-ask --help`'s usage block gains `omarchy-kids-ask outcome  # the newest decision in your own directory`, and `collect`'s line notes `# also heals a missing kid copy (R-NOTIFY-6)`. and `omarchy-kids-data --help`'s `retention` line reads "requests and their decisions 90 days".
 
-## 20. Known gap: the request decision does not sign what the parent saw (security review, 2026-09-25)
+## 20. The request decision signs what the parent saw (security review, 2026-09-25; built 2026-09-25)
 
-A request decision the app sends signs the request id, the decision, a timestamp, a nonce and the
-optional reply (`clients/parent/lib/relay_client.dart`, `lib/session.dart`); root applies whatever
-the queue record with that id says (`bin/omarchy-kids-authd`). The app signs no kid, type, `what` or
-minutes, so a compromised `omarchy-kids-relay` -- the only network listener -- could show request B's
-id with request A's details and have the parent approve A's fields under B's id. The review id is
-already bound (`kid.sha256(app)[:16]`, checked by `lib/relay.py`, `lib/devices.py`, and now the app),
-so add-on reviews are safe; the request record is the remaining gap.
+A request decision the app sends now signs the request id, the decision, a timestamp, a nonce, the
+optional reply, **and the displayed request**: `kid`, `kind`, `what`, and `minutes` when the request
+is a time ask (`clients/parent/lib/relay_client.dart`, `lib/session.dart`). `lib/devices.py`'s
+`valid_record` requires the binding, so a decision missing it is malformed; `omarchy-kids-ask
+approve|decline` re-checks it against the queue record under the decision lock (`lib/ask.py`'s
+`--expect_*`) and refuses with "the record changed since it was shown" when it does not match. A
+compromised `omarchy-kids-relay` -- the only network listener -- can therefore only stop delivery,
+not relabel what a parent approves. A review id is bound to its kid and app the same way.
 
-Closing it is a wire change, not a client-only one: the app signs the displayed `kid`, `kind`, `what`
-and `minutes` (and `reply`) into the decision frame, and authd re-validates them against the queue
-record the id names before applying -- the shape the review fingerprint already uses. It needs both
-sides changed together and a VM check, so it is tracked here rather than shipped half-done. Until
-then, `docs/relayd.md` states the limit plainly instead of claiming the relay's whole attack surface
-is "notifications stop".
+This closed a real finding: before it, the record signed only the id, so a compromised relay could
+show request B's id with request A's details and have the parent approve A's fields under B's id.
+The wire change ships on both sides together; the live path needs the VM check the spec already
+requires for the decision routes (`docs/relayd.md`, `docs/notify.md`).
