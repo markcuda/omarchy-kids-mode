@@ -137,7 +137,13 @@ validate_value() {
     dns)
       case "$value" in
         cloudflare-family | cleanbrowsing-family) ;;
-        custom:?*) ;;
+        custom:?*)
+          # A stored-only value today, but a future reader must not be able to
+          # take a shell metacharacter, a quote, a space or a newline from it:
+          # a URL/host charset only (security review, 2026-09-25).
+          [[ "${value#custom:}" =~ ^[A-Za-z0-9][A-Za-z0-9._:/-]*$ ]] ||
+            die "invalid value for 'dns': custom:<url> is a host or https URL with no spaces or quotes"
+          ;;
         *) die "invalid value for 'dns': cloudflare-family, cleanbrowsing-family, or custom:<url>" ;;
       esac
       ;;
@@ -562,7 +568,11 @@ cmd_machine() {
           boot_mode_set "$value" || exit $?
           ;;
         parent)
-          [[ -n "$value" && "$value" != *$'\n'* ]] || die "invalid value for 'parent': must be non-empty, single-line text"
+          # The account charset, the same one posture_valid_account and the PAM
+          # rule writers require, so a value stored here can never be a shell
+          # metacharacter or an unexpected name for a later root consumer.
+          [[ "$value" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] ||
+            die "invalid value for 'parent': must be a lowercase account name"
           conf_set "$MACHINE_CONF" "$key" "$value"
           luks_slots_record_parent "$SLOTS_FILE" "$KIDS_DIR" "$value" || die "could not record the parent's LUKS slot (see stderr above)"
           ;;

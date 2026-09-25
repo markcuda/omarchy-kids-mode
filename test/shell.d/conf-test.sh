@@ -358,6 +358,7 @@ done
 invalid_values=(
   "name|" "avatar|Bad Id" "avatar|not-an-avatar"
   "band|7-9" "level|0" "web|open-everything" "dns|custom:" "dns|custom"
+  "dns|custom:has space" "dns|custom:x(y)"
   "budget_min|0" "budget_min_weekend|1441" "lights_out|9pm"
   "lights_out_weekend|24:00" "wifi|child" "history_visible|maybe"
   "menu|all" "theme|Not A Real Theme" "theme|no-such-theme"
@@ -365,6 +366,11 @@ invalid_values=(
   "onboarded|maybe" "apps.extra|not an id" "apps.hidden|not an id"
   "apps.show_missing|maybe"
 )
+# The parent identity a root consumer may interpolate is the account charset
+# posture_valid_account requires (security review, 2026-09-25).
+"$CONF" machine set parent 'Bad Name' >/dev/null 2>&1
+check_status "$?" 2 "machine set parent refuses a name that is not a lowercase account"
+
 for pair in "${invalid_values[@]}"; do
   key="${pair%%|*}"
   value="${pair#*|}"
