@@ -213,6 +213,14 @@ check_contains "$out" "Requests (1)" "Home totals one open request (T25: one bat
 rm -f "$QUEUE_DIR/1000000000-kid-ada-app.json"
 check_contains "$out" "Remove Kids Mode" "Home offers the Remove Kids Mode row"
 
+# T18: the hand-over row is an honest sign-out -- in dry-run it prints the
+# command it would run, and its card says what happens.
+answers="$(answers_file hand_over yes quit)"
+run_panel "$answers" --dry-run
+check_contains "$out" "Hand over to a kid" "Home offers the Hand over row (T18)"
+check_contains "$out" "[dry-run] hyprctl dispatch exit" "hand over signs out (dry-run prints the command)"
+check_contains "$out" "The login screen then shows every account" "the hand-over card says it signs out, not that it opens a kid's session"
+
 # review §3.1: a screen's facts are its own card body now, so they belong
 # between that screen's header and its own first row. Echoed above the
 # screen instead -- fine here, since file mode never clears -- they left a
