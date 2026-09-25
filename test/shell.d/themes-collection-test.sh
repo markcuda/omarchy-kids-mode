@@ -44,8 +44,8 @@ for d in "$COLL"/*/; do
   [[ -d "$d" ]] || continue
   name="$(basename "$d")"
   themes=$((themes + 1))
-  [[ -f "$d/colors.toml" ]] && pass "$name: has colors.toml" || fail "$name: missing colors.toml"
-  [[ -f "$d/README.md" ]] && pass "$name: has a README" || fail "$name: missing README.md"
+  if [[ -f "$d/colors.toml" ]]; then pass "$name: has colors.toml"; else fail "$name: missing colors.toml"; fi
+  if [[ -f "$d/README.md" ]]; then pass "$name: has a README"; else fail "$name: missing README.md"; fi
   if [[ -f "$d/ATTRIBUTION.md" || -f "$d/CREDITS.md" ]]; then
     pass "$name: carries its credits"
   else
