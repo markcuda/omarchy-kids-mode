@@ -826,12 +826,12 @@ check_contains "$out" "could not read" "the refusal says why (ELOOP from O_NOFOL
 BIND="1000000026-kid-ada-app"
 printf '%s\n' "{\"kid\": \"kid-ada\", \"kind\": \"app\", \"what\": \"minecraft\", \"asked_at\": 1000000026, \"state\": \"open\"}" >"$QUEUE_DIR/$BIND.json"
 "$BIN" approve "$BIND" --expect-kid kid-ada --expect-kind app --expect-what roblox --apply >/dev/null 2>&1
-check_eq "$?" 2 "a decision whose signed what differs from the record is refused"
+check_eq "$?" 4 "a decision whose signed what differs from the record is refused"
 check_contains "$(cat "$QUEUE_DIR/$BIND.json")" '"state": "open"' "the mismatched decision leaves the record open"
 "$BIN" approve "$BIND" --expect-kid kid-cy --expect-kind app --expect-what minecraft --apply >/dev/null 2>&1
-check_eq "$?" 2 "a decision whose signed kid differs from the record is refused"
+check_eq "$?" 4 "a decision whose signed kid differs from the record is refused"
 "$BIN" approve "$BIND" --expect-kid kid-ada --expect-kind app --expect-what minecraft --expect-minutes 99 --apply >/dev/null 2>&1
-check_eq "$?" 2 "a decision whose signed minutes differ from the record is refused"
+check_eq "$?" 4 "a decision whose signed minutes differ from the record is refused"
 check_contains "$(cat "$QUEUE_DIR/$BIND.json")" '"state": "open"' "the mismatched decisions leave the record open"
 "$BIN" approve "$BIND" --by device:d-vector --expect-kid kid-ada --expect-kind app --expect-what minecraft --apply >/dev/null 2>&1
 check_eq "$?" 0 "a decision whose binding matches is applied"

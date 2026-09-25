@@ -524,6 +524,11 @@ def handle_decide(header: str, conn: socket.socket, cfg) -> bytes:
         proc = subprocess.run(argv, capture_output=True, timeout=30)
     except (OSError, subprocess.TimeoutExpired):
         return b"no apply failed\n"
+    if proc.returncode == 4:
+        # The display binding did not match the record (amendment section 20):
+        # a distinct reply, so the app and the courier can tell it apart from a
+        # plain apply failure (the REVIEW handler's "changed-again").
+        return b"no changed-since-you-looked\n"
     if proc.returncode != 0:
         return b"no apply failed\n"
     return b"ok\n"
@@ -578,6 +583,11 @@ def handle_review(header: str, conn: socket.socket, cfg) -> bytes:
         # The command checks the live surface under its lock and exits 3 when the
         # decider's fingerprint no longer matches it.
         return b"no changed-again\n"
+    if proc.returncode == 4:
+        # The display binding did not match the record (amendment section 20):
+        # a distinct reply, so the app and the courier can tell it apart from a
+        # plain apply failure (the REVIEW handler's "changed-again").
+        return b"no changed-since-you-looked\n"
     if proc.returncode != 0:
         return b"no apply failed\n"
     return b"ok\n"
