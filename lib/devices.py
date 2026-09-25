@@ -16,8 +16,9 @@ The signed bytes are fixed here and documented so the client (N-8) can match:
     b"omarchy-kids-decision-v1\\n" + json.dumps(record, sort_keys=True,
                                                 separators=(",", ":")).encode()
 
-`record` is exactly: {device_id, request_id, decision, ts, nonce} plus an
-optional {reply}; the signature is base64 of the Ed25519 signature. json.dumps
+`record` is exactly: {device_id, request_id, decision, kid, kind, what, ts,
+nonce} plus an optional {minutes} (a time ask) and {reply}; the signature is
+base64 of the Ed25519 signature. json.dumps
 keeps its ensure_ascii default, so a non-ASCII reply is escaped as \\uXXXX -- the
 client (N-8) must canonicalize the same way.
 """

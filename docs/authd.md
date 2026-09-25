@@ -171,8 +171,8 @@ The next is `DECIDE <json-frame>\n`, a paired
 device's signed decision (R-NOTIFY-4): only the relay account (`--relay-user`) or root may send it (the away courier runs as root and
 carries the app's signed decision; both only carry it, root verifies here),
 `lib/devices.py` verifies the Ed25519 signature, skew, nonce and the fixed `decide` scope as root,
-and on success root runs `<--ask-bin> approve|decline <id> --by device:<id> --apply`, which refuses
-an already-decided record. The next is `PAIR <json-frame>\n` (R-NOTIFY-5): again only the relay may
+and on success root runs `<--ask-bin> approve|decline <id> --by device:<id> --expect-kid ... --expect-kind ... --expect-what ... [--expect-minutes ...] --apply`, which refuses
+an already-decided record or one whose signed display binding no longer matches (amendment section 20). The next is `PAIR <json-frame>\n` (R-NOTIFY-5): again only the relay may
 send it, `lib/devices.py` reads the single-use pairing record (`--pairing-dir`), checks the
 HMAC-SHA256 proof over the device's keys and name against the expiry, then registers the device
 through `<--devices-bin> add` and consumes the record -- and only then, so a failure to register

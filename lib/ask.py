@@ -24,6 +24,7 @@ bin/omarchy-kids-ask's `collect`/`apply-grant` (via `ask.py validate`).
 Usage:
     ask.py write DIR --kid K --kind KIND --what WHAT [--minutes N]
     ask.py decide PATH --state approved|declined --by panel|keyboard|widget|device [--device ID]
+                 [--expect-kid K --expect-kind KIND --expect-what W [--expect-minutes N]]
     ask.py show PATH [--field FIELD]
     ask.py list-open DIR [--kid KID]
     ask.py reopen PATH --kid KID
@@ -471,6 +472,12 @@ def cmd_decide(argv):
     if by == "device":
         if not isinstance(device, str) or not RE_DEVICE_ID.match(device):
             die("decide: --by device needs --device <id>")
+        # A device decision must carry the display binding (amendment section 20):
+        # authd always sends it, and requiring it here closes the path that would
+        # otherwise let a device decision skip the record check.
+        for field in ("kid", "kind", "what"):
+            if opts.get("expect_" + field) is None:
+                die(f"decide: a device decision needs --expect-{field}")
     else:
         device = None
 
@@ -495,7 +502,7 @@ def cmd_decide(argv):
                 if want is None:
                     continue
                 have = record.get(field)
-                got = "" if (field == "minutes" and have is None) else str(have)
+                got = "" if have is None else str(have)
                 if got != str(want):
                     die("decide: the record changed since it was shown", code=2)
 

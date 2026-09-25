@@ -99,6 +99,8 @@ try:
 except Exception:
     dec_ok = False
 check(dec_ok, "the decision signature verifies over the canonical record")
+check(devices.valid_record(doc["decision"]),
+      "the decision vector carries the display binding (amendment section 20)")
 check(
     doc["decision_message_b64"] == base64.b64encode(devices.canonical(doc["decision"])).decode(),
     "the recorded decision message is the canonical record the box signs",

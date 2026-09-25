@@ -8,7 +8,8 @@ python-cryptography only (both package dependencies); it is a test helper, not
 shipped in the package.
 
   notify-client.py pair --key FILE --id ID --token TOKEN [--name N]
-  notify-client.py decide --key FILE --id ID --request REQ_ID [--decision approve|decline]
+  notify-client.py decide --key FILE --id ID --request REQ_ID --kid KID --kind KIND --what WHAT
+                           [--minutes N] [--decision approve|decline]
 """
 
 import argparse
@@ -101,9 +102,16 @@ def do_decide(args):
         "device_id": args.id,
         "request_id": args.request,
         "decision": args.decision,
+        # The display binding the box re-checks (amendment section 20): the kid,
+        # type, what and minutes the app showed.
+        "kid": args.kid,
+        "kind": args.kind,
+        "what": args.what,
         "ts": now,
         "nonce": nonce,
     }
+    if args.minutes is not None:
+        record["minutes"] = args.minutes
     record_sig = b64(
         key.sign(SIGN_CONTEXT + json.dumps(record, sort_keys=True, separators=(",", ":")).encode())
     )
@@ -208,6 +216,10 @@ def main():
     decide.add_argument("--id", required=True)
     decide.add_argument("--request", required=True)
     decide.add_argument("--decision", default="approve", choices=["approve", "decline"])
+    decide.add_argument("--kid", required=True)
+    decide.add_argument("--kind", required=True, choices=["time", "app", "plugin", "site"])
+    decide.add_argument("--what", required=True)
+    decide.add_argument("--minutes", type=int, default=None)
     review = sub.add_parser("review")
     review.add_argument("--key", required=True)
     review.add_argument("--id", required=True)

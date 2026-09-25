@@ -59,11 +59,13 @@ hardening `systemd/omarchy-kids-wifid.service` uses. The parent may opt in to "a
 (N-10, `docs/notify.md`): a drop-in adds the CGNAT range `100.64.0.0/10` to the allow list, which is
 the parent's tailnet but also any CGNAT network the box sits behind directly — the relay's own auth
 (the pinned certificate and signed decisions) is the lock, not the fence alone). The drop-in adds
-that one range and nothing else. The relay can never approve anything, and it cannot relabel what a parent sees either: a request
-decision signs the kid, type, `what` and minutes the app displayed (amendment section 20), and
-`omarchy-kids-ask approve|decline` refuses one whose binding no longer matches the queue record. The
-review id is likewise bound to its kid and app. A compromised relay can therefore only stop
-delivery, not change a decision.
+that one range and nothing else. The relay can never approve anything, and it cannot turn a relabelled display into an applied
+decision: a request decision signs the kid, type, `what` and minutes the app displayed (amendment
+section 20), and `omarchy-kids-ask approve|decline` refuses one whose binding no longer matches the
+queue record (the review id is bound to its kid and app the same way). What it *can* still do is
+deliver the state a parent sees and answer for authd, so a compromised relay can lie on the screen
+-- show one request's details under another's id, hide or invent rows, misreport minutes -- or stop
+delivery; the binding is what stops a lie becoming a decision.
 
 ## Files and flags
 

@@ -55,7 +55,9 @@ the frame.
 A device signs a canonical record with its Ed25519 key; `omarchy-kids-authd` verifies it with
 `python-cryptography` against the root-owned public key and refuses on any of: unknown or revoked
 device, missing `decide` scope, clock skew over five minutes, a nonce seen in the last ten minutes,
-or an already-decided record. On success the decision is applied through the same path the panel
+or an already-decided record. The record also carries the displayed `kid`/`kind`/`what`/`minutes`
+(`valid_record` requires them), which the ask path re-checks against the queue record, so a relabelled
+decision cannot apply (amendment section 20). On success the decision is applied through the same path the panel
 uses, recorded with `by: device` and the device id. The relay only forwards the frame
 (`docs/relayd.md`);
 `docs/authd.md` has the frames (VERIFY, BOOTSTRAP, PAIR, DECIDE). Everything fails closed: a missing

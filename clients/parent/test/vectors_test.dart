@@ -25,6 +25,24 @@ void main() {
     expect(utf8.decode(message), contains(r'Apr\u00e8s \"d\u00eener\" \\ ok'));
   });
 
+  test('the decision record the app builds is the box vector, byte for byte (amendment section 20)', () {
+    final decision = (doc['decision'] as Map).cast<String, Object?>();
+    final built = decisionRecord(
+      deviceId: decision['device_id'] as String,
+      requestId: decision['request_id'] as String,
+      decision: decision['decision'] as String,
+      ts: decision['ts'] as int,
+      nonce: decision['nonce'] as String,
+      reply: decision['reply'] as String?,
+      kid: decision['kid'] as String,
+      kind: decision['kind'] as String,
+      what: decision['what'] as String,
+      minutes: decision['minutes'] as int?,
+    );
+    expect(built, equals(decision),
+        reason: 'the app signs exactly the vector, display binding included');
+  });
+
   test('the review record the app builds is the box vector, byte for byte (R-NOTIFY-12)', () async {
     final review = (doc['review'] as Map).cast<String, Object?>();
     final built = reviewDecisionRecord(

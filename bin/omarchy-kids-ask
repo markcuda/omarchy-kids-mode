@@ -61,8 +61,8 @@ Usage: omarchy-kids-ask time <minutes>
        omarchy-kids-ask apply-grant --kid K --kind KIND --what W [--minutes N] --apply
        omarchy-kids-ask collect [--apply]       # also heals a missing kid copy (R-NOTIFY-6)
        omarchy-kids-ask list [<kid>]            # root or a member of omarchy-parents
-       omarchy-kids-ask approve <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
-       omarchy-kids-ask decline <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--apply]
+       omarchy-kids-ask approve <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--expect-kid K --expect-kind KIND --expect-what W [--expect-minutes N]] [--apply]
+       omarchy-kids-ask decline <id> [--by panel|keyboard|widget|device:<id>] [--reply TEXT] [--expect-kid K --expect-kind KIND --expect-what W [--expect-minutes N]] [--apply]
        omarchy-kids-ask --help
 
 time/app/plugin/site   Kid-side: opens share/ask/shell.qml, the "Ask a

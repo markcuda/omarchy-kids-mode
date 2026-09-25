@@ -108,8 +108,10 @@ every non-ASCII character escaped as `\uXXXX`. A Dart `jsonEncode` emits raw UTF
 for a reply with non-ASCII, a quote or a backslash — the shared vectors carry exactly that case. UTF-8 encode the
 resulting string.
 
-- **Decision**: `"omarchy-kids-decision-v1\n"` + `{device_id, request_id, decision, reply?, ts, nonce}`
-  (`decision` is `approve` or `decline`, `ts` in Unix seconds).
+- **Decision**: `"omarchy-kids-decision-v1\n"` + `{device_id, request_id, decision, kid, kind, what, minutes?, reply?, ts, nonce}`
+  (`decision` is `approve` or `decline`, `ts` in Unix seconds; `kid`/`kind`/`what`/`minutes` are the
+  displayed request the decision binds — amendment section 20 — with `minutes` only for a `time`
+  ask).
 - **Request**: `"omarchy-kids-request-v1\n"` +
   `{device_id, ts, nonce, method, path, body_sha256}`, where `body_sha256` is the hex SHA-256 of the
   request body (`""` hashes the empty string).

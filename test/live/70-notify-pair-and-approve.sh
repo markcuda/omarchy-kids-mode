@@ -45,7 +45,20 @@ before="$(vmroot "omarchy-kids-time status $LIVE_KID1_ACCOUNT | head -1")"
 # marks the scenario FAIL), so every step that needs the device is guarded: an unguarded use of an
 # unset NOTIFY_DEVICE_ID would abort under set -u before scenario_result and skip the cleanup.
 if [[ -n "${NOTIFY_DEVICE_ID:-}" ]]; then
-  decide_reply="$(vmroot "python3 /tmp/notify-client.py decide --key $KEY --id $NOTIFY_DEVICE_ID --request $REQ_ID --decision approve" 2>&1)"
+  # The display binding (amendment section 20): a decision whose signed what
+  # does not match the record is refused, and the record stays open.
+  mismatch="$(vmroot "python3 /tmp/notify-client.py decide --key $KEY --id $NOTIFY_DEVICE_ID --request $REQ_ID --kid $LIVE_KID1_ACCOUNT --kind time --what 99 --minutes 99 --decision approve" 2>&1)"
+  if [[ "$mismatch" != *"decide 200"* ]]; then
+    ok "a relabelled decision is refused ($mismatch)"
+  else
+    fail "a relabelled decision was accepted"
+  fi
+  state_after="$(vmroot "jq -r '.state' /var/lib/omarchy-kids/queue/$REQ_ID.json" | tr -d '[:space:]')"
+  [[ "$state_after" == "open" ]] &&
+    ok "the relabelled decision left the record open" ||
+    fail "the record is '$state_after' after a relabelled decision"
+
+  decide_reply="$(vmroot "python3 /tmp/notify-client.py decide --key $KEY --id $NOTIFY_DEVICE_ID --request $REQ_ID --kid $LIVE_KID1_ACCOUNT --kind time --what 15 --minutes 15 --decision approve" 2>&1)"
   if [[ "$decide_reply" == *"decide 200"* ]]; then
     ok "the client's signed decision was accepted ($decide_reply)"
   else
