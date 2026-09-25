@@ -191,6 +191,7 @@ screen_apply() {
   # "your changes stay" situation (I-6).
   if [[ "$DRY_RUN" != "1" ]]; then
     APPLY_STARTED=1
+    # shellcheck disable=SC2034 # read by _tui_confirm_leave (lib/tui.sh)
     TUI_LEAVE_MESSAGE="Leave setup? Apply has already made its changes; they stay."
   fi
   for ((i = 0; i < total; i++)); do
@@ -244,6 +245,7 @@ screen_done() {
   # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local done_label="Return to my desktop"
   ((WIZARD_FROM_PANEL)) && done_label="Return to the panel"
+  # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   local choices=(
     "parent|$done_label|"
   )

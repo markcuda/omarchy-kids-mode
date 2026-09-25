@@ -26,7 +26,6 @@ SYSROOT=""
 # whether systemd merges the drop-in's IPAddressAllow or replaces the unit's.
 AWAY_DIR="$SYSROOT/etc/systemd/system/$RELAY_UNIT.d"
 AWAY_FILE="$AWAY_DIR/away.conf"
-LAN_ALLOW="$RELAY_LAN_ALLOW"
 CGNAT_RANGE="$RELAY_CGNAT"
 DRY_RUN=1
 DEVICES_BIN="$(kids_bin devices "$DIR")"

@@ -220,6 +220,7 @@ screen_apps() {
   # Apply cannot keep (I-6, R-APPS-1).
   aur_count="$(pack_field "$BAND" pkg | grep -c '^aur:' || true)"
   local -a apps_body=()
+  # shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
   ((aur_count > 0)) && apps_body=("$aur_count of these install by hand after setup (AUR); the rest install now.")
   local choices=(
     "pack|The $BAND starter pack|$names"
