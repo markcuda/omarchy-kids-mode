@@ -1,3 +1,6 @@
+> **Kids Mode ships this theme's config only.** The wallpapers and `preview.png` this file
+> may mention are not included; see `../README.md` for what ships and why.
+
 # Dino Dawn
 
 An Omarchy Kids theme. Design direction: ages 8–10; available to everyone.
