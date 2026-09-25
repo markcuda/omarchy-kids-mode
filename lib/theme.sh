@@ -121,12 +121,45 @@ theme_geometry() {
   "$KIDS_PY" "$helper" "$parent" "${THEME_KIDS_HOME:-$HOME}" "$cache"
 }
 
-# theme_current_name -- theme_dir's own theme.name, plain one-line file.
-# Empty, not an error, if that account has never received a theme.
-theme_current_name() {
+# theme_name_state -- theme_dir's own theme.name, plain one-line file. Empty,
+# not an error, if that account has never received a theme.
+# The read is a root process opening a file inside a kid's home (rule 9), so it
+# goes through O_NOFOLLOW + O_NONBLOCK + a regular-file check: a FIFO or a
+# symlink a kid plants must never hang the assert or follow to another file.
+# Prints "none" (absent), "unsafe" (not a readable regular file), or the name.
+# `theme_geometry` is the same shape for the portal (lib/theme-geometry.py).
+theme_name_state() {
   local f
   f="$(dirname "$(theme_dir)")/theme.name"
-  [[ -r "$f" ]] && cat "$f" || true
+  "$KIDS_PY" -c 'import os, stat, sys
+flags = os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_CLOEXEC", 0)
+try:
+    fd = os.open(sys.argv[1], flags)
+except FileNotFoundError:
+    print("none")        # nothing set
+    sys.exit(0)
+except OSError:
+    print("unsafe")      # symlink, loop, not a file we may open
+    sys.exit(0)
+try:
+    if not stat.S_ISREG(os.fstat(fd).st_mode):
+        print("unsafe")
+        sys.exit(0)
+    data = os.read(fd, 4096)
+finally:
+    os.close(fd)
+name = data.decode("utf-8", "replace").strip()
+print(name if name else "none")
+' "$f" 2>/dev/null || true
+}
+
+# theme_current_name -- the name, or empty for "none"/"unsafe"/error. Callers
+# that need to tell "nothing set" from "planted something" use theme_name_state.
+theme_current_name() {
+  local state
+  state="$(theme_name_state)"
+  case "$state" in none | unsafe | "") return 0 ;; esac
+  printf '%s\n' "$state"
 }
 
 # theme_list_installed -- every name under $OMARCHY_PATH/themes and the
@@ -148,11 +181,11 @@ theme_list_installed() {
 # theme_apply_for ACCOUNT NAME -- writes ACCOUNT's current theme, mirroring
 # omarchy-theme-set's own build-then-swap shape but narrower (no user-theme
 # overlay, no background, no live-session restart -- theme_reload_if_live
-# is that half). Root-owned inside the kid's own home: this alone can't
-# stop a kid with a terminal from deleting it, which is what the
-# "theme:<account>" assert lock is for (re-applies on drift, not an
-# unbreakable barrier). See docs/theming.md issue #53 for the full mapping
-# to upstream and the ownership rationale.
+# is that half). Kid-owned inside the kid's own home (T44): the theme is a
+# presentation preference, so the kid may change it on Omarchy's own chord; the
+# "theme:<account>" assert lock is verify-only (it refuses a name outside the
+# offered set, never re-applies over the kid's choice). See docs/theming.md
+# issue #53 and docs/phase1/SPEC-AMENDMENT-kid-themes.md.
 theme_apply_for() {
   _theme_kids_env_defaults
   local account="$1" name="$2" home src current next tmp
@@ -176,8 +209,8 @@ theme_apply_for() {
     omarchy-theme-colors-from-alacritty "$next" >/dev/null 2>&1 || true
   fi
 
-  if ! chown -R root:root "$next" >/dev/null 2>&1; then
-    echo "theme_apply_for: could not chown $next to root:root (fine outside a real root run)" >&2
+  if ! chown -R "$account:$account" "$next" >/dev/null 2>&1; then
+    echo "theme_apply_for: could not chown $next to $account (fine outside a real root run)" >&2
   fi
   find "$next" -type d -exec chmod 0755 {} + 2>/dev/null
   find "$next" -type f -exec chmod 0644 {} + 2>/dev/null
@@ -187,7 +220,7 @@ theme_apply_for() {
 
   tmp="$(mktemp "$(dirname "$current")/.theme.name.XXXXXX")" || return 1
   printf '%s\n' "$name" >"$tmp"
-  chown root:root "$tmp" >/dev/null 2>&1 || true
+  chown "$account:$account" "$tmp" >/dev/null 2>&1 || true
   chmod 0644 "$tmp"
   mv -f "$tmp" "$(dirname "$current")/theme.name"
 }

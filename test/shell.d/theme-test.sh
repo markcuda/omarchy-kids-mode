@@ -363,6 +363,64 @@ check_eq "$(
   )
 )" "" "theme_current_name: empty (not an error) with no theme.name at all"
 
+# rule 9: root opens a kid-writable theme.name with O_NOFOLLOW + a regular-file
+# check, so a FIFO cannot hang the assert and a symlink is not followed.
+FIFO_HOME="$TMP/fifo-home"
+mkdir -p "$FIFO_HOME/.local/state/omarchy/current"
+/usr/bin/mkfifo "$FIFO_HOME/.local/state/omarchy/current/theme.name"
+check_eq "$(
+  (
+    THEME_KIDS_HOME="$FIFO_HOME"
+    export THEME_KIDS_HOME
+    # shellcheck source=/dev/null
+    source "$THEME_LIB"
+    theme_current_name
+  )
+)" "" "theme_current_name: a FIFO theme.name reads empty, never hangs (rule 9)"
+rm -f "$FIFO_HOME/.local/state/omarchy/current/theme.name"
+ln -s /etc/passwd "$FIFO_HOME/.local/state/omarchy/current/theme.name"
+check_eq "$(
+  (
+    THEME_KIDS_HOME="$FIFO_HOME"
+    export THEME_KIDS_HOME
+    # shellcheck source=/dev/null
+    source "$THEME_LIB"
+    theme_current_name
+  )
+)" "" "theme_current_name: a symlinked theme.name is not followed (rule 9)"
+
+# theme_name_state tells "nothing set" from "planted something", so the lock can
+# FAIL on a FIFO/symlink instead of reading it as "no theme" (review finding).
+check_eq "$(
+  (
+    THEME_KIDS_HOME="$TMP/no-such-home"
+    export THEME_KIDS_HOME
+    # shellcheck source=/dev/null
+    source "$THEME_LIB"
+    theme_name_state
+  )
+)" "none" "theme_name_state: absent theme.name is 'none'"
+check_eq "$(
+  (
+    THEME_KIDS_HOME="$FIFO_HOME"
+    export THEME_KIDS_HOME
+    # shellcheck source=/dev/null
+    source "$THEME_LIB"
+    theme_name_state
+  )
+)" "unsafe" "theme_name_state: a symlinked theme.name is 'unsafe'"
+rm -f "$FIFO_HOME/.local/state/omarchy/current/theme.name"
+/usr/bin/mkfifo "$FIFO_HOME/.local/state/omarchy/current/theme.name"
+check_eq "$(
+  (
+    THEME_KIDS_HOME="$FIFO_HOME"
+    export THEME_KIDS_HOME
+    # shellcheck source=/dev/null
+    source "$THEME_LIB"
+    theme_name_state
+  )
+)" "unsafe" "theme_name_state: a FIFO theme.name is 'unsafe' (O_NONBLOCK, no hang)"
+
 # --- issue #53: theme_list_installed, theme_apply_for, theme_reload_if_live -
 
 OMARCHY_SHARE="$TMP/omarchy-share"
