@@ -148,11 +148,11 @@ theme_list_installed() {
 # theme_apply_for ACCOUNT NAME -- writes ACCOUNT's current theme, mirroring
 # omarchy-theme-set's own build-then-swap shape but narrower (no user-theme
 # overlay, no background, no live-session restart -- theme_reload_if_live
-# is that half). Root-owned inside the kid's own home: this alone can't
-# stop a kid with a terminal from deleting it, which is what the
-# "theme:<account>" assert lock is for (re-applies on drift, not an
-# unbreakable barrier). See docs/theming.md issue #53 for the full mapping
-# to upstream and the ownership rationale.
+# is that half). Kid-owned inside the kid's own home (T44): the theme is a
+# presentation preference, so the kid may change it on Omarchy's own chord; the
+# "theme:<account>" assert lock is verify-only (it refuses a name outside the
+# offered set, never re-applies over the kid's choice). See docs/theming.md
+# issue #53 and docs/phase1/SPEC-AMENDMENT-kid-themes.md.
 theme_apply_for() {
   _theme_kids_env_defaults
   local account="$1" name="$2" home src current next tmp
@@ -176,8 +176,8 @@ theme_apply_for() {
     omarchy-theme-colors-from-alacritty "$next" >/dev/null 2>&1 || true
   fi
 
-  if ! chown -R root:root "$next" >/dev/null 2>&1; then
-    echo "theme_apply_for: could not chown $next to root:root (fine outside a real root run)" >&2
+  if ! chown -R "$account:$account" "$next" >/dev/null 2>&1; then
+    echo "theme_apply_for: could not chown $next to $account (fine outside a real root run)" >&2
   fi
   find "$next" -type d -exec chmod 0755 {} + 2>/dev/null
   find "$next" -type f -exec chmod 0644 {} + 2>/dev/null
@@ -187,7 +187,7 @@ theme_apply_for() {
 
   tmp="$(mktemp "$(dirname "$current")/.theme.name.XXXXXX")" || return 1
   printf '%s\n' "$name" >"$tmp"
-  chown root:root "$tmp" >/dev/null 2>&1 || true
+  chown "$account:$account" "$tmp" >/dev/null 2>&1 || true
   chmod 0644 "$tmp"
   mv -f "$tmp" "$(dirname "$current")/theme.name"
 }

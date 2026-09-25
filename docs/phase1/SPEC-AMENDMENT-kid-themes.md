@@ -1,6 +1,6 @@
 # SPEC amendment: kid-chosen themes (T44/T45)
 
-Status: **proposed — owner decision needed on one fence question** (below). Requested by the owner's
+Status: **partly built.** The pick-from-the-set half (T44: `theme_apply_for` is kid-owned; the `theme:<account>` lock is verify-only) is built on `fix/kid-session-polish`. The T45 chord and the "make a theme" question (T48) are still open. Requested by the owner's
 dogfooding notes, 2026-09-24: "We need a way for kids to easily change and make inside the system,
 their own themes, and bundle some desktop themes for kids for them out of the box. It should be the
 same keybinding as the main, so they are actually learning."

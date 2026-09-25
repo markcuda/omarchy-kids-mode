@@ -903,6 +903,15 @@ check_eq "$(cat "$HOMEROOT/home/kid-ada/.local/state/omarchy/current/theme/color
   "$(cat "$OMARCHY_PATH/themes/tokyo-night/colors.toml")" \
   "theme: kid-ada's colors.toml is back to tokyo-night's own"
 
+# T44: a theme inside the offered set is the kid's own choice now -- the lock
+# must pass and must not revert it (the second root, `cozy-night`, is offered).
+mkdir -p "$OMARCHY_PATH/themes/cozy-night"
+echo 'background = "#000000"' >"$OMARCHY_PATH/themes/cozy-night/colors.toml"
+echo "cozy-night" >"$KID_THEME_NAME_FILE"
+out="$("$BIN" 2>&1)"
+check_status "$out" "theme:kid-ada" "ok" "theme: an in-set kid-chosen theme passes the lock (T44)"
+check_eq "$(cat "$KID_THEME_NAME_FILE")" "cozy-night" "theme: the in-set choice is not reverted (T44)"
+
 # launcher map: a damaged root map is rebuilt from the pack and contains
 # absolute argv with desktop-entry field codes already removed.
 MAP_FILE="$ETC/launchers/kid-ada.json"

@@ -255,20 +255,16 @@ mechanics `lib/theme.sh`'s `theme_apply_for` mirrors:**
 - `theme_apply_for ACCOUNT NAME` — the non-interactive apply. `NAME` must be one of `theme_list_installed`'s own names (never a user-installed one — `USER_THEMES_PATH` above is not read at all, since the wizard/panel never offer such a name to begin with, and `omarchy-theme-set`'s own repo-theme file-filtering logic only exists to police that overlay). Otherwise the same shape: a fresh staging dir, the alacritty-derived `colors.toml` fallback, `rm -rf` + `mv` into `.../current/theme`, `theme.name` written beside it. No background selection, no `post_theme_commands` — nothing here has a live session to restart; see the next function.
 - `theme_reload_if_live ACCOUNT` — best-effort only. If `pgrep -u ACCOUNT -x Hyprland` finds nothing, this is a no-op with one line explaining why (the theme is already correct on disk; the kid sees it at their next login, no restart needed). If a session *is* live, it runs the same `omarchy-shell shell applyTheme <base64 colors.toml> <base64 shell.toml>` IPC call `omarchy-theme-set`'s own `shell_ipc` makes, via `runuser -l ACCOUNT` so it reaches that account's own socket.
 
-**Ownership: root-owned, inside the kid's own home.** `theme_apply_for` writes the whole
-`.../current/theme` tree (and `theme.name`) as `root:root`, 0644 files / 0755 dirs — the same
-"root-owned file inside a kid-writable directory" shape `bin/omarchy-kids-provision`'s
-`install_kids_chromium_flags` already uses for `~/.config/chromium-flags.conf`, for the identical
-reason: the *containing* directory (`~/.local/state/omarchy/current/`) is still kid-owned, part of
-their normal home, so root ownership on the theme files alone cannot stop a kid with a terminal
-(bands 9-12/13+) from deleting or replacing the whole directory — Unix deletion rights come from
-the directory, not the file. That is exactly what the `theme:<account>` assert lock
-(`bin/omarchy-kids-assert`'s `theme_ok`/`theme_fix`, `docs/assert.md`) is for: it notices the
-kid's `theme.name` no longer matches their profile's `theme` key and calls `theme_apply_for` again
-— the same eventually-fail-closed shape every other Kids Mode lock in this repo already uses, not
-an unbreakable barrier (I-3 only requires *locks* to be root-owned and outside every home; a
-kid-facing theme file has to live inside the kid's own `$HOME` because Omarchy's own tools only
-ever look there — see "Ground truth" above — so this repo does the next best thing instead).
+**Ownership: kid-owned, inside the kid's own home (T44).** `theme_apply_for` writes the whole
+`.../current/theme` tree (and `theme.name`) as `ACCOUNT:ACCOUNT`, 0644 files / 0755 dirs. The theme
+is a presentation **preference**, not an enforced lock: there is no security reason to root-own it
+(a theme dir in the kid's own home is read only by the kid's own session), and the owner asked for
+kids to be able to change their own theme. The `theme:<account>` assert lock
+(`bin/omarchy-kids-assert`'s `theme_ok`/`theme_fix`, `docs/assert.md`) is **verify-only**: it refuses
+a theme *name outside the offered set* (`theme_list_installed` — Omarchy's themes plus the package's
+kid collection) and then re-applies the profile's default; a kid's choice inside the set is valid and
+is never reverted. The kid-facing picker on Omarchy's own chord is the separate T45 work; a kid with
+a terminal can already change it. See `docs/phase1/SPEC-AMENDMENT-kid-themes.md`.
 
 **Where this gets called:**
 
@@ -285,7 +281,7 @@ ever look there — see "Ground truth" above — so this repo does the next best
   override, then calls `theme_apply_for` and `theme_reload_if_live` itself. The wizard's Advanced
   Desktop group and the panel's Desktop screen both write through this same command, never around
   it.
-- `bin/omarchy-kids-assert`'s `theme:<account>` lock — re-applies on drift, as above.
+- `bin/omarchy-kids-assert`'s `theme:<account>` lock — verify-only (T44): re-applies the profile's default only when the kid's theme name is outside the offered set.
 
 ## Tests
 

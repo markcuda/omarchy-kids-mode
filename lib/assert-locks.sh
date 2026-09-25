@@ -104,14 +104,18 @@ groups_fix() {
   usermod -G "omarchy-kids,$group" "$account"
 }
 
-# theme (issue #53): the kid's current Omarchy theme still matches the
-# profile's `theme` override -- docs/theming.md.
+# theme (issue #53, T44): verify-only. The theme is a kid preference inside the
+# offered set, so a kid-chosen theme is valid; only a name outside the set (or
+# nothing) is refused, and fix re-applies the profile's default. See
+# docs/phase1/SPEC-AMENDMENT-kid-themes.md.
 theme_ok() {
-  local account="$1" expected current
-  expected="$(profile_field "$account" theme)"
-  [[ -n "$expected" ]] || return 0
+  local account="$1" current name
   current="$(THEME_KIDS_HOME="$(home_dir_for "$account")" theme_current_name)"
-  [[ "$current" == "$expected" ]]
+  [[ -z "$current" ]] && return 0
+  while IFS= read -r name; do
+    [[ "$name" == "$current" ]] && return 0
+  done < <(theme_list_installed)
+  return 1
 }
 theme_fix() {
   local account="$1" expected
