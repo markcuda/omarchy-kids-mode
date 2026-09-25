@@ -590,7 +590,7 @@ if [[ "$EUID" != 0 ]]; then
   PAM_FILE="$SCRATCH_ROOT/etc/pam.d/sddm"
   POLKIT_DIR="$(posture_polkit_dir)"
   ACCOUNTS_DIR="$(posture_accountsservice_dir)"
-  targets=("$PAM_FILE" "$CHROMIUM_FILE" "$POLKIT_DIR/40-omarchy-kids.rules" \
+  targets=("$PAM_FILE" "$CHROMIUM_FILE" "$POLKIT_DIR/40-omarchy-kids.rules"
     "$POLKIT_DIR/41-omarchy-kids-deny.rules" "$ACCOUNTS_DIR/kid-ada")
   saved_modes=()
   for f in "${targets[@]}"; do saved_modes+=("$(kids_file_mode "$f")"); done

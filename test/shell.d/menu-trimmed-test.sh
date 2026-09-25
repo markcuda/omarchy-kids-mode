@@ -11,7 +11,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FILE="$ROOT/share/menu/omarchy-kids-trimmed.jsonc"
 rc=0
-fail() { echo "FAIL menu-trimmed: $*"; rc=1; }
+fail() {
+  echo "FAIL menu-trimmed: $*"
+  rc=1
+}
 pass() { echo "ok   menu-trimmed: $*"; }
 
 if [[ ! -f "$FILE" ]]; then
@@ -21,7 +24,8 @@ if [[ ! -f "$FILE" ]]; then
 fi
 
 if command -v node >/dev/null 2>&1; then
-  out="$(FILE="$FILE" node <<'NODE'
+  out="$(
+    FILE="$FILE" node <<'NODE'
 const fs = require('fs');
 const raw = fs.readFileSync(process.env.FILE, 'utf8');
 const stripped = raw.replace(/^\s*\/\/.*$/gm, '');
@@ -39,7 +43,7 @@ console.log(JSON.stringify({
   missing: missing
 }));
 NODE
-)" || {
+  )" || {
     fail "the file does not parse as JSONC"
     echo "menu-trimmed-test RESULT: FAIL"
     exit 1
