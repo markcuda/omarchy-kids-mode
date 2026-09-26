@@ -208,12 +208,17 @@ must still show the actual reviewed product and the named live scenario must sti
   confirmed live with more than two kid tiles.** `lib.sh`'s own comment on `portal_login` has the
   full reasoning (the Left/Right clamp, the "overshoot Left, then Right to the target index"
   trick) and the citation.
-- **`portal_reset` uses `a clean compositor exit (SwitchToGreeter fails on 4.0.2 and revoked the laptop's input devices once)`** (the same D-Bus call V1 verified — docs/phase1/V1.md),
-  which puts a fresh greeter on screen without logging out whatever session is already running
-  underneath. That's fine for what these scenarios check (they only look at the greeter and at
-  the specific kid's session state), but it means a scenario that runs after a crashed prior run
-  may find an extra, orphaned session still resident — `state` (called on most failures) will show
-  it if so.
+- **`portal_reset` now treats seat0 as the state machine it is, bounded at three rounds: a greeter
+  is done once it answers; an empty seat gets an SDDM restart; a session is exited with the clean
+  compositor exit (`SwitchToGreeter` fails on 4.0.2 and revoked the laptop's input devices once —
+  the same D-Bus call V1 verified, docs/phase1/V1.md).** Verified live on the try-omarchy VM,
+  2026-09-26 (issue #21): a clean exit returned the greeter within 5s, a `loginctl
+  terminate-session` left seat0 **empty with no greeter at all**, and a restart with an autologin
+  in place handed the seat to that session — which is exactly why the old single greeter wait hung.
+  Two traps for anything else driving this VM: resolve the Hyprland signature from
+  `hyprctl instances -j` rather than that user's `hypr/` directory (it held 18 stale ones, and a
+  dispatch at a dead socket prints "Couldn't connect" and *still exits 0*), and a scenario after a
+  crashed prior run may still find an orphaned session — `state` (called on most failures) shows it.
 - **`50-ask-grant.sh`'s in-session command** (harvesting the launcher process's Wayland/D-Bus
   environment to run `omarchy-kids-ask` "as" the kid) is the same technique docs/ask.md's own
   "Verified live" section used — it hasn't been re-verified against this exact harness script yet.
@@ -252,3 +257,10 @@ must still show the actual reviewed product and the named live scenario must sti
 - 2026-09-03, run 8, the eight scenarios one per invocation (two full `all -k` runs were cut
   off mid-way by the driving tool, not by the VM) — all eight green on main at the end of the
   day: the readable captions, the parent-facing docs, the shfmt gate in scenario 05.
+- 2026-09-26, hand probes on the try-omarchy VM (owner-sanctioned dogfooding, **not** a scenario
+  run — rule 11 still keeps `test/live/` to the gate runner): the seat behaviour behind
+  `portal_reset` was settled by hand because it is the one thing a stub cannot answer — clean exit
+  vs `loginctl terminate-session` vs a restart with an autologin in place — and `portal_reset`
+  became the bounded seat loop above (#21, `f0bb773`). The greeter-reset helper's false clean exit
+  (#134, `6bc5391`) was fixed and stub-tested the same day. The scenarios themselves are unchanged
+  and still await a gate-runner pass.
