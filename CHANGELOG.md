@@ -287,13 +287,18 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 
 ### Fixed (2026-09-26, the dogfooding pass)
 
-- Kids' volume/brightness media keys go through Omarchy's own `omarchy-audio-output-volume`
-  (`raise`/`lower`/`mute-toggle`) and `omarchy-brightness-display` (`+5%`/`5%-`) with the same
-  `locked`/`repeating` options, instead of raw `wpctl`/`brightnessctl`: a kid gets the on-screen
-  feedback, volume ceiling and brightness rounding a parent's session has (`brightnessctl set +5%`
-  can round to nothing on a display with few steps), and holding the key repeats.
-  `share/hyprland/L1.lua` and `L2.lua`; the `fullscreen = true` windowrule both files use also
+- Kids' volume/brightness media keys now go through `omarchy-audio-output-volume`
+  (`raise`/`lower`/`mute-toggle`) and `omarchy-brightness-display` (`+5%`/`5%-`) -- the commands
+  Omarchy's own `default/hypr/bindings/media.lua` binds for these five keys, with that file's own
+  `locked`/`repeating` options -- instead of raw `wpctl`/`brightnessctl`. **Unverified at Levels 1
+  and 2, which is where it was changed**: the on-screen display those wrappers feed comes from
+  `omarchy-shell`, and both levels run the kids launcher instead (the same reason `L2.lua`'s
+  cheat-sheet comment gives for `Super+K`). So the keys may or may not change volume there until
+  someone presses them in a live Level 1 session; nothing is claimed to be better, and the old
+  `wpctl` binds already capped volume at 100%.
+  `share/hyprland/L1.lua` and `L2.lua`; the `fullscreen = true` windowrule `L1.lua` uses also
   stopped being UNVERIFIED, settled from Omarchy's own `windows.lua`/`apps/system.lua`.
+  (`L2.lua` has no such rule — it is the desktop mode, not a kiosk.)
 - `omarchy-kids-provision add` on the fallback path (no `omarchy-provision-user` on the box) writes
   the migration record Omarchy's own `omarchy-migrate` reads — one marker per script under
   `~/.local/state/omarchy/migrations/<script name>` — instead of a `migrations.log` nothing in
