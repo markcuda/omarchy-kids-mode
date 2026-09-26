@@ -35,6 +35,14 @@ check_contains() { # haystack needle label
     fail=1
   fi
 }
+check_not_contains() { # haystack needle label -- defined here because the call below ran as
+  # "command not found" for months: it never checked anything, and a dead assertion looks exactly
+  # like a passing one (found 2026-09-26 while editing this file).
+  if [[ "$1" != *"$2"* ]]; then echo "ok   $3"; else
+    echo "FAIL $3 (found '$2', which must not be there)"
+    fail=1
+  fi
+}
 # bind_combos FILE -> each o.bind(...)'s first (key-combo) argument, one
 # per line, in file order.
 bind_combos() {
@@ -109,6 +117,22 @@ check_contains "$(cat "$HYPR/L1.lua")" 'cursor = { inactive_timeout = 1 }' \
   "L1.lua hides the idle pointer (cursor:inactive_timeout, verified on the compositor)"
 check_contains "$(cat "$HYPR/L2.lua")" 'cursor = { inactive_timeout = 1 }' \
   "L2.lua hides the idle pointer too"
+
+# The media keys go through Omarchy's own wrappers, the ones its
+# default/hypr/bindings/media.lua binds for the same five keys on 4.0.2, so a kid
+# gets the on-screen feedback and rounding a parent's session has. Not
+# wpctl/brightnessctl: no feedback, and `brightnessctl set +5%` rounds to nothing
+# on a display with few steps.
+for level in L1 L2; do
+  check_contains "$(cat "$HYPR/$level.lua")" 'omarchy-audio-output-volume raise' \
+    "$level.lua: volume up uses Omarchy's wrapper"
+  check_contains "$(cat "$HYPR/$level.lua")" 'omarchy-brightness-display' \
+    "$level.lua: brightness uses Omarchy's wrapper"
+  check_not_contains "$(cat "$HYPR/$level.lua")" 'wpctl set-volume' \
+    "$level.lua: no raw wpctl volume call"
+  check_not_contains "$(cat "$HYPR/$level.lua")" 'brightnessctl set' \
+    "$level.lua: no raw brightnessctl call"
+done
 # A stale merge once left L2.lua setting the same rule twice (and this test
 # asserting it twice); one call is the whole rule, so pin the count. Count
 # code lines only -- a comment quoting the rule must satisfy neither the

@@ -252,10 +252,13 @@ with the arrows and rendered real icons through `Quickshell.iconPath()`; the Lev
 desktop layer rendered as sibling Quickshell windows (the `PanelWindow`/desktop-mode shapes are
 real API). The live output there is 876x491 and the grid drew exactly the four columns `gridnav.js`
 computes for that width. The Level 3 pass then ran the stock desktop itself (live status above).
-Still open: item 2 (whether an `omarchy-sudo-passwordless` keybind exists at all), item 3
-(`fullscreen = true`'s exact form), item 4 (`hl.unbind`'s signature, Level 3 only), item 7
-(whether Omarchy ships its own volume/brightness wrappers), and item 8's exact per-row layout on
-unusual geometries. Item 1 is checked and item 6 is verified; item 5 was confirmed on 2026-09-03.
+Still open: item 2 (whether an `omarchy-sudo-passwordless` keybind exists at all), item 4
+(`hl.unbind`'s signature, Level 3 only), and item 8's exact per-row layout on unusual geometries.
+Item 1 is checked and item 6 is verified; item 5 was confirmed on 2026-09-03. Items 3 and 7 were
+settled on 2026-09-26 by reading Omarchy's own shipped configs on the VM (`fullscreen = true` is
+what `default/hypr/apps/system.lua` writes; the volume/brightness wrappers are
+`default/hypr/bindings/media.lua`'s) — confirmed against the real install, though still not
+*exercised* live in a kid session.
 
 This repo had two of Omarchy's real `default.hypr.bindings.*` files to check syntax against
 (`bindings-tiling.lua`, `bindings-utilities.lua`) and a handful of other `default.hypr.*` files,
@@ -296,12 +299,14 @@ Omarchy 4.0.2 box to close out:
    for a kid; it was never a bind to strip. L3.lua does not load `default.hypr.omarchy`, so
    `omarchy-provision-first-run` is not re-run for a kid either
    (`docs/phase1/SPEC-AMENDMENT-two-kid-modes.md`).
-3. **`fullscreen = true` as a windowrule.** Modeled on the one confirmed boolean windowrule flag
-   in the reference material (`{ no_focus = true }` in `default.hypr.windows`). Could be
-   `{ fullscreen = "1" }` or something dispatcher-shaped instead: the Level 1/2 pass did not
-   exercise it, because the launcher fullscreens itself (`share/launcher/shell.qml`'s
-   `Window.FullScreen`) and GCompris asks for `fullscreen: 2` of its own accord, so no
-   non-self-fullscreening client has been seen under the rule. Check with `hyprctl clients`.
+3. **`fullscreen = true` as a windowrule -- resolved 2026-09-26, from Omarchy's own files.**
+   It is the right shape: `default/hypr/windows.lua` writes `fullscreen = false` as the default
+   boolean and `default/hypr/apps/system.lua:35` uses
+   `o.window("org.omarchy.screensaver", { fullscreen = true })` for the screensaver, both read off
+   the try-omarchy VM's real 4.0.2 install. `{ fullscreen = "1" }` is not what Omarchy itself
+   writes. Still true that no live pass has *seen* a non-self-fullscreening client under our rule
+   (the launcher fullscreens itself via `share/launcher/shell.qml`'s `Window.FullScreen`, and
+   GCompris asks for `fullscreen: 2` of its own accord) — `hyprctl clients` would settle that.
 4. **`hl.unbind`'s signature.** Assumed to take the same key-combo string `o.bind`'s first
    argument does. `bindings-utilities.lua`'s comment on its selection-layer binds describes
    unbinding by key as risky only because it can strip a *user's own* rebinding from their
@@ -345,9 +350,14 @@ Omarchy 4.0.2 box to close out:
    anything to `"omarchy-menu toggle"` (`Super+Space` is rebound to the kids' own launcher), so
    there is no keyboard path to the untrimmed menu at either level. The trim is presentation, not
    a lock: the kid's own account still refuses every action behind a hidden row (I-3).
-7. **Volume/brightness keys** use `wpctl`/`brightnessctl` directly rather than an
-   Omarchy-specific wrapper, since none was in the reference material. If Omarchy ships its own
-   (e.g. for on-screen-display feedback), swap them in.
+7. **Volume/brightness keys use Omarchy's own wrappers -- swapped in 2026-09-26.** The reference
+   material was simply missing `default/hypr/bindings/media.lua`, which exists on the real 4.0.2
+   install and binds exactly these five keys to `omarchy-audio-output-volume raise|lower|mute-toggle`
+   and `omarchy-brightness-display +5%|5%-`, with `{ locked = true, repeating = true }`. L1 and L2
+   now mirror it, so a kid gets the same on-screen feedback, volume ceiling and brightness
+   rounding as the parent instead of raw `wpctl`/`brightnessctl` (and `brightnessctl set +5%`
+   rounds to nothing on a display with few steps). `levels-test.sh` holds both files to the
+   wrapper names.
 8. **GridView's real column layout (issue #43) -- holds at the tested sizes.**
    `share/launcher/gridnav.js`'s `columnsFor()` assumes GridView lays tiles out at exactly
    `Math.floor(grid.width / grid.cellWidth)` per row. The 2026-09-21 pass drew exactly its four
