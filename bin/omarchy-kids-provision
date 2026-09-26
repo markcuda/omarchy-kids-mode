@@ -156,25 +156,46 @@ unique_account() {
 # override, for its tests) is deliberately not read here. A kid's session does not set it, and a
 # fixed path under the kid's home is the smaller surface for root to write to (rule 9).
 mark_migrations_done() {
-  local account="$1" home migrations_src omarchy_state state_dir f base stage
+  local account="$1" home migrations_src omarchy_state state_dir f base dest stage
   home="$(home_dir_for "$account")"
   migrations_src="${OMARCHY_MIGRATIONS_DIR:-/usr/share/omarchy/migrations}"
   omarchy_state="$home/.local/state/omarchy"
   state_dir="$omarchy_state/migrations"
   install -d -m 0700 "$omarchy_state" "$state_dir"
   if [[ -d "$migrations_src" ]]; then
-    for f in "$migrations_src"/*; do
+    # `*.sh` only: Omarchy's own `migration_entries` walks exactly that, so a marker for anything
+    # else would claim a migration the runner never had.
+    for f in "$migrations_src"/*.sh; do
       [[ -f "$f" ]] || continue
       base="$(basename "$f")"
+      dest="$state_dir/$base"
+      # A kid's home can be one an earlier account left behind (`remove --keep-home`) after that
+      # kid had a shell, so there may be a link or a directory at this exact marker name. `mv`
+      # would move the staged file *into* a directory destination and write through a link, which
+      # is root writing where a kid pointed (rule 9). So: a link is removed -- `rm` never follows
+      # one -- and the marker is then written; a directory or FIFO is left alone and that one
+      # migration stays visibly pending. Either way the add finishes, because aborting here would
+      # leave a half-provisioned account behind.
+      if [[ -L "$dest" ]]; then
+        rm -f -- "$dest" || {
+          echo "omarchy-kids-provision: cannot remove the link at $dest; leaving it, so that migration will show as pending" >&2
+          continue
+        }
+      elif [[ -e "$dest" && ! -f "$dest" ]]; then
+        echo "omarchy-kids-provision: $dest is not a regular file; leaving it, so that migration will show as pending" >&2
+        continue
+      fi
       # Staged and renamed like the app configs: `touch`, or a plain redirect, would follow a
       # symlink a kid could have planted at this exact marker path.
       stage="$(mktemp "$state_dir/.$base.XXXXXX")"
       chmod 0600 "$stage"
-      mv -f "$stage" "$state_dir/$base"
+      mv -f "$stage" "$dest"
     done
   fi
-  # The kid's own session reads this to decide what is pending, so it (and the parent
-  # directory) has to be the kid's, not root's, or nothing can read it.
+  # The kid's session only has to *see* these paths: `omarchy-migrate` tests `[[ -f $marker ]]`,
+  # which needs directory traversal rather than a read of the file itself. So the directories
+  # become the kid's and the markers can stay root-owned 0600. (The kid owns the directory either
+  # way, so a marker is a claim the runner keeps, not a lock.)
   chown "$account:$account" "$omarchy_state" "$state_dir" 2>/dev/null || true
 }
 
