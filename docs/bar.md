@@ -55,14 +55,16 @@ still calls `omarchy-shell shell rescanPlugins` best-effort afterward, and `disa
 logout -- both are no-ops (never fail the command) when no shell is running, which is every test
 and most of local development.
 
-**What is not confirmed:** whether a *third-party* plugin under `~/.config/omarchy/plugins/` can
-`import qs.Ui` / `import qs.Commons` the same way a first-party one under `$OMARCHY_PATH/shell/
-plugins/` does. The docs say both are discovered "the same way" by the same process, which implies
-yes, but no third-party plugin source was available to confirm the import resolves outside
-`$OMARCHY_PATH`. If it doesn't, on a live box the fix is almost certainly vendoring the small
-pieces of `qs.Ui` this widget needs (`Panel`, `KeyboardPanel`, `PanelKeyCatcher`) into
-`share/bar/` itself instead of importing the shell's copy -- confirm this first (see "What's
-unverified" below).
+**Confirmed 2026-09-26 against a real 4.0.2 install** (the try-omarchy VM): a third-party plugin
+*can* `import qs.Ui` / `import qs.Commons`. `/usr/share/omarchy/shell/Ui/qmldir` declares
+`module qs.Ui` (`Commons/qmldir` declares `module qs.Commons`), and Omarchy's own **plugins** --
+not just its shell core -- import it: `plugins/bar/indicators/Dictation.qml` and five other bar
+indicators do exactly that. Third-party plugins are found by the same `PluginRegistry`
+(`pluginsDir = ~/.config/omarchy/plugins`, "third-party plugins stay at the top level") and emitted
+with the same manifest shape, so they load into the shell process that already resolves the module.
+Vendoring `Panel`/`KeyboardPanel`/`PanelKeyCatcher` into `share/bar/` is therefore not needed. What
+the same run could not show is the live half -- that the plugin is discovered, instantiated and
+drawn (see "What's unverified" below).
 
 ## `bin/omarchy-kids-bar`
 
@@ -253,10 +255,10 @@ No Quickshell install, headless or otherwise, was available while writing `KidsM
 In order of what to check first:
 
 1. **Does the widget appear on the bar at all** once `omarchy-kids-bar enable --apply` runs and
-   `omarchy-shell shell rescanPlugins`/a re-login picks it up. This is the load-bearing unknown:
-   if `import qs.Ui` doesn't resolve for a plugin under `~/.config/omarchy/plugins/` the way it
-   does for one under `$OMARCHY_PATH/shell/plugins/`, this file needs its own copy of `Panel` /
-   `KeyboardPanel` / `PanelKeyCatcher` (see "What is not confirmed" above).
+   `omarchy-shell shell rescanPlugins`/a re-login picks it up. The import question behind this
+   ("does `import qs.Ui` resolve outside `$OMARCHY_PATH`") is answered yes -- 2026-09-26, see "What
+   is not confirmed" above -- so this needs no vendored copy of `Panel` / `KeyboardPanel` /
+   `PanelKeyCatcher`; what is left is the loading and drawing itself.
 2. With a kid logged in (and paused, via `omarchy-kids-time` or `bin/omarchy-kids-panel`): does
    the dot appear, with the right initial, and does its color/label change when paused?
 3. Click the widget, then Enter/arrows/Escape with no mouse (I-5): does the menu open, navigate,
