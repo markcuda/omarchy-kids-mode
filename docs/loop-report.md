@@ -2810,6 +2810,16 @@ Lessons worth keeping:
   slow, not stuck.
 
 Left blocked, not worked: real device pairing (needs a second peer), `test/live/` scenarios (rule
-11 keeps them to the gate runner), app store builds (no Xcode/Android SDK), and the owner's own
-open decisions — `docs/phase1/DECISIONS-NEEDED.md` rows 1 (Pause), 3 (add-on model), 5 (per-app
-limits), 6 (the Level 3 file-manager bind) and 7 (`dns`/`sites`, stored and not applied).
+11 keeps them to the gate runner), and app store builds (no Xcode/Android SDK). On the owner's own
+list (`docs/phase1/DECISIONS-NEEDED.md`), this entry originally named five open decisions; four of
+them are already answered, so the accurate state is one open decision and three "decided, not yet
+built":
+
+- **Open:** row 3, the add-on (plugins) model — its five questions are the owner's.
+- **Decided, not built:** row 6 (stop unbinding the Level 3 terminal; add the per-kid command
+  blocks instead) and row 7 (wire `dns` and `sites`, band-level).
+- **Decided and built:** rows 1 and 8, and the Pause and per-app-limit entries in the other tables.
+
+A fourth outstanding item came out of this pass's own review: T45's Grid half is not built and
+cannot be without amending Appendix E, which still lists a theme picker on a Grid that R-DESK-3
+keeps terminal-free (`PROGRESS.md`).

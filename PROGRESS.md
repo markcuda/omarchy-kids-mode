@@ -36,9 +36,14 @@ is slow, not stuck); `shfmt -i 2 -ci` and shellcheck are clean.
 floating wizard window), T23 (background installs), T49-T53 (the #11196 screen-time ideas, specced),
 and T31/T32 (an `Ask Omy` `?` key and a clickable/animated Omy -- a pointer GUI `gum` cannot do).
 
-**Done since this list was written:** T45's chord binding -- Level 3 binds the theme picker on
-Omarchy's own `SUPER + CTRL + SHIFT + SPACE` after unbinding Omarchy's first
-(`share/hyprland/L3.lua`), and `test/shell.d/levels-test.sh` holds both halves to it.
+**T45 is half-built and should stay on this list.** Level 3's half is done: it binds the theme
+picker on Omarchy's own `SUPER + CTRL + SHIFT + SPACE` after unbinding Omarchy's first
+(`share/hyprland/L3.lua`), and `test/shell.d/levels-test.sh` holds both halves of that to the file.
+The **Grid** half is deliberately not built -- the picker needs a terminal and the Grid has none
+(R-DESK-3, `docs/levels.md`) -- so `levels-test.sh` pins the opposite of Appendix E, which still
+lists `Super+Ctrl+Shift+Space` in the Grid's table (`SPEC.md:367`). That is a spec conflict, not an
+oversight: it needs an amendment before either side can be called done (the review of this pass,
+2026-09-26).
 
 The sections below are the earlier (September 21 and before) state, kept for their live evidence.
 
