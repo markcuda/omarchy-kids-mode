@@ -14,9 +14,10 @@
 # Those are still run by hand where they matter; this check is about the code
 # that reaches a box and the tests that guard it.
 #
-# shellcheck and shfmt are dev-machine tools, absent on a fresh Arch box, so the
-# check SKIPs loudly rather than failing -- the same shape as the other
-# tool-gated checks in this suite.
+# Both tools are dev-machine-only and absent on a fresh Arch box, so the check
+# SKIPs loudly rather than failing -- the same shape as the other tool-gated
+# checks in this suite. (A comment beginning "# shellcheck ..." is itself read as
+# a directive, so a line describing them must not start that way.)
 set -uo pipefail
 pass() { echo "PASS  $*"; }
 fail() {
