@@ -28,14 +28,38 @@ skip() { echo "SKIP  $*"; }
 rc=0
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+# A suite file's own assertion helpers must be the ones its assertions reach. Sourcing a
+# library that defines check/pass/fail (test/live/lib.sh does, for the scenarios) silently
+# shadows them, and a file whose check() can no longer set its own fail flag prints FAIL while
+# exiting 0 -- a gate that lies, which is what test/shell.d/live-lib-test.sh did until
+# 2026-09-26. So a file that sources a shadowing library must (re)define each helper it uses
+# after that source line. Pure text, no tools: runs on the VM, before the shellcheck gate.
+for f in "$ROOT"/test/shell.d/*-test.sh; do
+  [[ -f "$f" ]] || continue
+  src_line="$(grep -nE '^[[:space:]]*(source|\.)[[:space:]].*test/live/lib\.sh' "$f" | tail -1 | cut -d: -f1)"
+  [[ -n "$src_line" ]] || continue
+  while IFS= read -r name; do
+    [[ -n "$name" ]] || continue
+    last_def="$(grep -nE "^[[:space:]]*${name}\(\)" "$f" | tail -1 | cut -d: -f1)"
+    [[ -n "$last_def" ]] || continue
+    if ((last_def < src_line)); then
+      fail "${f#"$ROOT"/}: $name() is defined only before sourcing test/live/lib.sh (line $src_line)"
+      fail "  the sourced library shadows it, so this file's assertions cannot fail"
+    fi
+  done < <(grep -oE '^[[:space:]]*(check|check_status|pass|fail|fail_|ok)\(\)' "$f" | tr -d ' ()' | sort -u)
+done
+
 missing=()
 for tool in shellcheck shfmt; do
   command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
 done
 if ((${#missing[@]})); then
   skip "lint-test.sh: not installed: ${missing[*]}"
-  echo "lint-test RESULT: PASS"
-  exit 0
+  # Still carry the tool-free checks above (the shadowing guard): skipping shellcheck on a box
+  # that lacks it is not the same as passing everything else this file knows how to check.
+  echo "lint-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
+  exit "$rc"
 fi
 
 # git ls-files where there is a checkout; a plain find where the suite runs
