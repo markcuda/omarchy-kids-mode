@@ -698,7 +698,10 @@ if pid == 0:
     os.execv(sys.argv[1], [sys.argv[1]])
 
 output = bytearray()
-deadline = time.monotonic() + 30
+# Generous on purpose: test/all runs several files at once and expiry here ends the run early, so a
+# tight deadline turns a loaded box into a red suite (the same shape that failed in parallel on the
+# try-omarchy VM, 2026-09-26, in two sibling files).
+deadline = time.monotonic() + 120
 while True:
     if time.monotonic() >= deadline:
         os.kill(pid, signal.SIGKILL)
