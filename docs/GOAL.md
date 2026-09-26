@@ -19,13 +19,15 @@ autonomous loop works from; `docs/loop-report.md` is the running account.
    approves and removes) is recorded from the VM and delivered to Mark. Anything that looks wrong
    in a picture is a ticket before it is a release.
 
-   Capture route, as it actually stands (`docs/vm-dogfood.md` has the details): **`grim` inside a
-   Wayland session** is what produced the media in `docs/media/`, and the SDDM greeter needs
-   `import` on `:0` as the `sddm` user with its own `xauth`. The earlier idea of stitching QMP
-   `screendump` frames is not known to work — that call came back **all black for the X11 greeter**
-   (`docs/loop-report.md`, 2026-09-22) and was not the route any committed picture came from — so
-   the videos want an in-guest capture (`grim` frames, or a screencast started from inside the
-   session) rather than a host-side one.
+   Capture route: `grim` inside a Wayland session, and `import` on `:0` as the `sddm` user with its
+   own `xauth` for the X11 greeter. The earlier idea of stitching QMP `screendump` frames is not
+   known to work — that call came back **all black for the X11 greeter** (`docs/loop-report.md`,
+   2026-09-22) — so the videos want an in-guest capture (`grim` frames, or a screencast started
+   from inside the session) rather than a host-side one.
+   *(The committed media comes from `scripts/media-driver.sh` on the test laptop's VM, and its
+   screenshots are QMP `screendump` — `test/live/lib.sh`'s `shot` calls `qmp shot`. The all-black
+   result recorded on 2026-09-22 was the **try-omarchy guest's X11 greeter**, a different VM and a
+   different display path, so the host route is "not known to work *there*", not "known not to".)*
 4. **Security reviewed three times and every finding closed or documented**: the two
    antagonistic rounds, the maintainer's eye, and Codex's review. The trust-boundary test stays
    the gate for new code.

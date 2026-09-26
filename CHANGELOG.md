@@ -316,10 +316,10 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
 - `test/all` keeps the parallel pass's last lines when a file fails in company and passes on retry,
   so the summary quotes the evidence rather than only claiming shared state; the three python-PTY
   wrappers get deadlines that do not measure the machine's load (120s/120s/60s, from 30s/30s/5s).
-- `docs/vm-dogfood.md` (the Mac dogfood VM's runbook) is new, three decision rows in
-  `docs/phase1/DECISIONS-NEEDED.md` are corrected, and `docs/bar.md`, `docs/levels.md`,
-  `docs/provision.md`, `docs/live-tests.md`, `PROGRESS.md` and the loop report were brought back in
-  line with the code.
+- Three decision rows in `docs/phase1/DECISIONS-NEEDED.md` are corrected, and `docs/bar.md`,
+  `docs/levels.md`, `docs/provision.md`, `docs/live-tests.md`, `PROGRESS.md` and the loop report
+  were brought back in line with the code. (The dogfood VM's own recipe stays untracked, per the
+  loop's standing orders.)
 
 ### Known gaps
 
