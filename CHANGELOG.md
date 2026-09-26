@@ -285,6 +285,42 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
   `posture_write_luks_slots` writer (moved from `lib/posture.sh`), so there's one place this file
   is parsed and rewritten instead of three.
 
+### Fixed (2026-09-26, the dogfooding pass)
+
+- Kids' volume/brightness media keys go through Omarchy's own `omarchy-audio-output-volume`
+  (`raise`/`lower`/`mute-toggle`) and `omarchy-brightness-display` (`+5%`/`5%-`) with the same
+  `locked`/`repeating` options, instead of raw `wpctl`/`brightnessctl`: a kid gets the on-screen
+  feedback, volume ceiling and brightness rounding a parent's session has (`brightnessctl set +5%`
+  can round to nothing on a display with few steps), and holding the key repeats.
+  `share/hyprland/L1.lua` and `L2.lua`; the `fullscreen = true` windowrule both files use also
+  stopped being UNVERIFIED, settled from Omarchy's own `windows.lua`/`apps/system.lua`.
+- `omarchy-kids-provision add` on the fallback path (no `omarchy-provision-user` on the box) writes
+  the migration record Omarchy's own `omarchy-migrate` reads — one marker per script under
+  `~/.local/state/omarchy/migrations/<script name>` — instead of a `migrations.log` nothing in
+  Omarchy has ever read. A kid provisioned that way would otherwise be shown "Pending Omarchy
+  Migrations" at login. Verified against the real runner: 104 markers, `--pending` empty, exit 1.
+- The bar widget's "Open Kids Mode" and "Open requests" rows open a terminal
+  (`omarchy-launch-floating-terminal-with-presentation`). Bare from Quickshell, `omarchy-kids`
+  printed "tui: no terminal to ask" and **exited 0**, so both rows silently did nothing.
+- `omarchy-kids-review`'s help and `docs/review.md` name `--dry-run`, which the command has always
+  accepted (it forces the preview whatever `DRY_RUN` says).
+
+### Tests and docs (2026-09-26, the dogfooding pass)
+
+- The suite can no longer carry an assertion that never runs: `test/shell.d/lint-test.sh` refuses a
+  test file whose `check`/`pass`/`fail` is shadowed by a library it sources (which caught
+  `live-lib-test.sh` printing FAIL while exiting 0) or whose helper is called but never defined
+  (`levels-test.sh`'s failure path, `panel-test.sh`, `wizard-test.sh`,
+  `wizard-advanced-row-test.sh`), and `cksum` joins `KIDS_BASE_TOOLS` — without it, eight
+  before/after comparisons compared empty to empty.
+- `test/all` keeps the parallel pass's last lines when a file fails in company and passes on retry,
+  so the summary quotes the evidence rather than only claiming shared state; the three python-PTY
+  wrappers get deadlines that do not measure the machine's load (120s/120s/60s, from 30s/30s/5s).
+- `docs/vm-dogfood.md` (the Mac dogfood VM's runbook) is new, three decision rows in
+  `docs/phase1/DECISIONS-NEEDED.md` are corrected, and `docs/bar.md`, `docs/levels.md`,
+  `docs/provision.md`, `docs/live-tests.md`, `PROGRESS.md` and the loop report were brought back in
+  line with the code.
+
 ### Known gaps
 
 See `docs/phase1/DECISIONS-NEEDED.md` and `docs/phase1/BLOCKED.md` for what still needs a human
