@@ -2793,11 +2793,12 @@ directory are as `docs/bar.md` now says. `omarchy-kids-ask list` answers
 
 Lessons worth keeping:
 
-- **A comment admitting a guess is a defect with a location.** Two of the eleven came straight out
+- **A comment admitting a guess is a defect with a location.** Two of the twelve came straight out
   of `# ... guessed`, `TODO(#10)` and `UNVERIFIED:` lines, and both were settled by reading
   Omarchy's own shipped files on the VM rather than by reasoning.
 - **A green test proves nothing until it can fail.** Four assertions never ran at all (an undefined
-  helper prints `command not found` and sets nothing), and eight before/after comparisons compared
+  helper prints `command not found` and sets nothing), and four before/after comparisons (eight
+  `cksum` calls, one of whose `before` is never compared) compared
   empty to empty because `cksum` was missing from the base toolset. Both classes now have a guard,
   and the two are the shapes AGENTS.md's "owns its fixture" rule already warned about.
 - **Docs can contradict themselves.** `docs/bar.md` carried both the old and the new badge design,
