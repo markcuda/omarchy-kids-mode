@@ -48,10 +48,13 @@ Every one of these has bitten at least one pass:
 
 ## Driving it
 
-- **QMP** (`/tmp/omarchy-qemu-gpu.*/qmp.sock`) takes `input-send-event`, with `vmkeys.py` and
-  `vmclick.py` as the thin wrappers. It sends keys to the focused client and **cannot press an
-  Omarchy keybind** (Super+… is intercepted above the input layer the events reach) — do not
-  conclude a keybind is broken from QMP.
+- **QMP**: `scripts/vm-qmp.sh` — `shot <file.png> | type | key <qcode>… | enter | status` — is the
+  tracked helper, and it refuses a QMP error instead of piping the reply away (issue #178's
+  dropped keystroke looked exactly like success). Point `VM_DIR` at the guest's directory, since
+  the dogfood VM's socket is `/tmp/omarchy-qemu-gpu.*/qmp.sock` while the helper defaults to
+  `$HOME/vm`. It sends keys to the focused client and **cannot press an Omarchy keybind** (Super+…
+  is intercepted above the layer those events reach) — do not conclude a keybind is broken from
+  QMP. Its own tests are `test/shell.d/vm-qmp-test.sh`.
 - **Screenshots**: `grim` inside a Wayland session; the SDDM greeter is X11, so capture it with
   `import` on `:0` as the `sddm` user with its own `xauth` (QMP `screendump` returns black for it).
 - **Overlays (ask, exit, Time's Up) are layer surfaces**, so they never appear in `hyprctl
