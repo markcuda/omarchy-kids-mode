@@ -204,6 +204,22 @@ BEHAVIOR_ROOT="$LIB_FIXTURE_ROOT"
     echo "FAIL $*"
     fail=1
   }
+  # The source above is test/live/lib.sh, which has its own check/pass/fail for scenarios and
+  # therefore shadows this file's check/check_status inside this subshell: a FAIL would print
+  # while the file still exited 0. Re-declare both after the source so every assertion below
+  # counts, which is how the earlier inner failures were able to pass the suite.
+  check() { # got want label
+    if [[ "$1" == "$2" ]]; then echo "ok   $3"; else
+      echo "FAIL $3 (want '$2', got '$1')"
+      fail=1
+    fi
+  }
+  check_status() { # got_status want_status label
+    if [[ "$1" == "$2" ]]; then echo "ok   $3"; else
+      echo "FAIL $3 (want exit $2, got $1)"
+      fail=1
+    fi
+  }
   vmroot() {
     local command="$1" calls=0
     [[ -f "$LIVE_TEST_STATE_DIR/calls" ]] && calls="$(cat "$LIVE_TEST_STATE_DIR/calls")"
@@ -213,7 +229,20 @@ BEHAVIOR_ROOT="$LIB_FIXTURE_ROOT"
       *"/usr/bin/id -u kid-test"*) printf '1000\n' ;;
       *"loginctl list-sessions --no-legend"*)
         [[ "$LIVE_TEST_VMROOT_MODE" != query-failure ]] || return 1
-        if [[ "$LIVE_TEST_VMROOT_MODE" != restart-failure ]]; then
+        if [[ "$LIVE_TEST_VMROOT_MODE" == restart-failure ]]; then
+          return 0 # an empty seat, so portal_reset tries the SDDM restart
+        fi
+        # Seat0 holds a session until the clean exit has happened; after a clean exit the
+        # greeter is back on its own (issue #21, live-verified on the try-omarchy VM).
+        # `autologin` starts empty and hands the seat to a session at SDDM start;
+        # `session-always` never stops returning a session.
+        if [[ "$LIVE_TEST_VMROOT_MODE" == session-always ]]; then
+          printf '1 1000 kid-test seat0 - user\n'
+        elif [[ "$LIVE_TEST_VMROOT_MODE" == autologin && ! -f "$LIVE_TEST_STATE_DIR/restart-attempt" ]]; then
+          return 0
+        elif [[ -f "$LIVE_TEST_STATE_DIR/dispatches" ]]; then
+          printf '2 965 sddm seat0 - greeter\n'
+        else
           printf '1 1000 kid-test seat0 - user\n'
         fi
         return 0
@@ -232,6 +261,17 @@ BEHAVIOR_ROOT="$LIB_FIXTURE_ROOT"
         # what portal_clean_exit now waits for (sandbox #134). A `stubborn` run
         # is a compositor hyprctl says it exited but which is still there.
         [[ -f "$LIVE_TEST_STATE_DIR/dispatches" ]] && dispatches_seen="$(cat "$LIVE_TEST_STATE_DIR/dispatches")"
+        # `session-always` keeps a compositor on every odd read: portal_clean_exit's find
+        # sees one, its confirmation sees it gone, and the next attempt finds one again,
+        # so the seat can keep handing back a session until portal_reset's bound is hit.
+        if [[ "$LIVE_TEST_VMROOT_MODE" == session-always ]]; then
+          if ((inventory_calls % 2 == 1)); then
+            printf '[{"instance":"live","wl_socket":"wayland-1","pid":2}]\n'
+          else
+            printf '[]\n'
+          fi
+          return 0
+        fi
         if ((dispatches_seen >= 1)) && [[ "$LIVE_TEST_VMROOT_MODE" != stubborn ]]; then
           printf '[]\n'
           return 0
@@ -329,6 +369,32 @@ BEHAVIOR_ROOT="$LIB_FIXTURE_ROOT"
   [[ ! -e "$LIVE_TEST_STATE_DIR/sleep-attempt" ]] &&
     pass "portal_reset: restart failure skips the wait" ||
     fail_ "portal_reset waited after restart failure"
+  LIVE_TEST_VMROOT_MODE=
+  : >"$LIVE_TEST_STATE_DIR/calls"
+  rm -f "$LIVE_TEST_STATE_DIR/restart-attempt" "$LIVE_TEST_STATE_DIR/dispatches"
+  portal_reset 0
+  check_status "$?" "0" "portal_reset: a session's clean exit returns the greeter"
+  check "$(cat "$LIVE_TEST_STATE_DIR/dispatches")" "1" \
+    "portal_reset: exited the session exactly once"
+  LIVE_TEST_VMROOT_MODE=autologin
+  : >"$LIVE_TEST_STATE_DIR/calls"
+  rm -f "$LIVE_TEST_STATE_DIR/restart-attempt" "$LIVE_TEST_STATE_DIR/dispatches"
+  portal_reset 0
+  check_status "$?" "0" "portal_reset: an empty seat restarts into a session and still ends at the greeter"
+  [[ -e "$LIVE_TEST_STATE_DIR/restart-attempt" ]] &&
+    pass "portal_reset: restarted SDDM when the seat was empty" ||
+    fail_ "portal_reset skipped the SDDM restart on an empty seat"
+  check "$(cat "$LIVE_TEST_STATE_DIR/dispatches")" "1" \
+    "portal_reset: exited the autologin session exactly once"
+  LIVE_TEST_VMROOT_MODE=session-always
+  : >"$LIVE_TEST_STATE_DIR/calls"
+  rm -f "$LIVE_TEST_STATE_DIR/dispatches"
+  portal_reset 0
+  check_status "$?" "1" "portal_reset: a seat that keeps coming back as a session fails"
+  check "$(cat "$LIVE_TEST_STATE_DIR/dispatches")" "3" \
+    "portal_reset: bounded at three attempts, not endless"
+  # Last: this case hides jq for the rest of the subshell, so nothing may follow it that
+  # needs jq (or cat/rm on the real PATH).
   mkdir -p "$TMP/no-jq"
   rm -f "$LIVE_TEST_STATE_DIR/restart-attempt"
   # shellcheck disable=SC2123 # intentionally hide jq while exercising the host prerequisite
