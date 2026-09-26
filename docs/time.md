@@ -129,6 +129,20 @@ facts. Its output remains `lights-out at HH:MM` or `budget runs out at HH:MM` on
 `grant` adds to a *separate* `usage/<day>.grant` file and remains root-only. The root tick is the
 only code that recomputes budget, lights-out, and enforcement state.
 
+R-TIME-4's grant has two transitions (Appendix F), and `grant <kid> <minutes> [--lights-out]` is both:
+
+- **budget** — `budget += n` for today, written to `usage/<day>.grant` as above.
+- **lights-out** — `lights_out_tonight = t`, written to a separate `usage/<day>.lightsout` holding one
+  `HH:MM`. The root tick prefers it over the kid's configured `lights_out` for that logical day and
+  no other, so a push is **tonight only** with no cleanup pass: the next day's file name differs, so
+  the next day is back to the configured bedtime. It never edits the kid's profile.
+
+`--lights-out` forces the push; without it, `grant` reads the kid's published `reason` and takes the
+lights-out transition when the tick last stopped them for lights-out. That is what makes the Time's
+Up card's "Ask a grown-up / for more time" work at bedtime: the approval runs this same `grant`, and
+before this it added budget, which cannot move a lights-out stop — the kid would be out anyway
+(issue #16). A push is `now + <minutes>`, clamped to 23:59, and 1..1440 minutes like a budget grant.
+
 A paired device holding the `act` scope reaches the same `grant` through the relay and authd
 (R-NOTIFY-13, `docs/notify.md`): `authd` verifies the device's signature, checks the target is a
 provisioned kid account, and runs `omarchy-kids-time grant <account> <minutes>` as root -- the same

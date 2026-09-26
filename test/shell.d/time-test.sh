@@ -873,5 +873,70 @@ else
   pass "systemd-analyze not available here -- static [Section]/key checks above stand in for it"
 fi
 
+# =========================================================================
+# a parent pushes tonight's lights-out (R-TIME-4, Appendix F:
+# `lights_out_tonight = t`): the pushed time wins for today only, and a grant
+# at lights-out pushes rather than adding budget that cannot move a bedtime.
+# =========================================================================
+
+# Clock starts small and only moves forward: a fresh state with a large
+# monotonic reading counts the gap as active time and exhausts the budget.
+PUSH_DAY="2026-09-23" # a weekday the tests above never use
+NEXT_DAY="2026-09-24"
+rm -f "$USAGE_DIR"/"$PUSH_DAY"* "$USAGE_DIR"/"$NEXT_DAY"* \
+  "$ROOT/run/omarchy-kids/time/kid-ada.json"
+# Band 6-8's *weekday* lights-out is 19:30 (20:00 is the weekend value), so
+# 19:20 is inside the day and 19:40 would be past it without a push.
+set_now "$PUSH_DAY 19:20:00"
+set_clock 0
+set_sessions "20 1000 kid-ada yes no"
+"$LEDGER" tick >/dev/null
+check "$(state_value state)" "allowed" "push setup: the day is allowed before lights-out"
+
+out="$("$TIME" grant kid-ada 30 --lights-out)"
+check_contains "$out" "lights-out pushed to 19:50 tonight" \
+  "push: grant --lights-out reports the pushed time"
+check "$(cat "$USAGE_DIR/$PUSH_DAY.lightsout" 2>/dev/null)" "19:50" \
+  "push: the pushed time is recorded for the logical day"
+
+# The configured bedtime is 19:30; tonight's push moves the stop to 19:50.
+set_now "$PUSH_DAY 19:40:00"
+set_clock 1200
+set_sessions "21 1000 kid-ada yes no"
+"$LEDGER" tick >/dev/null
+check "$(state_value state)" "allowed" \
+  "push: 19:40 is past the configured bedtime, and the day continues inside tonight's push"
+check "$(state_value reason)" "none" "push: so the tick does not call it lights-out"
+
+set_now "$PUSH_DAY 19:55:00"
+set_clock 2100
+"$LEDGER" tick >/dev/null
+check "$(state_value state)" "grace" "push: past the pushed time the day stops"
+check "$(state_value reason)" "lights-out" "push: and the reason stays lights-out"
+
+# Tonight only: the file is keyed by the logical day, so the next day ignores it.
+set_now "$NEXT_DAY 19:40:00"
+set_clock 3000
+set_sessions "22 1000 kid-ada yes no"
+"$LEDGER" tick >/dev/null
+check "$(state_value state)" "grace" \
+  "push: the next day falls back to the configured bedtime (tonight only)"
+check "$(state_value reason)" "lights-out" "push: and stops for lights-out, not the push"
+
+# A grant made while the kid is already stopped by lights-out pushes instead of
+# adding budget: minutes cannot move a bedtime stop (the bug this closes).
+set_now "$NEXT_DAY 19:45:00"
+set_clock 3100
+set_sessions "23 1000 kid-ada yes no"
+"$LEDGER" tick >/dev/null
+check "$(state_value reason)" "lights-out" "implicit push setup: the kid is stopped by lights-out"
+out="$("$TIME" grant kid-ada 15)"
+check_contains "$out" "lights-out pushed to 20:00 tonight" \
+  "implicit push: a grant at lights-out pushes, it does not add budget"
+check "$(cat "$USAGE_DIR/$NEXT_DAY.lightsout" 2>/dev/null)" "20:00" \
+  "implicit push: the pushed time is recorded"
+check "$(cat "$USAGE_DIR/$NEXT_DAY.grant" 2>/dev/null || echo 0)" "0" \
+  "implicit push: no budget minutes were added"
+
 echo "time-test RESULT: $([[ $fail == 0 ]] && echo PASS || echo FAIL)"
 exit $fail

@@ -37,7 +37,7 @@ usage() {
   cat <<'EOF'
 Usage: omarchy-kids-time daemon
        omarchy-kids-time status [<kid>]
-       omarchy-kids-time grant <kid> <minutes>
+       omarchy-kids-time grant <kid> <minutes> [--lights-out]
 
 daemon        Run this session's screen-time warnings/enforcement loop
               until the session ends (SPEC.md R-TIME-3, R-TIME-4).
@@ -45,6 +45,10 @@ daemon        Run this session's screen-time warnings/enforcement loop
 status        Print <kid>'s minutes used, minutes left, and next
               boundary today (default <kid>: this account).
 grant         Add <minutes> to <kid>'s budget for today only. Root only.
+              With --lights-out, or without it when <kid> is already stopped
+              by lights-out, it instead pushes tonight's lights-out <minutes>
+              from now (R-TIME-4's grant: "budget += n or lights_out_tonight
+              = t"); tonight's push never changes the configured bedtime.
 
   -h, --help  Show this help and exit.
 EOF
@@ -92,7 +96,26 @@ cmd_status() {
 # --- grant -------------------------------------------------------------
 
 cmd_grant() {
-  local kid="${1:-}" minutes="${2:-}" now day weekend
+  local kid="" minutes="" lights_out=0 arg now day weekend reason
+  for arg in "$@"; do
+    case "$arg" in
+      --lights-out) lights_out=1 ;;
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      -*) die "grant: unknown option '$arg' (see --help)" ;;
+      *)
+        if [[ -z "$kid" ]]; then
+          kid="$arg"
+        elif [[ -z "$minutes" ]]; then
+          minutes="$arg"
+        else
+          die "grant: unexpected argument '$arg' (see --help)"
+        fi
+        ;;
+    esac
+  done
   [[ -n "$kid" && -n "$minutes" ]] || die "grant: needs <kid> <minutes> (see --help)"
   [[ "$minutes" =~ ^[0-9]+$ && "$minutes" -gt 0 ]] || die "grant: <minutes> must be a positive integer, got '$minutes'"
   if ! is_root; then
@@ -100,6 +123,28 @@ cmd_grant() {
   fi
   now="$(time_root_now)"
   IFS=$'\t' read -r day weekend <<<"$(time_logical_day "$now")" || die "could not compute today's logical day"
+
+  # R-TIME-4's grant is one of two transitions (Appendix F): minutes into
+  # today's budget, or a push of tonight's lights-out. The reason decides when
+  # --lights-out is not given -- adding budget to a kid stopped by lights-out
+  # could not move their stopping time, which is the bug this fixes.
+  if ((! lights_out)); then
+    reason="$(time_state_reason "$kid")"
+    [[ "$reason" == lights-out ]] && lights_out=1
+  fi
+
+  if ((lights_out)); then
+    local now_min target pushed
+    now_min="$(time_minutes_since_midnight "$(time_hm "$now")")"
+    target=$((now_min + minutes))
+    ((target > 1439)) && target=1439
+    printf -v pushed '%02d:%02d' $((target / 60)) $((target % 60))
+    time_lights_out_push "$kid" "$day" "$pushed" || die "grant: could not push lights-out to '$pushed'"
+    printf '%s: lights-out pushed to %s tonight (%d minute(s) from now)\n' \
+      "$kid" "$pushed" "$minutes"
+    return 0
+  fi
+
   time_grant_add "$kid" "$day" "$minutes"
   printf '%s: granted %d more minute(s) for today (now %d granted today)\n' \
     "$kid" "$minutes" "$(time_granted_minutes "$kid" "$day")"
