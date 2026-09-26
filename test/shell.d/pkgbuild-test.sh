@@ -86,6 +86,34 @@ if [[ -f "$PKGBUILD" ]]; then
       fail "package() does not reference: ${missing[*]}"
     fi
   fi
+
+  # The bin/ check above can fall back on a glob; these two cannot. desktop/
+  # entries and the top-level initcpio file are installed one path at a time
+  # (each desktop entry has its own target directory), so a new entry or hook
+  # would simply never ship and every test would still pass. 2026-09-25.
+  missing=()
+  for f in "$ROOT"/desktop/*.desktop; do
+    [[ -f "$f" ]] || continue
+    name="$(basename "$f")"
+    grep -qF "desktop/$name" <<<"$pkg_body" || missing+=("desktop/$name")
+  done
+  if [[ ${#missing[@]} -eq 0 ]]; then
+    pass "package() installs every desktop/*.desktop file"
+  else
+    fail "package() does not install: ${missing[*]}"
+  fi
+
+  missing=()
+  for f in "$ROOT"/initcpio/*; do
+    [[ -f "$f" ]] || continue
+    name="$(basename "$f")"
+    grep -qF "initcpio/$name" <<<"$pkg_body" || missing+=("initcpio/$name")
+  done
+  if [[ ${#missing[@]} -eq 0 ]]; then
+    pass "package() installs every top-level initcpio file"
+  else
+    fail "package() does not install: ${missing[*]}"
+  fi
 fi
 
 # --- the relay's sysusers account is installed (R-NOTIFY-1) ---------------
