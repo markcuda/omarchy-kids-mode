@@ -26,8 +26,9 @@ run_web_section() {
     # Group ownership: root-only check, same reasoning as the
     # chromium-policy lock (docs/check.md's "Web" section).
     owner_group="$(file_stat G "$cf")"
-    # is_root, not $EUID: one root check in the package, lib/kids.sh's (AGENTS.md rule 9).
-    if ! is_root; then
+    # $EUID, not is_root: check-test.sh puts an `id` stub first on PATH whose `-u` branch reads its
+    # argument as an account name, so `id -u` is empty there (see its own guard's comment).
+    if [[ "$EUID" != 0 ]]; then
       add_result Web "web:owner:$bt" skip "not checked as non-root — a real run of this check is always root, at which point the file's group is already correct by construction (R-WEB-1)"
     elif [[ -z "$owner_group" ]]; then
       add_result Web "web:owner:$bt" warn "cannot verify: could not read $cf's group owner on this box"
