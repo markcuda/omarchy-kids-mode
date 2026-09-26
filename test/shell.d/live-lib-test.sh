@@ -224,10 +224,18 @@ BEHAVIOR_ROOT="$LIB_FIXTURE_ROOT"
         ;;
       *"sleep 16"*) : >"$LIVE_TEST_STATE_DIR/sleep-attempt" ;;
       *"instances -j"*)
-        local inventory_calls=0
+        local inventory_calls=0 dispatches_seen=0
         [[ -f "$LIVE_TEST_STATE_DIR/inventory-calls" ]] && inventory_calls="$(cat "$LIVE_TEST_STATE_DIR/inventory-calls")"
         inventory_calls=$((inventory_calls + 1))
         printf '%s\n' "$inventory_calls" >"$LIVE_TEST_STATE_DIR/inventory-calls"
+        # Once the dispatch has gone out, the compositor is gone too -- that is
+        # what portal_clean_exit now waits for (sandbox #134). A `stubborn` run
+        # is a compositor hyprctl says it exited but which is still there.
+        [[ -f "$LIVE_TEST_STATE_DIR/dispatches" ]] && dispatches_seen="$(cat "$LIVE_TEST_STATE_DIR/dispatches")"
+        if ((dispatches_seen >= 1)) && [[ "$LIVE_TEST_VMROOT_MODE" != stubborn ]]; then
+          printf '[]\n'
+          return 0
+        fi
         case "$LIVE_TEST_VMROOT_MODE:$inventory_calls" in
           delayed:1) printf '[{"instance":"old","wl_socket":"wayland-0","pid":1}]\n' ;;
           delayed:*) printf '[{"instance":"live","wl_socket":"wayland-1","pid":2}]\n' ;;
@@ -253,8 +261,10 @@ BEHAVIOR_ROOT="$LIB_FIXTURE_ROOT"
 
   portal_clean_exit kid-test 10
   check_status "$?" "0" "portal_clean_exit: delayed inventory waits for a live instance"
-  check "$(cat "$LIVE_TEST_STATE_DIR/inventory-calls")" "2" \
-    "portal_clean_exit: delayed inventory queried twice"
+  # Two queries to find the live instance, and one more to confirm it really
+  # left after the dispatch (sandbox #134).
+  check "$(cat "$LIVE_TEST_STATE_DIR/inventory-calls")" "3" \
+    "portal_clean_exit: delayed inventory queried twice, then once to confirm the exit"
   check "$(cat "$LIVE_TEST_STATE_DIR/dispatches")" "1" \
     "portal_clean_exit: dispatches exactly once after readiness"
   LIVE_TEST_VMROOT_MODE=malformed
@@ -267,13 +277,22 @@ BEHAVIOR_ROOT="$LIB_FIXTURE_ROOT"
   rm -f "$LIVE_TEST_STATE_DIR/inventory-calls"
   portal_clean_exit kid-test 0
   check_status "$?" "1" "portal_clean_exit: ambiguous inventory is rejected"
+  # hyprctl accepts the exit and the compositor stays anyway (sandbox #134):
+  # the helper must not report a clean exit for a session still on wayland-1.
+  LIVE_TEST_VMROOT_MODE=stubborn
+  : >"$LIVE_TEST_STATE_DIR/calls"
+  rm -f "$LIVE_TEST_STATE_DIR/inventory-calls" "$LIVE_TEST_STATE_DIR/dispatches"
+  portal_clean_exit kid-test 10
+  check_status "$?" "1" "portal_clean_exit: a compositor that stays after the dispatch is not a clean exit"
+  check "$(cat "$LIVE_TEST_STATE_DIR/dispatches")" "1" \
+    "portal_clean_exit: the stubborn case still dispatched exactly once"
   LIVE_TEST_VMROOT_MODE=malformed-delayed
   : >"$LIVE_TEST_STATE_DIR/calls"
-  rm -f "$LIVE_TEST_STATE_DIR/inventory-calls"
+  rm -f "$LIVE_TEST_STATE_DIR/inventory-calls" "$LIVE_TEST_STATE_DIR/dispatches"
   portal_clean_exit kid-test 10
   check_status "$?" "0" "portal_clean_exit: invalid inventory waits for a later valid query"
-  check "$(cat "$LIVE_TEST_STATE_DIR/inventory-calls")" "2" \
-    "portal_clean_exit: invalid inventory queried twice"
+  check "$(cat "$LIVE_TEST_STATE_DIR/inventory-calls")" "3" \
+    "portal_clean_exit: invalid inventory queried twice, then once to confirm the exit"
   LIVE_TEST_VMROOT_MODE=dispatch-failure
   : >"$LIVE_TEST_STATE_DIR/calls"
   rm -f "$LIVE_TEST_STATE_DIR/inventory-calls"
