@@ -123,6 +123,26 @@ without SDDM — as its own future ticket with its own Phase 1 check. Until that
 offer Pause until that mechanism exists, so it cannot imply that an unenforced action works.
 The design note and the failed Phase 1 check remain in `docs/phase1/V1.md`.
 
+## Where R-EXIT-5 lives (the parent's own session)
+
+R-EXIT-5 ("the parent session locks itself when the parent switches away") is the one requirement in
+`SPEC.md` with no Kids Mode code behind it, and deliberately so: it is **Omarchy's own idle
+behaviour**. The parent's `~/.config/omarchy/shell.json` ships
+
+```json
+"idle": { "screensaver": 150, "lock": 300 }
+```
+
+and Omarchy's `omarchy.idle` shell plugin acts on it, locking the parent's session after 300 s away
+(verified in that file on the dogfood VM, 2026-09-26). Kids Mode neither adds nor removes this:
+changing the parent's session is what I-1 forbids, and an idle lock on the parent's own desktop is
+their setting, not a Kids Mode lock. What we must do is not *break* it -- which is why the parent is
+never given a kids level config.
+
+The header above still reads R-EXIT-1..6 because this file covers the exit path end to end; R-EXIT-5's
+implementation is the platform's, and this section is the record of that, the way the Pause section
+records R-EXIT-3's absence.
+
 ## The triple-tap bind
 
 Both gestures are wired into `share/hyprland/L1.lua`, `L2.lua`, and `L3.lua` now: `Super+Shift+K`
