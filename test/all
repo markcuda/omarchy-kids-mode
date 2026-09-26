@@ -70,6 +70,7 @@ fail=0
 n=0
 skipped=()
 retried=()
+retry_why=()
 i=0
 for t in "${files[@]}"; do
   [[ -f $t ]] || continue
@@ -77,11 +78,19 @@ for t in "${files[@]}"; do
   out="$(cat "$out_dir/$i.out" 2>/dev/null)"
   status="$(cat "$out_dir/$i.status" 2>/dev/null)"
   [[ "$status" =~ ^[0-9]+$ ]] || status=1 # the job died without recording one
+  this_out="$out_dir/$i.out"
   i=$((i + 1))
   if ((status != 0)) && ((jobs_wanted > 1)); then
+    # What the parallel pass printed is about to be replaced by the retry's output, and with it
+    # the only evidence of *why* it failed in company (a FAIL line, or nothing at all when a
+    # `set -e` abort or a poll's deadline did it). Keep the last few lines for the summary.
+    why="$(tail -3 "$this_out" 2>/dev/null | tr '\n' ' ' | cut -c1-300)"
     out="$(bash "$t" 2>&1)"
     status=$?
-    ((status == 0)) && retried+=("$t")
+    if ((status == 0)); then
+      retried+=("$t")
+      retry_why+=("$t: ${why:-<the parallel pass printed nothing>}")
+    fi
   fi
   printf '%s\n' "$out"
   if ((status == 0)); then echo "ok   $t"; else
@@ -96,6 +105,8 @@ echo "$n test file(s)"
 if ((${#retried[@]})); then
   echo "${#retried[@]} file(s) failed in parallel and passed alone -- they share state with another file:"
   printf '  %s\n' "${retried[@]}"
+  echo "  what the parallel pass printed for them (the retry's output above replaced it):"
+  printf '    %s\n' "${retry_why[@]}"
 fi
 if ((${#skipped[@]})); then
   echo "${#skipped[@]} skipped check(s) -- these did NOT run:"
