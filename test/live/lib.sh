@@ -446,7 +446,21 @@ portal_clean_exit() {
       [[ -n "$sig" && "$sig" != null ]] || return 1
       sig_q="$(printf '%q' "$sig")"
       vmroot "runuser -u $acct_q -- env XDG_RUNTIME_DIR=/run/user/$uid HYPRLAND_INSTANCE_SIGNATURE=$sig_q WAYLAND_DISPLAY=wayland-1 /usr/bin/hyprctl dispatch 'hl.dsp.exit()' >/dev/null 2>&1" || return 1
-      return 0
+      # A dispatch hyprctl accepted is not a compositor that has gone: it reports
+      # success while the instance outlives it, and the old helper returned 0 on
+      # that alone (sandbox #134 -- a gate then read "clean exit" from a session
+      # that was still there). Wait for the instance to leave wayland-1, and say
+      # so if it does not, rather than reporting an exit that did not happen.
+      local gone_waited=0 after_inventory after_count
+      while ((gone_waited < deadline)); do
+        after_inventory="$(vmroot "runuser -u $acct_q -- env XDG_RUNTIME_DIR=/run/user/$uid WAYLAND_DISPLAY=wayland-1 LANG=C.UTF-8 /usr/bin/hyprctl instances -j" 2>/dev/null)" || after_inventory=
+        after_count="$(jq -r --arg display wayland-1 '[.[] | select(.wl_socket == $display)] | length' <<<"$after_inventory" 2>/dev/null)" || after_count=
+        [[ "$after_count" == 0 ]] && return 0
+        sleep 5
+        gone_waited=$((gone_waited + 5))
+      done
+      echo "portal_clean_exit: the dispatch was accepted but $acct's compositor is still on wayland-1 after ${deadline}s" >&2
+      return 1
     fi
     ((count > 1)) && return 1
     ((waited >= deadline)) && return 1
