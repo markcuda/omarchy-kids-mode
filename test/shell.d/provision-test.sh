@@ -943,6 +943,58 @@ check_contains "$out_link3" "$LINK_HOME/.local/state/omarchy/migrations is a sym
 check_eq "$(cat "$LINK_TARGET/victim")" "a line the add must not touch" \
   "the planted file link was neither truncated nor rewritten"
 
+# And at a *marker* name inside a real migrations directory -- the one path a refusal list cannot
+# name, because its filenames come from Omarchy's own migrations. `mv` moves the staged file *into*
+# a directory destination, so without the guard root writes where the kid pointed (rule 9; the
+# review of this pass, 2026-09-26). A home left behind by `remove --keep-home` is the setup.
+HOSTILE_SLUG="$("$CONFBIN" slug "Cy")"
+HOSTILE_HOME="$HOMEROOT/home/$HOSTILE_SLUG"
+mkdir -p "$HOSTILE_HOME/.local/state/omarchy/migrations" "$LINK_TARGET/marker-victim"
+export OMARCHY_MIGRATIONS_DIR="$MIGRATIONS_SRC"
+ln -s "$LINK_TARGET/marker-victim" "$HOSTILE_HOME/.local/state/omarchy/migrations/1787815267.sh"
+: >"$ARGV_LOG"
+out_marker="$(printf 'kidpass1\n' | "$BIN" add "Cy" --band 6-8 --avatar fox --password-stdin 2>&1)"
+st=$?
+check_eq "$st" 0 "add succeeds when a marker name is a planted link"
+check_contains "$out_marker" "Done: $HOSTILE_SLUG" "the add really provisioned the pre-seeded home"
+if [[ -f "$HOSTILE_HOME/.local/state/omarchy/migrations/1787815267.sh" &&
+  ! -L "$HOSTILE_HOME/.local/state/omarchy/migrations/1787815267.sh" ]]; then
+  pass "the planted marker link was replaced by a regular marker"
+else
+  fail "the marker is still a link (or was never written)"
+fi
+if [[ -z "$(ls -A "$LINK_TARGET/marker-victim")" ]]; then
+  pass "nothing was written through the planted marker link"
+else
+  fail "root wrote into the directory a kid pointed at: $(ls -A "$LINK_TARGET/marker-victim")"
+fi
+
+# The other branch: a real directory at a marker name (a FIFO behaves the same way). It is left
+# alone -- `mv` would move the staged file *into* it -- and that one migration stays pending, while
+# the add finishes and the *other* markers are still written. Without this case a refactor could
+# drop the branch and only the symlink test above would notice (second review round, 2026-09-26).
+HOSTILE_DIR_SLUG="$("$CONFBIN" slug "Ada")"
+HOSTILE_DIR_HOME="$HOMEROOT/home/$HOSTILE_DIR_SLUG"
+mkdir -p "$HOSTILE_DIR_HOME/.local/state/omarchy/migrations/1787815267.sh"
+export OMARCHY_MIGRATIONS_DIR="$MIGRATIONS_SRC"
+out_marker_dir="$(printf 'kidpass1\n' | "$BIN" add "Ada" --band 6-8 --avatar fox --password-stdin 2>&1)"
+st=$?
+check_eq "$st" 0 "add finishes when a marker name is a real directory"
+check_contains "$out_marker_dir" "1787815267.sh is not a regular file" "the skip names the path it left alone"
+check_contains "$out_marker_dir" "will show as pending" "the skip says what the consequence is"
+# Emptiness, not just "still a directory": with the branch gone, `mv` succeeds by moving the
+# staged file *into* it, and a bare `-d` test would still pass while root wrote there.
+if [[ -d "$HOSTILE_DIR_HOME/.local/state/omarchy/migrations/1787815267.sh" &&
+  -z "$(ls -A "$HOSTILE_DIR_HOME/.local/state/omarchy/migrations/1787815267.sh")" ]]; then
+  pass "the directory at the marker name was left, and left empty"
+else
+  fail "the planted directory was replaced or written into: $(ls -A "$HOSTILE_DIR_HOME/.local/state/omarchy/migrations/1787815267.sh" 2>/dev/null)"
+fi
+[[ -f "$HOSTILE_DIR_HOME/.local/state/omarchy/migrations/1788662350.sh" ]] &&
+  pass "the next migration's marker was still written" ||
+  fail "the loop stopped at the planted directory instead of continuing"
+unset OMARCHY_MIGRATIONS_DIR
+
 # install_kids_data_entry positive, at the very end so its extra kid disturbs
 # no earlier count: a 9-12 kid gets the data desktop entry. boot=portal keeps
 # the add from needing a disk secret; a fresh home root isolates the write.
