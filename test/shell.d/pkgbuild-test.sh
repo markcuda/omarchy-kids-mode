@@ -357,6 +357,32 @@ if [[ "$(sed -n 's/^arch=//p' "$PKGBUILD" | tr -d "'()")" == "$(sed -n 's/^\tarc
 else
   fail ".SRCINFO and PKGBUILD disagree on arch (.SRCINFO says '$(sed -n 's/^\tarch = //p' "$ROOT/.SRCINFO")')"
 fi
+# arch was the only field compared; a bumped pkgver with a stale .SRCINFO is the
+# commoner drift, and AUR rejects it. 2026-09-25.
+for k in pkgver pkgrel; do
+  pkg_field="$(sed -n "s/^$k=//p" "$PKGBUILD")"
+  src_field="$(sed -n "s/^\t$k = //p" "$ROOT/.SRCINFO")"
+  if [[ -n "$pkg_field" && "$pkg_field" == "$src_field" ]]; then
+    pass ".SRCINFO's $k matches PKGBUILD's"
+  else
+    fail ".SRCINFO and PKGBUILD disagree on $k (PKGBUILD '$pkg_field', .SRCINFO '$src_field')"
+  fi
+done
+
+# --- every unit's own command is a file that ships -----------------------
+# Each command's test checks its own unit, so a rename that missed a unit left a
+# service pointing at a binary that is not there -- a timer that fails every
+# tick, with only the journal to say so. Nothing swept the whole set.
+unit_missing=()
+while IFS= read -r cmd; do
+  [[ -n "$cmd" ]] || continue
+  [[ -f "$ROOT/bin/$cmd" ]] || unit_missing+=("$cmd")
+done < <(grep -rhoE '/usr/bin/omarchy-kids[a-z-]*' "$ROOT/systemd" | sort -u | sed 's|/usr/bin/||')
+if [[ ${#unit_missing[@]} -eq 0 ]]; then
+  pass "every unit ExecStart names a command that ships in bin/"
+else
+  fail "units reference commands with no bin/ file: ${unit_missing[*]}"
+fi
 
 echo "pkgbuild-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc
