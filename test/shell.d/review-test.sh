@@ -95,6 +95,12 @@ out="$("$BIN" scan 2>&1)"
 check_contains "$out" "[dry-run] would stamp kid-ada/minecraft" "scan previews the first sighting"
 [[ -e "$BASELINE" ]] && fail "scan (dry-run) must not write the stamp" || pass "scan (dry-run) writes nothing"
 
+# Rule 8: --dry-run forces the preview whatever DRY_RUN says, so it wins even when --apply comes
+# after it. The last flag used to win instead (review of this pass, 2026-09-26).
+out="$("$BIN" scan --dry-run --apply 2>&1)"
+check_contains "$out" "[dry-run] would stamp kid-ada/minecraft" "--dry-run before --apply still previews"
+[[ -e "$BASELINE" ]] && fail "--dry-run --apply wrote the stamp" || pass "--dry-run --apply writes nothing"
+
 out="$("$BIN" scan --apply 2>&1)"
 check_contains "$out" "nothing needs reviewing" "scan --apply stamps without opening a review"
 check "$(jq -r 'has("minecraft")' "$BASELINE" 2>/dev/null)" "true" "the first sighting is stamped"
