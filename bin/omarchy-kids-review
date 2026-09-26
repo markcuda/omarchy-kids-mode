@@ -1,6 +1,6 @@
 #!/bin/bash
 # omarchy:summary=Re-review an approved add-on whose surface set or exec changed
-# omarchy:args=<scan|list|show|approve|deny> ...
+# omarchy:args=<scan|list|show|approve|deny> ... [--dry-run] [--apply]
 # R-NOTIFY-12: when a parent approves an app for a kid (apps.extra), that app's
 # desktop file -- the kid's launcher surface and the app's Exec -- is stamped.
 # `scan` re-reads it (a package update) and, when it changed, opens one review the
@@ -49,7 +49,7 @@ update). The parent then `approve`s the new surface, or `deny`s it, which hides
 the app again. `list` shows the open reviews and `show` prints one in full -- what
 changed, and the desktop file's Exec now -- so a parent (or their own agent) can
 check it before deciding. Root only; DRY_RUN=1 prints the plan (--apply makes it
-real).
+real, and --dry-run forces the preview whatever DRY_RUN says).
 EOF
 }
 
