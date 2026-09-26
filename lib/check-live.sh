@@ -160,9 +160,12 @@ run_live_section() {
     add_result "Live tests" "live:skipped" skip "not run — pass --live (as root) to spawn a short session as each kid and confirm sudo/polkit/tmp/exec are actually denied"
     return
   fi
-  # is_root, not $EUID: AGENTS.md's convention is that every root check goes through
-  # lib/kids.sh's one helper (rule 9), and this file's only caller has it in scope.
-  if ! is_root; then
+  # $EUID, not is_root, and check-test.sh explains why at its own guard: that suite puts an `id`
+  # stub first on PATH whose `-u` branch reads its argument as an account name, so `id -u` is empty
+  # there and is_root can never report root. Using is_root here broke every live-row assertion on a
+  # box where unshare works (the VM and a real Omarchy), which the Mac skips for -- the review
+  # caught it, and `-S warning`/tests on Darwin could not.
+  if [[ "$EUID" != 0 ]]; then
     add_result "Live tests" "live:skipped" warn "--live was passed but this isn't root — live tests need root to runuser as each kid"
     return
   fi
