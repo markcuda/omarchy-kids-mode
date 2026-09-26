@@ -645,12 +645,26 @@ check_contains "$out4" "too short" "add: short-password message names the reason
 printf 'parent=mark\nboot=portal\n' >"$ETC/machine.conf"
 chmod 0644 "$ETC/machine.conf"
 rm -f "$STUBS/omarchy-provision-user"
+MIGRATIONS_SRC="$TMP/migrations-src"
+mkdir -p "$MIGRATIONS_SRC"
+: >"$MIGRATIONS_SRC/1787815267.sh"
+: >"$MIGRATIONS_SRC/1788662350.sh"
+export OMARCHY_MIGRATIONS_DIR="$MIGRATIONS_SRC"
 out5="$(printf 'kidpass3\n' | "$BIN" add "Ben" --band 6-8 --avatar fox --password-stdin 2>&1)"
 SLUG_BEN="$("$CONFBIN" slug "Ben")"
-MARKER="$HOMEROOT/home/$SLUG_BEN/.local/state/omarchy/migrations.log"
+BEN_STATE="$HOMEROOT/home/$SLUG_BEN/.local/state/omarchy"
 check_not_contains "$out5" "omarchy-provision-user" "add without omarchy-provision-user on PATH doesn't try to run it"
-[[ -f "$MARKER" ]] && pass "migration marker file written when omarchy-provision-user is absent" ||
-  fail "no migration marker at $MARKER"
+# Omarchy's own omarchy-migrate calls a migration pending while
+# ~/.local/state/omarchy/migrations/<script basename> is missing, so the marker has to carry
+# the script's own name -- one per migration, not one line in one file (verified against the
+# real 4.0.2 script on the try-omarchy VM, 2026-09-26; docs/provision.md).
+[[ -f "$BEN_STATE/migrations/1787815267.sh" && -f "$BEN_STATE/migrations/1788662350.sh" ]] &&
+  pass "one marker per shipped migration, named exactly like the script" ||
+  fail "missing per-migration markers under $BEN_STATE/migrations"
+[[ ! -e "$BEN_STATE/migrations.log" ]] &&
+  pass "no migrations.log: Omarchy reads no such file" ||
+  fail "the old migrations.log was written"
+unset OMARCHY_MIGRATIONS_DIR
 stub omarchy-provision-user # restore for the rest of the test
 
 # --- issue #53: parent has no current Omarchy theme yet -> a warning, no
@@ -919,13 +933,13 @@ rm -f "$STUBS/omarchy-provision-user"
 rm -f "$LINK_HOME/.config/gcompris"
 mkdir -p "$LINK_HOME/.local/state/omarchy"
 printf 'a line the add must not touch\n' >"$LINK_TARGET/victim"
-ln -s "$LINK_TARGET/victim" "$LINK_HOME/.local/state/omarchy/migrations.log"
+ln -s "$LINK_TARGET/victim" "$LINK_HOME/.local/state/omarchy/migrations"
 : >"$ARGV_LOG"
 out_link3="$(printf 'kidpass1\n' | "$BIN" add "Dot" --band 6-8 --avatar fox --password-stdin 2>&1)"
 st=$?
-check_eq "$st" 2 "add refuses a kid-planted migrations.log link"
-check_contains "$out_link3" "$LINK_HOME/.local/state/omarchy/migrations.log is a symlink" \
-  "the refusal names the planted file"
+check_eq "$st" 2 "add refuses a kid-planted migrations directory link"
+check_contains "$out_link3" "$LINK_HOME/.local/state/omarchy/migrations is a symlink" \
+  "the refusal names the planted path"
 check_eq "$(cat "$LINK_TARGET/victim")" "a line the add must not touch" \
   "the planted file link was neither truncated nor rewritten"
 

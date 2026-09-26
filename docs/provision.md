@@ -203,18 +203,34 @@ stub `PATH` (fake `useradd`, `usermod`, `userdel`, `chpasswd`, `mount`, `umount`
 `cryptsetup`, `omarchy-provision-user`) that only logs its own argv — see that file's `stub()`
 helper.
 
-## Known gap: the exact "migration done" marker (issue #10 finding b)
+## The "migration done" marker, as Omarchy 4.0.2 really keeps it (verified 2026-09-26)
 
 `omarchy-provision-user` is called when it exists on the target, which is the right thing and
 needs no guessing. When it doesn't (an older Omarchy, or a dev box), `mark_migrations_done`
-(`bin/omarchy-kids-provision`) writes one line per file under `OMARCHY_MIGRATIONS_DIR` into
-`~/.local/state/omarchy/migrations.log`, timestamped. This repo has no access to a real Omarchy
-install to confirm that this is the marker format (or location) Omarchy's own migration runner
-actually reads before it decides how many migrations are "pending" — it is a documented best
-effort, not a verified fact, marked `TODO(#10)` at the definition. Before this ships: run it
-against a real Omarchy 4.0.x install with `omarchy-provision-user` temporarily hidden from
-`PATH`, confirm the kid's fresh desktop does *not* show "Pending Omarchy Migrations", and fix the
-format here if it does.
+(`bin/omarchy-kids-provision`) now marks a kid's migrations the way Omarchy itself does, read off
+the real script on the try-omarchy VM instead of guessed:
+
+- `omarchy-migrate`'s `migration_entries` walks `$OMARCHY_PATH/migrations/*.sh` and calls a
+  migration **pending** while
+  `${OMARCHY_MIGRATION_STATE:-$HOME/.local/state/omarchy/migrations}/<script basename>` does not
+  exist; running one touches that marker. So the record is **one marker file per migration, named
+  exactly like the script** — `~/.local/state/omarchy/migrations/1787815267.sh`, say.
+- `omarchy-provision-user` keeps a separate, task-level marker of its own,
+  `~/.local/state/omarchy/done/finalize-user`, checked by `omarchy-done check finalize-user` and
+  set by that script itself when it runs.
+
+So the writer emits per-migration markers and **not** the
+`~/.local/state/omarchy/migrations.log` this repo had invented: nothing in Omarchy reads a file of
+that name, which means a kid provisioned through the fallback would still have been shown
+"Pending Omarchy Migrations" at login. The markers are staged and renamed rather than touched in
+place, so a symlink a kid planted at a marker path is replaced rather than written through (rule
+9), and `~/.local/state/omarchy/migrations` is in `kid_home_writable_paths`, so a link *there* is
+refused outright. Upstream's `OMARCHY_MIGRATION_STATE` override is deliberately not read: a fixed
+path under the kid's home is the smaller surface, and a kid's session does not set it.
+
+The guess is gone, but the outcome still deserves one look on a fresh box: `add` a kid with
+`omarchy-provision-user` hidden from `PATH`, then in that kid's session `omarchy-migrate --pending`
+should print nothing and exit 1, and no "Pending Omarchy Migrations" toast should appear.
 
 `omarchy-provision-user` itself can fail even when present: on a VM built from the ISO's offline
 package set it failed on a missing bundled Node tarball (seen live 2026-09-02). `add` treats that
