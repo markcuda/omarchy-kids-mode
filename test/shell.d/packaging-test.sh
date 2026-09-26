@@ -58,10 +58,16 @@ if sh -n "$ROOT/omarchy-kids.install"; then
 else
   bad "omarchy-kids.install is not valid POSIX shell"
 fi
-if command -v shellcheck >/dev/null 2>&1 && shellcheck -s sh "$ROOT/omarchy-kids.install"; then
+# A missing shellcheck is not a rejection. The old single guard turned it into
+# a `bad`, so this file failed on every box without shellcheck installed (a
+# fresh Arch box, the try-omarchy VM) while passing on the dev Mac -- the
+# opposite of AGENTS.md's "must pass on a real Omarchy box" rule.
+if ! command -v shellcheck >/dev/null 2>&1; then
+  echo "SKIP packaging-test.sh: shellcheck not installed"
+elif shellcheck -s sh "$ROOT/omarchy-kids.install"; then
   ok "ShellCheck validates omarchy-kids.install as POSIX sh"
 else
-  bad "ShellCheck rejects or is unavailable for omarchy-kids.install"
+  bad "ShellCheck rejects omarchy-kids.install"
 fi
 
 if grep -qF '_omarchy_kids_conf_bin="/usr/bin/omarchy-kids-conf"' "$ROOT/omarchy-kids.install" &&

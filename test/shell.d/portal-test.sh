@@ -286,7 +286,13 @@ NODE
   else
     fail "Main.qml lets the GECOS fallback override the exact portal display name"
   fi
-  if command -v node >/dev/null 2>&1 && node -e '
+  # Without node this used to fall to `fail`, so the file failed on every box
+  # with no node (fresh Arch, the try-omarchy VM) even though the property held.
+  # The guard now separates "cannot run the probe" from "the probe failed",
+  # which is the distinction the label was already claiming. 2026-09-25.
+  if ! command -v node >/dev/null 2>&1; then
+    echo "SKIP portal-test.sh: node not found (allowlist adversarial case)"
+  elif node -e '
     const kids = {}
     const hasKid = name => Object.prototype.hasOwnProperty.call(kids, String(name))
     if (hasKid("constructor")) process.exit(1)

@@ -460,7 +460,11 @@ if ((${#py_bins[@]})); then
   py_in_pkgbuild=()
   while IFS= read -r name; do
     [[ -n "$name" ]] && py_in_pkgbuild+=("$(basename "$name")")
-  done < <(grep -E '^\tfor py in .*; do$' "$DIR/PKGBUILD" | grep -oE 'omarchy-kids-[a-z-]+')
+    # `[[:blank:]]*`, not `^\t`: in an ERE `\t` is a literal `t` to GNU grep (it
+    # warns "stray \ before t" and matches nothing), so this check failed on every
+    # real Arch box while passing on BSD grep. Caught by running the suite on the
+    # target platform, 2026-09-25.
+  done < <(grep -E '^[[:blank:]]*for py in .*; do$' "$DIR/PKGBUILD" | grep -oE 'omarchy-kids-[a-z-]+')
   same=1
   for f in "${py_bins[@]}"; do
     base="$(basename "$f")"
