@@ -2761,3 +2761,54 @@ Lessons worth keeping:
 
 `test/all` is 72 files, exit 0 on both platforms; the VM's own `test/all` additionally runs the
 `luac`, qmllint, SO_PEERCRED and `unshare`-gated checks the Mac skips.
+
+### 2026-09-26 (second pass) — dogfooding the shipped files: 11 fixes, and what is left
+
+The tracker was empty at the start of this pass, so the work came from reading the code and the
+docs against a real 4.0.2 install rather than from a queue. Each item below is merged into
+`integration/dogfood-2026-09-19`; the merge is what is named.
+
+| # | Finding | Fixed by |
+| --- | --- | --- |
+| 1 | `portal_clean_exit` could report a clean exit for a compositor still there (`hyprctl` prints "Couldn't connect" and exits 0) | waits for the instance to leave `wayland-1`; sandbox #134, merged `6bc5391` |
+| 2 | `portal_reset` did one greeter wait after any branch, so a restart that fires an autologin hung it — the #103 driver's failure | bounded seat loop (greeter / restart / clean exit); #21, merged `22c98ee` |
+| 3 | `lint-test` had nothing stopping a sourced library from shadowing a test's own `check`/`pass`/`fail` | static guard, verified by planting one; merged `2a228e9` |
+| 4 | `mark_migrations_done` wrote a `migrations.log` **nothing in Omarchy reads**, so a fallback-provisioned kid would still see "Pending Omarchy Migrations" | Omarchy's real per-migration markers (`migrations/<script name>`); merged `0a3e9dc`, verified end to end and recorded in `f8d813b` |
+| 5 | L1/L2 media keys used raw `wpctl`/`brightnessctl` because `default/hypr/bindings/media.lua` "was not in the reference material" — it exists | Omarchy's own `omarchy-audio-output-volume`/`omarchy-brightness-display`, with `locked`/`repeating`; merged `6c8125f` |
+| 6 | `levels-test.sh` called `check_not_contains` without defining it; `panel-test.sh`/`wizard-test.sh` called `check`; `wizard-advanced-row-test.sh` had no `tui.sh`; `ask-test.sh`/`assert-test.sh` snapshotted with a `cksum` their PATH did not have | all four fixed, `cksum` added to the base toolset, and a tool-free guard for the class; merged `380a108` |
+| 7 | `docs/bar.md` asked whether `import qs.Ui` resolves outside `$OMARCHY_PATH` (with a vendoring fallback) | confirmed it does, from Omarchy's own plugin files and `Ui/qmldir`; merged `1a3ce77` |
+| 8 | The bar's "Open Kids Mode"/"Open requests" rows ran `omarchy-kids` with no tty: it printed `tui: no terminal to ask` and **exited 0**, so the rows did nothing | both go through `omarchy-launch-floating-terminal-with-presentation`; merged `a1036eb` |
+| 9 | `omarchy-kids-review` accepted `--dry-run` that its header, usage and `docs/review.md` never mentioned | added to all three; merged `dc655ea` |
+| 10 | `docs/bar.md` described the old polling badge and the new `status.json` one at once, and decision row 8's premise had gone stale | one bullet, and row 8 marked settled; in `a1036eb` |
+| 11 | Decision rows 4 (Level 3 "hidden for v1") and the two-modes amendment ("no code until then") were answered by the tree | rows record the code that settled them; merged `2c8089c` |
+
+Verified on the try-omarchy VM, not just the stub: 104 markers for 104 migrations with
+`omarchy-migrate --pending` empty (exit 1) as the kid; a clean `hl.dsp.exit()` returned the greeter
+within 5s while a `loginctl terminate-session` left seat0 empty with no greeter at all;
+`/usr/bin/omarchy-audio-output-volume` and `omarchy-brightness-display` are where `media.lua` binds
+them and both edited level files parse under `luac`; `qs.Ui`'s `qmldir` and the third-party plugin
+directory are as `docs/bar.md` now says. `omarchy-kids-ask list` answers
+`omarchy-kids-ask: no open requests` for a parent (exit 0), and `omarchy-kids --requests` with it.
+
+Lessons worth keeping:
+
+- **A comment admitting a guess is a defect with a location.** Two of the eleven came straight out
+  of `# ... guessed`, `TODO(#10)` and `UNVERIFIED:` lines, and both were settled by reading
+  Omarchy's own shipped files on the VM rather than by reasoning.
+- **A green test proves nothing until it can fail.** Four assertions never ran at all (an undefined
+  helper prints `command not found` and sets nothing), and eight before/after comparisons compared
+  empty to empty because `cksum` was missing from the base toolset. Both classes now have a guard,
+  and the two are the shapes AGENTS.md's "owns its fixture" rule already warned about.
+- **Docs can contradict themselves.** `docs/bar.md` carried both the old and the new badge design,
+  and the decision list carried rows the code had answered. Reading the docs against the tree is
+  as much a part of a pass as reading the code.
+- **Do not leave something running on the shared VM.** Four `test/all` runs left behind by ssh
+  commands that hit the agent tool's timeout put the 4-core guest at load ~9 and made one test look
+  hung for seven minutes; and `pkill -f` issued from a command line that contains the pattern kills
+  that command's own session (twice). `test/all` on the guest is a ~30–45 minute affair: it is
+  slow, not stuck.
+
+Left blocked, not worked: real device pairing (needs a second peer), `test/live/` scenarios (rule
+11 keeps them to the gate runner), app store builds (no Xcode/Android SDK), and the owner's own
+open decisions — `docs/phase1/DECISIONS-NEEDED.md` rows 1 (Pause), 3 (add-on model), 5 (per-app
+limits), 6 (the Level 3 file-manager bind) and 7 (`dns`/`sites`, stored and not applied).
