@@ -228,9 +228,11 @@ place, so a symlink a kid planted at a marker path is replaced rather than writt
 refused outright. Upstream's `OMARCHY_MIGRATION_STATE` override is deliberately not read: a fixed
 path under the kid's home is the smaller surface, and a kid's session does not set it.
 
-The guess is gone, but the outcome still deserves one look on a fresh box: `add` a kid with
-`omarchy-provision-user` hidden from `PATH`, then in that kid's session `omarchy-migrate --pending`
-should print nothing and exit 1, and no "Pending Omarchy Migrations" toast should appear.
+Verified end to end on the try-omarchy VM, 2026-09-26, with a failing `omarchy-provision-user`
+first on `PATH` (a present one can fail too — see the paragraph below — and that is what puts this
+fallback in play): `add` wrote **all 104 markers** for the 104 shipped migrations, wrote no
+`migrations.log`, and `omarchy-migrate --pending` run as that kid printed nothing and exited 1. The
+kid it provisioned was removed again afterwards.
 
 `omarchy-provision-user` itself can fail even when present: on a VM built from the ISO's offline
 package set it failed on a missing bundled Node tarball (seen live 2026-09-02). `add` treats that
