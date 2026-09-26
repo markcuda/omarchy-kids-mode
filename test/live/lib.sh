@@ -415,7 +415,14 @@ portal_reset() {
     waited=0
     while :; do
       sessions="$(vmroot "loginctl list-sessions --no-legend")" || return 1
-      who="$(awk '$4=="seat0"{print $3; exit}' <<<"$sessions" | tr -d '[:space:]')"
+      # Not just the first seat0 row. A session whose processes linger after a clean exit stays
+      # listed -- the disowned `omarchy-kids-time` daemon loops forever -- and that row (class
+      # `manager`, or a state of `closing`) would send the next round waiting on a user with no
+      # compositor, reporting a reset that worked as a failure. Take the greeter if there is one,
+      # else a real `user` session, never either of those. (Review of this pass, 2026-09-26.)
+      who="$(awk '$4 == "seat0" && $6 == "greeter" { print $3; exit }' <<<"$sessions" | tr -d '[:space:]')"
+      [[ -n "$who" ]] ||
+        who="$(awk '$4 == "seat0" && $6 == "user" && $9 != "closing" { print $3; exit }' <<<"$sessions" | tr -d '[:space:]')"
       [[ -n "$who" || $waited -ge 45 ]] && break
       sleep 5
       waited=$((waited + 5))
@@ -434,9 +441,15 @@ portal_reset() {
         ;;
     esac
     # A restart plus an autologin, or two clean exits, is enough; a seat that keeps coming back
-    # as a session is a loop the caller should hear about rather than wait out.
+    # as a session is a loop the caller should hear about rather than wait out. The third action
+    # may have been the one that worked, though, so the seat is read once more before failing
+    # rather than returning on the attempt count alone (review of this pass, 2026-09-26).
     attempt=$((attempt + 1))
-    ((attempt < 3)) || return 1
+    ((attempt < 3)) && continue
+    sessions="$(vmroot "loginctl list-sessions --no-legend")" || return 1
+    who="$(awk '$4 == "seat0" && $6 == "greeter" { print $3; exit }' <<<"$sessions" | tr -d '[:space:]')"
+    [[ -n "$who" ]] && assert_greeter "$deadline" && return 0
+    return 1
   done
 }
 

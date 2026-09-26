@@ -245,7 +245,18 @@ BEHAVIOR_ROOT="$LIB_FIXTURE_ROOT"
         # greeter is back on its own (issue #21, live-verified on the try-omarchy VM).
         # `autologin` starts empty and hands the seat to a session at SDDM start;
         # `session-always` never stops returning a session.
-        if [[ "$LIVE_TEST_VMROOT_MODE" == session-always ]]; then
+        if [[ "$LIVE_TEST_VMROOT_MODE" == closing-first ]]; then
+          # A `manager` row for an account this harness cannot exit, listed before the real session:
+          # taking the first seat0 row would pick it and fail. (The stub knows one account, so a
+          # wrong pick shows up as a failed reset rather than a silently different one.) Once the
+          # clean exit has happened the greeter is back, as in the other modes.
+          if [[ -f "$LIVE_TEST_STATE_DIR/dispatches" ]]; then
+            printf '2 965 sddm seat0 - greeter\n'
+          else
+            printf '1 1002 kid-cy seat0 111 manager - no closing\n'
+            printf '2 1000 kid-test seat0 - user\n'
+          fi
+        elif [[ "$LIVE_TEST_VMROOT_MODE" == session-always ]]; then
           printf '1 1000 kid-test seat0 - user\n'
         elif [[ "$LIVE_TEST_VMROOT_MODE" == autologin && ! -f "$LIVE_TEST_STATE_DIR/restart-attempt" ]]; then
           return 0
@@ -395,6 +406,17 @@ BEHAVIOR_ROOT="$LIB_FIXTURE_ROOT"
     fail_ "portal_reset skipped the SDDM restart on an empty seat"
   check "$(cat "$LIVE_TEST_STATE_DIR/dispatches")" "1" \
     "portal_reset: exited the autologin session exactly once"
+  # A `manager`/closing row for a user the harness cannot exit, listed before the real session: it
+  # is on seat0, so taking the first row picks it and the reset fails. (The stub knows one account,
+  # so a wrong pick shows up as a failed reset rather than a silently different one.) Review of
+  # this pass, 2026-09-26.
+  LIVE_TEST_VMROOT_MODE=closing-first
+  : >"$LIVE_TEST_STATE_DIR/calls"
+  rm -f "$LIVE_TEST_STATE_DIR/restart-attempt" "$LIVE_TEST_STATE_DIR/dispatches"
+  portal_reset 0
+  check_status "$?" "0" "portal_reset: a manager row on seat0 is skipped for the real session"
+  check "$(cat "$LIVE_TEST_STATE_DIR/dispatches")" "1" \
+    "portal_reset: exited the session and not the seat's manager row"
   LIVE_TEST_VMROOT_MODE=session-always
   : >"$LIVE_TEST_STATE_DIR/calls"
   rm -f "$LIVE_TEST_STATE_DIR/dispatches"
