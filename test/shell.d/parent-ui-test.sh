@@ -22,6 +22,15 @@ if ! flutter pub get >/dev/null 2>&1; then
   exit 0
 fi
 
+# The analyzer, not just the widget tests: same reason as parent-app-test.sh.
+if out="$(flutter analyze 2>&1)"; then
+  echo "ok   flutter analyze: the parent app is clean"
+else
+  echo "FAIL parent-ui-test.sh: flutter analyze found issues:"
+  printf '%s\n' "$out" | tail -15
+  exit 1
+fi
+
 out="$(flutter test 2>&1)"
 st=$?
 printf '%s\n' "$out" | grep -E 'All tests passed|Some tests failed' | tail -1
