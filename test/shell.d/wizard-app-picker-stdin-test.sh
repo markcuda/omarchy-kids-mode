@@ -56,7 +56,10 @@ pid, fd = pty.fork()
 if pid == 0:
     os.execv('/bin/bash', ['/bin/bash', script, '--pty'])
 chunks = []
-deadline = time.monotonic() + 30
+# Generous on purpose: test/all runs several files at once and expiry here SIGKILLs the inner run,
+# so a tight deadline turns a loaded box into a red suite (seen on the try-omarchy VM, 2026-09-26:
+# this file failed in parallel and passed alone). The inner run takes ~0.9s idle.
+deadline = time.monotonic() + 120
 status = None
 try:
     while time.monotonic() < deadline:

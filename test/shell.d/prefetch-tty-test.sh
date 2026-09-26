@@ -63,7 +63,10 @@ if pid == 0:
     env = {"PATH": stubs + ":/usr/bin:/bin", "TERM": "xterm-256color"}
     os.execve(bash, [bash, "--noprofile", "--norc", "-i", "-m", "-c", harness], env)
 
-deadline = time.monotonic() + 5.0
+# Generous on purpose: test/all runs several files at once and this deadline kills the child, so a
+# tight one turns a loaded box into a red suite (seen on the try-omarchy VM, 2026-09-26, where a
+# file failed in parallel and passed alone). The run itself takes ~0.2s idle.
+deadline = time.monotonic() + 60
 status = None
 while time.monotonic() < deadline:
     waited, raw = os.waitpid(pid, os.WNOHANG)
