@@ -195,6 +195,21 @@ check_contains "$out" "Screen time" "summary shows the screen-time row"
 check_contains "$out" "60 minutes a day" "summary shows band 6-8's budget"
 check_contains "$out" "19:30" "summary shows band 6-8's bedtime"
 check_contains "$out" "Face          owl" "summary shows the chosen face"
+# Issue #15: portal mode enrols no child disk key, so the password screen must
+# not promise one. Every run in this file is portal unless it says otherwise.
+check_not_contains "$out" "(and this computer's disk" \
+  "portal mode: the password screen promises no disk unlock (issue #15)"
+
+# ... and disk mode, where that key really is enrolled, still says it. The
+# run below overwrites $out, and the happy path's own assertions (including
+# Apply's exact flags) come after this point, so keep it aside and put it back.
+_happy_out="$out"
+WIZARD_TEST_BOOT_MODE=disk run_wizard \
+  "$(answers_file begin parentpw123 Ada fox 6-8 simple garden default pack parent 1 secret1 secret1 apply parent)"
+check_status "$WIZ_STATUS" 0 "disk-mode run exits 0"
+check_contains "$out" "(and this computer's disk" \
+  "disk mode: the password screen names the disk unlock (issue #15)"
+out="$_happy_out"
 
 # --dry-run means Apply's run_priv/run_priv_stdin print the command
 # instead of ever calling sudo/pacman/omarchy-kids-*, so this is checking

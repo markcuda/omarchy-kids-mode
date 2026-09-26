@@ -25,6 +25,11 @@ source "$LIB/kids.sh"
 SHARE="${OMARCHY_KIDS_SHARE:-/usr/share/omarchy-kids}"
 
 CONF_BIN="$(kids_bin conf "$DIR")"
+# The trusted boot mode, resolved once here: it decides one sentence on the
+# password screen (issue #15). Only a disk-mode box enrols a child disk key, so
+# only there may the screen promise one; an unreadable or absent machine.conf
+# (a fresh first run) leaves this empty and the sentence makes no claim.
+BOOT_MODE="$("$CONF_BIN" machine get boot 2>/dev/null || true)"
 PARENT_AUTH_BIN="$(kids_bin parent-auth "$DIR")"
 PROVISION_BIN="$(kids_bin provision "$DIR")"
 WEB_BIN="$(kids_bin web "$DIR")"
