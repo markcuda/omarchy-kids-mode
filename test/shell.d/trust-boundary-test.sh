@@ -280,6 +280,21 @@ else
   ok "trust boundary: every root check goes through lib/kids.sh's is_root"
 fi
 
+# `$EUID` is the other way a bash file can ask, and it is legitimate in exactly two places: the
+# suite's own `id` stub sits first on PATH and reads `-u` as an account name, so `is_root` cannot
+# report root there and both files say so at the line. Anywhere else it is the same hand-rolled
+# check this section exists to catch -- the first version of this guard only looked for `id -u`, so
+# `$EUID` went unseen (review of this pass, 2026-09-26).
+euid_allowed='lib/check-live.sh|lib/check-web.sh'
+if hits="$(grep -rnE '\$\{?EUID\}?' bin lib --include='omarchy-kids*' --include='*.sh' |
+  grep -vE "^($euid_allowed):" |
+  grep -vE '^[^:]*:[0-9]+:[[:space:]]*#')"; then
+  bad "trust boundary: \$EUID used for a root check outside the two documented exceptions:"
+  printf '     %s\n' "$hits"
+else
+  ok "trust boundary: the only \$EUID root checks are the two the suite's id stub requires"
+fi
+
 # =====================================================================
 # 4. The compositor config a kid's session runs under decides nothing
 #    from that session's own environment (review §3.5).
