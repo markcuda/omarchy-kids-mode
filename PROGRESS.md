@@ -29,12 +29,16 @@ The dogfooding workstream landed on `fix/kid-session-polish` and is merged (inte
   `docs/phase1/SPEC-AMENDMENT-screen-time-11196.md` (T49-T53).
 
 **Reviewed** twice with opus 5.5 at max effort (fable 5.1 was rate-limited); every finding closed.
-`test/all -j 4` is 65 files green; `shfmt -i 2 -ci` and shellcheck are clean.
+`test/all -j 4` is **73 files** green on the Mac and the VM (the guest run takes ~30-45 minutes: it
+is slow, not stuck); `shfmt -i 2 -ci` and shellcheck are clean.
 
-**Blocked on the test VM (AGENTS.md rule 11) or a pointer GUI:** T45's chord binding, T18
-(hand over to a kid), T34 (a floating wizard window), T23 (background installs), T49-T53 (the
-#11196 screen-time ideas, specced), and T31/T32 (an `Ask Omy` `?` key and a clickable/animated
-Omy -- a pointer GUI `gum` cannot do).
+**Blocked on the test VM (AGENTS.md rule 11) or a pointer GUI:** T18 (hand over to a kid), T34 (a
+floating wizard window), T23 (background installs), T49-T53 (the #11196 screen-time ideas, specced),
+and T31/T32 (an `Ask Omy` `?` key and a clickable/animated Omy -- a pointer GUI `gum` cannot do).
+
+**Done since this list was written:** T45's chord binding -- Level 3 binds the theme picker on
+Omarchy's own `SUPER + CTRL + SHIFT + SPACE` after unbinding Omarchy's first
+(`share/hyprland/L3.lua`), and `test/shell.d/levels-test.sh` holds both halves to it.
 
 The sections below are the earlier (September 21 and before) state, kept for their live evidence.
 
