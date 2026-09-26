@@ -297,9 +297,17 @@ screen_password() {
     fi
   fi
 
+  # The disk clause is a claim about a key this run will enrol: true in disk
+  # mode, false in portal mode (which enrols none) and unverified before
+  # machine.conf exists. Only say it when the mode says disk (issue #15).
+  local unlock="This unlocks $DISPLAY_NAME's screen and logs them in."
+  if [[ "${BOOT_MODE:-}" == disk ]]; then
+    unlock="This unlocks $DISPLAY_NAME's screen (and this computer's disk, if it's encrypted) and logs them in."
+  fi
+
   while true; do
     tui_screen_input "Now a password for $DISPLAY_NAME." 12 "$TOTAL_STEPS" 0 "" \
-      password "This unlocks $DISPLAY_NAME's screen (and this computer's disk, if it's encrypted) and logs them in." \
+      password "$unlock" \
       validate_kid_password
     local rc=$?
     ((rc == 0)) || return $rc
