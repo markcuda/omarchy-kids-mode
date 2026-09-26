@@ -36,8 +36,13 @@ if [[ -z "$qmllint" ]]; then
 fi
 
 # while-read, not mapfile: test/all also runs under macOS's bash 3.2.
+#
+# `! -name '._*'`: a tree copied off a Mac with `tar` (not `git archive`) carries
+# AppleDouble metadata files named `._KidsTheme.qml`, which qmllint cannot parse.
+# The suite is meant to run from an extracted tarball, so macOS bookkeeping is
+# not source. Found the hard way on 2026-09-26, with 759 of them in one copy.
 files=()
-while IFS= read -r f; do files+=("$f"); done < <(find "$ROOT" -name '*.qml' -not -path '*/.git/*' | sort)
+while IFS= read -r f; do files+=("$f"); done < <(find "$ROOT" -name '*.qml' -not -name '._*' -not -path '*/.git/*' | sort)
 if ((${#files[@]} == 0)); then
   fail "no .qml files found under $ROOT"
   echo "qml-syntax-test RESULT: FAIL"
