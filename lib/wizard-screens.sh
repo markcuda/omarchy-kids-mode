@@ -59,8 +59,10 @@ screen_parent_password() {
 
 # A3: Name.
 screen_name() {
+  # "$DISPLAY_NAME" as the offered value: Esc back from Face returns here (issue
+  # #19), and the parent should see the name they typed rather than an empty box.
   tui_screen_input "What's your kid's name?" 3 "$TOTAL_STEPS" 0 "" \
-    text "First name or nickname. It's what they'll see." validate_kid_name
+    text "First name or nickname. It's what they'll see." validate_kid_name "" "$DISPLAY_NAME"
   local rc=$?
   ((rc == 0)) || return $rc
   DISPLAY_NAME="$TUI_REPLY"

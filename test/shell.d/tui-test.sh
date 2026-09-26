@@ -521,6 +521,41 @@ touch "$release"
 wait "$blocked_pid"
 check_contains "$(cat "$blocked_out")" "rc=0 reply=Ada" "tui_screen_input: blocked widget still returns its answer"
 
+# Issue #19: a screen the caller returns to offers its previous value back, so
+# Escape from the wizard's Face screen does not make the parent retype the name.
+: >"$GUM_LOG"
+prefill_out="$TMP/prefill.out"
+(
+  unset OMARCHY_KIDS_TUI_ANSWERS OMARCHY_KIDS_TUI_PLAIN
+  # shellcheck disable=SC2030,SC2031 # the subshell owns these exports
+  export GUM_OUTPUT=Ada
+  # shellcheck source=/dev/null
+  source "$TUI_LIB"
+  tui_init 2>/dev/null
+  TUI_MODE="interactive" TUI_HAVE_GUM=1
+  tui_screen_input "What's your kid's name?" 3 3 0 "" text "hint" "" "$TUI_FOOTER_DEFAULT" "Ada"
+  echo "rc=$? reply=$TUI_REPLY"
+) >"$prefill_out" 2>&1 </dev/null
+check_contains "$(cat "$GUM_LOG")" "--value Ada" \
+  "tui_screen_input: an offered value reaches gum as --value (issue #19)"
+check_contains "$(cat "$prefill_out")" "rc=0 reply=Ada" \
+  "tui_screen_input: and the answer is still returned"
+
+# ... and a screen with no previous value passes no --value at all.
+: >"$GUM_LOG"
+(
+  unset OMARCHY_KIDS_TUI_ANSWERS OMARCHY_KIDS_TUI_PLAIN
+  # shellcheck disable=SC2030,SC2031 # the subshell owns these exports
+  export GUM_OUTPUT=Ada
+  # shellcheck source=/dev/null
+  source "$TUI_LIB"
+  tui_init 2>/dev/null
+  TUI_MODE="interactive" TUI_HAVE_GUM=1
+  tui_screen_input "What's your kid's name?" 3 3 0 "" text "hint" "" "$TUI_FOOTER_DEFAULT"
+) >/dev/null 2>&1 </dev/null
+check_not_contains "$(cat "$GUM_LOG")" "--value" \
+  "tui_screen_input: a fresh screen passes no --value"
+
 : >"$GUM_LOG"
 rm -f "$release"
 (

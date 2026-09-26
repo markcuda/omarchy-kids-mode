@@ -436,6 +436,10 @@ tui_screen_input() {
   local title="$1" step="$2" total="$3" show_omy="$4" omy_line="$5"
   local kind="$6" placeholder="${7:-}" validator="${8:-}"
   local footer="${9:-$TUI_FOOTER_DEFAULT}"
+  # A screen the caller can return to offers its previous value back (issue #19:
+  # Escape from the wizard's Face screen used to land on an empty Name field, so
+  # the parent retyped what was already typed).
+  local value="${10:-}"
   local last_err="$TUI_PRESET_ERROR"
   TUI_PRESET_ERROR=""
 
@@ -466,6 +470,7 @@ tui_screen_input() {
       # The hint is on the card (or printed above) already; repeating it inside the box read twice.
       local -a gflags=(--placeholder "" --prompt.foreground "$TUI_C_ACCENT")
       [[ "$kind" == password ]] && gflags+=(--password)
+      [[ -n "$value" ]] && gflags+=(--value "$value")
       ans="$(gum input "${gflags[@]}")"
       case $? in
         1) return 1 ;;
@@ -477,6 +482,9 @@ tui_screen_input() {
       if [[ "$kind" == password ]]; then
         read -r -s -p "> " ans
         echo
+      elif [[ -n "$value" ]]; then
+        # -e -i: the plain fallback prefills too, so both paths behave alike.
+        read -r -e -i "$value" -p "> " ans
       else
         read -r -p "> " ans
       fi
