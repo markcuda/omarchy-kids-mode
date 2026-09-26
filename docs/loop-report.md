@@ -2762,7 +2762,7 @@ Lessons worth keeping:
 `test/all` is 72 files, exit 0 on both platforms; the VM's own `test/all` additionally runs the
 `luac`, qmllint, SO_PEERCRED and `unshare`-gated checks the Mac skips.
 
-### 2026-09-26 (second pass) — dogfooding the shipped files: 11 fixes, and what is left
+### 2026-09-26 (second pass) — dogfooding the shipped files: 12 fixes, and what is left
 
 The tracker was empty at the start of this pass, so the work came from reading the code and the
 docs against a real 4.0.2 install rather than from a queue. Each item below is merged into
@@ -2781,6 +2781,7 @@ docs against a real 4.0.2 install rather than from a queue. Each item below is m
 | 9 | `omarchy-kids-review` accepted `--dry-run` that its header, usage and `docs/review.md` never mentioned | added to all three; merged `dc655ea` |
 | 10 | `docs/bar.md` described the old polling badge and the new `status.json` one at once, and decision row 8's premise had gone stale | one bullet, and row 8 marked settled; in `a1036eb` |
 | 11 | Decision rows 4 (Level 3 "hidden for v1") and the two-modes amendment ("no code until then") were answered by the tree | rows record the code that settled them; merged `2c8089c` |
+| 12 | `PROGRESS.md`'s live section still said `test/all` was 65 files and still listed T45 as blocked | 73 files, and T45 moved to a "done since" line; merged `7846925` |
 
 Verified on the try-omarchy VM, not just the stub: 104 markers for 104 migrations with
 `omarchy-migrate --pending` empty (exit 1) as the kid; a clean `hl.dsp.exit()` returned the greeter
