@@ -397,34 +397,47 @@ portal_tile_index() {
 # portal_reset [DEADLINE] — gets a fresh greeter on screen the only way SDDM 0.21 on Omarchy 4.0.2
 # allows (docs/exit.md, docs/phase1/V1.md): a clean compositor exit of whatever seat0 session is
 # active. SwitchToGreeter over D-Bus fails with HELPER_TTY_ERROR and, on the laptop, revoked the
-# input devices; a hard terminate leaves SDDM with no greeter at all. If nothing is on seat0 (a
-# black screen), restart SDDM (the owner's stock autologin fires) and exit that session cleanly.
+# input devices; a hard terminate leaves SDDM with no greeter at all. A session on seat0 is
+# therefore exited, not killed; an empty seat is SDDM with no greeter to return to, so SDDM is
+# restarted, which may fire a configured autologin (a recorded parent slot, docs/boot.md) instead
+# of a greeter -- so loop, bounded, until the seat really is `sddm`. Live-verified on the
+# try-omarchy VM (issue #21): a clean exit returned the greeter within 5s, while a
+# `loginctl terminate-session` left seat0 empty with no greeter process.
 portal_reset() {
-  local deadline="${1:-45}" who sessions waited=0
+  local deadline="${1:-45}" who sessions waited=0 attempt=0
   command -v jq >/dev/null 2>&1 || {
     echo "portal_reset: jq is required on the harness host to inspect Hyprland instances" >&2
     return 1
   }
-  # Right after a boot the seat may still be empty while the owner's autologin (a recorded
-  # parent slot, docs/boot.md) is starting: give it a moment before treating it as black.
   while :; do
-    sessions="$(vmroot "loginctl list-sessions --no-legend" 2>/dev/null)" || return 1
-    who="$(awk '$4=="seat0"{print $3; exit}' <<<"$sessions" | tr -d '[:space:]')"
-    [[ -n "$who" || $waited -ge 45 ]] && break
-    sleep 5
-    waited=$((waited + 5))
+    # Right after a boot the seat may still be empty while an autologin is starting: give it a
+    # moment before treating it as black.
+    waited=0
+    while :; do
+      sessions="$(vmroot "loginctl list-sessions --no-legend")" || return 1
+      who="$(awk '$4=="seat0"{print $3; exit}' <<<"$sessions" | tr -d '[:space:]')"
+      [[ -n "$who" || $waited -ge 45 ]] && break
+      sleep 5
+      waited=$((waited + 5))
+    done
+    case "$who" in
+      sddm) # the greeter holds the seat: done once it answers within the deadline
+        assert_greeter "$deadline" || return 1
+        return 0
+        ;;
+      "") # no session and no greeter: restart SDDM, and an autologin may take the seat
+        vmroot "systemctl restart sddm" || return 1
+        vmroot "sleep 16" || return 1
+        ;;
+      *) # a session (an autologin, a leftover kid): a clean exit returns the greeter
+        portal_clean_exit "$who" || return 1
+        ;;
+    esac
+    # A restart plus an autologin, or two clean exits, is enough; a seat that keeps coming back
+    # as a session is a loop the caller should hear about rather than wait out.
+    attempt=$((attempt + 1))
+    ((attempt < 3)) || return 1
   done
-  case "$who" in
-    sddm) : ;; # the greeter is already up
-    "")
-      vmroot "systemctl restart sddm" || return 1
-      vmroot "sleep 16" || return 1
-      who="$LIVE_OWNER_ACCOUNT"
-      portal_clean_exit "$who" || return 1
-      ;;
-    *) portal_clean_exit "$who" || return 1 ;;
-  esac
-  assert_greeter "$deadline"
 }
 
 # portal_clean_exit ACCOUNT [DEADLINE] — waits for one live Hyprland instance on wayland-1, then
