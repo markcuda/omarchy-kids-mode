@@ -326,9 +326,21 @@ cmd_unset() {
 # manifest_follow_profile KID -- on a provisioned box the manifest must match the profile, or the
 # kid's next login fails closed (R-MANIFEST-4). Best-effort: assert rebuilds it too.
 manifest_follow_profile() {
+  local kid="$1" key value
   [[ -d "$(session_manifest_dir)" ]] || return 0
-  session_manifest_build "$1" ||
-    echo "omarchy-kids-conf: could not rebuild the session manifest for '$1' (see stderr above) -- omarchy-kids-assert will" >&2
+  # Provisioning writes a profile one key at a time, so an early `set` is followed
+  # by a build that cannot resolve the keys not written yet: a setup that is going
+  # perfectly well printed "cannot resolve 'avatar'" and "could not rebuild the
+  # session manifest" (issue #17). Only follow a profile the build can read -- the
+  # key that completes it, or omarchy-kids-assert, is what really syncs it. The
+  # three keys are the ones session_manifest_validate_profile resolves first, and
+  # each has default_source=none, so an unset one is genuinely empty here.
+  for key in name avatar band; do
+    value="$(resolve "$kid" "$key" 2>/dev/null)" || return 0
+    [[ -n "${value%%$'\t'*}" ]] || return 0
+  done
+  session_manifest_build "$kid" ||
+    echo "omarchy-kids-conf: could not rebuild the session manifest for '$kid' (see stderr above) -- omarchy-kids-assert will" >&2
 }
 
 cmd_show() {
