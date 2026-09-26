@@ -138,17 +138,14 @@ consent, both ways).
 - A badge with the count of open requests, read from `status.json`'s `open_requests` (R-BAR-3 as
   amended): the ledger publishes it, so the widget runs no subprocess and needs no 30-second
   polling (it follows the file). The requests row opens the panel, which lists them.
-- A badge with the count of open requests, refreshed every 30s by running `omarchy-kids-ask list`
-  in a `Process` and counting its output lines (that command prints a plain aligned table or the
-  literal line `omarchy-kids-ask: no open requests` -- there is no `--json`/`--count` mode, so this
-  counts lines rather than adding a new output mode to a command another issue owns).
-  **As written it cannot populate:** `omarchy-kids-ask list` requires root (`docs/ask.md`) and this
-  widget runs in the parent's unprivileged session, so the `Process` exits 1 with empty stdout and
-  the count stays 0; the `Open requests` row below runs `omarchy-kids --requests`, which fails the
-  same way. Reconciling that is an open decision, not a bug this page can settle: the live failure
-  is recorded in `docs/loop-bar-requests-finding`, and `docs/phase1/DECISIONS-NEEDED.md` carries the
-  choice between publishing the count in root-written `status.json`, reading the queue the way the
-  panel already does, or tightening the queue's permissions.
+  The badge once ran `omarchy-kids-ask list` in a `Process` and counted its output lines, which
+  `docs/phase1/DECISIONS-NEEDED.md` row 8 recorded as unable to populate from the parent's
+  unprivileged session. **That row is settled** in favour of publishing the count in `status.json`
+  (the amendment above), so this widget shells out for nothing. And `omarchy-kids-ask list` is no
+  longer root-only either: `bin/omarchy-kids-ask`'s `cmd_list` is
+  `is_root || in_parent_group || die "list: root or a member of omarchy-parents only"`, and the
+  parent's session is in that group -- run as the parent on the try-omarchy VM, 2026-09-26, both
+  `omarchy-kids-ask list` and `omarchy-kids --requests` answered `no open requests`, exit 0.
 - Click or Enter opens a menu: two-line "Give 15 more" and "End session" rows for each live kid,
   with the affected kid's status and minutes on the detail line (R-BAR-1's
   "Ada · paused · 32 min"), then "Open requests" and "Open Kids Mode".
@@ -159,8 +156,15 @@ consent, both ways).
 | --- | --- |
 | `Give 15 more` / `<K> · live/paused · N min` | `omarchy-kids-bar grant <kid> 15` |
 | `End session` / `<K> · live/paused · N min` | `omarchy-kids-bar end <kid>` |
-| `Open requests` | `omarchy-kids --requests` |
-| `Open Kids Mode` | `omarchy-kids` |
+| `Open requests` | `omarchy-launch-floating-terminal-with-presentation omarchy-kids --requests` |
+| `Open Kids Mode` | `omarchy-launch-floating-terminal-with-presentation omarchy-kids` |
+
+Both of those rows go through Omarchy's floating-terminal helper for the same reason `grant`/`end`
+do: the widget's launch has no tty, and the two commands it runs *show a person something*.
+Verified live on the try-omarchy VM, 2026-09-26: run bare from the parent's session, `omarchy-kids`
+prints `tui: no terminal to ask, and OMARCHY_KIDS_TUI_ANSWERS is not set — nothing to answer prompts
+with` and **exits 0** -- so "Open Kids Mode" was a silent no-op, and "Open requests" wrote its list
+to a stdout nobody had. (Absolute path, like the other two binaries here: rule 9.)
 
 `Open requests` is a fourth row this widget carries beyond R-BAR-2's exact three, grounded in
 SPEC.md's own Ask flow description ("Kid action → modal → password on the spot, or queue → panel
@@ -276,7 +280,11 @@ In order of what to check first:
    does the clean-exit path work often enough that it doesn't) -- see docs/exit.md's own "What's
    unverified" for this in detail.
 6. "Open requests" / "Open Kids Mode": do they print/launch what `bin/omarchy-kids` now does for
-   `--requests` / no args?
+   `--requests` / no args? **Half answered on the try-omarchy VM, 2026-09-26:** both commands do
+   what the table above says when run as the parent (`--requests` printed its answer with exit 0;
+   no-args printed the wizard's no-terminal message), and the row now opens a terminal so the
+   parent can actually see either. What a headless run could not show is the terminal appearing
+   from a click in a live parent session.
 7. `omarchy-kids-bar disable --apply` on a bar that has other, unrelated customizations (a real
    parent's real `shell.json`, not a fixture): confirm nothing else moves.
 

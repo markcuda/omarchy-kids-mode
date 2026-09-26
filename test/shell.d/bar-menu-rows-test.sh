@@ -60,7 +60,7 @@ const launches = [];
 const root = {
   liveKids: [], openRequestCount: 0, grantMinutes: 15,
   cursorIndex: 0, hasFile: false, opened: true,
-  kidsBin: '/fixture/kids', barCtlBin: '/fixture/bar',
+  kidsBin: '/fixture/kids', barCtlBin: '/fixture/bar', terminalBin: '/fixture/term',
   runDetached(command) { launches.push(Array.from(command)); },
   close() { this.opened = false; }
 };
@@ -112,10 +112,12 @@ for (const kind of ['missing', 'empty', 'malformed', 'valid-empty']) {
   root.reloadStatus();
   assert.strictEqual(root.cursorIndex, 1, 'repeated refresh preserves a still-valid selection');
   activate();
-  assert.deepStrictEqual(launches.pop(), ['/fixture/kids'], 'activation targets the visible ordinary row');
+  assert.deepStrictEqual(launches.pop(), ['/fixture/term', '/fixture/kids'],
+    'activation targets the visible ordinary row, through a terminal (the shell has no tty)');
   root.opened = true;
   enter();
-  assert.deepStrictEqual(launches.pop(), ['/fixture/kids'], 'Enter targets the visible ordinary row');
+  assert.deepStrictEqual(launches.pop(), ['/fixture/term', '/fixture/kids'],
+    'Enter targets the visible ordinary row, through a terminal');
   root.opened = true;
   readFails = false;
   statusText = populated;
@@ -138,5 +140,12 @@ for (const [value, want] of [['2', 2], [-3, 0], [1.6, 2], ['x', 0], [null, 0], [
   const row = root.menuRows.find(r => r.kind === 'requests');
   assert.strictEqual(row.label, want > 0 ? `Open requests (${want})` : 'Open requests', `the row shows ${want}`);
 }
+// The requests row shows its list in a terminal as well: `omarchy-kids --requests` writes to
+// stdout, and this shell's launch discards it, so a bare call showed the parent nothing.
+root.opened = true;
+root.cursorIndex = root.menuRows.findIndex(r => r.kind === 'requests');
+activate();
+assert.deepStrictEqual(launches.pop(), ['/fixture/term', '/fixture/kids', '--requests'],
+  'the requests row opens a terminal for the list');
 console.log('bar-menu-rows-test: PASS');
 NODE

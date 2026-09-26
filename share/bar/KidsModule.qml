@@ -18,6 +18,12 @@ Panel {
     // Absolute, and not from the environment (AGENTS.md rule 9, review S12).
     readonly property string barCtlBin: "/usr/bin/omarchy-kids-bar"
     readonly property string kidsBin: "/usr/bin/omarchy-kids"
+    // Omarchy's own floating-terminal helper, also absolute (rule 9). The two rows that show a
+    // parent something -- the wizard and the request list -- need a tty, and this shell process
+    // has none: run bare, `omarchy-kids` prints "tui: no terminal to ask" and exits 0, so the row
+    // was a silent no-op (found live on the try-omarchy VM, 2026-09-26). Confirmed present at this
+    // path on 4.0.2, and the same helper bin/omarchy-kids-bar uses for its own sudo prompts.
+    readonly property string terminalBin: "/usr/bin/omarchy-launch-floating-terminal-with-presentation"
     // How many more minutes one click grants (bin/omarchy-kids-time grant
     // takes any positive integer; this is just this menu's one-click amount).
     readonly property int grantMinutes: 15
@@ -152,9 +158,9 @@ Panel {
         } else if (row.kind === "end") {
             root.runDetached([root.barCtlBin, "end", row.kid])
         } else if (row.kind === "requests") {
-            root.runDetached([root.kidsBin, "--requests"])
+            root.runDetached([root.terminalBin, root.kidsBin, "--requests"])
         } else if (row.kind === "open") {
-            root.runDetached([root.kidsBin])
+            root.runDetached([root.terminalBin, root.kidsBin])
         }
         root.close()
     }

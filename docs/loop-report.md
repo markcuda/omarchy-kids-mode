@@ -1128,7 +1128,12 @@ are `fix/modal-key-hints`; `dns`/`sites` are `fix/dns-control-honesty`/`fix/gard
 What this loop added and cannot finish itself: the bar's open-request badge and its "Open requests"
 row run the root-only `list` from the parent's unprivileged session -- recorded on
 `docs/loop-bar-requests-finding`, since the union here does not carry that entry. The fix is a
-request-visibility decision, not a patch. Everything else waits on the owner's decisions
+request-visibility decision, not a patch.
+
+*(Correction, 2026-09-26: `docs/loop-bar-requests-finding` never landed in the union, so that
+citation dangles. The finding is settled -- the count moved into `status.json` and
+`omarchy-kids-ask list` now admits `omarchy-parents` members -- see
+`docs/phase1/DECISIONS-NEEDED.md` row 8 and `docs/bar.md`.)* Everything else waits on the owner's decisions
 (`docs/phase1/DECISIONS-NEEDED.md`, latest on `docs/decisions-loop-2026-09-22`), the merge gate, or
 an owner-run live session. Until one of those moves, a further pass should not open more branches.
 ### 2026-09-22, loop iteration: the notification workstream begins (N-0 .. N-3a)
