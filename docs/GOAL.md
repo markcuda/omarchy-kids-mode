@@ -16,8 +16,16 @@ autonomous loop works from; `docs/loop-report.md` is the running account.
    Time's Up, Wi-Fi picker, plugins shelf, wizard, panel, bar module) a screenshot under a dark
    and a light Omarchy theme lives in `docs/media/`, and a short video of each of the three
    walkthroughs (parent sets up a kid; kid logs in, plays, asks for time, gets Time's Up; parent
-   approves and removes) is recorded from the VM (QMP frames stitched with ffmpeg) and delivered
-   to Mark. Anything that looks wrong in a picture is a ticket before it is a release.
+   approves and removes) is recorded from the VM and delivered to Mark. Anything that looks wrong
+   in a picture is a ticket before it is a release.
+
+   Capture route, as it actually stands (`docs/vm-dogfood.md` has the details): **`grim` inside a
+   Wayland session** is what produced the media in `docs/media/`, and the SDDM greeter needs
+   `import` on `:0` as the `sddm` user with its own `xauth`. The earlier idea of stitching QMP
+   `screendump` frames is not known to work — that call came back **all black for the X11 greeter**
+   (`docs/loop-report.md`, 2026-09-22) and was not the route any committed picture came from — so
+   the videos want an in-guest capture (`grim` frames, or a screencast started from inside the
+   session) rather than a host-side one.
 4. **Security reviewed three times and every finding closed or documented**: the two
    antagonistic rounds, the maintainer's eye, and Codex's review. The trust-boundary test stays
    the gate for new code.
