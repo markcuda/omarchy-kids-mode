@@ -422,7 +422,10 @@ tick_kid() {
   ((remaining < 0)) && remaining=0
   decision="$(time_warning_thresholds "$previous_remaining" "$remaining" "$fired")"
   fired="$(sed -n '2p' <<<"$decision")"
-  lo="$(time_is_lights_out "$kid" "$weekend" "$(time_hm "$now")")"
+  # A parent's push for tonight wins over the kid's configured bedtime
+  # (R-TIME-4, Appendix F); the file is keyed by the logical day, so tonight's
+  # value expires with the day on its own.
+  lo="$(time_is_lights_out "$kid" "$weekend" "$(time_hm "$now")" "$(time_lights_out_tonight "$kid" "$day")")"
 
   if [[ "$state" == grace || "$state" == finishing ]]; then
     if [[ "$lo" != yes && "$remaining" -gt 0 ]]; then

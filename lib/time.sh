@@ -192,6 +192,34 @@ time_grant_add() {
   time_write_int "$file" "$((cur + add))"
 }
 
+# time_lights_out_tonight_file KID DAY — a one-off push of DAY's lights-out
+# (R-TIME-4: "lights-out can be pushed by a parent for tonight only"; Appendix
+# F: `lights_out_tonight = t`). Keyed by the logical day, so the next day
+# ignores it and "tonight only" needs no cleanup pass.
+time_lights_out_tonight_file() { printf '%s/%s.lightsout\n' "$(time_usage_dir "$1")" "$2"; }
+
+# time_lights_out_tonight KID DAY — the pushed HH:MM, or nothing. Anything that
+# is not a 24-hour HH:MM is treated as absent, never as a value to read.
+time_lights_out_tonight() {
+  local file
+  file="$(time_lights_out_tonight_file "$1" "$2")"
+  [[ -f "$file" && ! -L "$file" && -r "$file" ]] || return 0
+  grep -m1 -E '^([01][0-9]|2[0-3]):[0-5][0-9]$' "$file" 2>/dev/null || true
+}
+
+# time_lights_out_push KID DAY HH:MM — record tonight's pushed lights-out.
+# Root-only, like time_grant_add, and never the kid's configured bedtime.
+time_lights_out_push() {
+  local kid="$1" day="$2" hm="$3" dir tmp
+  time_minutes_since_midnight "$hm" >/dev/null || return 1
+  dir="$(time_usage_dir "$kid")"
+  [[ -d "$dir" ]] || install -d -m 0755 "$dir"
+  tmp="$(mktemp "$dir/.lightsout.XXXXXX")"
+  printf '%s\n' "$hm" >"$tmp"
+  chmod 0644 "$tmp"
+  mv -f "$tmp" "$(time_lights_out_tonight_file "$kid" "$day")"
+}
+
 # time_grant_newer_than KID DAY STATE_FILE — true when today's grant file is
 # newer than the last published root tick. That document's remaining seconds
 # were computed before the grant, so a just-made grant is invisible in it
@@ -217,10 +245,16 @@ time_remaining_minutes() {
   printf '%s\n' "$remaining"
 }
 
-# time_is_lights_out KID DAY WEEKEND NOW_HM — yes/no: reached lights-out.
+# time_is_lights_out KID WEEKEND NOW_HM [PUSHED_HM] — yes/no: reached
+# lights-out. PUSHED_HM (tonight's one-off, R-TIME-4) wins over the kid's
+# configured value when given.
 time_is_lights_out() {
-  local kid="$1" weekend="$2" now_hm="$3" lights_out now_min lo_min
-  lights_out="$(time_lights_out "$kid" "$weekend")"
+  local kid="$1" weekend="$2" now_hm="$3" pushed="${4:-}" lights_out now_min lo_min
+  if [[ -n "$pushed" ]]; then
+    lights_out="$pushed"
+  else
+    lights_out="$(time_lights_out "$kid" "$weekend")"
+  fi
   now_min="$(time_minutes_since_midnight "$now_hm")"
   lo_min="$(time_minutes_since_midnight "$lights_out")"
   if ((now_min >= lo_min)); then printf 'yes\n'; else printf 'no\n'; fi
@@ -315,6 +349,17 @@ time_state_read() {
       (type == "string" and (length == 0 or
         test("^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$"))))
   ' "$file" >/dev/null 2>&1
+}
+
+# time_state_reason KID — the published reason ("none", "budget" or
+# "lights-out"), or nothing when there is no readable state. A grant branches
+# on it: R-TIME-4 makes a budget grant add minutes and a lights-out grant push
+# tonight, and Appendix F's state machine names both transitions.
+time_state_reason() {
+  local file
+  file="$(time_state_file "$1")"
+  time_state_read "$file" || return 0
+  jq -r '.reason' "$file" 2>/dev/null || true
 }
 
 # time_state_write KID DAY STATE REASON REMAINING GRACE LAST REMAINDER FIRED LAST_WALL ACTION ACTION_REASON ACTION_RESULT ACTION_AT.
