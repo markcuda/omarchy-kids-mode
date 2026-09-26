@@ -58,3 +58,24 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 - **Claim**: `gh issue edit <n> --add-assignee @me`, the session's first write.
 - **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then append a
   context pointer (gist + link) to the map's Decisions-so-far.
+
+## Where the older `#NN` citations resolve
+
+Many comments in `docs/`, `bin/`, `lib/` and `share/` cite a bare `#NN` that does not resolve here:
+this tracker's history starts at #4. Those numbers belong to **`markcuda/omarchy-kids-sandbox`**,
+this project's development repo, which predates the public one. Spot-checked against their contexts
+on 2026-09-26:
+
+| cited | cited in | `omarchy-kids-sandbox` issue |
+| --- | --- | --- |
+| #28 | `lib/launcher-map.sh`, `bin/omarchy-kids-session-start` | Kids-plugins shelf from the marketplace Kids category |
+| #37 | `docs/exit.md` | Parent bar widget: live and paused kids, minutes left, quick actions |
+| #42, #43, #54 | `docs/levels.md` | Level 1 launcher: hidden uninstalled tiles, keyboard grid navigation, centred grid with real icons |
+| #44 | `docs/web.md` | Web tile: launch Chromium without Omarchy's unpacked-extension flags |
+| #46 | `AGENTS.md` | Wizard: parent-password screen fails when omarchy-kids-authd is not running |
+| #58 | `docs/web.md` | Security round two: one trust boundary |
+
+Read one with `gh issue view <NN> --repo markcuda/omarchy-kids-sandbox`. Cross-repo citations qualify
+themselves (`omacom/omarchy#12488`); a bare number is this project's earlier tracker, not a missing
+issue in this one. Nothing needs renumbering — but a comment written **now** that means an issue in
+*this* tracker should say so, and one that means the sandbox issue should name the repo.
