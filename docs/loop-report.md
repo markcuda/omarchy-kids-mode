@@ -2723,3 +2723,36 @@ What this pass could not do: a **real device pairing** (no full Xcode here, only
 so the Flutter macOS target will not build) and the `test/live/` scenarios (rule 11 — gate runner
 only). The host half of pairing is verified: `notify enable` mints the cert and fingerprint,
 `pair` opens a single-use window and prints the URI, `disable` removes the cert.
+
+### 2026-09-26 — coverage hardening (`test/all` 68 → 72 files)
+
+The dogfood pass above ended with the suite green. It was green **on this Mac**, which is not the
+target. Running it on the VM turned up nine failures and, once those were fixed, showed how much the
+suite was silently not running. Seven branches, each with a check proven to fail before it was
+trusted:
+
+| Branch | What | Commit |
+| --- | --- | --- |
+| `fix/suite-passes-on-arch` | GNU grep reads `\t` in an ERE as a literal `t`, so `trust-boundary-test.sh`'s python-command list was empty and all three "PKGBUILD rewrites the shebang" checks failed on every Arch box while passing on BSD grep. Three more checks turned a *missing* tool (`shellcheck`, `node`) into `bad`/`fail` instead of skipping. | `46e1710`, merged `42a7fd8` |
+| `test/qml-syntax` | `portal-test.sh` linted only the portal's `Main.qml`; every other QML file was exercised only by a live run. New test lints all of them, using qmllint's *exit status* (nonzero = parse error, 0 = the unresolved-import warnings our files have by construction). Both analyzers (`dart analyze`, `flutter analyze`) wired into the parent tests. | `72dd13a`, merged `a9be72d` |
+| `chore/enforce-shell-lint` | AGENTS.md claimed shellcheck/shfmt clean; nothing checked it. A shipped file was four-space indented and eight test warnings had never been read — including `courier-test.sh` capturing its authd stub as `AUTH_PID` and never killing it (one leaked process per run). New `lint-test.sh` enforces the style over `bin/ lib/ initcpio/ share/ test/shell.d/ test/all`. | `39459a4`, merged `f351f77` |
+| `test/command-header-conventions` | `# omarchy:summary=` on line 2 and `set -euo pipefail` for every bash command were required and unchecked. New test; needs no tools, so it runs on the VM. Its first catch was itself — a comment beginning `# shellcheck …` is parsed as a directive (SC1073). | `9f351d4`, merged `769152b` |
+| `test/pkgbuild-file-coverage` | `bin/` coverage had a glob behind it; `desktop/*.desktop` and the top-level initcpio file are installed one path at a time, so a new entry would never ship and every test would still pass. | `e79af84`, merged `f099da9` |
+| `test/units-and-srcinfo` | `.SRCINFO`'s `arch` was compared but not `pkgver`/`pkgrel`, and no check swept all units: a command renamed without its unit leaves a service pointing at a binary that is not there. | `f551630`, merged `756bab0` |
+| `test/docs-pointers` | A renamed doc leaves sources pointing at a file that is not there. Checks every pointer resolves and every command names one — not 1:1, since docs are topic-grouped. | `d32002b`, merged `1d8f775` |
+
+Lessons worth keeping:
+
+- **The Mac suite is necessary, not sufficient.** The target is GNU grep, bash 5.3, and often no
+  `node`/`shellcheck`; this Mac is the opposite. Both machines' `test/all` are now run every pass,
+  and `systemd-analyze verify`, `luac`, `qmllint`, SO_PEERCRED, `unshare` and libcrypt only exist on
+  the VM side, while `ash` (initramfs) needed a `busybox` container — neither machine had it. The
+  guest's pacman mirror is stale (`404` on nodejs), so its missing tools cannot be installed; the
+  coverage is the union of the two plus that container.
+- **A "skipped" check is a check that did not run.** Four of these gaps hid behind skips or behind
+  checks that only ever ran by hand.
+- `systemd-analyze verify` over all 18 installed units: clean. Dart/Flutter analyzers: clean.
+  Repo-wide shellcheck/shfmt across 103 files: clean.
+
+`test/all` is 72 files, exit 0 on both platforms; the VM's own `test/all` additionally runs the
+`luac`, qmllint, SO_PEERCRED and `unshare`-gated checks the Mac skips.
