@@ -512,7 +512,6 @@ check_eq "$deny_any" "yes" "deny_is_any accepts the keyword and systemd's expans
 
 # --- the secret-holding files (R-NOTIFY-11.4) --------------------------
 RELAY_DIR="$SCRATCH_ROOT/etc/omarchy-kids/relay"
-COURIER_CONF="$SCRATCH_ROOT/etc/omarchy-kids/courier.conf"
 plain="$(strip_ansi "$("$BIN")")"
 check_contains "$plain" "PASS  lock:relay-tls" "relay-tls: absent passes"
 check_contains "$plain" "PASS  lock:courier-conf" "courier-conf: absent passes"

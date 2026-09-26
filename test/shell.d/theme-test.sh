@@ -471,6 +471,7 @@ check_eq "$(
     export OMARCHY_PATH
     # shellcheck source=/dev/null
     source "$THEME_LIB"
+    # shellcheck disable=SC2034 # read by the sourced theme_list_installed
     KIDS_THEMES_DIR="$KIDS_SHARE/themes-kids"
     theme_list_installed
   )
