@@ -502,18 +502,26 @@ else
 fi
 
 # --- R-SEC-6: root's own password is never read, set, or relied on ---------
-# A kid's is set from a variable (`lib/provision-add.sh`: `printf '%s:%s\n' "$account"
-# "$kid_password" | run chpasswd`) and the parent's hash is read by the account named in
-# machine.conf (`bin/omarchy-kids-authd`'s DEFAULT_SHADOW), so what has to stay absent is the
-# literal account in a password context: `passwd root`, `root:...` piped to chpasswd, or a chage
-# named for root. The pattern is deliberately about a *literal* root beside a verb -- `lib/data.py`'s
-# comment about a kid pointing root *at* /etc/shadow describes the attack this defends against, and
-# the authd unit's own "runs as root" comment is not a password operation.
+# A kid's is set from a variable (`lib/provision-add.sh`) and the parent's hash is read by the
+# account named in machine.conf (`bin/omarchy-kids-authd`'s DEFAULT_SHADOW), so what has to stay
+# absent is a *literal* root in a password context.
+#
+# What this looks for, so the pass message above can be trusted: `passwd`/`chage` naming root (with
+# or without their own flags, so `passwd -l root` counts), `usermod -p`/`--password … root`, a
+# `root:…` line and chpasswd in either order, and a sudoers `Defaults rootpw` or bare `rootpw`.
+# Across bin/, lib/, share/, initcpio/, systemd/, the PKGBUILD and the install scriptlet.
+#
+# What it cannot: parse shell. A password operation built from a variable that happens to hold
+# "root" is out of reach, as is any config outside those paths. The pattern is deliberately about a
+# literal root beside a verb -- `lib/data.py`'s comment about a kid pointing root *at* /etc/shadow
+# describes the attack this defends against, and the authd unit's own "runs as root" comment is not
+# a password operation. (Review of this pass, 2026-09-26: the first version checked three forms in
+# four directories and its label claimed R-SEC-6 whole.)
 root_password_hits="$(grep -rInE \
-  'passwd +root([^a-z-]|$)|chage +root([^a-z-]|$)|chpasswd[^|]*root:|root:[^ ]*[[:space:]]*\|[[:space:]]*chpasswd' \
-  "$DIR/bin" "$DIR/lib" "$DIR/initcpio" "$DIR/systemd" 2>/dev/null || true)"
+  '(^|[^a-zA-Z_-])passwd([[:space:]]+-[a-zA-Z]+)*[[:space:]]+root([^a-zA-Z_-]|$)|(^|[^a-zA-Z_-])chage([[:space:]]+-[a-zA-Z]+)*[[:space:]]+root([^a-zA-Z_-]|$)|(^|[^a-zA-Z_-])usermod[^|]*[[:space:]](-p|--password)([[:space:]]|=)[^|]*root([^a-zA-Z_-]|$)|chpasswd[^|]*root:|root:[^|]*[[:space:]]*\|[[:space:]]*chpasswd|(^|[^a-zA-Z_-])rootpw([^a-zA-Z_-]|$)' \
+  "$DIR/bin" "$DIR/lib" "$DIR/share" "$DIR/initcpio" "$DIR/systemd" "$DIR/PKGBUILD" "$DIR/omarchy-kids.install" 2>/dev/null || true)"
 if [[ -z "$root_password_hits" ]]; then
-  ok "R-SEC-6: no shipped file names root in a password context"
+  ok "R-SEC-6: no literal-root password operation in the shipped files and configs (see the comment for its reach)"
 else
   bad "a shipped file names root in a password context (R-SEC-6):"
   printf '%s\n' "$root_password_hits"
