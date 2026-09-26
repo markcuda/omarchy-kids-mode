@@ -359,6 +359,10 @@ want_json=""
 # The fingerprint a decider was shown, for approve: see cmd_approve.
 SEEN=""
 args=()
+# Rule 8: `--dry-run` always forces the preview, whatever DRY_RUN says -- including when it is
+# given before `--apply`, so it is remembered here and applied after the loop rather than letting
+# the last flag win.
+dry_run_forced=0
 while (($#)); do
   case "$1" in
     --apply)
@@ -379,6 +383,7 @@ while (($#)); do
       ;;
     --dry-run)
       DRY_RUN=1
+      dry_run_forced=1
       shift
       ;;
     *)
@@ -387,6 +392,8 @@ while (($#)); do
       ;;
   esac
 done
+
+((dry_run_forced)) && DRY_RUN=1
 
 case "$cmd" in
   scan) cmd_scan "$want_kid" ;;
