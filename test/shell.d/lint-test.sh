@@ -50,6 +50,31 @@ for f in "$ROOT"/test/shell.d/*-test.sh; do
   done < <(grep -oE '^[[:space:]]*(check|check_status|pass|fail|fail_|ok)\(\)' "$f" | tr -d ' ()' | sort -u)
 done
 
+# And every assertion helper a test file *calls* must be defined in that file or in
+# test/shell.d/lib.sh. A call to an undefined one prints "command not found" and checks nothing;
+# a dead assertion and a passing one look identical in the output. levels-test.sh,
+# panel-test.sh and wizard-test.sh each carried one until 2026-09-26. Shell calls look like
+# `check "a" "b"`: line-initial, followed by a quoted or `$`-substituted argument. Requiring that
+# argument is what keeps the embedded Python in several of these files out -- `check(...)` and
+# `fail = False` are not shell calls.
+lib_helpers="$(grep -ohE '^[[:space:]]*(check[a-z_]*|pass|fail_?|ok)\(\)' "$ROOT"/test/shell.d/lib.sh 2>/dev/null | tr -d ' ()')"
+for f in "$ROOT"/test/shell.d/*-test.sh; do
+  [[ -f "$f" ]] || continue
+  helpers="$(grep -ohE '^[[:space:]]*(check[a-z_]*|pass|fail_?|ok)\(\)' "$f" | tr -d ' ()')"
+  # A file that sources test/live/lib.sh gets its ok/fail/check from there, so those count as
+  # defined for it (they are what its inner assertions run).
+  if grep -qE '^[[:space:]]*(source|\.)[[:space:]].*test/live/lib\.sh' "$f"; then
+    helpers="$helpers
+$(grep -ohE '^[[:space:]]*(check[a-z_]*|pass|fail_?|ok)\(\)' "$ROOT"/test/live/lib.sh | tr -d ' ()')"
+  fi
+  while IFS= read -r called; do
+    [[ -n "$called" ]] || continue
+    grep -qxF "$called" <<<"$helpers"$'\n'"$lib_helpers" || {
+      fail "${f#"$ROOT"/}: $called is called but never defined -- a dead assertion"
+    }
+  done < <(grep -ohE '^[[:space:]]*(check[a-z_]*|pass|fail_?|ok)[[:space:]]+["$]' "$f" | tr -d ' "$' | sort -u)
+done
+
 missing=()
 for tool in shellcheck shfmt; do
   command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")

@@ -53,6 +53,11 @@ check_not_contains() { # haystack needle label
 check_status() { # got want label
   if [[ "$1" == "$2" ]]; then pass "$3"; else fail "$3 (want exit $2, got $1)"; fi
 }
+check() { # got want label -- the call below this used to run as "command not found" (a dead
+  # assertion, found 2026-09-26): this file had check_contains/check_not_contains/check_status
+  # but no got/want helper.
+  if [[ "$1" == "$2" ]]; then pass "$3"; else fail "$3 (want '$2', got '$1')"; fi
+}
 
 TMP="$(mktemp -d)"
 cleanup() { rm -rf "$TMP"; }

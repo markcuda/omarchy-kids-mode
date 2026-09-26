@@ -506,7 +506,9 @@ check_contains "$rm_out" "FAKE-PROVISION: refusing on purpose" "the failing comm
 check_not_contains "$rm_out" "FAKE-WEB" "Apply stops at the first failure and never reaches a later step"
 check_contains "$rm_out" 'Setup stopped at "Setting up Ada'"'"'s account"' "Done explains which step stopped it"
 check_contains "$rm_out" "Last lines from the failed step:" "Done carries the failed step's tail into its own card"
-check "$(awk '
+# check_eq, not check: this file defines check_eq (below), and a bare `check` ran as
+# "command not found" -- the assertion checked nothing until 2026-09-26.
+check_eq "$(awk '
   /Last lines from the failed step:/ { header = NR }
   header && /FAKE-PROVISION: refusing on purpose/ { found = 1 }
   END { print(found ? "yes" : "no") }' <<<"$rm_out")" "yes" \
