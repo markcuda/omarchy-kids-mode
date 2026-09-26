@@ -55,5 +55,25 @@ for f in bin/omarchy-kids*; do
 done
 ((undocumented)) || pass "every bin/omarchy-kids-* command names a doc"
 
+# Relative markdown links between docs (and README/AGENTS) must resolve: a doc
+# renamed by one of these sweeps leaves a clickable link to nothing in every file
+# that referenced it. 29 links, all resolving today.
+broken_links=0
+while IFS= read -r f; do
+  dir="$(dirname "$f")"
+  while IFS= read -r target; do
+    [[ -n "$target" ]] || continue
+    case "$target" in /* | http*) continue ;; esac
+    if [[ ! -f "$dir/$target" ]]; then
+      fail "$f links to $target, which does not exist"
+      broken_links=1
+    fi
+  done < <(grep -ohE '\]\([A-Za-z0-9._/-]+\.md\)' "$f" 2>/dev/null | sed 's|](||; s|)$||' | sort -u)
+done < <(
+  find docs -name '*.md'
+  printf '%s\n' README.md AGENTS.md CONTRIBUTING.md
+)
+((broken_links)) || pass "every relative .md link in docs/README/AGENTS resolves"
+
 echo "docs-pointers-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc
