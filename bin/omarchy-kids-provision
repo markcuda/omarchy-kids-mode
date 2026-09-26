@@ -140,33 +140,42 @@ unique_account() {
   printf '%s\n' "$account"
 }
 
-# --- Omarchy per-user migrations (issue #10 finding b) ---------------------
+# --- Omarchy per-user migrations -------------------------------------------
 
-# mark_migrations_done ACCOUNT — best-effort stand-in for
-# omarchy-provision-user when it doesn't exist -- guessed marker format,
-# TODO(#10). docs/provision.md "Known gap".
+# mark_migrations_done ACCOUNT — mark every shipped Omarchy migration complete for a kid whose
+# `omarchy-provision-user` is absent (an older Omarchy, a dev box).
+#
+# This writes what Omarchy's own `omarchy-migrate` reads, verified against 4.0.2 on the
+# try-omarchy VM rather than guessed: `migration_entries` walks `$OMARCHY_PATH/migrations/*.sh`
+# and treats a migration as pending while `$HOME/.local/state/omarchy/migrations/<script
+# basename>` does not exist, touching that marker when it runs it. So it is one marker per
+# migration, named exactly like the script. `migrations.log` was this repo's own invention and
+# nothing in Omarchy ever read it.
+#
+# The marker path is Omarchy's default and only that: `OMARCHY_MIGRATION_STATE` (upstream's own
+# override, for its tests) is deliberately not read here. A kid's session does not set it, and a
+# fixed path under the kid's home is the smaller surface for root to write to (rule 9).
 mark_migrations_done() {
-  local account="$1" home migrations_src state_dir f stage
+  local account="$1" home migrations_src omarchy_state state_dir f base stage
   home="$(home_dir_for "$account")"
   migrations_src="${OMARCHY_MIGRATIONS_DIR:-/usr/share/omarchy/migrations}"
-  state_dir="$home/.local/state/omarchy"
-  install -d -m 0700 "$state_dir"
-  # Staged and renamed like the app configs: a plain redirect would follow a
-  # symlink a kid could have planted at this exact path.
-  stage="$(mktemp "$state_dir/.migrations.log.XXXXXX")"
-  {
-    if [[ -d "$migrations_src" ]]; then
-      for f in "$migrations_src"/*; do
-        [[ -e "$f" ]] || continue
-        printf '%s %s\n' "$(basename "$f")" "$(date -u +%FT%TZ)"
-      done
-    fi
-  } >"$stage"
-  # 0600 like the directory it sits in (root-owned 0700), and staged so the write
-  # cannot follow a link a kid planted at this exact path.
-  chmod 0600 "$stage"
-  mv -f "$stage" "$state_dir/migrations.log"
-  chown "$account:$account" "$state_dir" 2>/dev/null || true
+  omarchy_state="$home/.local/state/omarchy"
+  state_dir="$omarchy_state/migrations"
+  install -d -m 0700 "$omarchy_state" "$state_dir"
+  if [[ -d "$migrations_src" ]]; then
+    for f in "$migrations_src"/*; do
+      [[ -f "$f" ]] || continue
+      base="$(basename "$f")"
+      # Staged and renamed like the app configs: `touch`, or a plain redirect, would follow a
+      # symlink a kid could have planted at this exact marker path.
+      stage="$(mktemp "$state_dir/.$base.XXXXXX")"
+      chmod 0600 "$stage"
+      mv -f "$stage" "$state_dir/$base"
+    done
+  fi
+  # The kid's own session reads this to decide what is pending, so it (and the parent
+  # directory) has to be the kid's, not root's, or nothing can read it.
+  chown "$account:$account" "$omarchy_state" "$state_dir" 2>/dev/null || true
 }
 
 # symlinked_kid_path PATH... -- prints the first PATH that is a symlink and fails.
@@ -201,7 +210,7 @@ kid_home_writable_paths() {
     "$home/.local" \
     "$home/.local/state" \
     "$home/.local/state/omarchy" \
-    "$home/.local/state/omarchy/migrations.log"
+    "$home/.local/state/omarchy/migrations"
 }
 
 # --- Chromium launch flags override (issue #44) -----------------------
