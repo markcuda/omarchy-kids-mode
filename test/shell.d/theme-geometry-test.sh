@@ -107,7 +107,11 @@ with tempfile.TemporaryDirectory() as temp:
 print("PASS parent geometry: square, rounded, live, matching cache, malformed tokens and owned runtime query")
 PY
 rc=$?
-node - "$ROOT/share/sddm-theme/PortalConfig.js" <<'JS' || rc=1
+# node is optional here; without it this check used to abort the whole file
+# with "node: command not found" (a fail, not a skip) on any box that has no
+# node -- every fresh Arch install, the try-omarchy VM. 2026-09-25.
+if command -v node >/dev/null 2>&1; then
+  node - "$ROOT/share/sddm-theme/PortalConfig.js" <<'JS' || rc=1
 const fs = require('fs');
 const vm = require('vm');
 const context = {};
@@ -131,4 +135,7 @@ for (const name of ['controlFill', 'controlBorder']) {
 }
 console.log('PASS QML geometry parser preserves zero and rejects malformed tokens');
 JS
+else
+  echo "SKIP theme-geometry-test.sh: node not found (QML geometry parser check)"
+fi
 exit "$rc"
