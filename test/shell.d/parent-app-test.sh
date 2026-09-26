@@ -22,6 +22,17 @@ if ! dart pub get >/dev/null 2>&1; then
   exit 0
 fi
 
+# The analyzer, not just the tests: `dart test` never compiles the paths a test
+# does not touch, so an unused import or a dead null check could sit here
+# forever. Nothing else in the suite runs it.
+if out="$(dart analyze 2>&1)"; then
+  echo "ok   dart analyze: the parent's Dart core is clean"
+else
+  echo "FAIL parent-app-test.sh: dart analyze found issues:"
+  printf '%s\n' "$out" | tail -15
+  exit 1
+fi
+
 # Tie the Dart pin fixture to the box: lib/cert.py's own SPKI of the committed
 # certificate must equal the constant the Dart pinning test uses, so a change to
 # either side fails here. Skips where python-cryptography is absent.
