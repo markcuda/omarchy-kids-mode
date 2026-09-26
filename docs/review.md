@@ -37,7 +37,8 @@ omarchy-kids-review deny <kid> <id> [--apply]
 - `deny` asks `omarchy-kids-apps hide <kid> <id>` to hide it again, and only once that succeeds
 drops the stamp and clears the review (a failed hide leaves the review open to retry). The hide
 lands in the kid's launcher at the next sign-in, like every `hide` (`docs/apps.md`).
-- Root only; `DRY_RUN=1` prints the plan (`--apply` makes it real, AGENTS.md rule 8).
+- Root only; `DRY_RUN=1` prints the plan (`--apply` makes it real, and `--dry-run` forces the
+  preview whatever `DRY_RUN` says; AGENTS.md rule 8).
 
 ## Where it lives
 
