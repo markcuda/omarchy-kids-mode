@@ -82,9 +82,12 @@ for t in "${files[@]}"; do
   i=$((i + 1))
   if ((status != 0)) && ((jobs_wanted > 1)); then
     # What the parallel pass printed is about to be replaced by the retry's output, and with it
-    # the only evidence of *why* it failed in company (a FAIL line, or nothing at all when a
-    # `set -e` abort or a poll's deadline did it). Keep the last few lines for the summary.
-    why="$(tail -3 "$this_out" 2>/dev/null | tr '\n' ' ' | cut -c1-300)"
+    # the only evidence of *why* it failed in company. Its own FAIL lines are that evidence; a file
+    # with none (a `set -e` abort, or a poll's deadline on a loaded machine) falls back to its last
+    # lines, which at least carry the RESULT. The review of this pass found `tail -3` alone loses a
+    # FAIL from the middle of a file.
+    why="$(grep -m3 -E '^ *(FAIL|SKIP)' "$this_out" 2>/dev/null | tr '\n' ' ' | cut -c1-300)"
+    [[ -n "$why" ]] || why="$(tail -3 "$this_out" 2>/dev/null | tr '\n' ' ' | cut -c1-300)"
     out="$(bash "$t" 2>&1)"
     status=$?
     if ((status == 0)); then
@@ -103,7 +106,7 @@ for t in "${files[@]}"; do
 done
 echo "$n test file(s)"
 if ((${#retried[@]})); then
-  echo "${#retried[@]} file(s) failed in parallel and passed alone -- they share state with another file:"
+  echo "${#retried[@]} file(s) failed in parallel and passed alone -- a shared fixture, or a deadline too tight for a loaded machine:"
   printf '  %s\n' "${retried[@]}"
   echo "  what the parallel pass printed for them (the retry's output above replaced it):"
   printf '    %s\n' "${retry_why[@]}"
