@@ -94,11 +94,14 @@ o.bind("SUPER + CTRL + SHIFT + SPACE", "Kids Mode: theme", "omarchy-launch-float
 -- calls it once per bare Super release.
 o.bind("SUPER + SUPER_L", "Kids Mode: exit (tap Super three times)", "omarchy-kids-super-tap", { release = true })
 
-o.bind("XF86AudioRaiseVolume", "Volume up", "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+")
-o.bind("XF86AudioLowerVolume", "Volume down", "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-")
-o.bind("XF86AudioMute", "Mute toggle", "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle")
-o.bind("XF86MonBrightnessUp", "Brightness up", "brightnessctl set +5%")
-o.bind("XF86MonBrightnessDown", "Brightness down", "brightnessctl set 5%-")
+-- The media keys are L1's, verbatim and for the same reason: Omarchy's own
+-- default/hypr/bindings/media.lua, so the wrappers carry the on-screen feedback
+-- and rounding (verified against 4.0.2 on the VM, 2026-09-26). See L1.lua.
+o.bind("XF86AudioRaiseVolume", "Volume up", "omarchy-audio-output-volume raise", { locked = true, repeating = true })
+o.bind("XF86AudioLowerVolume", "Volume down", "omarchy-audio-output-volume lower", { locked = true, repeating = true })
+o.bind("XF86AudioMute", "Mute", "omarchy-audio-output-volume mute-toggle", { locked = true })
+o.bind("XF86MonBrightnessUp", "Brightness up", "omarchy-brightness-display +5%", { locked = true, repeating = true })
+o.bind("XF86MonBrightnessDown", "Brightness down", "omarchy-brightness-display 5%-", { locked = true, repeating = true })
 
 -- Focus/swap dispatchers copied verbatim (same calls Omarchy's own
 -- default.hypr.bindings.tiling uses) rather than requiring that module,

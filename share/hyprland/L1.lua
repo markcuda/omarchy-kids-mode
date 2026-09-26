@@ -97,12 +97,12 @@ hl.config({
 -- a home directory; out of scope for this issue.
 
 -- --- Every window fullscreen (Appendix E) --------------------------------
--- `no_focus = true` in Omarchy's own default.hypr.windows shows a
--- boolean windowrule flag is written this way in this DSL, so the
--- fullscreen flag rule (windowrulev2 = fullscreen, ...) is assumed to
--- follow the same shape. UNVERIFIED against a live Hyprland: confirm
--- `fullscreen = true` actually renders as the `fullscreen` windowrule
--- and not, say, `fullscreen = "1"` or a dispatcher-shaped table.
+-- `fullscreen = true` is how this DSL spells the `fullscreen` windowrule for a
+-- boolean flag: Omarchy's own /usr/share/omarchy/default/hypr/windows.lua writes
+-- `fullscreen = false` as the default and
+-- default/hypr/apps/system.lua:35 uses `o.window("org.omarchy.screensaver",
+-- { fullscreen = true })` for the screensaver (verified against 4.0.2 on the
+-- try-omarchy VM, 2026-09-26; this was an UNVERIFIED note here until then).
 o.window(".*", { fullscreen = true })
 
 -- --- Bindings: exactly the Appendix E Level 1 set, nothing else ---------
@@ -146,17 +146,17 @@ o.bind("SUPER + SHIFT + W", "Kids Mode: Wi-Fi", "omarchy-kids-wifi picker")
 -- calls it once per bare Super release.
 o.bind("SUPER + SUPER_L", "Kids Mode: exit (tap Super three times)", "omarchy-kids-super-tap", { release = true })
 
--- Volume/brightness media keys. UNVERIFIED: no default.hypr.bindings.media
--- was in the reference material used to write this file, so this uses
--- wpctl (PipeWire, ships with every current Omarchy) and brightnessctl
--- directly rather than guessing an Omarchy-specific wrapper name. If
--- Omarchy ships its own volume/brightness helper (for on-screen-display
--- feedback, say), swap these for it.
-o.bind("XF86AudioRaiseVolume", "Volume up", "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+")
-o.bind("XF86AudioLowerVolume", "Volume down", "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-")
-o.bind("XF86AudioMute", "Mute toggle", "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle")
-o.bind("XF86MonBrightnessUp", "Brightness up", "brightnessctl set +5%")
-o.bind("XF86MonBrightnessDown", "Brightness down", "brightnessctl set 5%-")
+-- Volume/brightness media keys, mirroring Omarchy's own
+-- /usr/share/omarchy/default/hypr/bindings/media.lua (verified against 4.0.2 on
+-- the try-omarchy VM, 2026-09-26): the same wrapper commands and the same
+-- locked/repeating options, so a kid gets the parent's on-screen feedback,
+-- rounding and sink handling instead of raw wpctl/brightnessctl, and holding the
+-- key keeps going.
+o.bind("XF86AudioRaiseVolume", "Volume up", "omarchy-audio-output-volume raise", { locked = true, repeating = true })
+o.bind("XF86AudioLowerVolume", "Volume down", "omarchy-audio-output-volume lower", { locked = true, repeating = true })
+o.bind("XF86AudioMute", "Mute", "omarchy-audio-output-volume mute-toggle", { locked = true })
+o.bind("XF86MonBrightnessUp", "Brightness up", "omarchy-brightness-display +5%", { locked = true, repeating = true })
+o.bind("XF86MonBrightnessDown", "Brightness down", "omarchy-brightness-display 5%-", { locked = true, repeating = true })
 
 -- --- Start the session (launcher, exit overlay, notifications) ---------
 -- The same systemd/dbus environment imports L3's start hook makes (and that
