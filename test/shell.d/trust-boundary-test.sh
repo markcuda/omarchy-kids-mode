@@ -2,7 +2,8 @@
 # The one rule this package cannot get wrong (SPEC.md I-3, R-SEC-2,
 # R-FND-4; AGENTS.md "The trust boundary"): no environment variable, and
 # nothing a kid can write, selects which code runs or whether a root
-# check happens.
+# check happens. R-SEC-6 ("root's password is never read, set, or relied
+# on") is the same shape and lives in the check at the end of this file.
 #
 # A static test, deliberately: the 2026-09-03 round-two review's finding
 # was not that one variable was wrong, it was that the *class* kept
@@ -498,6 +499,24 @@ if ((${#py_bins[@]})); then
   fi
 else
   bad "no python command carries the dev shebang -- the PKGBUILD rewrite has nothing to rewrite"
+fi
+
+# --- R-SEC-6: root's own password is never read, set, or relied on ---------
+# A kid's is set from a variable (`lib/provision-add.sh`: `printf '%s:%s\n' "$account"
+# "$kid_password" | run chpasswd`) and the parent's hash is read by the account named in
+# machine.conf (`bin/omarchy-kids-authd`'s DEFAULT_SHADOW), so what has to stay absent is the
+# literal account in a password context: `passwd root`, `root:...` piped to chpasswd, or a chage
+# named for root. The pattern is deliberately about a *literal* root beside a verb -- `lib/data.py`'s
+# comment about a kid pointing root *at* /etc/shadow describes the attack this defends against, and
+# the authd unit's own "runs as root" comment is not a password operation.
+root_password_hits="$(grep -rInE \
+  'passwd +root([^a-z-]|$)|chage +root([^a-z-]|$)|chpasswd[^|]*root:|root:[^ ]*[[:space:]]*\|[[:space:]]*chpasswd' \
+  "$DIR/bin" "$DIR/lib" "$DIR/initcpio" "$DIR/systemd" 2>/dev/null || true)"
+if [[ -z "$root_password_hits" ]]; then
+  ok "R-SEC-6: no shipped file names root in a password context"
+else
+  bad "a shipped file names root in a password context (R-SEC-6):"
+  printf '%s\n' "$root_password_hits"
 fi
 
 echo "trust-boundary-test RESULT: $([[ $fail == 0 ]] && echo PASS || echo FAIL)"
