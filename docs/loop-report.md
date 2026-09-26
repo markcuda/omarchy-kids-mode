@@ -2743,8 +2743,8 @@ trusted:
 | `chore/enforce-shell-lint` | AGENTS.md claimed shellcheck/shfmt clean; nothing checked it. A shipped file was four-space indented and eight test warnings had never been read — including `courier-test.sh` capturing its authd stub as `AUTH_PID` and never killing it (one leaked process per run). New `lint-test.sh` enforces the style over `bin/ lib/ initcpio/ share/ test/shell.d/ test/all`. | `39459a4`, merged `f351f77` |
 | `test/command-header-conventions` | `# omarchy:summary=` on line 2 and `set -euo pipefail` for every bash command were required and unchecked. New test; needs no tools, so it runs on the VM. Its first catch was itself — a comment beginning `# shellcheck …` is parsed as a directive (SC1073). | `9f351d4`, merged `769152b` |
 | `test/pkgbuild-file-coverage` | `bin/` coverage had a glob behind it; `desktop/*.desktop` and the top-level initcpio file are installed one path at a time, so a new entry would never ship and every test would still pass. | `e79af84`, merged `f099da9` |
-| `test/units-and-srcinfo` | `.SRCINFO`'s `arch` was compared but not `pkgver`/`pkgrel`, and no check swept all units: a command renamed without its unit leaves a service pointing at a binary that is not there. | `f551630`, merged `756bab0` |
-| `test/docs-pointers` | A renamed doc leaves sources pointing at a file that is not there. Checks every pointer resolves and every command names one — not 1:1, since docs are topic-grouped. | `d32002b`, merged `1d8f775` |
+| `test/shell.d/pkgbuild-test.sh` (the `.SRCINFO` and units sweep) | `.SRCINFO`'s `arch` was compared but not `pkgver`/`pkgrel`, and no check swept all units: a command renamed without its unit leaves a service pointing at a binary that is not there. | `f551630`, merged `756bab0` |
+| `test/shell.d/docs-pointers-test.sh` | A renamed doc leaves sources pointing at a file that is not there. Checks every pointer resolves and every command names one — not 1:1, since docs are topic-grouped. | `d32002b`, merged `1d8f775` |
 
 Lessons worth keeping:
 
