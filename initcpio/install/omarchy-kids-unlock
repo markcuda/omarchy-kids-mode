@@ -5,32 +5,32 @@
 # resolve-and-open as the stock 'encrypt' hook before handing off to it.
 
 build() {
-    add_module 'dm-crypt'
+  add_module 'dm-crypt'
 
-    add_binary 'cryptsetup'
+  add_binary 'cryptsetup'
 
-    map add_udev_rule \
-        '10-dm.rules' \
-        '13-dm-disk.rules' \
-        '95-dm-notify.rules'
+  map add_udev_rule \
+    '10-dm.rules' \
+    '13-dm-disk.rules' \
+    '95-dm-notify.rules'
 
-    # cryptsetup calls pthread_create(), which dlopen()s libgcc_s.so.1
-    add_binary '/usr/lib/libgcc_s.so.1'
+  # cryptsetup calls pthread_create(), which dlopen()s libgcc_s.so.1
+  add_binary '/usr/lib/libgcc_s.so.1'
 
-    # cryptsetup loads the legacy provider which is required for whirlpool
-    add_binary '/usr/lib/ossl-modules/legacy.so'
+  # cryptsetup loads the legacy provider which is required for whirlpool
+  add_binary '/usr/lib/ossl-modules/legacy.so'
 
-    # The passphrase-reading helper (/usr/lib/initcpio/omarchy-kids-open).
-    # It's plain ash — slot parsing is case/parameter-expansion only, no
-    # grep or sed — so add_binary's shebang handling is all that's needed
-    # to pull it (and its interpreter) into the image; no extra binaries.
-    add_binary '/usr/lib/initcpio/omarchy-kids-open'
+  # The passphrase-reading helper (/usr/lib/initcpio/omarchy-kids-open).
+  # It's plain ash — slot parsing is case/parameter-expansion only, no
+  # grep or sed — so add_binary's shebang handling is all that's needed
+  # to pull it (and its interpreter) into the image; no extra binaries.
+  add_binary '/usr/lib/initcpio/omarchy-kids-open'
 
-    add_runscript
+  add_runscript
 }
 
 help() {
-    cat <<HELPEOF
+  cat <<HELPEOF
 This hook runs before the stock 'encrypt' hook and prompts for the boot LUKS
 passphrase the same way it does (plymouth ask-for-password, or a plain
 console loop), using the same 'cryptdevice=device:dmname:options' kernel

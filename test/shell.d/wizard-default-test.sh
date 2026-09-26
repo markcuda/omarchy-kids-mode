@@ -65,6 +65,7 @@ fi
 # tui_init deliberately proves the no-TTY initialization path above; the
 # owned Gum stub then exercises the same chooser in its interactive branch.
 TUI_MODE=interactive
+# shellcheck disable=SC2034 # read by tui_screen_choose via nameref-by-name
 choices=("plain|Plain option|No comma" "six|Ages 6–8, \\ safe|The intended default")
 tui_screen_choose "Age" 1 1 0 "" choices six
 [[ "$TUI_REPLY" == six ]] || exit 1

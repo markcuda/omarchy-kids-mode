@@ -30,7 +30,7 @@ check_contains() { # haystack needle label
 }
 
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"; [[ -n "${SERVER_PID:-}" ]] && kill "$SERVER_PID" 2>/dev/null' EXIT
+trap 'rm -rf "$TMP"; [[ -n "${SERVER_PID:-}" ]] && kill "$SERVER_PID" 2>/dev/null; [[ -n "${AUTH_PID:-}" ]] && kill "$AUTH_PID" 2>/dev/null; true' EXIT
 STUBS="$TMP/stubs"
 ETC="$TMP/etc"
 ROOT="$TMP/root"

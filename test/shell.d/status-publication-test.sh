@@ -102,7 +102,9 @@ REVIEW_DIR="$RUN_DIR/reviews/open"
 QUEUE_DIR="$ROOT/var/lib/omarchy-kids/queue"
 # open_requests_count delegates to lib/ask.py’s list-open, so the extracted
 # write_status_json needs both the interpreter and the module path.
+# shellcheck disable=SC2034 # consumed by the extracted production function
 KIDS_PY=python3
+# shellcheck disable=SC2034 # consumed by the extracted production function
 ASK_PY="$DIR/lib/ask.py"
 printf '%s\n' '{"generated_at":"old","kids":[]}' >"$STATUS_JSON"
 OLD_HASH="$(file_hash "$STATUS_JSON")"

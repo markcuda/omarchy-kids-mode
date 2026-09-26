@@ -368,6 +368,7 @@ chmod +x "$INSTALL_STUBS"/*
 if (
   PATH="$INSTALL_STUBS:$PATH"
   export FAIL_ENABLE=1
+  # shellcheck source=/dev/null
   . "$INSTALL_COPY"
   post_install >/dev/null 2>&1
 ); then
@@ -378,6 +379,7 @@ fi
 if (
   PATH="$INSTALL_STUBS:$PATH"
   export FAIL_TRY_RESTART=1
+  # shellcheck source=/dev/null
   . "$INSTALL_COPY"
   post_upgrade >/dev/null 2>&1
 ); then
