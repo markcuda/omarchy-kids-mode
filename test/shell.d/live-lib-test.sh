@@ -37,6 +37,15 @@ source "$LIB_FIXTURE_ROOT/lib/conf.sh"
 source "$LIB_FIXTURE_ROOT/lib/posture.sh"
 
 fail=0
+# This file's own pass/fail_, not the ones test/live/lib.sh defines (it is sourced below for the
+# helpers under test): that library's `fail` sets LIVE_FAIL, a different flag, so an assertion
+# written with it prints FAIL while this file still exits 0. Line 66 did exactly that until the
+# review of this pass found it.
+pass() { echo "ok   $*"; }
+fail_() {
+  echo "FAIL $*"
+  fail=1
+}
 check() { # got want label
   if [[ "$1" == "$2" ]]; then echo "ok   $3"; else
     echo "FAIL $3 (want '$2', got '$1')"
@@ -63,7 +72,7 @@ check "$(portal_kid_count "$QUOTED_CSV")" "2" "portal_kid_count: quoted two-kid 
 TILES=$'kid-ada\nkid-ben\nkid-cy\nkid-vm'
 check "$(portal_tile_index "$TILES" kid-cy)" "2" "portal_tile_index: sorted greeter order, third account is index 2"
 check "$(portal_tile_index "$TILES" kid-vm)" "3" "portal_tile_index: the parent sorts last here"
-portal_tile_index "$TILES" kid-zed >/dev/null && fail "portal_tile_index: unknown account should fail" || echo "ok   portal_tile_index: unknown account fails"
+portal_tile_index "$TILES" kid-zed >/dev/null && fail_ "portal_tile_index: unknown account should fail" || pass "portal_tile_index: unknown account fails"
 
 portal_kid_index "$CSV" kid-nope >/dev/null 2>&1
 check_status "$?" "1" "portal_kid_index: an account not in the list fails"
