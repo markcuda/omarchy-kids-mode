@@ -2653,3 +2653,73 @@ Also this pass: T44 (the kid's theme is a preference), T45 (the collection is vi
 switcher, and the picker is bound on Omarchy's own chord), T25 (one panel read per Home screen), and
 the FIFO-write hang that broke every assert run. `test/all -j 4` is 68 files green, plus 61 Dart and
 58 Flutter tests.
+
+## 2026-09-25 — dogfood pass on the try-omarchy VM, and four fixes
+
+Mark asked the loop to launch try-omarchy on this Mac and dogfood the product by driving it, not to
+keep testing the CLI from a shell. This is that pass, plus the four defects it turned up. Base was
+`integration/dogfood-2026-09-19` at `9415e98`; everything below is merged there, tip `9e66847`.
+
+### Driving the VM (the hard part, and what it cost)
+
+The old temp-dir SSH key had been purged, and the app's own launch menu was not a reliable control
+path. What works, and is written up in the untracked `.local/VM-DOGFOOD.md`:
+
+- Launch the app's QEMU directly with `OMARCHY_QEMU_GPU_PORT_FORWARDS=tcp:2222:22`, which also
+  appends `tryomarchy.ssh_access=1` and so enables `sshd.service`; owner set the box to **4 cores /
+  4 GB** for this pass. `/usr/sbin` must be on `PATH` (`sysctl`) or the launcher exits.
+- Input over QMP (`input-send-event`, explicit down/up with a hold); `/tmp/vmkeys.py` and
+  `/tmp/vmclick.py`. **QMP cannot fire Hyprland keybinds** — see the retractions.
+- Screenshots: in-guest `grim`; an X11 greeter needs `import` on the SDDM X display, not
+  `screendump`; a closed-modal QEMU window does not exist in `hyprctl clients` if it is a layer
+  surface. Killing by `pkill -f` can match your own SSH command line; kill by pidfile.
+
+### Verified live (working)
+
+Portal (4 tiles, correct avatars); Grid plus keyboard launch; the browser fence both ways;
+the garden start page; Desktop mode and its trimmed menu; Time's Up by budget **and** by
+lights-out; ask → panel approve → the kid's overlay shows the answer, live; the desktop notifier
+and the bar's open-request badge; the exit modal; wizard steps 1–6; panel home / kid / requests /
+notifications / reviews; `provision add` and `remove`; the `helper`-band Wi-Fi path against the
+6-8 refusal; data, K5 and retention; notify `enable`/`pair`/`disable`; `remove --dry-run`;
+fresh-install authd; `--live`.
+
+### Fixed (each its own branch, tests, merged)
+
+| Branch | What | Issue |
+| --- | --- | --- |
+| `fix/kid-session-polish` (tip `b615211`) | A docs-vs-code sweep, plus two defects it exposed: `omarchy-kids-data prune_launches` rewrote the launches log `0644`, widening a record about a kid; and `L1.lua` still bound the theme picker, whose `gum` needs a terminal the fullscreen Grid must not offer. | — |
+| `fix/check-live-no-session` (`ab9da53`) | `omarchy-kids-check --live` printed **nothing** and exited 1: `pid="$(live_session_leader_pid …)"` returns 1 for "no session", and under `set -euo pipefail` that ended the report before it rendered; the session-log `grep` had the same shape. The old coverage sat behind an `unshare` gate that only opens on Linux, which is why it shipped. | #7 |
+| `fix/garden-start-page` (`0b728f7`, `5db4dad`) | The Web tile opened Chromium's own Google new-tab. `render_policy_json` now derives `RestoreOnStartupURLs`/`NewTabPageLocation` from the band's first allowlisted host, so both a cold start and a new tab land in the garden. Also corrected a false `docs/web.md` claim that `launch` takes its band from `$OMARCHY_KIDS_BAND`. | #6 |
+| `fix/wizard-verifier-diagnostics` (`590a7d0`) | The unavailable-verifier line said "start omarchy-kids-authd.socket", the wrong repair when the socket is listening and the *service* died. It now names both units. | #4 |
+| `fix/timesup-reload` (`318cada`) | The Time's Up card never rendered: `timesup.qml`'s `FileView` never re-read the state file, so the card hid itself while the state still said `allowed` and never came back. Bound `onFileChanged: reload()` plus the launcher's 2 s timer. | #9 |
+
+### Filed, then retracted
+
+`#10` ("Super+Shift+K does not fire") and `#11` ("closing the exit modal strands it") were my
+harness, not the product. Marker binds (`SUPER + F10`, `SUPER + SHIFT + F10`, `SHIFT + F9`, each
+`touch /tmp/<marker>`) never fired even though `hyprctl binds` listed them as loaded, and the exit
+modal is a layer surface that never appears in `hyprctl clients`, so "the window closed" proved
+nothing. Both closed with the reasoning; the recipe now says so. `#5` (letter tiles) closed as an
+image gap: the VM has no `Yaru-*` icon theme at all, and symlinking `Yaru-blue -> Adwaita` made
+every real icon appear.
+
+### Open
+
+`#8` (`ready-for-human`): in Desktop mode the Omarchy menu's Apps submenu is the parent's whole
+installed-app list — WhatsApp, X, YouTube, Discord, Neovim, Docker. The trim extension hides four
+top-level ids by name and cannot scope a list generated from `.desktop` files, and the three ways
+out (scope it to the band pack, hide the row, or accept it and correct the claim) are mutually
+exclusive product intents, so it needs Mark, not a guess.
+
+### State of the machines
+
+VM left clean: portal up, no autologin drop-in (`boot:stock-autologin` and `login:autologin-dropin`
+both PASS), three kids on band defaults, notifications off, relay inactive, nothing listening.
+`test/all -j 4` exit 0 (68 files), dart 61, flutter 58, shellcheck and `shfmt -i 2 -ci` clean on the
+merged tip.
+
+What this pass could not do: a **real device pairing** (no full Xcode here, only Command Line Tools,
+so the Flutter macOS target will not build) and the `test/live/` scenarios (rule 11 — gate runner
+only). The host half of pairing is verified: `notify enable` mints the cert and fingerprint,
+`pair` opens a single-use window and prints the URI, `disable` removes the cert.
