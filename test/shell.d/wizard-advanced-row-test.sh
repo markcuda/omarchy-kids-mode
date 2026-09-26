@@ -27,6 +27,11 @@ app_label_for() {
 }
 friendly_web_mode() { printf '%s' "$1"; }
 friendly_wifi_mode() { printf '%s' "$1"; }
+# tui.sh is not sourced here (the real wizard sources it before wizard-advanced.sh, bin/
+# omarchy-kids-wizard:16 then :21), so adv_friendly's `level` branch called an undefined
+# tui_desktop_label and printed "command not found" until 2026-09-26. Stub it as the other
+# two friendly_* helpers are stubbed.
+tui_desktop_label() { printf '%s' "$1"; }
 
 # shellcheck disable=SC1091
 source "$ROOT/lib/wizard-advanced.sh"

@@ -23,6 +23,12 @@ HYPR="$DIR/share/hyprland"
 
 fail=0
 pass() { echo "ok   $*"; }
+fail_() { # the message, and set the flag -- the failure paths below called this undefined until
+  # 2026-09-26, so a broken session-start would have printed "command not found" and still exited
+  # 0: a dead assertion on a failure path is the one that hides a real regression.
+  echo "FAIL $*"
+  fail=1
+}
 check() { # got want label
   if [[ "$1" == "$2" ]]; then echo "ok   $3"; else
     echo "FAIL $3 (want '$2', got '$1')"

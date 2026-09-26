@@ -25,12 +25,14 @@ kids_file_mtime() {
   if stat --version >/dev/null 2>&1; then stat -c '%Y' "$1"; else stat -f '%m' "$1"; fi
 }
 
-# KIDS_BASE_TOOLS — bash plus the coreutils/text tools bin/ and lib/ use.
+# KIDS_BASE_TOOLS — bash plus the coreutils/text tools bin/ and lib/ use, and
+# cksum, which tests use to snapshot a file before and after (without it those
+# comparisons ran as "command not found" and compared empty to empty).
 # Deliberately absent: everything a test may need to *not* find — getent,
 # lsblk, socat, limine, every omarchy-* and omarchy-kids-* command. Name
 # those explicitly when a test wants them.
 KIDS_BASE_TOOLS=(
-  awk base64 basename bash cat chgrp chmod chown cmp comm cp cut date
+  awk base64 basename bash cat chgrp chmod chown cksum cmp comm cp cut date
   diff dirname du env expr find grep gzip head id install jq ln ls mkdir
   mktemp mv od ps python3 readlink realpath rm rmdir sed seq sh sleep
   sort stat tail tar tee timeout touch tr uname uniq wc xargs
