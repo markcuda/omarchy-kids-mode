@@ -583,6 +583,19 @@ if session_manifest_build kid-ada 2>"$TMP/mf.err"; then
 else
   check "built" "not built: $(tr "\n" " " <"$TMP/mf.err" | cut -c1-400)" "set: a manifest could be built for the fixture kid"
 fi
+
+# Issue #17: provisioning writes a profile one key at a time, so a set on an
+# incomplete one -- the shape the add path sees between its own success lines --
+# must not report a failed rebuild. name alone is that shape; avatar and band
+# come later in the sequence.
+printf 'name=Cy\n' >"$ETC/kids/kid-cy.conf"
+err="$("$CONF" set kid-cy name Cy 2>&1 >/dev/null)"
+check "$(grep -c 'could not rebuild the session manifest' <<<"$err")" "0" \
+  "set: an incomplete profile is not reported as a failed manifest rebuild (issue #17)"
+check "$(grep -c 'cannot resolve' <<<"$err")" "0" \
+  "set: and nothing tries to resolve the keys not written yet"
+rm -f "$ETC/kids/kid-cy.conf"
+
 rm -rf "$ETC/sessions"
 "$CONF" set kid-ada budget_min 60 >/dev/null
 check "$?" "0" "set: no sessions dir (not provisioned) is not an error"
