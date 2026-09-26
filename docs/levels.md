@@ -350,14 +350,16 @@ Omarchy 4.0.2 box to close out:
    anything to `"omarchy-menu toggle"` (`Super+Space` is rebound to the kids' own launcher), so
    there is no keyboard path to the untrimmed menu at either level. The trim is presentation, not
    a lock: the kid's own account still refuses every action behind a hidden row (I-3).
-7. **Volume/brightness keys use Omarchy's own wrappers -- swapped in 2026-09-26.** The reference
-   material was simply missing `default/hypr/bindings/media.lua`, which exists on the real 4.0.2
-   install and binds exactly these five keys to `omarchy-audio-output-volume raise|lower|mute-toggle`
-   and `omarchy-brightness-display +5%|5%-`, with `{ locked = true, repeating = true }`. L1 and L2
-   now mirror it, so a kid gets the same on-screen feedback, volume ceiling and brightness
-   rounding as the parent instead of raw `wpctl`/`brightnessctl` (and `brightnessctl set +5%`
-   rounds to nothing on a display with few steps). `levels-test.sh` holds both files to the
-   wrapper names.
+7. **Volume/brightness keys use Omarchy's own wrappers -- swapped 2026-09-26, and unverified where
+   they run.** The reference material was missing `default/hypr/bindings/media.lua`, which exists on
+   the real 4.0.2 install and binds these five keys to `omarchy-audio-output-volume
+   raise|lower|mute-toggle` and `omarchy-brightness-display +5%|5%-`; L1 and L2 mirror it, and
+   `levels-test.sh` holds both files to the wrapper names. **What that does at Levels 1 and 2 has
+   not been tried**: the on-screen display those wrappers feed is `omarchy-shell`'s, and neither
+   level runs it (both run the kids launcher -- the same reason `L2.lua`'s own comment gives for
+   `Super+K` being inert there). Press the five keys in a live Level 1 session; if the wrappers need
+   the shell, they should go back to `wpctl`/`brightnessctl`. Note the old `wpctl` binds already
+   capped volume at 100%, so the ceiling was never the reason to change.
 8. **GridView's real column layout (issue #43) -- holds at the tested sizes.**
    `share/launcher/gridnav.js`'s `columnsFor()` assumes GridView lays tiles out at exactly
    `Math.floor(grid.width / grid.cellWidth)` per row. The 2026-09-21 pass drew exactly its four
