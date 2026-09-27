@@ -346,6 +346,16 @@ BEHAVIOR_ROOT="$LIB_FIXTURE_ROOT"
   check_status "$?" "1" "portal_clean_exit: a compositor that stays after the dispatch is not a clean exit"
   check "$(cat "$LIVE_TEST_STATE_DIR/dispatches")" "1" \
     "portal_clean_exit: the stubborn case still dispatched exactly once"
+  # A zero deadline must not skip the confirmation: a clean exit still means the compositor is
+  # gone. The loop body used to sit inside `((gone_waited < deadline))`, so `portal_clean_exit
+  # kid-test 0` returned 1 without ever looking -- and the stubborn case above passed for the
+  # wrong reason (review of this pass, 2026-09-26).
+  LIVE_TEST_VMROOT_MODE=
+  : >"$LIVE_TEST_STATE_DIR/calls"
+  rm -f "$LIVE_TEST_STATE_DIR/inventory-calls" "$LIVE_TEST_STATE_DIR/dispatches"
+  portal_clean_exit kid-test 0
+  check_status "$?" "0" "portal_clean_exit: a zero deadline still confirms the compositor left"
+  check "$(cat "$LIVE_TEST_STATE_DIR/dispatches")" "1" "portal_clean_exit: and it dispatched once"
   LIVE_TEST_VMROOT_MODE=malformed-delayed
   : >"$LIVE_TEST_STATE_DIR/calls"
   rm -f "$LIVE_TEST_STATE_DIR/inventory-calls" "$LIVE_TEST_STATE_DIR/dispatches"

@@ -478,10 +478,14 @@ portal_clean_exit() {
       # that was still there). Wait for the instance to leave wayland-1, and say
       # so if it does not, rather than reporting an exit that did not happen.
       local gone_waited=0 after_inventory after_count
-      while ((gone_waited < deadline)); do
+      # Read once before consulting the deadline, like the find loop above: with `deadline` 0 the
+      # test suite's calls used to return 1 without ever looking, so "a clean exit means the
+      # compositor is gone" was silently untrue there (review of this pass, 2026-09-26).
+      while :; do
         after_inventory="$(vmroot "runuser -u $acct_q -- env XDG_RUNTIME_DIR=/run/user/$uid WAYLAND_DISPLAY=wayland-1 LANG=C.UTF-8 /usr/bin/hyprctl instances -j" 2>/dev/null)" || after_inventory=
         after_count="$(jq -r --arg display wayland-1 '[.[] | select(.wl_socket == $display)] | length' <<<"$after_inventory" 2>/dev/null)" || after_count=
         [[ "$after_count" == 0 ]] && return 0
+        ((gone_waited >= deadline)) && break
         sleep 5
         gone_waited=$((gone_waited + 5))
       done
