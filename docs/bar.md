@@ -314,6 +314,15 @@ script), so there is no bash unit test for it here -- item 4 above is the VM che
 `omarchy-kids-assert` adds the parent, and the membership takes effect at the next login. After
 an SDDM restart the module showed its kid indicator at the right end of the bar.
 
+**Loaded again on 2026-09-26 with this pass's change** (the two menu rows that now go through
+Omarchy's floating terminal): logged the parent in at the portal, enabled the widget into *their*
+home (`sudo … OMARCHY_KIDS_HOME=/home/omini-test omarchy-kids-bar enable --apply`), put the
+checkout's `KidsModule.qml` over the plugin's copy, and reloaded. The shell's journal shows
+`DEBUG qml: Local plugin changed, reloading: omarchy-kids.bar` with **no QML errors** for it, and
+`hyprctl layers` lists `omarchy-bar` as a live surface on `Virtual-1`. Two things that costs me: a
+`grim` capture of that session came back garbage (the VM had been up a day), so this is a *load*
+check rather than a picture, and QMP cannot press a keybind, so the menu itself could not be driven.
+
 The two actions' underlying commands have since been verified live (2026-09-22), though not through
 the popup: `omarchy-kids-exit --finish --kid kid-ada` -- what `end` runs under sudo -- found the
 kid's Hyprland, exited it through `runuser`, and SDDM's greeter came back on the Kids theme with no
