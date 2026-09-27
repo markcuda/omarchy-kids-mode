@@ -109,9 +109,10 @@ utilities, voxtype, optional applications), envs, looknfeel, input, windows — 
 `omarchy-provision-first-run` (`fix/level3-no-parent-autostart`; the session's own start hook runs
 the shell instead). Then `hl.unbind("SUPER + RETURN")` — under this config `hyprctl binds` lists
 no such bind (L3.lua's header); that does not separate "stock never binds it" from "stock binds it
-and the unbind worked" — and `o.bind("SUPER + SHIFT + K", ...)` for the exit overlay. The old worry about `omarchy-sudo-passwordless` was the autostart's provisioning,
-which this file no longer requires; whether a keybind of that name exists at all is still open
-(item 2).
+and the unbind worked" — and `o.bind("SUPER + SHIFT + K", ...)` for the exit overlay. The old worry about
+`omarchy-sudo-passwordless` was the autostart's provisioning, which this file no longer requires;
+the name itself is settled -- there is no bind of that name, it is a menu row the kid's trimmed
+menu hides (the Open questions list, item 2).
 
 ## What Level 1/2 do and don't require from Omarchy's defaults (I-3)
 
@@ -252,8 +253,8 @@ with the arrows and rendered real icons through `Quickshell.iconPath()`; the Lev
 desktop layer rendered as sibling Quickshell windows (the `PanelWindow`/desktop-mode shapes are
 real API). The live output there is 876x491 and the grid drew exactly the four columns `gridnav.js`
 computes for that width. The Level 3 pass then ran the stock desktop itself (live status above).
-Still open: item 2 (whether an `omarchy-sudo-passwordless` keybind exists at all), item 4
-(`hl.unbind`'s signature, Level 3 only), and item 8's exact per-row layout on unusual geometries.
+Still open: item 4 (`hl.unbind`'s signature, Level 3 only) and item 8's exact per-row layout on
+unusual geometries. Item 2 was settled and re-checked on 2026-09-26: no such keybind exists.
 Item 1 is checked and item 6 is verified; item 5 was confirmed on 2026-09-03. Items 3 and 7 were
 settled on 2026-09-26 by reading Omarchy's own shipped configs on the VM (`fullscreen = true` is
 what `default/hypr/apps/system.lua` writes; the volume/brightness wrappers are
@@ -274,12 +275,17 @@ another look:
    from "stock binds it and the unbind worked". Try `Super+Return` and confirm nothing launches.
    Whether the file-manager bind should also go under `menu=trimmed` is an owner question
    (`docs/dogfood-2026-09-21.md`).
-2. **`omarchy-sudo-passwordless`.** Deliberately not touched. The worry that a Level 3 session
-   re-runs Omarchy's first-run provisioning -- a likely home for such a convenience -- is answered:
-   L3.lua no longer requires `default.hypr.omarchy` (`fix/level3-no-parent-autostart`), and the
-   2026-09-21 Level 3 pass saw no `omarchy-provision-first-run`, `udiskie` or migration line in
-   the kid's journal. Whether an `omarchy-sudo-passwordless` keybind exists at all remains
-   unconfirmed on a real box.
+2. **`omarchy-sudo-passwordless` -- answered, and checked again 2026-09-26.** Deliberately not
+   touched, and there is nothing to strip: it is a **menu row**, not a keybind. `grep` for it across
+   `/usr/share/omarchy` and `/usr/bin/omarchy-*` on the real 4.0.2 finds it once, as
+   `setup.security.passwordless-sudo` in `default/omarchy/omarchy-menu.jsonc` (whose action is
+   `omarchy-launch-floating-terminal-with-presentation omarchy-sudo-passwordless`), and finds no
+   bind of that name at all; the kid's trimmed menu hides the whole `setup` section
+   (`share/menu/omarchy-kids-trimmed.jsonc`). The worry that a Level 3 session re-runs Omarchy's
+   first-run provisioning -- a likely home for such a convenience -- is answered too: L3.lua no
+   longer requires `default.hypr.omarchy` (`fix/level3-no-parent-autostart`), and the 2026-09-21
+   Level 3 pass saw no `omarchy-provision-first-run`, `udiskie` or migration line in the kid's
+   journal.
 When this checklist was first written the repo had two of Omarchy's real
 `default.hypr.bindings.*` files to check syntax against (`bindings-tiling.lua`,
 `bindings-utilities.lua`) and a handful of other `default.hypr.*` files, but no live Hyprland and
