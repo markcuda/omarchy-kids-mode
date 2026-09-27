@@ -27,22 +27,38 @@ OPEN="$ROOT/initcpio/omarchy-kids-open"
   exit 1
 }
 
-# --- syntax: ash -n (prefer real ash/dash; else busybox ash; else skip) ---
+# --- syntax: ash -n (real ash/dash; else busybox ash; else busybox in a container; else skip) ---
+# The install script (initcpio/install/omarchy-kids-unlock) is deliberately not in this list: it is
+# #!/bin/bash and runs at mkinitcpio time, not in the initramfs. The hook and the helper both run
+# before the stock `encrypt` hook, where a syntax error is a boot that dies before the LUKS prompt.
 ASH=""
 if command -v ash >/dev/null 2>&1; then
   ASH="ash"
 elif command -v busybox >/dev/null 2>&1 && busybox ash -c 'exit 0' >/dev/null 2>&1; then
   ASH="busybox ash"
+elif command -v docker >/dev/null 2>&1 &&
+  docker run --rm -v "$ROOT":/w -w /w busybox:latest ash -c 'exit 0' >/dev/null 2>&1; then
+  # Docker is the only route on a box with neither ash nor busybox -- a macOS dev machine with
+  # Docker Desktop. The probe above fails fast when the image cannot be pulled or there is no
+  # network, so this still SKIPs rather than hanging where a container is not usable.
+  ASH="container"
 fi
 
-if [[ -n "$ASH" ]]; then
+if [[ "$ASH" == "container" ]]; then
+  if docker run --rm -v "$ROOT":/w -w /w busybox:latest ash -n "${HOOK#"$ROOT"/}" &&
+    docker run --rm -v "$ROOT":/w -w /w busybox:latest ash -n "${OPEN#"$ROOT"/}"; then
+    pass "ash -n parses both the hook and the helper (busybox in a container)"
+  else
+    fail "ash -n reported a syntax error"
+  fi
+elif [[ -n "$ASH" ]]; then
   if $ASH -n "$HOOK" && $ASH -n "$OPEN"; then
     pass "ash -n parses both the hook and the helper"
   else
     fail "ash -n reported a syntax error"
   fi
 else
-  skip "no ash/busybox available on this machine — syntax not checked"
+  skip "no ash/busybox and no usable busybox container — syntax not checked"
 fi
 
 # --- no bashisms: neither file declares itself bash, nor uses [[ ]] ---
