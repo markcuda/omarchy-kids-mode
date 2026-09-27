@@ -330,6 +330,14 @@ Omarchy 4.0.2 box to close out:
 
    **Call this file the first stop for any other Hyprland Lua API question** — it answers what the
    engine provides without a live session.
+
+   Checked that way on 2026-09-26, every API name the level files use is in the engine's own
+   sources: the two `o.*` helpers we call are Omarchy's, with the shapes we pass —
+   `o.bind(keys, description, dispatcher, options)` (`helpers.lua:92`) and `o.window(match, rules)`
+   (`:142`) — and all nine `hl.*` names are in the stub: `animation`, `config`, `curve`, `env`,
+   `exec_cmd`, `on`, `unbind`, plus the dispatchers `dsp.exit`, `dsp.focus`, and `dsp.window` with
+   its `close`. So this file's own comments that say "confirmed, not guessed" now have a second
+   confirmation, from the engine rather than from a live load.
 5. **Historical launcher API questions (predating #200).** #200 uses the documented
    `Process.startDetached()` lifecycle, a sibling background `PanelWindow`, and Hyprland
    0.56 `hyprctl dispatch 'hl.dsp.focus({window=...})'` for the picker. The old fullscreen/focuswindow
