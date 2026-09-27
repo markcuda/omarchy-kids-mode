@@ -8,7 +8,7 @@ each lands as a fast-forward with no merge commit:
 
 | Branch | Commits | What it is |
 | --- | --- | --- |
-| `docs/sudo-passwordless-settled` | 29 | everything: the review fixes, the doc-claim resolutions, the new guards, this file |
+| `docs/sudo-passwordless-settled` | everything | the review fixes, the doc-claim resolutions, the new guards, this file (`git log --oneline integration/dogfood-2026-09-19..docs/sudo-passwordless-settled` is the count) |
 | `fix/review-2026-09-26-blockers` | 6 | the six blocking fixes only, for a gate that wants the review answered without the rest |
 | `docs/grid-theme-picker-conformance` | 1 | option 1 for **#24** |
 
@@ -35,8 +35,25 @@ amendment does not offer at that level — option 1 (drop the clause) is drafted
 with their spec and code effects are on the issue. The other open decisions
 (`docs/phase1/DECISIONS-NEEDED.md` §7) are unchanged and still yours.
 
-**Test VM:** stopped. The pass's live work is done and the guest was restored byte-for-byte before it
-was powered down (`shell.json` 1194 bytes, no plugin directory, no root leftovers).
+**Brand (2026-09-27):** the product is now called **OmaKid**, tagline "a shared, safe, and curated
+Omarchy experience for Kids". This is a public brand only. The internal names stay
+`omarchy-kids-*` and the `omarchy-kids` package, because those are spec'd and renaming them touches
+the PKGBUILD, every command, SPEC.md and the installed paths. A full technical rename is its own
+ticket if it is ever wanted. The X thread is at `docs/marketing/x-thread-omakid.md` (on this branch): 27
+posts, each under 280, drafted against the repo's own docs so every claim matches what is built or
+planned.
+
+**Open from the last round, not acted on:** a spec-traceability audit found **31 of the 104
+requirement ids in SPEC.md are named in no test**. Spot checks show most are covered by behavior
+under a different id, but three appear to have no test at all: **R-APPS-5** (the "hide kids' apps"
+`Hidden=true` write into the parent's launcher), **R-WEB-6** (the `omarchy-kids-wifid` fence that
+only touches its own `kids-<ssid>` profiles), and **R-DESK-6** ("the kid's `~/.config/hypr` is never
+read"). Worth a ticket before it drifts further.
+
+**Test VM:** stopped and left stopped for the break. The pass's live work is done and the guest was
+restored byte-for-byte before it was powered down (`shell.json` 1194 bytes, no plugin directory, no
+root leftovers). Colima (the Docker VM, `limactl usernet`) is still up because it is a shared dev
+tool, not this project's VM.
 
 ## Earlier — September 25, 2026: the dogfooding workstream
 
