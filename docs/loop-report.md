@@ -2844,6 +2844,8 @@ other (checked):
   the current `integration`. This is the one to take if the gate wants the review answered now.
 - **`docs/sudo-passwordless-settled`** — everything: the blockers, the should-fixes, the doc-claim
   resolutions (the migration markers, `qs.Ui`, the media keys, `hl.unbind` and every other API name
-  the level files use, the bar widget's live load), and this entry. Twenty-one commits.
+  the level files use, the bar widget's live load), and this entry. (`git log --oneline
+  integration/dogfood-2026-09-19..docs/sudo-passwordless-settled` is the current count — it changes
+  when this page does, which is why it is not written here.)
 
 Merges stay with the owner's gate; neither branch has touched `integration`.
