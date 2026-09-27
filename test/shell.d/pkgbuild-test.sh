@@ -384,5 +384,19 @@ else
   fail "units reference commands with no bin/ file: ${unit_missing[*]}"
 fi
 
+# I-7: the package must never install into Omarchy's own tree. A file under /usr/share/omarchy or
+# /usr/lib/omarchy belongs to the `omarchy` or `omarchy-settings` package, and overwriting one is
+# what rule I-7 forbids -- our own data lives under /usr/share/omarchy-kids and our locks under
+# /etc/omarchy-kids. `assert-test.sh` pins this for one case (the relay's packaged unit); this is
+# the general sweep, so a new install line lands here rather than on a real box.
+omarchy_targets="$(grep -oE '\$pkgdir/usr/(share|lib)/omarchy[a-z_-]*[^" ]*' "$ROOT/PKGBUILD" |
+  sort -u | grep -vE 'omarchy-kids' || true)"
+if [[ -z "$omarchy_targets" ]]; then
+  pass "PKGBUILD: no install target under /usr/share/omarchy or /usr/lib/omarchy (I-7)"
+else
+  fail "the PKGBUILD installs into Omarchy's own tree (I-7):"
+  printf '     %s\n' "$omarchy_targets"
+fi
+
 echo "pkgbuild-test RESULT: $([[ $rc == 0 ]] && echo PASS || echo FAIL)"
 exit $rc
