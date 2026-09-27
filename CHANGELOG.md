@@ -306,7 +306,8 @@ once there is one. Regenerate or extend this by hand; it is not produced by a sc
   Migrations" at login. Verified against the real runner: 104 markers, `--pending` empty, exit 1.
 - The bar widget's "Open Kids Mode" and "Open requests" rows open a terminal
   (`omarchy-launch-floating-terminal-with-presentation`). Bare from Quickshell, `omarchy-kids`
-  printed "tui: no terminal to ask" and **exited 0**, so both rows silently did nothing.
+  printed "tui: no terminal to ask" and **exited 0**, so that row showed nothing at all; the
+  requests row wrote its list to a stdout nobody had. Both were silent.
 - `omarchy-kids-review`'s help and `docs/review.md` name `--dry-run`, which the command has always
   accepted (it forces the preview whatever `DRY_RUN` says).
 

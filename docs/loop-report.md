@@ -2807,7 +2807,7 @@ Lessons worth keeping:
 - **Do not leave something running on the shared VM.** Four `test/all` runs left behind by ssh
   commands that hit the agent tool's timeout put the 4-core guest at load ~9 and made one test look
   hung for seven minutes; and `pkill -f` issued from a command line that contains the pattern kills
-  that command's own session (twice). `test/all` on the guest is a ~30–45 minute affair: it is
+  that command's own session (twice). `test/all` on the guest is a ~20–45 minute affair: it is
   slow, not stuck.
 
 Left blocked, not worked: real device pairing (needs a second peer), `test/live/` scenarios (rule

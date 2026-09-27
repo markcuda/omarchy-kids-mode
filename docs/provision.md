@@ -126,7 +126,7 @@ the link) and adding again is the remedy. The same step seeds one app's own conf
     lists so QSettings keeps each one scalar.
 16. **Omarchy's own per-user setup** (issue #10 finding b): if `omarchy-provision-user` exists on
     the target, it's run with the new account. If it doesn't, `mark_migrations_done` writes a
-    best-effort stand-in — see "Known gap" below.
+    stand-in — see "The `migration done` marker, as Omarchy 4.0.2 really keeps it" below.
 17. **The launcher map and session manifest** (R-MANIFEST-1..3): the root-derived map is built at
     `/etc/omarchy-kids/launchers/<account>.json`, immediately followed by the atomic manifest at
     `/etc/omarchy-kids/sessions/<account>.json`. The manifest is the validated input for the next
@@ -196,7 +196,7 @@ account being added or removed — never assuming a slot number that wasn't just
 | `OMARCHY_KIDS_SHARE` | `/usr/share/omarchy-kids` | `omarchy-kids-conf`'s bands/packs (passed through); the avatar SVG `posture_write_face_icon` copies from (issue #39) |
 | `OMARCHY_KIDS_ROOT` | (none — the real paths) | prefixes every path `lib/posture.sh` writes: `/etc/polkit-1`, `/etc/security`, `/etc/pam.d`, `/etc/fstab`, `/var/lib/AccountsService`, `/usr/share/sddm/themes/omarchy-kids` (`theme.conf.user`), `/usr/share/sddm/faces`; also passed to `systemctl --root=` for the console masks |
 | `OMARCHY_KIDS_HOME_ROOT` | (none — the real `/home`) | prefixes `/home/<account>` for every `mount`/`umount`/`mv` this command itself runs (**not** in the spec's original env list — added here; see "Judgment calls" below) |
-| `OMARCHY_MIGRATIONS_DIR` | `/usr/share/omarchy/migrations` | source list for `mark_migrations_done`'s guessed markers |
+| `OMARCHY_MIGRATIONS_DIR` | `/usr/share/omarchy/migrations` | source list for `mark_migrations_done`'s markers (one per script, named exactly like Omarchy's own runner expects) |
 
 `test/shell.d/provision-test.sh` runs entirely against a scratch tree built from these, with a
 stub `PATH` (fake `useradd`, `usermod`, `userdel`, `chpasswd`, `mount`, `umount`, `systemctl`,

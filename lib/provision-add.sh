@@ -210,8 +210,9 @@ cmd_add() {
   run posture_write_portal_conf "$parent" "${portal_entries[@]}"
 
   # Issue #10 finding (b): so the desktop never shows "Pending Omarchy
-  # Migrations" -- docs/provision.md's "Known gap". A failure here is a
-  # warning, not a failed provision: everything else is already in place.
+  # Migrations" -- docs/provision.md, "The `migration done` marker, as Omarchy
+  # 4.0.2 really keeps it". A failure here is a warning, not a failed
+  # provision: everything else is already in place.
   if command -v omarchy-provision-user >/dev/null 2>&1; then
     if ! run runuser -l "$account" -c "omarchy-provision-user --first-install"; then
       echo "warning: omarchy-provision-user failed for $account; marking Omarchy migrations done instead" >&2

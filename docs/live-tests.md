@@ -211,10 +211,16 @@ must still show the actual reviewed product and the named live scenario must sti
 - **`portal_reset` now treats seat0 as the state machine it is, bounded at three rounds: a greeter
   is done once it answers; an empty seat gets an SDDM restart; a session is exited with the clean
   compositor exit (`SwitchToGreeter` fails on 4.0.2 and revoked the laptop's input devices once —
-  the same D-Bus call V1 verified, docs/phase1/V1.md).** Verified live on the try-omarchy VM,
-  2026-09-26 (issue #21): a clean exit returned the greeter within 5s, a `loginctl
-  terminate-session` left seat0 **empty with no greeter at all**, and a restart with an autologin
-  in place handed the seat to that session — which is exactly why the old single greeter wait hung.
+  the same D-Bus call V1 verified, docs/phase1/V1.md).** The *behaviour it is built on* was
+  verified by hand on the try-omarchy VM, 2026-09-26 (issue #21): a clean exit returned the greeter
+  within 5s, a `loginctl terminate-session` left seat0 **empty with no greeter at all**, and a
+  restart with an autologin in place handed the seat to that session. The old helper ended with one
+  `assert_greeter` after whichever branch, so a seat handed to a session — rather than to a greeter —
+  is what it waited out; the branch that cleaned `$LIVE_OWNER_ACCOUNT` after a restart only ever
+  covered the owner's own autologin, not a kid's.
+  **The rewritten helper itself has not run live**: it is exercised through the stubbed
+  `test/shell.d/live-lib-test.sh` (`portal_reset` cases, including a seat whose first row is a
+  `manager` one), and the first real run of it is the gate runner's.
   Two traps for anything else driving this VM: resolve the Hyprland signature from
   `hyprctl instances -j` rather than that user's `hypr/` directory (it held 18 stale ones, and a
   dispatch at a dead socket prints "Couldn't connect" and *still exits 0*), and a scenario after a

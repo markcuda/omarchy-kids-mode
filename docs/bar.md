@@ -62,9 +62,10 @@ not just its shell core -- import it: `plugins/bar/indicators/Dictation.qml` and
 indicators do exactly that. Third-party plugins are found by the same `PluginRegistry`
 (`pluginsDir = ~/.config/omarchy/plugins`, "third-party plugins stay at the top level") and emitted
 with the same manifest shape, so they load into the shell process that already resolves the module.
-Vendoring `Panel`/`KeyboardPanel`/`PanelKeyCatcher` into `share/bar/` is therefore not needed. What
-the same run could not show is the live half -- that the plugin is discovered, instantiated and
-drawn (see "What's unverified" below).
+Vendoring `Panel`/`KeyboardPanel`/`PanelKeyCatcher` into `share/bar/` is therefore not needed. This
+run did not exercise the live half -- it reads files rather than running a shell -- but that is on
+record from 2026-09-02 ("Verified live" below): the plugin was discovered, instantiated and drew
+its kid indicator.
 
 ## `bin/omarchy-kids-bar`
 
@@ -262,7 +263,8 @@ In order of what to check first:
    `omarchy-shell shell rescanPlugins`/a re-login picks it up. The import question behind this
    ("does `import qs.Ui` resolve outside `$OMARCHY_PATH`") is answered yes -- 2026-09-26, see "What
    is not confirmed" above -- so this needs no vendored copy of `Panel` / `KeyboardPanel` /
-   `PanelKeyCatcher`; what is left is the loading and drawing itself.
+   `PanelKeyCatcher`, and the loading and drawing itself is on record from 2026-09-02 ("Verified
+   live" below). Items 2-7 are the ones still waiting on a live pass.
 2. With a kid logged in (and paused, via `omarchy-kids-time` or `bin/omarchy-kids-panel`): does
    the dot appear, with the right initial, and does its color/label change when paused?
 3. Click the widget, then Enter/arrows/Escape with no mouse (I-5): does the menu open, navigate,
