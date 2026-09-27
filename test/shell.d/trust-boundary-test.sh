@@ -66,6 +66,10 @@ ALLOWED=(
   OMARCHY_KIDS_LUKS_DEVICE       # which block device (root-only command)
   OMARCHY_KIDS_UKI               # which boot image to inspect (read-only check)
   OMARCHY_KIDS_UID_MAP           # test fixture for uid->account, root-only path
+  # (a, upstream) the two OMARCHY_* names this package reads that Omarchy itself owns. Both choose
+  # where our *data* is read from, never what runs: files under them are read, never executed.
+  OMARCHY_PATH           # upstream's install prefix (its migrations, its theme data)
+  OMARCHY_MIGRATIONS_DIR # the migration source list, pointed at a fixture by a test
   # (b) values a command hands to the surface it is starting.
   OMARCHY_KIDS_ACCOUNT    # exported to a QML surface; never read back
   OMARCHY_KIDS_NAME       # display name, exported to a QML surface
@@ -114,9 +118,12 @@ while IFS= read -r name; do
   read_names+=("$name")
 done < <(
   {
-    # ${OMARCHY_KIDS_X...} in shell, os.environ.get("OMARCHY_KIDS_X") in python
-    grep -rhoE '\$\{OMARCHY_KIDS_[A-Z0-9_]+' bin lib | sed 's/\${//'
-    grep -rhoE 'environ[^)]*"OMARCHY_KIDS_[A-Z0-9_]+"' bin lib | grep -oE 'OMARCHY_KIDS_[A-Z0-9_]+'
+    # ${OMARCHY_X...} or $OMARCHY_X in shell, os.environ.get("OMARCHY_X") in python. `OMARCHY_`,
+    # not `OMARCHY_KIDS_`, and the brace optional: the narrower prefix let anything without KIDS in
+    # its name go unpoliced (`OMARCHY_MIGRATIONS_DIR` did exactly that) and the mandatory brace
+    # missed bare reads (review of this pass, 2026-09-26).
+    grep -rhoE '\$\{?OMARCHY_[A-Z0-9_]+' bin lib | sed 's/^\${//; s/^\$//'
+    grep -rhoE 'environ[^)]*"OMARCHY_[A-Z0-9_]+"' bin lib | grep -oE 'OMARCHY_[A-Z0-9_]+'
     grep -rhoE 'getenv\("OMARCHY_KIDS_[A-Z0-9_]+"' bin lib | grep -oE 'OMARCHY_KIDS_[A-Z0-9_]+'
   } | sort -u
 )
@@ -130,7 +137,7 @@ for name in "${read_names[@]}"; do
     unlisted=1
   fi
 done
-((unlisted == 0)) && ok "trust boundary: every OMARCHY_KIDS_* read in bin/ and lib/ is allowlisted (${#read_names[@]} names)"
+((unlisted == 0)) && ok "trust boundary: every OMARCHY_* read in bin/ and lib/ is allowlisted (${#read_names[@]} names)"
 
 # The OMARCHY_KIDS_* scan above also matches python (os.environ.get / getenv).
 # A non-namespaced environment read is the same hazard under a plain name, and

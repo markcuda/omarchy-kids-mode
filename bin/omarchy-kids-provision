@@ -195,8 +195,11 @@ mark_migrations_done() {
   # The kid's session only has to *see* these paths: `omarchy-migrate` tests `[[ -f $marker ]]`,
   # which needs directory traversal rather than a read of the file itself. So the directories
   # become the kid's and the markers can stay root-owned 0600. (The kid owns the directory either
-  # way, so a marker is a claim the runner keeps, not a lock.)
-  chown "$account:$account" "$omarchy_state" "$state_dir" 2>/dev/null || true
+  # way, so a marker is a claim the runner keeps, not a lock.) A failure is said out loud: with the
+  # directories left root-owned 0700 the kid cannot traverse them, so every migration would read as
+  # pending forever -- the exact symptom this function exists to prevent.
+  chown "$account:$account" "$omarchy_state" "$state_dir" 2>/dev/null ||
+    echo "warning: could not hand $omarchy_state to $account; its migrations will keep showing as pending" >&2
 }
 
 # symlinked_kid_path PATH... -- prints the first PATH that is a symlink and fails.
