@@ -323,6 +323,13 @@ checkout's `KidsModule.qml` over the plugin's copy, and reloaded. The shell's jo
 `grim` capture of that session came back garbage (the VM had been up a day), so this is a *load*
 check rather than a picture, and QMP cannot press a keybind, so the menu itself could not be driven.
 
+That load also confirms the `FileView` members this widget relies on, by upstream's own usage:
+`watchChanges` (15 files, e.g. `shell/shell.qml:131`), `onFileChanged` (12), `onLoaded` (17),
+`onTextChanged` (6), and `.text()` (35, `shell.qml:85` — the same idiom the widget's `statusFile`
+uses). The type's QML source is on disk (`/usr/lib/qt6/qml/Quickshell/Io/FileView.qml`, which
+declares `path` and `text()`), but its C++-side members and signals are compiled in, so upstream's
+usage and the clean load are what hold those.
+
 The two actions' underlying commands have since been verified live (2026-09-22), though not through
 the popup: `omarchy-kids-exit --finish --kid kid-ada` -- what `end` runs under sudo -- found the
 kid's Hyprland, exited it through `runuser`, and SDDM's greeter came back on the Kids theme with no
