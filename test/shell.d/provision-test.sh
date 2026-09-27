@@ -670,17 +670,26 @@ stub omarchy-provision-user # restore for the rest of the test
 # --- issue #53: parent has no current Omarchy theme yet -> a warning, no
 #     override written, no theme directory copied for the new kid --------
 
+#
+# Its own ETC, so the account this case provisions cannot collide with the fixtures other cases
+# leave in the shared one. It used to run as "Nia", outside AGENTS.md rule 10's invented names, and
+# simply renaming it to a name already used in this root broke the GCompris-seed case further down
+# (issue #25 -- that case expects the fresh-account path for `Test`). The parent's theme state,
+# which this case is about, lives in the parent's *home*, so HOMEROOT stays shared.
+NOTHEME_ETC="$TMP/notheme-etc"
+mkdir -p "$NOTHEME_ETC/kids"
+printf 'parent=mark\nboot=portal\n' >"$NOTHEME_ETC/machine.conf"
 mv "$HOMEROOT/home/mark/.local/state/omarchy/current/theme.name" "$TMP/theme.name.bak"
 : >"$ARGV_LOG"
-out_notheme="$(printf 'kidpass4\n' | "$BIN" add "Nia" --band 6-8 --avatar bear --password-stdin 2>&1)"
-SLUG_NIA="$("$CONFBIN" slug "Nia")"
+out_notheme="$(printf 'kidpass4\n' | env OMARCHY_KIDS_ETC="$NOTHEME_ETC" "$BIN" add "Ada" --band 6-8 --avatar bear --password-stdin 2>&1)"
+SLUG_NOTHEME="$("$CONFBIN" slug "Ada")"
 check_contains "$out_notheme" "parent 'mark' has no current Omarchy theme yet" \
   "add: warns (does not fail) when the parent has never picked an Omarchy theme"
-check_eq "$(grep -c '^theme=' "$ETC/kids/$SLUG_NIA.conf")" "0" \
+check_eq "$(grep -c '^theme=' "$NOTHEME_ETC/kids/$SLUG_NOTHEME.conf")" "0" \
   "add: no theme override is written when the parent has no theme to copy"
-[[ -e "$HOMEROOT/home/$SLUG_NIA/.local/state/omarchy/current/theme" ]] &&
-  fail "add: no theme directory should be created for $SLUG_NIA" ||
-  pass "add: $SLUG_NIA's own theme directory was never created"
+[[ -e "$HOMEROOT/home/$SLUG_NOTHEME/.local/state/omarchy/current/theme" ]] &&
+  fail "add: no theme directory should be created for $SLUG_NOTHEME" ||
+  pass "add: $SLUG_NOTHEME's own theme directory was never created"
 mv "$TMP/theme.name.bak" "$HOMEROOT/home/mark/.local/state/omarchy/current/theme.name"
 
 printf 'parent=mark\nboot=disk\n' >"$ETC/machine.conf"
