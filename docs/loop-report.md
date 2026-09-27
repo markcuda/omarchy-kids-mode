@@ -2854,3 +2854,17 @@ conflict markers for the same pair and was wrong, so it is the worktree merge th
   when this page does, which is why it is not written here.)
 
 Merges stay with the owner's gate; neither branch has touched `integration`.
+
+### The pass closes (2026-09-27)
+
+The test VM is stopped, and the guest was restored byte-for-byte before the powerdown (`shell.json`
+1194 bytes, no plugin directory, no root leftovers), so the next session starts from the same box
+this one did. The landing sequence above was re-checked in a worktree at the final tips: the chain
+fast-forwards from `integration`, and the theme-picker branch merges clean on top of it (29 files,
++697/-238), which is the pair that closes #24.
+
+The tracker is honest again as well: twenty closed issues still carried `needs-triage` or
+`ready-for-human` -- a claim that work remained on something already fixed -- and those labels are
+removed. That leaves **#24** (`documentation` + `ready-for-human`) as the one open issue, and it is a
+decision rather than a task: drop the Grid's theme-picker clause, keep it and correct the amendment,
+or build the Grid tile the amendment's own note anticipated. Option 1 is drafted and ready.

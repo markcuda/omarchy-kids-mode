@@ -1,6 +1,44 @@
 # Progress and handoff
 
-## Current — September 25, 2026: the dogfooding workstream
+## Current — September 27, 2026: the review answered, everything at the gate
+
+**Branch:** `integration/dogfood-2026-09-19` is `d8b6151`, in sync with `origin`, and **untouched
+by this pass**. All of this pass's work sits on three branches, each **linear from integration**, so
+each lands as a fast-forward with no merge commit:
+
+| Branch | Commits | What it is |
+| --- | --- | --- |
+| `docs/sudo-passwordless-settled` | 29 | everything: the review fixes, the doc-claim resolutions, the new guards, this file |
+| `fix/review-2026-09-26-blockers` | 6 | the six blocking fixes only, for a gate that wants the review answered without the rest |
+| `docs/grid-theme-picker-conformance` | 1 | option 1 for **#24** |
+
+**Take the chain, and the theme-picker branch on top of it if you want #24 closed.** Both were
+merged in a scratch worktree and come out clean (29 files, +697/−238). Do **not** also take the
+blocker-only branch: it is the chain's six blocker commits re-made, and the two conflict in
+`bin/omarchy-kids-provision`. (`git merge-tree` reported that pair clean and was wrong — the
+worktree merge is what counts.)
+
+**The pass in one paragraph.** An independent review of the pass's 48 commits (opus 5.5 at max
+effort, `docs/reviews/2026-09-26-dogfooding-pass.md`) came back request-changes: six blocking
+findings and five should-fixes, every one now closed, plus one unfixable nit (two merged commits each
+carry two topics). Alongside it the pass fixed what dogfooding and the review surfaced on the live
+path — the portal reset and exit races (#21, #134), the migration markers (#22), the R-SEC-6 gap
+(#23), a stray kid name outside the invented set (#25) — and added guards so each class fails a test
+next time: `network-boundary-test.sh` (only the courier may open a connection), an I-7 install-target
+sweep, the R-SEC-6 scan, the `$EUID` scan, the shadowing and dead-assertion guards, and a busybox
+container that finally parses the initcpio hook scripts.
+
+**State:** `test/all -j 4` is **74 files**, green on the Mac (five environment skips, each covered on
+the VM) and green on the VM. `shellcheck` and `shfmt -i 2 -ci` clean. The one open issue is **#24**
+(`documentation`, `ready-for-human`): Appendix E binds a theme picker in the Grid, which the two-mode
+amendment does not offer at that level — option 1 (drop the clause) is drafted, and the alternatives
+with their spec and code effects are on the issue. The other open decisions
+(`docs/phase1/DECISIONS-NEEDED.md` §7) are unchanged and still yours.
+
+**Test VM:** stopped. The pass's live work is done and the guest was restored byte-for-byte before it
+was powered down (`shell.json` 1194 bytes, no plugin directory, no root leftovers).
+
+## Earlier — September 25, 2026: the dogfooding workstream
 
 **Branch:** `integration/dogfood-2026-09-19` is the union of all topic work, in sync with `origin`.
 The dogfooding workstream landed on `fix/kid-session-polish` and is merged (integration tip past
