@@ -2837,8 +2837,13 @@ where the kid pointed — was fixed **and reviewed before it was committed**, as
 require for root and trust-boundary changes. Every should-fix and every nitpick is closed except one
 that cannot be: `82972c8` and `030a8ed` each mix topics, and rewriting merged commits is worse.
 
-Two branches carry the fixes, both green on the Mac and the VM, and they merge cleanly with each
-other (checked):
+Two branches carry the fixes. **Take one or the other, not both**: the blocker-only branch is the
+chain's six blocker commits re-made (`git cherry-pick -x`), so the same hunks arrive twice with
+different hashes, and merging both really does conflict in `bin/omarchy-kids-provision`. The chain
+already contains them -- taking it gives everything, landing as a fast-forward from `integration` --
+and the subset exists only for a gate that wants the review answered without the rest. (Established
+2026-09-27 by merging in a scratch worktree. `git merge-tree`'s two-branch form had reported no
+conflict markers for the same pair and was wrong, so it is the worktree merge that counts.)
 
 - **`fix/review-2026-09-26-blockers`** — the six blocking fixes only, six commits cherry-picked onto
   the current `integration`. This is the one to take if the gate wants the review answered now.
