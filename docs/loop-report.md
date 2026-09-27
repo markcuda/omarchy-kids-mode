@@ -2824,3 +2824,26 @@ built":
 A fourth outstanding item came out of this pass's own review: T45's Grid half is not built and
 cannot be without amending Appendix E, which still lists a theme picker on a Grid that R-DESK-3
 keeps terminal-free (`PROGRESS.md`).
+
+### The review phase, after the twelve (same day)
+
+That entry was written before the independent review of the whole pass — 48 commits — which is in
+`docs/reviews/2026-09-26-dogfooding-pass.md`. Its verdict was request changes: six blocking
+findings, four Standards and two Spec. Two of the six were **regressions this pass had introduced**:
+`is_root` in place of `$EUID` (which breaks `check-test.sh` where `unshare` works, and the Mac skips
+that block) and a surviving dead assertion in `live-lib-test.sh` that the new guard could not see.
+The security one — a kid-planted link or directory at a migration-marker path that made root write
+where the kid pointed — was fixed **and reviewed before it was committed**, as the loop's orders
+require for root and trust-boundary changes. Every should-fix and every nitpick is closed except one
+that cannot be: `82972c8` and `030a8ed` each mix topics, and rewriting merged commits is worse.
+
+Two branches carry the fixes, both green on the Mac and the VM, and they merge cleanly with each
+other (checked):
+
+- **`fix/review-2026-09-26-blockers`** — the six blocking fixes only, six commits cherry-picked onto
+  the current `integration`. This is the one to take if the gate wants the review answered now.
+- **`docs/sudo-passwordless-settled`** — everything: the blockers, the should-fixes, the doc-claim
+  resolutions (the migration markers, `qs.Ui`, the media keys, `hl.unbind` and every other API name
+  the level files use, the bar widget's live load), and this entry. Twenty-one commits.
+
+Merges stay with the owner's gate; neither branch has touched `integration`.
