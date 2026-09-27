@@ -313,13 +313,23 @@ Omarchy 4.0.2 box to close out:
    writes. Still true that no live pass has *seen* a non-self-fullscreening client under our rule
    (the launcher fullscreens itself via `share/launcher/shell.qml`'s `Window.FullScreen`, and
    GCompris asks for `fullscreen: 2` of its own accord) — `hyprctl clients` would settle that.
-4. **`hl.unbind`'s signature.** Assumed to take the same key-combo string `o.bind`'s first
-   argument does. `bindings-utilities.lua`'s comment on its selection-layer binds describes
-   unbinding by key as risky only because it can strip a *user's own* rebinding from their
-   personal `~/.config/hypr` files — L3.lua has no such layer (R-DESK-6), so that risk doesn't
-   apply here, but the call signature itself is still unverified. The L3 config loaded live on
-   2026-09-21 without an error from it; whether the unbind actually removes a bind remains
-   unshown.
+4. **`hl.unbind` exists; whether it removes a stock bind is still unshown.** The function is real,
+   and the primary source is on the box: **`/usr/share/hypr/stubs/hl.meta.lua`** is the embedded
+   Lua API's own stub, and line 853 declares `---@field unbind fun(...): any` on the `hl` table,
+   alongside the `HL.Keybind` method of the same name (`:637`) that Omarchy's own
+   `bindings-utilities.lua` uses for its selection layer (`keybind:unbind()`). So our
+   `hl.unbind("SUPER + RETURN")` is a valid call, not a load error — including on the 2026-09-21
+   live pass, which reported none. What is *not* shown is the effect: `hyprctl binds` listing no
+   such bind does not separate "stock never binds it" from "stock binds it and the unbind worked",
+   because the greeter-side chord we care about is a keybind a kid would have to press. Press it in
+   a live Level 3 session (once should open one picker, not two) — QMP cannot, since keybinds are
+   intercepted above the layer its key events reach.
+   `bindings-utilities.lua`'s own comment describes the risk of unbinding by key as stripping a
+   *user's own* rebinding from `~/.config/hypr`; L3.lua loads no such layer (R-DESK-6), so that
+   risk does not apply here.
+
+   **Call this file the first stop for any other Hyprland Lua API question** — it answers what the
+   engine provides without a live session.
 5. **Historical launcher API questions (predating #200).** #200 uses the documented
    `Process.startDetached()` lifecycle, a sibling background `PanelWindow`, and Hyprland
    0.56 `hyprctl dispatch 'hl.dsp.focus({window=...})'` for the picker. The old fullscreen/focuswindow
