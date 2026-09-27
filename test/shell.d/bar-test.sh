@@ -421,44 +421,16 @@ check_status "$?" 2 "an id with a space is refused"
 #    exactly what the spec asks for (chmod 0640; chgrp omarchy-parents,
 #    best-effort so a dev box with no such group still ticks).
 # ===========================================================================
-if command -v python3 >/dev/null 2>&1; then
-  ROOT5="$TMP/root5"
-  ETC5="$TMP/etc5"
-  mkdir -p "$ETC5/kids" "$ROOT5"
-  cat >"$ETC5/kids/kid-ada.conf" <<'EOF'
-name=Ada
-avatar=fox
-band=6-8
-EOF
-  export OMARCHY_KIDS_SHARE="$SHARE" # harmless: conf.sh only reads bands/packs it needs
-  mkdir -p "$SHARE/bands" "$SHARE/packs"
-  cp "$DIR/share/bands/bands.toml" "$SHARE/bands/" 2>/dev/null || true
-  cp "$DIR"/share/packs/*.toml "$SHARE/packs/" 2>/dev/null || true
-
-  STUBS_LEDGER="$TMP/stubs-ledger"
-  mkdir -p "$STUBS_LEDGER"
-  kids_id_stub "$STUBS_LEDGER" kid-ada "$(id -u)"
-  PATH="$STUBS_LEDGER:$BASE_PATH" KIDS_TEST_UID=0 \
-    OMARCHY_KIDS_ETC="$ETC5" OMARCHY_KIDS_ROOT="$ROOT5" \
-    OMARCHY_KIDS_NOW="2026-09-01 12:00:00" \
-    "$LEDGER" tick >/dev/null 2>&1
-
-  STATUS_JSON5="$ROOT5/run/omarchy-kids/status.json"
-  if command -v jq >/dev/null 2>&1 && [[ -f "$STATUS_JSON5" ]]; then
-    mode="$(kids_file_mode "$STATUS_JSON5")"
-    check "$mode" "640" "status.json is written mode 0640 (group omarchy-parents readable, R-BAR-3)"
-    check "$(jq -r '.kids[0].kid' "$STATUS_JSON5")" "kid-ada" "status.json lists the known kid"
-    check "$(jq -r '.kids[0] | has("minutes_left")' "$STATUS_JSON5")" "true" "status.json rows have minutes_left"
-    check "$(jq -r '.kids[0] | has("paused")' "$STATUS_JSON5")" "true" "status.json rows have paused"
-    check "$(jq -r '.kids[0] | has("live")' "$STATUS_JSON5")" "true" "status.json rows have live"
-  else
-    echo "SKIP status.json checks: jq missing or the ledger didn't write it (see time-test.sh for the same tick, tested there)"
-  fi
-  grep -q 'chgrp omarchy-parents' "$LEDGER" && pass "the ledger's write_status_json chgrps omarchy-parents (best-effort)" ||
-    fail_ "expected bin/omarchy-kids-time-ledger to chgrp omarchy-parents"
-else
-  echo "SKIP status.json checks: python3 not found (lib/time.sh needs it)"
-fi
+# R-BAR-3's status.json contract itself -- the mode 0640, the kid row, and minutes_left/paused/live
+# -- is covered by test/shell.d/status-publication-test.sh, which extracts `write_status_json` and
+# stubs its inputs. It was asserted here as well, by a tick against a fixture with a profile and no
+# live session, and those checks could **never run**: `write_status_json` returns early when no kid
+# session is active (`active_kid_sessions`), so the file the `[[ -f ]]` guard looked for was never
+# written, and the block always took its skip branch. That branch's message pointed at
+# `time-test.sh` for the same tick, which tests the ledger but publishes no status.json at all --
+# so the skip read as coverage twice over. (Found 2026-09-27 while auditing which checks never run.)
+grep -q 'chgrp omarchy-parents' "$LEDGER" && pass "the ledger's write_status_json chgrps omarchy-parents (best-effort)" ||
+  fail_ "expected bin/omarchy-kids-time-ledger to chgrp omarchy-parents"
 
 # --- KidsModule.qml renders nothing when the file is missing --------------
 grep -q 'root.hasFile = false' "$SHARE/bar/KidsModule.qml" &&
