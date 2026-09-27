@@ -364,7 +364,7 @@ B.2 `/etc/omarchy-kids/kids/<account>.conf`, key=value, only overrides present:
 
 ## Appendix E. Binding tables
 
-Grid (`level = 1`): `Super+Home` launcher · `Super+Enter` open selected · `Super+Q` close · `Super+Shift+K` exit modal · `Super+Shift+W` Wi-Fi picker (R-WIFI-1..2; the command itself refuses unless `wifi=helper`) · `Super+Ctrl+Shift+Space` theme picker (`omarchy-kids-theme`, T45) · volume/brightness keys. Nothing else bound; every window rule forces fullscreen.
+Grid (`level = 1`): `Super+Home` launcher · `Super+Enter` open selected · `Super+Q` close · `Super+Shift+K` exit modal · `Super+Shift+W` Wi-Fi picker (R-WIFI-1..2; the command itself refuses unless `wifi=helper`) · volume/brightness keys. Nothing else bound; every window rule forces fullscreen. (No theme picker in the Grid: it is a `gum` terminal program and the Grid has no terminal — R-DESK-3. Level 3 binds it; see `docs/levels.md` and `docs/phase1/SPEC-AMENDMENT-kid-themes.md`.)
 
 Desktop (`level = 3`): Omarchy defaults, menu-trimmed, minus terminal-launching binds under `menu=trimmed` (kept under `full`), `omarchy-sudo-passwordless`, screenshot-to-clipboard of other users' windows (n/a), plus `Super+Shift+K`, `Super+Shift+W`, and `Super+Ctrl+Shift+Space` the theme picker (`omarchy-kids-theme`, T45; the same chord a grown-up uses; Omarchy's own stock bind for the chord is removed first).
 
