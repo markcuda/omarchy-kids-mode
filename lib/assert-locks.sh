@@ -443,4 +443,19 @@ boot_hook_ok() {
   rm -f "$tmp"
   return "$rc"
 }
-boot_hook_fix() { mkinitcpio -P; }
+# A rebuild only adds the hook when some mkinitcpio config lists it (normally
+# the disk transition's drop-in, R-BOOT-2). Without that, rebuilding every UKI
+# on every pacman transaction changes nothing, so it is reported FAIL instead.
+boot_hook_configured() {
+  local root
+  root="$(posture_root)"
+  grep -qs -- 'omarchy-kids-unlock' "$root/etc/mkinitcpio.conf" "$root"/etc/mkinitcpio.conf.d/*.conf
+}
+boot_hook_fix() {
+  if ! boot_hook_configured; then
+    echo "omarchy-kids-assert: boot-hook: no mkinitcpio config adds omarchy-kids-unlock ($(posture_root)/etc/mkinitcpio.conf.d/omarchy_kids.conf is missing); not rebuilding" >&2
+    return 1
+  fi
+  # Re-check: a rebuild that "succeeded" without the hook is still a FAIL.
+  posture_rebuild_boot_images && boot_hook_ok
+}

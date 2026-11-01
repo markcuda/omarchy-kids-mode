@@ -5,7 +5,7 @@ fail-safe list, how to verify the hook is actually in the image, and how to remo
 
 ## Startup, end to end
 
-1. **Firmware → Limine → UKI.** Limine loads the UKI built by `mkinitcpio -P`. The kernel
+1. **Firmware → Limine → UKI.** Limine loads the UKI built by `limine-mkinitcpio` (`mkinitcpio -P` finds no presets on Omarchy). The kernel
    cmdline (baked into the UKI, contributed by drop-ins under `/etc/limine-entry-tool.d/*.conf`)
    carries `cryptdevice=PARTUUID=<uuid>:root` and `root=/dev/mapper/root`.
 2. **Early boot, our hook, before `encrypt`.** `omarchy-kids-unlock` runs. It parses
@@ -121,7 +121,7 @@ directly on `/boot/initramfs-linux.img`.
    `/etc/mkinitcpio.conf.d/omarchy_kids.conf` or, in
    `/etc/mkinitcpio.conf` itself, take `omarchy-kids-unlock` back out if it was ever hand-added
    there.
-2. `sudo mkinitcpio -P` to rebuild every installed kernel's image without it.
+2. `sudo limine-mkinitcpio` to rebuild every installed kernel's image without it.
 3. Confirm with the verification command above that `omarchy-kids-unlock` is gone from the
    rebuilt image.
 4. `systemctl disable --now omarchy-kids-boot-login.service omarchy-kids-boot-login-cleanup.service`
