@@ -71,7 +71,7 @@ account with a recorded kid slot because portal mode cannot prove that key is go
      one. `editor_enabled` is left exactly as it is — the parent chose that, Kids Mode never owned
      it, so there's nothing of ours to undo there (see "Judgment calls").
    - In disk mode only, removes `/etc/mkinitcpio.conf.d/omarchy_kids.conf` and runs exactly one
-     final `mkinitcpio -P`, even if that drop-in is already absent. A failed rebuild restores the
+     final `limine-mkinitcpio` (`mkinitcpio -P` without Limine), even if that drop-in is already absent. A failed rebuild restores the
      previous drop-in and fails the run.
    - Removes the per-boot SDDM autologin drop-in (`zz-omarchy-kids-autologin.conf`) if this boot
      happened to still have one around.

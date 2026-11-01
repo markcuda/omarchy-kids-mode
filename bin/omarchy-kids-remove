@@ -419,7 +419,7 @@ mkinitcpio_dropin_remove() {
       return 1
     }
   fi
-  if ! mkinitcpio -P; then
+  if ! posture_rebuild_boot_images; then
     [[ -n "$backup" ]] && mv -f "$backup" "$file"
     return 1
   fi

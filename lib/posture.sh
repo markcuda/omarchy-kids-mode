@@ -12,6 +12,24 @@
 source "$(dirname "${BASH_SOURCE[0]}")/theme.sh"
 
 posture_root() { printf '%s' "${OMARCHY_KIDS_ROOT:-}"; }
+
+# posture_rebuild_boot_images — rebuild every installed kernel's UKI (docs/boot.md).
+# Omarchy boots Limine UKIs built by limine-mkinitcpio and ships no
+# /etc/mkinitcpio.d presets, so a bare `mkinitcpio -P` there rebuilds nothing:
+# it dies with "No presets found", and Omarchy's /usr/local/bin/mkinitcpio
+# wrapper then exits 0 regardless. limine-mkinitcpio itself exits 0 when one
+# kernel fails, so its output is checked for that too. stdin is closed so
+# neither tool can stop on a prompt inside a pacman hook.
+posture_rebuild_boot_images() {
+  local out rc
+  if ! command -v limine-mkinitcpio >/dev/null 2>&1; then
+    mkinitcpio -P </dev/null
+    return
+  fi
+  out="$(limine-mkinitcpio </dev/null 2>&1)" && rc=0 || rc=$?
+  printf '%s\n' "$out" >&2
+  [[ "$rc" -eq 0 ]] && ! grep -q 'mkinitcpio failed for kernel' <<<"$out"
+}
 posture_polkit_dir() { printf '%s/etc/polkit-1/rules.d' "$(posture_root)"; }
 posture_namespace_conf() { printf '%s/etc/security/namespace.conf' "$(posture_root)"; }
 posture_pam_dir() { printf '%s/etc/pam.d' "$(posture_root)"; }

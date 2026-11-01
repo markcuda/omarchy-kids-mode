@@ -33,6 +33,9 @@ rc=0
 check_contains() { # haystack needle label
   if [[ "$1" == *"$2"* ]]; then pass "$3"; else fail "$3 (want to find '$2')"; fi
 }
+check_not_contains() { # haystack needle label
+  if [[ "$1" != *"$2"* ]]; then pass "$3"; else fail "$3 (did not want '$2')"; fi
+}
 check_eq() { # got want label
   if [[ "$1" == "$2" ]]; then pass "$3"; else fail "$3 (want '$2', got '$1')"; fi
 }
@@ -507,6 +510,9 @@ fi
 # lsinitcpio's fixture already reporting the hook is in it
 mkdir -p "$SCRATCH_ROOT/usr/lib/initcpio/hooks" "$SCRATCH_ROOT/boot/EFI/Linux"
 touch "$SCRATCH_ROOT/usr/lib/initcpio/hooks/omarchy-kids-unlock"
+# ...and the disk transition's drop-in that makes a rebuild include it
+mkdir -p "$SCRATCH_ROOT/etc/mkinitcpio.conf.d"
+cp "$ROOT_DIR/share/boot/omarchy_kids.conf" "$SCRATCH_ROOT/etc/mkinitcpio.conf.d/omarchy_kids.conf"
 # The bootloader locks are machine-level and report `warn` where the file
 # they assert does not exist (review S11), so the baseline tree has both.
 mkdir -p "$SCRATCH_ROOT/boot" "$SCRATCH_ROOT/etc/default"
@@ -859,6 +865,45 @@ out="$("$BIN")"
 only_this_lock_changed "$out" "boot-hook" "boot-hook"
 check_contains "$(cat "$ARGV_LOG")" "mkinitcpio -P" "boot-hook: mkinitcpio -P was run"
 check_contains "$(cat "$LOG/lsinitcpio-output")" "omarchy-kids-unlock" "boot-hook: the rebuilt image now reports the hook"
+: >"$ARGV_LOG"
+
+# boot hook, no drop-in: a rebuild cannot add the hook, so it is FAIL and
+# nothing is rebuilt (an Omarchy box in disk mode with no omarchy_kids.conf
+# used to run `mkinitcpio -P` on every pacman transaction and say "fixed").
+mv "$SCRATCH_ROOT/etc/mkinitcpio.conf.d/omarchy_kids.conf" "$TMP/omarchy_kids.conf.bak"
+echo "usr/lib/initcpio/hooks/some-other-hook" >"$LOG/lsinitcpio-output"
+out="$("$BIN" 2>&1)"
+check_status "$out" "boot-hook" "FAIL" "boot-hook, no drop-in: reported FAIL, never fixed"
+check_contains "$out" "omarchy_kids.conf is missing" "boot-hook, no drop-in: stderr names the missing drop-in"
+check_not_contains "$(cat "$ARGV_LOG")" "mkinitcpio" "boot-hook, no drop-in: nothing is rebuilt"
+mv "$TMP/omarchy_kids.conf.bak" "$SCRATCH_ROOT/etc/mkinitcpio.conf.d/omarchy_kids.conf"
+: >"$ARGV_LOG"
+
+# boot hook, rebuild exits 0 but the image still lacks the hook: FAIL.
+NOOP_STUBS="$(mktemp -d)"
+printf '#!/bin/bash\nexit 0\n' >"$NOOP_STUBS/mkinitcpio"
+chmod +x "$NOOP_STUBS/mkinitcpio"
+out="$(PATH="$NOOP_STUBS:$PATH" "$BIN" 2>&1)"
+check_status "$out" "boot-hook" "FAIL" "boot-hook: a rebuild that leaves the hook out is FAIL"
+rm -rf "$NOOP_STUBS"
+
+# boot hook on a Limine box: limine-mkinitcpio rebuilds, never mkinitcpio -P.
+LIMINE_MK_STUBS="$(mktemp -d)"
+printf '#!/bin/bash\necho limine-mkinitcpio >>"%s"\necho usr/lib/initcpio/hooks/omarchy-kids-unlock >"%s"\n' \
+  "$ARGV_LOG" "$LOG/lsinitcpio-output" >"$LIMINE_MK_STUBS/limine-mkinitcpio"
+chmod +x "$LIMINE_MK_STUBS/limine-mkinitcpio"
+out="$(PATH="$LIMINE_MK_STUBS:$PATH" "$BIN" 2>&1)"
+check_status "$out" "boot-hook" "fixed" "boot-hook, Limine: fixed"
+check_contains "$(cat "$ARGV_LOG")" "limine-mkinitcpio" "boot-hook, Limine: limine-mkinitcpio was run"
+check_not_contains "$(cat "$ARGV_LOG")" "mkinitcpio -P" "boot-hook, Limine: mkinitcpio -P was not run"
+
+# ...and a kernel limine-mkinitcpio could not rebuild (it still exits 0) is FAIL.
+echo "usr/lib/initcpio/hooks/some-other-hook" >"$LOG/lsinitcpio-output"
+printf '#!/bin/bash\necho "mkinitcpio failed for kernel linux"\n' >"$LIMINE_MK_STUBS/limine-mkinitcpio"
+out="$(PATH="$LIMINE_MK_STUBS:$PATH" "$BIN" 2>&1)"
+check_status "$out" "boot-hook" "FAIL" "boot-hook, Limine: a failed kernel rebuild is FAIL"
+rm -rf "$LIMINE_MK_STUBS"
+echo "usr/lib/initcpio/hooks/omarchy-kids-unlock" >"$LOG/lsinitcpio-output"
 : >"$ARGV_LOG"
 
 # --- second run after every fix above: everything is ok again ----------
